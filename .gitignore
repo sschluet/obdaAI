@@ -1,0 +1,27 @@
+# Runtime and personal data are never source control.
+.env
+.env.*
+!.env.example
+.local/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+data/
+uploads/
+artifacts/
+vault/
+secrets/
+*.key
+*.pem
+*.sqlite*
+*.db
+*.dump
+*.log
