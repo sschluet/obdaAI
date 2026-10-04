@@ -1,7 +1,8 @@
 # obdaAI — Status 04.10.2026
 
 M0-Grundlage implementiert und privat gepusht. M1 enthält eine getestete vertikale
-Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein produktives Deployment.
+Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Eine separate
+Proxmox-Pilotinstallation ist jetzt verfügbar; kein produktiver Dauerbetrieb.
 
 ## Umgesetzt
 - Eigenständiges privates GitHub-Repository `sschluet/obdaAI`; Sichtbarkeit via API bestätigt.
@@ -54,9 +55,8 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
 - Vorhandenes n8n 2.7.5 läuft auf Mac mini; API-Key/Workflow-/Credential-Inventar offen.
   Keine neue n8n-Instanz oder zweite Terminierung starten. Migration vor Zielabnahme nötig.
 - Bestehender Syncthing-Vault bleibt kanonisch. Memory-Pfadfreigabe ist noch festzulegen.
-- Zielwahl vorhandenes ai-core / neue VM offen. Bei neuer VM sind ID/Adresse,
-  Proxmox-Kapazitätsprüfung und konkrete Provisionierungsfreigabe erforderlich.
-  Alte Deploytoken-Freigaben werden nicht automatisch für neue Ressourcen verwendet.
+- Separate neue Proxmox-VM ausdrücklich autorisiert und provisioniert. Bestehende
+  Dienste bleiben erhalten. Private Ziel-/Zugangsdaten und Prüfbelege liegen nur in `.local/`.
 
 ## Fortsetzungspunkt
 Draft-PR #1 sichert den Teilstand; Head-CI vor Merge prüfen.
@@ -104,3 +104,26 @@ Wheel/Sdist gebaut und auf Worker-Module sowie Ausschluss privater Runtime-Datei
 Die CI-Fehler in caf676b/86b0fd8 betrafen SQL-Skriptübergabe und Worker-Pooloptionen;
 beide sind korrigiert und durch die tatsächliche PostgreSQL-Integration nachgewiesen.
 Kein produktives Deployment und keine neue Live-Cloudanfrage.
+
+## Proxmox-Pilotinstallation
+- Dedizierte Debian-13-VM: 4 vCPU, 8 GiB RAM, 80 GiB Disk, eigener PostgreSQL-18-Datenträger.
+  Offizielles Cloud-Image mit SHA512 geprüft; Docker-Paketversionen im privaten Betriebsbeleg.
+- Deployter Appstand: 3c6dd2f; eigenes API-/Worker-Image, Alembic bis 0003 angewandt.
+  App läuft als UID 10001, ohne Capabilities, mit schreibgeschütztem Dateisystem.
+  UID-basierte ausgehende Netzwerksperre erlaubt nur lokale Datenbank und Modellrelay.
+- Anmeldung, 401 ohne Anmeldung, gesperrtes Cloud-opt-in und echter lokaler Chat auf
+  der installierten VM bestanden: synthetische Antwort „2 plus 2 ist 4“, Run succeeded,
+  Provider local, 6,579 s Einzelmessung. Keine echte Cloudanfrage.
+- Testzugang und Modellrelay laufen über verschlüsselte SSH-Tunnel auf dem Arbeits-Mac.
+  Dieser Mac und der Tunnelprozess müssen für den Pilot erreichbar bleiben. Die VM,
+  PostgreSQL, API und Worker laufen eigenständig; ein dauerhaft unabhängiger Modellpfad
+  und privates HTTPS benötigen noch eine konkret freigegebene Infrastrukturänderung.
+- Generische Installationsdateien und Betriebsgrenzen stehen in `deploy/README.md`.
+  Ältere Nachweise oben beschreiben den Entwicklungsstand vor dieser Pilotinstallation.
+- Live-Unterbrechung bestanden: SSE geschlossen, ausschließlich neue API neu gestartet,
+  unabhängiger Worker beendet den lokalen Run erfolgreich; Antwort und Session bleiben erhalten.
+- Öffentliche ausgehende TCP-Verbindung als App-UID blockiert. Eigener PostgreSQL-Dump
+  mit AES-GCM verschlüsselt und entschlüsselt in eine getrennte Testdatenbank zurückgespielt:
+  1 synthetisches Gespräch, 2 Nachrichten. Kein automatischer Backupplan eingerichtet.
+- Bestehende VM-, Storage-, Netzwerk-, DNS- und Firewallkonfiguration nach der Installation
+  gegen den privaten Vorherbeleg geprüft: unverändert. Vollständiger VM-Reboot nicht getestet.
