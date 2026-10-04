@@ -201,4 +201,18 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   Provider: asynchroner Titel erscheint, manueller Titel und Antwort bleiben nach Reload.
   CI prüft zusätzlich echte PostgreSQL-Transaktionsrollback, Worker und Alembic up/down.
 - Direkte HTTPS-Browserprüfung in diesem Schritt durch Browser-Sicherheitsrichtlinie
-  blockiert; keine Warnung umgangen. Zieldeployment und lokaler Live-Titeltest noch ausstehend.
+  blockiert; keine Warnung umgangen. Zieldeployment und lokaler Live-Titeltest bestanden (siehe unten).
+- Codecommit 6f520cf: CI #37228021113 vollständig grün, einschließlich 41 Tests mit
+  PostgreSQL, Browserchecks, gitleaks und Containerbuild. Private Repo-Identität erneut geprüft.
+- Eigene VM104 auf Image obdaai:6f520cf aktualisiert; API, HTTPS-API und Worker am neuen
+  Image, Schema 0004. Image-ID sha256:903d508895a59d52bb6c83a9e5732f81b97c317301b4b81ec04b4715dcd01449.
+  Vorher verschlüsseltes Backup, bisheriges Image und Compose-Konfiguration für Rückwechsel
+  behalten. PostgreSQL selbst, bestehende VM101–103 und Proxmox-Konfiguration unverändert.
+- Reales lokales Qwen-Modell über VM-Relay und zertifikatsgeprüftes HTTPS: Antwort nach
+  12,085 s, Titelauftrag zu diesem Zeitpunkt noch running; gültiger 32-Zeichen-Titel nach
+  insgesamt 15,480 s. Einzelmessung, kein Benchmark. Nach manuellem Umbenennen und einer
+  weiteren lokalen Antwort bleibt der manuelle Titel erhalten. Cloud deaktiviert,
+  Nachrichten LOCAL_ONLY. Beide APIs healthy; Backup-Timer, Relay, Egress und Nginx aktiv.
+  Prüfbelege enthalten nur synthetische Abnahmedaten und liegen ausschließlich in `.local/`.
+- M1 bleibt Teilstand. Nächster Funktionsschritt: Nachrichtenedit/Retry mit revisionsgebundenen
+  Labels. Direkte Browser-TLS-Abnahme, automatische Off-VM-Sicherung und Alarmierung offen.
