@@ -21,3 +21,6 @@ PostgreSQL App-Schema mit Alembic; n8n separate Datenbank und Rolle. Queue-Schem
 nur über Procrastinate-Migrationen. Keine direkte n8n-Datenbankmanipulation.
 Memory-Markdown ist kanonisch; Index rekonstruierbar. Umbenennungen/Löschungen
 führen zu expliziten Reconciliation-Zuständen, keine Wiederbelebung aus alten Chunks.
+
+Aktuelles Schema 0001 implementiert Session, Conversation, Message und Run.
+Übrige Aggregate sind geplanter verbindlicher V1-Umfang, noch keine existierenden Tabellen.

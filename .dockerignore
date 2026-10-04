@@ -1,0 +1,15 @@
+.git
+.local
+.venv
+.env
+.env.*
+**/node_modules
+**/dist
+**/__pycache__
+**/*.sqlite*
+**/*.log
+secrets
+vault
+data
+uploads
+artifacts

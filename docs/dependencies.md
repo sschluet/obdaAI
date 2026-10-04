@@ -18,3 +18,16 @@ n8n-Community/API/Lizenzfunktionen vor Integration anhand vorhandener Version un
 offizieller Referenz erneut prüfen. Kein unbewiesenes Feature in V1 versprechen.
 Word/PPTX/PDF/Bild-/OCR-/Browserbibliotheken und LibreOffice erst für M2/M4 auswählen,
 mit ihren tatsächlichen Grenzen dokumentieren. Kein Runner im privilegierten API-Prozess.
+
+## Nachgewiesene n8n-Grundlagen
+Vorhandene Version 2.7.5: offizielle versionierte OpenAPI-Referenz
+https://github.com/n8n-io/n8n/blob/n8n%402.7.5/packages/cli/src/public-api/v1/openapi.yml
+und Lizenz https://github.com/n8n-io/n8n/blob/n8n%402.7.5/LICENSE.md .
+Public-API-Authentifizierung verwendet X-N8N-API-KEY; vorhandener Zugang und
+freigeschaltete Funktionen sind noch nicht live geprüft. Persönliche interne Nutzung
+ist im Lizenzrahmen vorgesehen; kein Hosting fremder Kundencredentials geplant.
+
+HTTPX-IP-Pinning verwendet die dokumentierte sni_hostname-Extension, Host bleibt
+der ursprüngliche Name und TLS-Prüfung bleibt aktiv: https://www.python-httpx.org/advanced/extensions/ .
+Alle DNS-Antworten prüfen, dann direkt zur geprüften IP verbinden; keine zweite
+DNS-Auflösung und keine Redirects/Umgebungsproxies.

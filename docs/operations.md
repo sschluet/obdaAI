@@ -32,3 +32,12 @@ Request-ID ohne Inhalt; Routerlatenz, TTFC, Dauer, Fehlerstatus, bekannte usage,
 Queuewait und Runner-RAM messen. Logs ohne Prompts/Secrets, Rotation und Retention.
 Mac-mini-Anfragen serialisieren und Chat gegenüber Batch priorisieren. Timeouts
 und Retries begrenzen. Kein Exactly-once-Versprechen; Writes vor Retry abgleichen.
+
+## M1 Entwicklungsimage
+Dockerfile baut die statische UI und die Python-App mit Lockfiles. Das Runtime-Image
+läuft als UID/GID 10001, enthält weder Runtime-Daten noch Secrets und führt keine
+Migration beim Start aus. Provider-Keyfiles müssen für diese UID ausschließlich
+lesbar sein (0600/0400); vorhandene gruppengeschützte Altplattform-Keys werden nicht
+automatisch umberechtigt. Der aktuelle Adapter unterstützt nur explizit erlaubte
+lokale IPs und den festen offiziellen OpenRouter-Origin; weitere Provider-UI folgt.
+Compose und produktive Infrastruktur sind noch nicht installiert oder abgenommen.
