@@ -2,9 +2,9 @@
 
 M1 ist implementiert und auf der eigenen Proxmox-VM mit echten lokalen und OpenRouter-
 Aufrufen geprüft. Die vollständige V1 umfasst zusätzlich M2–M5 und ist noch nicht fertig.
-Der aktuelle M1-Abschlusscheckpoint ergänzt automatische Preisaktualisierung, sichtbare
-Testrevisionen und reproduzierbare Masterkey-Erzeugung; seine Head-CI und sein Deployment
-werden vor der Auslieferung geprüft. Die folgenden historischen Abschnitte dokumentieren
+Der finale Codecheckpoint 244355d ergänzt automatische Preisaktualisierung, sichtbare
+Testrevisionen und reproduzierbare Masterkey-Erzeugung. CI 37232870330 ist vollständig
+grün; dieselbe Version läuft mit gesunden APIs/Worker auf der eigenen VM. Die folgenden historischen Abschnitte dokumentieren
 Zwischenstände und sind keine aktuelle Liste offener M1-Funktionen.
 
 ## M1 geliefert
@@ -29,11 +29,11 @@ Zwischenstände und sind keine aktuelle Liste offener M1-Funktionen.
 
 ## Überprüfbare Abnahme
 
-- Aktueller Vorcheckpoint 4077130: CI 37231743515 vollständig grün, 65 Tests einschließlich
+- Finaler Codecheckpoint 244355d: CI 37232870330 vollständig grün, 68 Tests einschließlich
   echter PostgreSQL-Migration Upgrade/Downgrade/Upgrade, Queue und Recovery; Browser,
   Typen/Lint, Secret-Scan und gepinnter Containerbuild bestanden.
-- Lokal 64 Tests bestanden, PostgreSQL wird separat in CI geprüft. Der Abschlusscheckpoint
-  ergänzt drei Varianten für automatische Preisprüfung und Datenschutz bei veralteten Preisen.
+- Lokal 67 Tests bestanden, PostgreSQL wird separat in CI geprüft. Frische, fehlende,
+  veraltete und nicht verfügbare Modellpreise inklusive privater Nicht-Übertragung geprüft.
 - Echtes lokales Dataset: 15/15 bestanden, jeder Fall genau ein Router-HTTP-Aufruf,
   einfache Inlineantworten, Kontextanschlüsse, Cloudklasse, kombinierte Fähigkeiten und
   zitierte Prompt-Injection. Einzelzeiten 5,83–8,70 s; kleine synthetische Stichprobe,
@@ -53,6 +53,15 @@ Zwischenstände und sind keine aktuelle Liste offener M1-Funktionen.
   Providersecret mit gesichertem Masterkey entschlüsselt. Vorhandene Proxmox-Konfiguration
   gegen Baseline unverändert. APIs ca. 72/77 MiB, Worker 130 MiB, DB 114 MiB bei einer
   einzelnen Messung; kein Lastbenchmark. Private Prüfbelege bleiben im ignorierten .local/.
+
+- Finale Liveprüfung auf 244355d: abgelaufene Metadaten simuliert, privates Gespräch
+  blieb ohne externe Preisprüfung lokal; freigegebene Cloudfrage aktualisierte den echten
+  offiziellen Katalog und antwortete erfolgreich. Gemeldete Antwortkosten 0,0001976 USD.
+  Aktuelle lokale/OpenRouter-Modelltests passen zur jeweiligen Einstellungsrevision.
+  Gesamte gemeldete Kosten plus offene Reservierungen nach Abschluss: 0,0006928 USD.
+- Abschlusssicherung erneut verschlüsselt kopiert und isoliert wiederhergestellt: Schema 0008,
+  28 synthetische/Pilot-Gespräche, 52 Nachrichten, Masterkey entschlüsselt Providersecret.
+  Bestehende Proxmox-Konfiguration weiterhin identisch; finale aktive Chatqueue leer.
 
 ## Verbleibender V1-Umfang und Betriebsgrenzen
 
