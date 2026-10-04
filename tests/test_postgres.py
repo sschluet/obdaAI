@@ -101,6 +101,28 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         assert (
             db.scalar(text("SELECT status::text FROM hub_queue.procrastinate_jobs")) == "succeeded"
         )
+    # A stalled task redispatch reconciles output without a second model call.
+    with factory() as db:
+        stale = Run(conversation_id=chat_id, status="streaming")
+        db.add(stale)
+        db.flush()
+        db.add(
+            RunEvent(
+                run_id=stale.id,
+                sequence=1,
+                kind="delta",
+                payload=json.dumps({"text": "SYNTHETIC_CRASH_PARTIAL"}),
+            )
+        )
+        enqueue(db, settings, stale.id)
+        db.commit()
+        stale_id = stale.id
+    asyncio.run(drain())
+    assert fake.calls == 1
+    with factory() as db:
+        assert db.get(Run, stale_id).status == "interrupted"
+        partial = db.scalar(select(Message).where(Message.content == "SYNTHETIC_CRASH_PARTIAL"))
+        assert partial is not None and partial.label == "LOCAL_ONLY"
     engine.dispose()
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")
