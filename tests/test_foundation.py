@@ -63,3 +63,34 @@ def test_router_cannot_grant_permissions() -> None:
 def test_inline_answer_cannot_fake_tool_work() -> None:
     with pytest.raises(ValidationError):
         Route(capabilities=["tool"], model_class="local", reason="synthetic", answer="done")
+
+
+@pytest.mark.parametrize("number,text", [(4, "4"), (4.0, "4"), (0, "0"), (2.5, "2.5")])
+def test_numeric_inline_answer_keeps_model_and_capability_rules(number, text):
+    value = {
+        "capabilities": ["chat"],
+        "model_class": "local",
+        "reason": "arithmetic",
+        "answer": number,
+    }
+    assert Route.model_validate(value).answer == text
+    value["model_class"] = "cloud"
+    with pytest.raises(ValueError):
+        Route.model_validate(value)
+    value["model_class"] = "local"
+    value["capabilities"] = ["tool"]
+    with pytest.raises(ValueError):
+        Route.model_validate(value)
+
+
+@pytest.mark.parametrize("invalid", [True, False, float("nan"), float("inf")])
+def test_inline_answer_rejects_boolean_and_nonfinite_numbers(invalid):
+    with pytest.raises(ValueError):
+        Route.model_validate(
+            {
+                "capabilities": ["chat"],
+                "model_class": "local",
+                "reason": "fixture",
+                "answer": invalid,
+            }
+        )

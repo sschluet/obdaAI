@@ -256,3 +256,8 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   und OpenRouter-Verbindungs-/Modelltests bestanden. Verschlüsselte neue Sicherung
   kopiert, Prüfsummen und isolierter Restore auf Schema 0008 bestanden; gesicherter
   Masterkey entschlüsselt DB-Providersecret. Vorhandene Proxmox-Konfiguration unverändert.
+
+- Live-Regression nach Routerupdate: numerische JSON-Inlineantwort `answer: 4` war
+  fachlich korrekt, aber zu strikt als Nicht-Text verworfen. Endliche Zahlen werden
+  jetzt zu Text normalisiert; Booleans/NaN/Infinity und unzulässige Cloud-/Tool-Inlineantworten
+  bleiben ungültig. Acht Regressionen prüfen diese Grenze.
