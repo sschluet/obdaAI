@@ -1,0 +1,9 @@
+[Unit]
+Description=obdaAI daily encrypted backup
+[Timer]
+OnCalendar=*-*-* 03:00:00 Europe/Berlin
+Persistent=true
+RandomizedDelaySec=10min
+Unit=obdaai-backup.service
+[Install]
+WantedBy=timers.target

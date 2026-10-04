@@ -1,0 +1,14 @@
+[Unit]
+Description=obdaAI encrypted database and configuration backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/obdaai-backup
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/obdaai /run/lock
+ProtectHome=read-only
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=30min

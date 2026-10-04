@@ -135,3 +135,40 @@ Die geprüfte IP muss stabil bleiben; derzeit DHCP mit festem VM-MAC. Eine DHCP-
 Reservierung erfordert gesonderte Routerfreigabe. Bei Adresswechsel sind Bindung,
 Clientregeln, Origin, SSH-Quellbeschränkung und Zertifikat anzupassen. Zertifikat
 läuft nach einem Jahr ab; Erneuerung und Clientvertrauen sind noch nicht automatisiert.
+
+## Automatische verschlüsselte Sicherung
+
+`backup.sh`, `backup.service` und `backup.timer` gelten ausschließlich für die eigene
+VM. Offizielles Debian-age-Paket mit dokumentierter Version installieren. Einen
+**separaten** age-/SSH-Ed25519-Wiederherstellungsschlüssel auf dem Arbeitsplatz erzeugen;
+private Identity niemals auf den Server kopieren oder für SSH-Anmeldung freigeben.
+Nur den öffentlichen Empfänger in rootgeschützte `/etc/obdaai/backup-recipients`
+schreiben. Keine bestehenden Deploy-Schlüssel als Backup-Identity verwenden.
+
+Der Timer läuft täglich ab 03:00 Europe/Berlin mit bis zu zehn Minuten Zufallsverzug
+und holt ausgefallene Termine nach. Er sichert den PostgreSQL-Custom-Dump sowie
+Runtime/TLS/Relay-/SSH-/Compose-/Netzwerk-Konfiguration als zwei age-Dateien.
+Die Daten werden durch Pipes verschlüsselt; kein Klartext-Dump auf dem Dateisystem.
+Snapshots werden erst nach beiden erfolgreichen Pipelines und SHA256-Beleg atomar
+veröffentlicht. Sperrdatei verhindert überlappende Läufe; fehlgeschlagene eigene
+Staging-Verzeichnisse werden verworfen. Bereits veröffentlichte Sicherungen bleiben
+erhalten. Ein 10-GiB-Backupbudget und mindestens 1 GiB verbleibender freier Speicher
+begrenzen den Betrieb; bei Überschreitung scheitert der Dienst mit Journalmeldung.
+
+Die Unit hat ausschließlich lokale Unix-Sockets und schreibt nur ins Backup- und
+Lockverzeichnis. Home-Verzeichnisse sind nur lesbar, damit die freigegebenen
+SSH-Public-Keys mitgesichert werden. Der Wiederherstellungsschlüssel bleibt außerhalb
+der VM. Erst manuell starten, erfolgreichen Lauf prüfen, dann Timer aktivieren.
+
+Für Restore die verschlüsselten Dateien und SHA256-Belege zuerst auf einen anderen
+Rechner kopieren. Dort mit der privaten Identity entschlüsseln und den Custom-Dump
+zunächst in eine **getrennte** Datenbank zurückspielen. Konfigurationsarchiv zuerst
+prüfen; kein unkontrolliertes Entpacken über `/`. Ein Restore aktiver Daten oder
+Wiederaufnahme gesicherter Queue-Jobs ist eine eigene Entscheidung, kein Timerjob.
+Offizielle age-Dokumentation: https://github.com/FiloSottile/age .
+
+Ein verschlüsselter Snapshot wurde auf dem Arbeitsplatz gesichert und ein echter
+isolierter Datenbank-Restore sowie die Entschlüsselung der Betriebskonfiguration
+geprüft. Weitere automatische Off-VM-Kopien, Alarmierung und eine Aufbewahrungs-/
+Löschpolicy sind noch offen. Der Wiederherstellungsschlüssel braucht eine separat
+aufbewahrte sichere Kopie; die VM-Sicherung allein ersetzt diese nicht.

@@ -160,3 +160,24 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
 - Offen: Nutzerfreigabe des Zertifikats und sichtbare Browserabnahme des direkten
   HTTPS-Endpunkts, stabile DHCP-Reservierung, Zertifikatserneuerung und Backupplan.
   Ältere Abschnitte dokumentieren den Zustand vor diesem HTTPS-Schritt.
+
+## Sicherung und Zertifikatsfreigabe
+- Hostbezogenes SSL-Vertrauen des einzelnen Serverzertifikats im macOS-Benutzer-
+  Schlüsselbund eingetragen; macOS verify-cert für die exakte IP erfolgreich.
+  Fingerabdruck-Tippfehler im privaten Importskript anhand des ursprünglichen
+  Serverbelegs korrigiert. Der erste Versuch hatte vor Änderung sicher abgebrochen.
+- Safari zeigt die direkte HTTPS-Anwendung nach Reload. Vollständige Browser-
+  Vertrauensabnahme bleibt offen: Safari zeigt noch „Nicht sicher“, der eingebaute
+  Codex-Browser lehnt das Zertifikat mit ERR_CERT_AUTHORITY_INVALID ab.
+  Keine Warnung umgangen oder Namensprüfung deaktiviert.
+- Tägliche age-Sicherung auf eigener VM eingerichtet, 03:00 Europe/Berlin plus
+  maximal zehn Minuten Verzug. Öffentlicher Empfänger auf der VM; separater privater
+  Wiederherstellungsschlüssel ausschließlich auf dem Arbeitsplatz.
+- PostgreSQL und Betriebskonfiguration werden ohne Klartext-Staging verschlüsselt,
+  mit SHA256-Beleg atomar veröffentlicht. Erster Backup-Lauf bestanden. Schreib-/
+  Netzwerkgrenzen, Sperrdatei und Speicherreserve gesetzt; kein automatisches Löschen
+  veröffentlichter Sicherungen.
+- Ein vollständiger verschlüsselter Snapshot auf dem Arbeitsplatz abgelegt;
+  isolierter Restore und Konfigurationsentschlüsselung separat geprüft.
+- Offen: automatische Off-VM-Kopie/Alarmierung, Aufbewahrungspolicy, DHCP-Reservierung
+  und Zertifikatserneuerung. M1/V1 bleiben Teilstand.
