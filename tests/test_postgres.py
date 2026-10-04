@@ -131,6 +131,7 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         enqueue(db, settings, stale.id)
         db.commit()
         stale_id = stale.id
+        db.execute(text("SET LOCAL search_path TO hub_queue, public"))
         db.execute(
             text(
                 "UPDATE hub_queue.procrastinate_jobs SET status='doing' WHERE args->>'run_id'=:run"
