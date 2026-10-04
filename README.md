@@ -29,7 +29,10 @@ separately from local SQLite contract checks.
 
 ## Current development limits
 The chat implementation is an M1 partial delivery. Automatic async titles, message
-edit/retry, provider settings UI and persistent job workers remain open. M2–M5 features
+edit/retry, provider settings UI and budgets remain open. PostgreSQL chat dispatch
+uses Procrastinate; start its separate process with `uv run python -m hub.jobs`.
+Reopening an active conversation follows stored events; see docs/operations.md
+for restart and crash-reconciliation limits. M2–M5 features
 are not available yet. Cloud is off by default and no live OpenRouter request has
 been performed. Database migrations must run before startup. SQLite is a local
 contract-test/development option; production and durable jobs use PostgreSQL.

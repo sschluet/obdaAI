@@ -42,5 +42,5 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 | A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | offen; Funktion noch nicht implementiert |
 | A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | offen; Funktion noch nicht implementiert |
 | A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | offen; Funktion noch nicht implementiert |
-| A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | Browser-/DB-Tests für Login/Historie/Titel/mobile bestanden; dauerhafte Jobs offen |
+| A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | Browser-/DB-Tests für Login/Historie/manuelle Titel/mobile und Reload während Chat bestanden; PostgreSQL-Queue in CI geprüft; automatische Titel und Zielbetrieb offen |
 | A14 | M0/M5 | Backup/Restore, private GitHub-Versionierung ohne Secrets/Runtime-Daten | Privates Repo und Source-/CI-gitleaks bestanden; Backup/Restore offen |

@@ -42,9 +42,9 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
   Draft-PR: https://github.com/sschluet/obdaAI/pull/1 .
 
 ## Offene Arbeit / echte Grenzen
-- M1: automatischer lokaler asynchroner Titelworker (Procrastinate), Nachrichtenedit/retry,
+- M1: automatischer lokaler asynchroner Titelworker auf vorhandener Procrastinate-Queue, Nachrichtenedit/retry,
   Volltext-Historiensuche, Provider-/Modellverwaltung mit Verbindungstests und Limits,
-  dauerhafter Workerbetrieb, vollständige Live-Routing-/Streamingabnahme und Budgetkontrolle.
+  abgenommener Ziel-Workerbetrieb, vollständige Live-Routing-/Streamingabnahme und Budgetkontrolle.
   PostgreSQL-Queue und persistente SSE-Wiederaufnahme implementiert; Zielbetrieb und
   automatische stalled-Reconciliation sind noch offen.
 - M2: Projekte/Uploads/Quellen, echte Websuche, Obsidian-Leseadapter und Konflikt-/Löschsync.
@@ -60,7 +60,7 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
 
 ## Fortsetzungspunkt
 Draft-PR #1 sichert den Teilstand; Head-CI vor Merge prüfen.
-Danach M1 vervollständigen: PostgreSQL-Procrastinate-Migration/Worker und lokale
+Danach M1 vervollständigen: lokale
 asynchrone Titel mit Schutz manueller Titel, Edit/Retry mit revisionsgebundenen Labels,
 Provider-/Capability-UI und Budgets; echte lokale Livechecks über den vorgesehenen
 Linux-Netzpfad. Erst danach M2. Keine Routinefreigaben, aber Produktion/Cloudtransfer
@@ -68,7 +68,7 @@ und n8n/Vault-Schreibzugriff benötigen konkrete Policy-/Zielentscheidungen.
 
 ## Git-Checkpoint
 Arbeitsbranch milestone/m1-chat; M0 auf main, M1 bleibt in Draft-PR #1.
-Letzter Codecommit 012a7d0 ist gepusht und vollständig grün in CI.
+Letzter Code-/Testcommit 78f3cf7 ist gepusht; CI #37221934013 vollständig grün.
 Der abschließende Dokumentationscommit ändert nur diesen Statusnachweis.
 Vor Freigabe/Merge den jeweils aktuellen PR-Head prüfen.
 Alle Quelländerungen werden beim Checkpoint committed/gepusht; persönliche
@@ -93,12 +93,14 @@ nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
 - Bei manueller Wiederaufnahme nach nachgewiesenem Workercrash: Teilantwort aus
   Ereignissen herstellen, interrupted markieren, keinen Provider automatisch wiederholen.
 - Lokal 28 Tests bestanden, PostgreSQL-Integration mangels lokaler DB übersprungen.
-  Neue CI-Integration prüft echte Queue, atomaren Rollback, API-Restart und Worker.
+  CI #37221934013: 29 Tests bestanden, einschließlich echter Queue, atomarem
+  Rollback, API-Restart, Worker und Crash-Reconciliation ohne zweiten Provideraufruf.
   Dieser Abschnitt ist ein Teilcheckpoint; M1/V1 bleiben offen.
 
-Erster Queue-CI-Lauf fand psycopg-Platzhalterinterpretation im upstream SQL-Skript;
-Migration auf parameterlose Ausführung über die gleiche Treiberverbindung korrigiert.
-Browser-Reload-Prüfung lokal bestanden. Pending Provider-I/O ist jetzt gezielt abbrechbar.
-
-Zweiter Queue-CI-Lauf: Schema und atomarer Queue-Rollback bestanden; Worker-Pool
-benötigt Connection-Optionen im kwargs-Container. Übergabe korrigiert.
+Abschließende Nachweise: Code-/Testcommit 78f3cf7; CI #37221934013 vollständig grün
+(Python/PostgreSQL 29 Tests, Frontend/Browser, gitleaks, Container). Lokaler
+Browser-Smoke mit Reload während laufender Antwort bestanden; Screenshot geprüft.
+Wheel/Sdist gebaut und auf Worker-Module sowie Ausschluss privater Runtime-Dateien geprüft.
+Die CI-Fehler in caf676b/86b0fd8 betrafen SQL-Skriptübergabe und Worker-Pooloptionen;
+beide sind korrigiert und durch die tatsächliche PostgreSQL-Integration nachgewiesen.
+Kein produktives Deployment und keine neue Live-Cloudanfrage.
