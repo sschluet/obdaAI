@@ -142,3 +142,21 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   wieder verfügbar. Öffentliche App-Egress-Verbindung auch nach Boot blockiert.
 - Arbeits-Mac-Modellrelay beendet; nur Browser-SSH-Forwarding bleibt für den Pilot.
   Privates HTTPS und automatischer Backupplan bleiben offen. M1/V1 bleiben Teilstand.
+
+## Privater HTTPS-Endpunkt
+- Eigenständiger Nginx-Proxy auf der neuen VM: nur private IPv4-Bindung an 443,
+  keine HTTP-Standardseite oder öffentliche Zertifikatsanforderung. Separate API
+  mit exakter HTTPS-Origin und Secure/HttpOnly/SameSite-Cookie; gleicher DB-/Workerstand.
+- Eigene INPUT-Regeln erlauben nur die geprüften privaten Clientnetze. Proxy-UID
+  ausgehend auf die lokale HTTPS-API beschränkt; keine globale Firewallkonfiguration geändert.
+- Einzelnes selbstsigniertes EC-Serverzertifikat, CA:FALSE, ServerAuth und geprüfte SAN.
+  Privater Schlüssel nur root auf der VM. Kein globales Clientvertrauen installiert;
+  Zertifikat, Fingerabdruck und manuelles, hostbezogenes SSL-Importskript liegen privat lokal.
+- Direkter HTTPS-Live-Smoke mit exakt diesem Zertifikat bestanden: Anmeldung,
+  Secure-Cookie, falsche Origin/fehlender CSRF abgewiesen, echte lokale Antwort,
+  Cloud weiterhin deaktiviert. Falscher TLS-Hostname wird abgewiesen.
+- Vollständiger Reboot der neuen VM mit gesunder HTTPS-API/Nginx und aktivem lokalen
+  Modellrelay bestanden. Proxy-Public-Egress gesperrt. Bisheriger SSH-Pilot bleibt verfügbar.
+- Offen: Nutzerfreigabe des Zertifikats und sichtbare Browserabnahme des direkten
+  HTTPS-Endpunkts, stabile DHCP-Reservierung, Zertifikatserneuerung und Backupplan.
+  Ältere Abschnitte dokumentieren den Zustand vor diesem HTTPS-Schritt.

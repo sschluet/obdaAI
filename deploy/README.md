@@ -81,3 +81,57 @@ Rollback: ausschließlich den eigenen Compose-Stack stoppen (kein `down -v`),
 Datenvolume und Backups bewahren. Ein Approllback muss zum vorhandenen DB-Schema passen.
 VM-/Volume-Löschung, Restore über bestehende Daten und Entzug vorhandener Deployzugänge
 sind eigene Entscheidungen. Keine bestehenden Plattformdienste abschalten.
+
+## Privates HTTPS
+
+Der zusätzliche HTTPS-Endpunkt bewahrt den bisherigen SSH-Pilot während der
+Zertifikatsabnahme. Beide APIs verwenden dieselbe Datenbank und denselben Worker.
+`https.compose.yaml` erweitert die geprüfte Basis, lauscht nur an 127.0.0.1:8766
+und liest `/etc/obdaai/https.env` zuletzt: exakte HTTPS-Origin und
+`HUB_SECURE_COOKIE=true`. Die API bleibt ohne öffentliche Bindung.
+
+Auf der neuen VM das geprüfte Debian-Nginx-Paket installieren und die genaue Version
+im privaten Paketbeleg sichern. Den automatischen Start der Standardseite während
+Installation verhindern; vorhandene Paketstartregeln niemals überschreiben.
+Den unangetasteten Standard-Sitelink bewahren und deaktivieren. Die Vorlage
+`nginx-https.conf.template` mit der geprüften privaten IPv4-Adresse rendern.
+Kein Port 80, kein öffentliches ACME, keine Host-/Origin-Umschreibung.
+SSE benötigt ausgeschaltetes Proxy-Buffering; keine automatische Wiederholung von
+POSTs auf einem zweiten Upstream. Vor Start `nginx -t` prüfen.
+
+`https-network.sh` prüft ausschließlich RFC1918-Netze und liest rootgeschützte
+`/etc/obdaai/https-network.env`: `HUB_HTTPS_BIND_IP` und durch Leerzeichen getrennte
+`HUB_HTTPS_CLIENT_CIDRS`. Erst die konkret autorisierten privaten Clientnetze eintragen.
+Die eigene INPUT-Chain begrenzt HTTPS; die Proxy-UID darf ausgehend nur zur lokalen
+HTTPS-API verbinden. `https-network.service` und `nginx-network.conf` sorgen für
+Anwendung vor Nginx; bei Fehler verhindert Requires den Start. API-/Worker-Egress
+enthält den zusätzlichen Healthcheck-Port 8766. Keine anderen Hostchains leeren.
+
+```sh
+docker compose --env-file /etc/obdaai/release.env \
+  -f /opt/obdaai/compose.yaml -f /opt/obdaai/https.compose.yaml \
+  --profile https config --quiet
+docker compose --env-file /etc/obdaai/release.env \
+  -f /opt/obdaai/compose.yaml -f /opt/obdaai/https.compose.yaml \
+  --profile https up -d --no-build api_https </dev/null
+```
+
+Der Pilot verwendet ein selbstsigniertes einzelnes Serverzertifikat (CA:FALSE,
+ServerAuth, SAN für geprüfte private Adresse), dessen privater EC-Schlüssel allein
+root auf der VM lesen kann. Das konkrete öffentliche Zertifikat und SHA256-
+Fingerabdruck getrennt bereitstellen. TLS-Tests vertrauen ausschließlich diesem
+Zertifikat; weder `verify=false` noch eine deaktivierte Namensprüfung verwenden.
+Browser-/Schlüsselbund-Vertrauen erfordert eine separate Nutzerentscheidung.
+Keine Warnung automatisch übergehen, keine allgemeine CA installieren. Ein manuell
+freigegebener macOS-Import kann SSL-Vertrauen auf genau diesen Servernamen beschränken.
+
+Abnahme: echtes lokales Gespräch über direkte TLS-Verbindung, Secure/HttpOnly/
+SameSite-Cookie, falsche Origin/fehlender CSRF abgewiesen, falscher Zertifikatsname
+abgewiesen, Proxy-Egress gesperrt und vollständiger Reboot der neuen VM.
+Der alte Browser-Tunnel bleibt bis zur sichtbaren Browserabnahme erhalten.
+Rollback: ausschließlich Nginx und api_https stoppen; gemeinsame DB/Worker bewahren.
+
+Die geprüfte IP muss stabil bleiben; derzeit DHCP mit festem VM-MAC. Eine DHCP-
+Reservierung erfordert gesonderte Routerfreigabe. Bei Adresswechsel sind Bindung,
+Clientregeln, Origin, SSH-Quellbeschränkung und Zertifikat anzupassen. Zertifikat
+läuft nach einem Jahr ab; Erneuerung und Clientvertrauen sind noch nicht automatisiert.
