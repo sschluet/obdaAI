@@ -18,22 +18,35 @@ async def evaluate(cases: list[dict[str, object]]) -> dict[str, object]:
     results = []
     for case in cases:
         started = time.monotonic()
+        history = case.get("context", [])
+        assert isinstance(history, list)
+        history = history + [{"role": "user", "content": str(case["prompt"])}]
         parts = [
             ContextPart(
-                content=str(case["prompt"]),
-                source_id=str(case["id"]),
+                content=m["content"],
+                source_id=str(case["id"]) + "-" + str(i),
                 revision=1,
                 label=Privacy.LOCAL_ONLY,
             )
+            for i, m in enumerate(history)
         ]
+        roles = [m["role"] for m in history]
+        before_calls = provider.route_calls
         try:
-            decision = await provider.route(parts, ["user"])
+            decision = await provider.route(parts, roles)
             expected = set(case["capabilities"])
             passed = expected.issubset(set(decision.capabilities))
             if case.get("model_class"):
                 passed = passed and decision.model_class == case["model_class"]
             if case.get("simple"):
-                passed = passed and decision.model_class == "local" and bool(decision.answer)
+                passed = (
+                    passed
+                    and decision.model_class == "local"
+                    and bool(decision.answer)
+                    and provider.route_calls - before_calls == 1
+                )
+            if case.get("answer_contains"):
+                passed = passed and str(case["answer_contains"]) in (decision.answer or "")
             results.append(
                 {
                     "id": case["id"],
@@ -41,6 +54,7 @@ async def evaluate(cases: list[dict[str, object]]) -> dict[str, object]:
                     "capabilities": decision.capabilities,
                     "model_class": decision.model_class,
                     "inline_answer": bool(decision.answer),
+                    "router_http_calls": provider.route_calls - before_calls,
                     "seconds": round(time.monotonic() - started, 3),
                 }
             )

@@ -17,6 +17,7 @@ enthält `/etc/obdaai`, damit auch der Masterkey wiederherstellbar ist. Verlust 
 Keys macht DB-Secrets unlesbar; DB und Masterkey getrennt gegen unberechtigten Zugriff
 schützen. API, Revisionsliste und Validierungsfehler geben keine Secrets zurück.
 Änderungen erzeugen Revisionen; laufende Aufträge nutzen ihren ausgewählten Stand.
+Öffentliche Verbindungstests aktualisieren Preis-Metadaten mit eigener Revision.
 Die serverseitige Cloud-Sperre gilt zusätzlich zur ausdrücklichen Gesprächsfreigabe.
 Nachrichtenedit widerruft die alte Inhaltsfreigabe und braucht eine neue Opt-in-Auswahl.
 
@@ -44,7 +45,7 @@ Loginversuche sind datenbankgestützt begrenzt und gelten gemeinsam für beide A
 
 Das synthetische Router-Dataset `tests/fixtures/router-cases.json` deckt einfache deutsche
 und englische Fragen, kombinierte Fähigkeiten, Werkzeuge, Wissen, Artefakte, Termine und
-Prompt-Injection ab. `scripts/evaluate_router.py` prüft ausschließlich den lokalen Router;
+Prompt-Injection und Anschlussfragen ab. Einfache Fragen müssen genau einen Router-HTTP-Aufruf nutzen. `scripts/evaluate_router.py` prüft ausschließlich den lokalen Router;
 Modell-/Antwortkosten und externe Werkzeuge werden damit nicht ausgelöst.
 
 Die optionale Ausgangsfreigabe `deploy/egress.sh` gilt nur auf der eigenen obdaAI-VM.

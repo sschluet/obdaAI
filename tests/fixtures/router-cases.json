@@ -98,5 +98,41 @@
    "chat"
   ],
   "simple": true
+ },
+ {
+  "id": "context-arithmetic",
+  "context": [
+   {
+    "role": "user",
+    "content": "Was ist 2 plus 2?"
+   },
+   {
+    "role": "assistant",
+    "content": "4"
+   }
+  ],
+  "prompt": "Und plus 3? Antworte nur mit der Zahl.",
+  "capabilities": [
+   "chat"
+  ],
+  "simple": true,
+  "answer_contains": "7"
+ },
+ {
+  "id": "context-artifact",
+  "context": [
+   {
+    "role": "user",
+    "content": "Erkläre die Photosynthese."
+   },
+   {
+    "role": "assistant",
+    "content": "Pflanzen nutzen Sonnenlicht, Wasser und Kohlendioxid, um Zucker und Sauerstoff zu erzeugen."
+   }
+  ],
+  "prompt": "Mach daraus eine Präsentation als editierbare Datei.",
+  "capabilities": [
+   "artifact"
+  ]
  }
 ]

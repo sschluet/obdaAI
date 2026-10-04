@@ -46,7 +46,7 @@ def test_json_router_one_call_and_bounded_repair(
         assert all(r["enable_thinking"] is False for r in requests)
     else:
         assert all("enable_thinking" not in r for r in requests)
-    assert len(requests) == 2
+    assert len(requests) == 2 and p.route_calls == 2
     assert len(requests[1]["messages"]) == len(requests[0]["messages"]) + 2
 
 

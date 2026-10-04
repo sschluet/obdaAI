@@ -248,3 +248,11 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
 
 - Vor Deployment korrigiert: SQLAlchemy-Insert quotet den reservierten PostgreSQL-Spaltennamen
   `window` in der Login-Migration; erneute CI prüft Upgrade/Downgrade/Upgrade.
+
+- Echtes lokales Dataset: zunächst 7/13 bestanden; unklare Modell-/Fähigkeitsregeln
+  gezielt verbessert, danach 13/13 bestanden (Einzelzeiten 6,03–8,69 Sekunden).
+  Erweiterte Anschlussfragen und tatsächliche HTTP-Aufrufzähler ergänzen den nächsten Check.
+- Eigene VM aktualisiert auf 5dd1776, Schema 0008; HTTPS/APIs/Worker gesund. Echte lokale
+  und OpenRouter-Verbindungs-/Modelltests bestanden. Verschlüsselte neue Sicherung
+  kopiert, Prüfsummen und isolierter Restore auf Schema 0008 bestanden; gesicherter
+  Masterkey entschlüsselt DB-Providersecret. Vorhandene Proxmox-Konfiguration unverändert.
