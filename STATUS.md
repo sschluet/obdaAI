@@ -99,3 +99,6 @@ nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
 Erster Queue-CI-Lauf fand psycopg-Platzhalterinterpretation im upstream SQL-Skript;
 Migration auf parameterlose Ausführung über die gleiche Treiberverbindung korrigiert.
 Browser-Reload-Prüfung lokal bestanden. Pending Provider-I/O ist jetzt gezielt abbrechbar.
+
+Zweiter Queue-CI-Lauf: Schema und atomarer Queue-Rollback bestanden; Worker-Pool
+benötigt Connection-Optionen im kwargs-Container. Übergabe korrigiert.

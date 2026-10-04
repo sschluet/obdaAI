@@ -39,7 +39,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
             conninfo=conninfo(cfg),
-            options="-c search_path=hub_queue,public",
+            kwargs={"options": "-c search_path=hub_queue,public"},
             min_size=1,
             max_size=3,
         )
