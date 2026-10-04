@@ -36,10 +36,13 @@ React wird von FastAPI statisch ausgeliefert; Chat-SSE bleibt im App-Pfad.
 - V1 beginnt mit LOCAL_ONLY. Frühere Plattform-Cloudfreigaben werden nicht übernommen.
 
 ## Ressourcen / Deploymententscheidung
-Ziel: eigene stabile Debian-13-VM. Startannahme: 4 vCPU, 8 GiB RAM, 80 GiB Datenträger,
+Ziel: separate stabile Debian-13-Linux-VM gegenüber dem Inference-Mac. Ob die
+vorhandene ai-core-VM zusätzlich oder eine neue dedizierte VM verwendet wird, ist
+noch zur Auswahl offen; keine neue VM wird allein aus dem Begriff separat abgeleitet. Startannahme: 4 vCPU, 8 GiB RAM, 80 GiB Datenträger,
 ein Batchjob und eine lokale Inference gleichzeitig. Kein GPU-Bedarf. Diese Werte
 sind noch nicht gemessen; M5 misst Chatlatenz, Runner-Spitzen und parallele Jobs.
-Bestehende ai-core-VM ist Rückfallbetrieb und keine automatische Installationsfreigabe.
+Bestehende ai-core-Dienste sind Rückfallbetrieb und keine automatische
+Installationsfreigabe. Bei Wiederverwendung bleiben ihre Ports/Netze/Volumes unverändert.
 Proxmox-Kapazität und neue VM-ID/Adresse vor Provisionierung prüfen und freigeben.
 App und n8n haben getrennte DBs, Rollen, Schlüssel und Migrationen. n8n bekommt
 keinen direkten App-DB-Zugriff. Runner erhält weder Providersecrets noch Docker-Socket.

@@ -3,11 +3,12 @@
 ## Aktueller Stand
 Kein Hub auf einem produktiven Server installiert. Bestehende Dienste bleiben als
 Rückfalloption. Interne Bestandsdaten stehen nur in `.local/inventory.md` (ignoriert).
-Die Ziel-VM ist noch nicht festgelegt/freigegeben. Kein Proxmox-Token wird aus alten
+Die Zielwahl (vorhandenes ai-core oder neue dedizierte VM) ist noch nicht
+festgelegt; konkrete Installation/Provisionierung ist noch nicht freigegeben. Kein Proxmox-Token wird aus alten
 Konfigurationen automatisch zum Provisionieren verwendet.
 
 ## Deployment-Gates
-1. Eigene VM-ID/Adresse und vorhandene Kapazität bestätigen; konkrete Provisionierung
+1. Zielwahl bestätigen; bei neuer VM deren ID/Adresse und Host-Kapazität prüfen; konkrete Provisionierung
    freigeben. Debian 13, Startannahme 4 vCPU/8 GiB/80 GiB.
 2. Unterstützte Docker Engine/Compose-Version und Images/Digests prüfen und pinnen.
 3. Neue App-DB/Rolle anlegen, Migration prüfen, Schlüssel außerhalb DB sichern.

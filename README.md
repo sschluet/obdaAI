@@ -11,7 +11,8 @@ Create `.local/` first with `mkdir -p .local`. Generate a login hash using `uv r
 for another project's secrets. Run `uv run alembic upgrade head` then
 `uv run uvicorn hub.api:app --host 127.0.0.1 --port 8765`.
 Build the UI with `cd frontend && pnpm install --frozen-lockfile --ignore-scripts && pnpm build`.
-Production requires TLS, a unique login hash and encryption key, private approved
+For local loopback development only, explicitly set `HUB_SECURE_COOKIE=false`;
+production keeps secure cookies enabled. Production requires TLS, a unique login hash and encryption key, private approved
 provider origins, separate PostgreSQL roles, backup verification and target approval.
 
 ## Checks

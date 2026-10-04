@@ -265,3 +265,11 @@ def test_pinned_dns_redirect_and_metadata_guards(monkeypatch: pytest.MonkeyPatch
     assert target == "http://127.0.0.1:11435/v1/chat/completions"
     assert headers["Host"] == "local.example:11435"
     assert ext["sni_hostname"] == "local.example"
+
+
+def test_public_endpoint_cannot_be_mislabelled_local(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("socket.getaddrinfo", lambda *a, **kw: [(2, 1, 6, "", ("8.8.8.8", 443))])
+    with pytest.raises(ValueError, match="public Internet"):
+        pinned_url(
+            "https://example.com/v1", "/chat/completions", external=False, allowed_ip="8.8.8.8"
+        )

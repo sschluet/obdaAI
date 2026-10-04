@@ -23,7 +23,7 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
   CI für Python/Lint/Typen/Tests, PostgreSQL, Frontend/Browser, Secrets und Containerbuild.
 
 ## Nachweise
-- Lokal: 22 Tests bestanden, 1 PostgreSQL-Test mangels isolierter lokaler DB übersprungen.
+- Lokal: 23 Tests bestanden, 1 PostgreSQL-Test mangels isolierter lokaler DB übersprungen.
 - Ruff und strikte Mypy-Prüfung bestanden; React/TypeScript/Vite-Build bestanden.
 - Browserprüfung bestanden: Login, API/SSE-Chat, Historie nach Reload, Umbenennen,
   Dark Mode, Mobilnavigation ohne horizontalen Overflow, Löschen und Logout.
@@ -53,7 +53,8 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
 - Vorhandenes n8n 2.7.5 läuft auf Mac mini; API-Key/Workflow-/Credential-Inventar offen.
   Keine neue n8n-Instanz oder zweite Terminierung starten. Migration vor Zielabnahme nötig.
 - Bestehender Syncthing-Vault bleibt kanonisch. Memory-Pfadfreigabe ist noch festzulegen.
-- Neue VM-ID/Adresse, Proxmox-Kapazitätsprüfung und konkrete Provisionierungsfreigabe offen.
+- Zielwahl vorhandenes ai-core / neue VM offen. Bei neuer VM sind ID/Adresse,
+  Proxmox-Kapazitätsprüfung und konkrete Provisionierungsfreigabe erforderlich.
   Alte Deploytoken-Freigaben werden nicht automatisch für neue Ressourcen verwendet.
 
 ## Fortsetzungspunkt

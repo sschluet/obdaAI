@@ -56,6 +56,8 @@ def pinned_url(
             raise ValueError("Forbidden provider address")
         if external and not ip.is_global:
             raise ValueError("External provider resolved to non-public address")
+        if not external and ip.is_global:
+            raise ValueError("A local provider cannot use a public Internet address")
         if not external and address != allowed_ip:
             raise ValueError("Local provider address is not explicitly allowed")
     ip_string = f"[{addresses[0]}]" if ":" in addresses[0] else addresses[0]
