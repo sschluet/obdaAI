@@ -211,12 +211,16 @@ def test_connection_and_queued_local_model_test(managed, monkeypatch):
     assert len(calls) == count
 
 
-def test_managed_cloud_route_usage_and_local_history_never_leaks(managed, monkeypatch):
+@pytest.mark.parametrize("pricing_state", ["fresh", "missing", "stale", "unavailable"])
+def test_managed_cloud_route_usage_and_local_history_never_leaks(
+    managed, monkeypatch, pricing_state
+):
     app, _, _, cfg = managed
     cloud_cfg = replace(cfg, cloud_enabled=True)
     cloud_app = create_app(cloud_cfg)
     original = httpx.AsyncClient
     outbound = []
+    catalog_requests = []
 
     def address(host, port, **kwargs):
         return [(2, 1, 6, "", ("8.8.8.8" if host == "openrouter.ai" else "127.0.0.1", port))]
@@ -226,6 +230,9 @@ def test_managed_cloud_route_usage_and_local_history_never_leaks(managed, monkey
     def handler(request):
         external = request.headers["host"] == "openrouter.ai"
         if request.method == "GET":
+            catalog_requests.append(str(request.url))
+            if pricing_state == "unavailable":
+                return httpx.Response(503)
             return httpx.Response(
                 200,
                 json={
@@ -290,14 +297,22 @@ def test_managed_cloud_route_usage_and_local_history_never_leaks(managed, monkey
         result = client.post("/api/providers", headers=headers, json=body)
         assert result.status_code == 200
         provider_id = result.json()["id"]
-        assert (
-            client.post(
-                "/api/providers/" + provider_id + "/test",
-                headers=headers,
-                json={"mode": "connection"},
-            ).status_code
-            == 200
-        )
+        if pricing_state in ("fresh", "stale"):
+            assert (
+                client.post(
+                    "/api/providers/" + provider_id + "/test",
+                    headers=headers,
+                    json={"mode": "connection"},
+                ).status_code
+                == 200
+            )
+        if pricing_state == "stale":
+            with app.state.sessions() as db:
+                row = db.get(ProviderConfig, provider_id)
+                data = json.loads(row.config)
+                data["pricing"]["verified_at"] = 0
+                row.config = json.dumps(data)
+                db.commit()
         chat = client.post(
             "/api/conversations", headers=headers, json={"cloud_allowed": True}
         ).json()["id"]
@@ -307,21 +322,38 @@ def test_managed_cloud_route_usage_and_local_history_never_leaks(managed, monkey
             json={"content": "complex synthetic question"},
         )
         detail = client.get("/api/conversations/" + chat).json()
-        assert (
-            detail["runs"][-1]["status"] == "succeeded"
-            and detail["runs"][-1]["provider"] == "openrouter"
-        )
-        assert detail["runs"][-1]["cost"] == 0.0002
-        assert detail["runs"][-1]["cost_estimate"] > 0
-        assert len(outbound) == 1
+        if pricing_state == "unavailable":
+            assert detail["runs"][-1]["status"] == "failed" and not outbound
+        else:
+            assert detail["runs"][-1]["status"] == "succeeded"
+            assert detail["runs"][-1]["provider"] == "openrouter"
+            assert detail["runs"][-1]["cost"] == 0.0002
+            assert detail["runs"][-1]["cost_estimate"] > 0
+            assert len(outbound) == 1
+        assert len(catalog_requests) == (2 if pricing_state == "stale" else 1)
+        prior_outbound = len(outbound)
+        prior_catalog = len(catalog_requests)
+        # Expired metadata must never trigger even a public external request
+        # while processing a LOCAL_ONLY question.
+        with app.state.sessions() as db:
+            row = db.get(ProviderConfig, provider_id)
+            data = json.loads(row.config)
+            if data.get("pricing"):
+                data["pricing"]["verified_at"] = 0
+                row.config = json.dumps(data)
+                db.commit()
         private = client.post("/api/conversations", headers=headers, json={}).json()["id"]
         client.post(
             "/api/conversations/" + private + "/messages",
             headers=headers,
             json={"content": "PRIVATE_SYNTHETIC_FIXTURE"},
         )
-        assert len(outbound) == 1
+        assert len(outbound) == prior_outbound and len(catalog_requests) == prior_catalog
         assert "PRIVATE_SYNTHETIC_FIXTURE" not in json.dumps(outbound)
         assert client.get("/api/conversations/" + private).json()["runs"][-1]["provider"] == "local"
         with app.state.sessions() as db:
-            assert db.get(BudgetReservation, detail["runs"][-1]["id"]).measured == 0.0002
+            reservation = db.get(BudgetReservation, detail["runs"][-1]["id"])
+            if pricing_state == "unavailable":
+                assert reservation is None
+            else:
+                assert reservation.measured == 0.0002

@@ -78,3 +78,14 @@ UI-Administration und Retention für Queue/Ereignisse sind noch offen.
 
 Quelle für atomare Übergabe: [Procrastinate external connections](https://procrastinate.readthedocs.io/en/stable/howto/production/external_connection.html).
 Schema und Updates: [offizielle Migrationsanleitung](https://procrastinate.readthedocs.io/en/stable/howto/production/migrations.html).
+
+## M1 Providerbetrieb
+
+[Providerkonfiguration und Limits](providers.md) beschreibt Endpunktfreigaben, AES-GCM-Keys,
+Revisionen und Budgetreservierungen. Der Masterkey wird in Compose read-only aus
+`/etc/obdaai/secrets/provider-encryption.key` eingebunden. Das Backup archiviert bereits
+`/etc/obdaai` vollständig; der isolierte Restore muss zusätzlich die Entschlüsselbarkeit
+der Providersecrets nachweisen. Metriken unter `/api/metrics` sind authentifiziert.
+OpenRouter nur nach eigener Ziel-/Budgetfreigabe aktivieren, Testdaten synthetisch halten
+und bei fehlenden frischen Preisen den Verbindungstest wiederholen. Der Operator-Marker
+für `deploy/egress.sh` ist keine Berechtigung des Assistenten für beliebige Netzwerkziele.

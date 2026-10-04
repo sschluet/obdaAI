@@ -23,7 +23,10 @@ Nachrichtenedit widerruft die alte Inhaltsfreigabe und braucht eine neue Opt-in-
 
 Vor jedem Cloudlauf wird unter Provider-Zeilensperre eine Kostenreservierung angelegt.
 Dazu müssen aktuelle Katalogpreise (höchstens eine Stunde alt), ein positives Monatsbudget
-und ein Limit je Lauf vorliegen. UTF-8-Inhaltslänge plus Nachrichtenoverhead und maximale
+und ein Limit je Lauf vorliegen. Fehlende/veraltete Preise werden für eine tatsächlich
+freigegebene Cloud-Anfrage einmal aus dem öffentlichen Modellkatalog aktualisiert,
+ohne Gesprächsinhalte. Schlägt dies fehl, startet kein kostenpflichtiger Modellaufruf.
+Private Anfragen lösen keine externe Preisprüfung aus. UTF-8-Inhaltslänge plus Nachrichtenoverhead und maximale
 Ausgabetokens ergeben eine konservative Schätzung. Das ist kein exakter Tokenizer und
 keine Garantie gegen andere Abrechnungskomponenten oder Preistierwechsel des Anbieters.
 Für eine harte Geldgrenze ist zusätzlich ein entsprechendes Provider-Kontolimit nötig.

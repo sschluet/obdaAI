@@ -97,7 +97,11 @@ def worker_app(cfg: Settings) -> procrastinate.App:
                         )
                     )
                 run.status, run.finished = "interrupted", time.time()
-                run.error = "Worker unterbrochen; gespeicherte Teilantwort wiederhergestellt"
+                run.error = (
+                    "Worker unterbrochen; gespeicherte Teilantwort wiederhergestellt"
+                    if output
+                    else "Worker unterbrochen; kein neuer Modellaufruf"
+                )
                 db.commit()
                 return
         await execute_run(factory, cfg, providers, run_id)

@@ -2,18 +2,19 @@
 
 Diese Dateien gelten ausschließlich für eine neue, zuvor geprüfte Debian-13-VM mit
 Hostname `obdaai`. Sie sind kein Installer für die bestehende LocalAI-Plattform.
-Der Pilot enthält den M1-Teilstand, keine vollständige V1.
+Der Pilot enthält die M1-Implementierung; M2–M5 sind noch keine vollständige V1.
 
 Vor der Provisionierung: freie VM-ID, Kapazität, Netzpfad, offizielle Image-Prüfsumme,
 SSH-Hostkey und konkrete Zielautorisierung prüfen. Zugangsdaten und Bestandsbelege
-bleiben außerhalb von Git. Cloud ist deaktiviert; es gibt keinen Cloudfallback.
+bleiben außerhalb von Git. Cloud ist im Ausgangszustand deaktiviert; es gibt keinen Cloudfallback.
 
 ## Ablauf auf der neuen VM
 
 1. `bootstrap-debian.sh` einmal als root ausführen. Das Skript prüft Host/OS und
    verweigert die Wiederholung. Die Docker-Adresspools müssen zuvor gegen alle
    Host-/Client-/VPN-Routen geprüft werden; die eingebauten Pools sind ein Pilotbeispiel.
-   Paketversionen werden unter `/etc/obdaai/packages.lock` dokumentiert.
+   Paketversionen werden unter `/etc/obdaai/packages.lock` dokumentiert. Der private
+   Provider-Masterkey wird einmalig erzeugt, gehört UID 10001 und liegt außerhalb der DB.
 2. Den geprüften Gitstand nach `/opt/obdaai/releases/<commit>` kopieren. Die Compose-
    Build-Context auf dieses Verzeichnis setzen. Release in `/etc/obdaai/release.env`
    als `HUB_RELEASE=<commit>` festlegen. Keine private Runtime in den Build kopieren.
@@ -38,7 +39,8 @@ docker compose --env-file /etc/obdaai/release.env up -d api worker
 
 `HUB_DATABASE_URL` zeigt auf die eigene Datenbank an 127.0.0.1:5432.
 `HUB_LOCAL_BASE_URL=http://127.0.0.1:11444/v1`, `HUB_LOCAL_ALLOWED_IP=127.0.0.1`,
-`HUB_LOCAL_KEY_FILE=/run/secrets/local-inference.key`, `HUB_CLOUD_ENABLED=false`.
+`HUB_LOCAL_KEY_FILE=/run/secrets/local-inference.key`, `HUB_CLOUD_ENABLED=false`,
+`HUB_SECRETS_KEY_FILE=/run/secrets/provider-encryption.key`.
 Modell-ID ist am echten Backend zu prüfen. API hört nur an 127.0.0.1:8765.
 Der Pilot leitet diese Adresse durch SSH auf den Arbeits-Mac weiter; `HUB_ORIGIN`
 muss exakt mit dessen Browseradresse übereinstimmen. `HUB_SECURE_COOKIE=false`
@@ -172,3 +174,14 @@ isolierter Datenbank-Restore sowie die Entschlüsselung der Betriebskonfiguratio
 geprüft. Weitere automatische Off-VM-Kopien, Alarmierung und eine Aufbewahrungs-/
 Löschpolicy sind noch offen. Der Wiederherstellungsschlüssel braucht eine separat
 aufbewahrte sichere Kopie; die VM-Sicherung allein ersetzt diese nicht.
+
+## Optionale OpenRouter-Freigabe
+
+Die ausdrückliche Betreiberfreigabe gilt für die eigene VM, synthetische Abnahme und
+ein definiertes Testbudget. Nur dann `HUB_CLOUD_ENABLED=true` setzen und den Marker
+`/etc/obdaai/openrouter-egress.enabled` anlegen. `egress.sh` übernimmt aktuelle öffentliche
+IPv4-Ziele für den offiziellen Host und DNS zum vorhandenen Stubresolver; IPv6 und
+übrige App-Ziele bleiben gesperrt. Marker vor Deaktivierung entfernen und Filter neu laden.
+Provider-Schlüssel über die authentifizierte API/UI verschlüsselt speichern; Modell aus
+dem echten Katalog wählen, Verbindung testen und ein kleines positives Budget festlegen.
+Private Gespräche bleiben unabhängig davon lokal. Details: [Providerbetrieb](../docs/providers.md).

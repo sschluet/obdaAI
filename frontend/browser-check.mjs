@@ -65,4 +65,4 @@ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();
 if(errors.length)throw Error(errors.join('\n'));
-await browser.close();console.log('Browser checks passed: login, SSE chat, history after reload, rename, dark, mobile, delete, logout. Synthetic provider only.');
+await browser.close();console.log('Browser checks passed: login, SSE chat, durable reload, titles, edit/retry, provider tests, rename, dark, mobile, delete, logout. Synthetic provider only.');

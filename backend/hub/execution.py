@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.budgets import ExecutionLimitError, reserve, settle
 from hub.config import Settings
 from hub.db import Conversation, Message, ProviderConfig, Run, RunEvent
-from hub.policy import CloudGrant, ContextPart, Privacy
-from hub.provider_settings import runtime_provider
+from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
+from hub.provider_settings import fresh_cloud_prices, runtime_provider
 from hub.providers import Providers
 from hub.routing import Capability, Route
 from hub.titles import execute_title, reserve_title
@@ -138,7 +138,9 @@ async def execute_run(
                     raise NotImplementedError
                 external = route.model_class == "cloud"
                 if external and (
-                    not cfg.cloud_enabled or any(p.label == Privacy.LOCAL_ONLY for p in parts)
+                    not cfg.cloud_enabled
+                    or not grants
+                    or any(p.label == Privacy.LOCAL_ONLY for p in parts)
                 ):
                     # Complex requests can still be answered locally. This is a
                     # policy choice, not an external provider outage fallback.
@@ -149,6 +151,10 @@ async def execute_run(
                     cloud = selected.get("openrouter")
                     if cloud is None:
                         raise ValueError("Cloud provider not configured")
+                    check_egress(parts, external=True, provider_id="openrouter", grants=grants)
+                    assert isinstance(providers, Providers)
+                    cloud = await fresh_cloud_prices(factory, cloud, providers)
+                    selected["openrouter"] = cloud
                     with factory() as db:
                         estimate = reserve(db, cloud, run_id, parts)
                         current = db.get(Run, run_id)

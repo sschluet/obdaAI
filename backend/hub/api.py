@@ -121,7 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "milestone": "M1-partial", "privacy_default": "LOCAL_ONLY"}
+        return {"status": "ok", "milestone": "M1", "privacy_default": "LOCAL_ONLY"}
 
     @app.get("/api/metrics")
     def metrics(session: SessionDependency) -> dict[str, object]:

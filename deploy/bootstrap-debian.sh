@@ -7,7 +7,7 @@ set -euo pipefail
 [[ ! -e /etc/obdaai ]] || { echo 'Already bootstrapped; inspect before retry'; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg qemu-guest-agent
+apt-get install -y -qq ca-certificates curl gnupg qemu-guest-agent python3
 install -d -m 0755 /etc/apt/keyrings
 curl --fail --silent --show-error https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 fingerprint=$(gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc | awk -F: '$1=="fpr" {print $10; exit}')
@@ -37,6 +37,14 @@ cat > /etc/docker/daemon.json <<'DOCKER'
 DOCKER
 apt-get install -y -qq "${pinned[@]}"
 install -d -m 0700 /etc/obdaai /etc/obdaai/secrets /var/backups/obdaai
+# Create once on the dedicated server; never in the image or database.
+python3 - <<'KEY'
+import base64, os
+fd = os.open('/etc/obdaai/secrets/provider-encryption.key', os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400)
+os.fchown(fd, 10001, 10001)
+with os.fdopen(fd, 'w') as stream:
+    stream.write(base64.b64encode(os.urandom(32)).decode() + '\n')
+KEY
 install -d -m 0755 /opt/obdaai/releases
 systemctl enable --now docker qemu-guest-agent
 dpkg-query -W -f='${Package} ${Version}\n' "${packages[@]}" > /etc/obdaai/packages.lock

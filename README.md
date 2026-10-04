@@ -25,17 +25,20 @@ separately from local SQLite contract checks.
 - [Requirements and acceptance](docs/requirements.md)
 - [Architecture](docs/architecture.md), [security](docs/security.md), [data model](docs/data-model.md)
 - [Implementation plan](docs/implementation-plan.md), [operations](docs/operations.md)
+- [Provider configuration, encrypted secrets and budgets](docs/providers.md)
 - [Versions and sources](docs/dependencies.md)
 
 ## Current development limits
-The chat implementation is an M1 partial delivery. Automatic async titles, message
-edit/retry, provider settings UI and budgets remain open. PostgreSQL chat dispatch
-uses Procrastinate; start its separate process with `uv run python -m hub.jobs`.
-Reopening an active conversation follows stored events; see docs/operations.md
-for restart and crash-reconciliation limits. M2–M5 features
-are not available yet. Cloud is off by default and no live OpenRouter request has
-been performed. Database migrations must run before startup. SQLite is a local
-contract-test/development option; production and durable jobs use PostgreSQL.
+M1 implements login, durable AUTO chat with local/OpenRouter providers, streaming,
+edit/retry/cancel, revision-preserving history, local asynchronous titles, German full-text
+search, provider settings/tests, encrypted secrets, budgets and bounded execution.
+PostgreSQL dispatch uses Procrastinate; start the separate process with
+`uv run python -m hub.jobs`. Reopening a conversation follows stored events, and stalled
+worker jobs reconcile partial output without repeating inference. See [STATUS](STATUS.md)
+for exact CI and real-integration evidence and remaining acceptance limits.
+M2–M5 are not available yet. Cloud remains disabled in generic defaults and needs an
+explicit operator authorization plus conversation opt-in. Migrations must run before
+startup. SQLite is for local contract tests/development; durable jobs use PostgreSQL.
 
 A temporary synthetic browser fixture can be started with
 `uv run uvicorn scripts.browser_fixture:app --host 127.0.0.1 --port 18765`;

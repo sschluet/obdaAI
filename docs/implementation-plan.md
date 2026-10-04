@@ -2,8 +2,8 @@
 
 | Meilenstein | Vertikale Lieferung | Abnahme | Stand |
 |---|---|---|---|
-| M0 | Bestand, Repo, Architektur, Security-/Datenmodell, CI, Lockfiles | sichere reproduzierbare Basis | implementiert/gepusht; CI-Nachweis läuft |
-| M1 | Login, persistenter Streaming-Chat, AUTO lokal/OpenRouter, Titel/Historie, Policies | A01-A04/A13 | getestete Teilfunktion, siehe STATUS |
+| M0 | Bestand, Repo, Architektur, Security-/Datenmodell, CI, Lockfiles | sichere reproduzierbare Basis | implementiert/gepusht; CI grün |
+| M1 | Login, persistenter Streaming-Chat, AUTO lokal/OpenRouter, Titel/Historie, Policies | A01-A04/A13 | implementiert und echte lokale/OpenRouter-Abnahme bestanden, siehe STATUS |
 | M2 | Projekte, Uploads, Fundstellen, Web, Obsidian/Memory | A05/A09 | offen |
 | M3 | Werkzeuge, MCP/REST/Browser, Skills, Freigaben, n8n/Task-Center, HA-Grenzen | A08/A10-A12 | offen |
 | M4 | DOCX/PPTX/PDF/Bilder, echte Vorschau, QA, Versionen | A06/A07 | offen |

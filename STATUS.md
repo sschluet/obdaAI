@@ -1,85 +1,83 @@
 # obdaAI — Status 04.10.2026
 
-M0-Grundlage implementiert und privat gepusht. M1 enthält eine getestete vertikale
-Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Eine separate
-Proxmox-Pilotinstallation ist jetzt verfügbar; kein produktiver Dauerbetrieb.
+M1 ist implementiert und auf der eigenen Proxmox-VM mit echten lokalen und OpenRouter-
+Aufrufen geprüft. Die vollständige V1 umfasst zusätzlich M2–M5 und ist noch nicht fertig.
+Der aktuelle M1-Abschlusscheckpoint ergänzt automatische Preisaktualisierung, sichtbare
+Testrevisionen und reproduzierbare Masterkey-Erzeugung; seine Head-CI und sein Deployment
+werden vor der Auslieferung geprüft. Die folgenden historischen Abschnitte dokumentieren
+Zwischenstände und sind keine aktuelle Liste offener M1-Funktionen.
 
-## Umgesetzt
-- Eigenständiges privates GitHub-Repository `sschluet/obdaAI`; Sichtbarkeit via API bestätigt.
-  M0 Commit ee0cf45 auf main und milestone/m0-foundation gepusht.
-- Autorisierte lesende Bestandsaufnahme, Architektur und begründete Vereinfachungen,
-  Daten-/Sicherheitsmodell, Zuordnung aller 19 Anforderungen und 14 Abnahmefälle.
-  Privates Bestandsprotokoll ausschließlich unter ignoriertem `.local/`.
-- FastAPI, Pydantic, SQLAlchemy und Alembic; persistente Sessions, Chats, Nachrichten und Runs.
-  Single-User scrypt-Login, HttpOnly-Cookie, Origin/CSRF, Loginlimit, Logout, Securityheaders.
-- Lokaler strukturierter AUTO-Router mit optionaler kompletter Inlineantwort; höchstens
-  eine Schema-Reparatur. Fähigkeitenliste unabhängig von Modellklasse. Kein Cloudfallback.
-- Lokaler/OpenRouter-HTTP-Adapter, finaler Scope/Revision/Label-Gateway, gepinnte DNS-IP
-  mit ursprünglicher TLS-SNI/Host-Prüfung, keine Redirects/Umgebungsproxies.
-  Cloud standardmäßig deaktiviert; explizites Gesprächsopt-in erforderlich.
-- Echte statische React/TypeScript-UI an API: SSE, Markdown/Code/Tabellen, Copy, Historie,
-  Titelsuche, Umbenennen, Archiv/Löschen, Abbruch, Runfehler, Light/Dark, mobile Navigation.
-  Offene Bereiche zeigen ihren tatsächlichen Entwicklungsstatus.
-- Gepinnte Paket-Lockfiles und per Registry geprüfte Container-Digests; Dockerfile und
-  CI für Python/Lint/Typen/Tests, PostgreSQL, Frontend/Browser, Secrets und Containerbuild.
+## M1 geliefert
 
-## Nachweise
-- Lokal: 23 Tests bestanden, 1 PostgreSQL-Test mangels isolierter lokaler DB übersprungen.
-- Ruff und strikte Mypy-Prüfung bestanden; React/TypeScript/Vite-Build bestanden.
-- Browserprüfung bestanden: Login, API/SSE-Chat, Historie nach Reload, Umbenennen,
-  Dark Mode, Mobilnavigation ohne horizontalen Overflow, Löschen und Logout.
-  Ausschließlich synthetischer Provider; Screenshots separat lokal geprüft.
-- Alembic upgrade lokal auf SQLite bestanden; PostgreSQL upgrade/downgrade/upgrade und API-Persistenz in CI bestanden.
-- Live Mac mini: zwei synthetische JSON-Proben bestanden. Neuer Hub-Routercode
-  nach expliziter backendbezogener Thinking-Option live bestanden: lokale Inlineantwort
-  auf synthetische Frage, 4,720 s Einzelmessung (kein Benchmark). Initialer Test ohne
-  Option endete nach 30 s im Timeout; kein Cloudfallback. Bestehender gruppengeschützter
-  Inference-Key nur im Arbeitsspeicher für diesen Smoke eingelesen, keine Rechte geändert.
-  Zweiter Live-Smoke: genau 1 Router-HTTP-Aufruf mit Inlineantwort, 4,292 s; separater
-  lokaler Stream mit Completion-Marker bestanden, 1,092 s. Keine echte Cloudanfrage. End-to-End-Verbindung von
-  Work-Mac via Tailnet-DNS derzeit nicht verfügbar; kein Zieldeployment behauptet.
-- Source-Scan bestanden. CI #37220204590 am Codecommit 012a7d0 vollständig grün:
-  Python/PostgreSQL, Frontend/Browser, gitleaks und gepinnter Containerbuild.
-  Draft-PR: https://github.com/sschluet/obdaAI/pull/1 .
+- Single-User-Login, persistente Sessions, CSRF/Origin, sichere Cookies, datenbankgestütztes
+  Loginlimit über beide API-Prozesse und Neustarts, Logout und Securityheader.
+- Persistenter AUTO-Chat, SSE mit Wiederaufnahme, Markdown/Code/Tabellen/Copy, Light/Dark,
+  Tastaturbedienung und mobile Navigation. Lokaler Router trennt Fähigkeiten und Modellklasse.
+- Edit mit revisionsgebundener erneuter Inhaltsfreigabe, explizites idempotentes Retry,
+  Abbruch, alte Kontexte/Antworten als Laufversionen, deutsche Volltextsuche, Archiv/Löschen.
+- Asynchrone lokale Titel mit Schutz manueller Titel; Procrastinate-Queue auf PostgreSQL,
+  Chatpriorität, Heartbeats und automatische Reconciliation ohne erneute Inference.
+- Mehrere freigegebene lokale/OpenRouter-Provider, AUTO-Standard je Typ, Katalog-/Modelltests,
+  Fähigkeiten, Kontext-/Token-/Zeitlimits, serverseitige Endpunktfreigabe und Konfigurationsrevisionen.
+- AES-GCM-Secrets mit getrenntem Masterkey, konservative Budgetreservierungen, gemeldete
+  gegenüber unbekannten Kosten, begrenzte Gesamt-/HTTP-Laufzeit und sichtbare Streambegrenzung.
+- Finale Label-/Scope-/Revision-Prüfung am Providerpayload; keine Rechte aus Routertext,
+  kein Cloud-Fallback. Generische Defaults bleiben LOCAL_ONLY und Cloud deaktiviert.
+  Die eigene VM wurde separat für synthetische OpenRouter-Abnahme bis 0,05 USD freigegeben.
+- Authentifizierte aggregierte Laufmetriken; Schema 0008; eigener HTTPS-/Worker-/DB-Betrieb,
+  verschlüsselte Sicherung, Off-VM-Kopie, isolierter Restore und Rückfallimage.
 
-## Offene Arbeit / echte Grenzen
-- M1: Nachrichtenedit/retry,
-  Volltext-Historiensuche, Provider-/Modellverwaltung mit Verbindungstests und Limits,
-  abgenommener Ziel-Workerbetrieb, vollständige Live-Routing-/Streamingabnahme und Budgetkontrolle.
-  PostgreSQL-Queue und persistente SSE-Wiederaufnahme implementiert; Zielbetrieb und
-  automatische stalled-Reconciliation sind noch offen.
-- M2: Projekte/Uploads/Quellen, echte Websuche, Obsidian-Leseadapter und Konflikt-/Löschsync.
-- M3: Tools/MCP/REST/Browser, Skills/Freigaben, echte n8n-Workflows, Tasks und HA-Wartung.
-- M4: isolierte Artefaktpipeline mit echten Dateien, Vorschau/QA und Folgeversionen.
-- M5: direkte OpenAI/Anthropic, Last/Sicherheit/Backup-Restore und separate Linux-Ziel-VM.
-- Vorhandenes n8n 2.7.5 läuft auf Mac mini; API-Key/Workflow-/Credential-Inventar offen.
-  Keine neue n8n-Instanz oder zweite Terminierung starten. Migration vor Zielabnahme nötig.
-- Bestehender Syncthing-Vault bleibt kanonisch. Memory-Pfadfreigabe ist noch festzulegen.
-- Separate neue Proxmox-VM ausdrücklich autorisiert und provisioniert. Bestehende
-  Dienste bleiben erhalten. Private Ziel-/Zugangsdaten und Prüfbelege liegen nur in `.local/`.
+## Überprüfbare Abnahme
 
-## Fortsetzungspunkt
-Draft-PR #1 sichert den Teilstand; Head-CI vor Merge prüfen.
-Danach M1 vervollständigen: Edit/Retry mit revisionsgebundenen Labels,
-Provider-/Capability-UI und Budgets; echte lokale Livechecks über den vorgesehenen
-Linux-Netzpfad. Erst danach M2. Keine Routinefreigaben, aber Produktion/Cloudtransfer
-und n8n/Vault-Schreibzugriff benötigen konkrete Policy-/Zielentscheidungen.
+- Aktueller Vorcheckpoint 4077130: CI 37231743515 vollständig grün, 65 Tests einschließlich
+  echter PostgreSQL-Migration Upgrade/Downgrade/Upgrade, Queue und Recovery; Browser,
+  Typen/Lint, Secret-Scan und gepinnter Containerbuild bestanden.
+- Lokal 64 Tests bestanden, PostgreSQL wird separat in CI geprüft. Der Abschlusscheckpoint
+  ergänzt drei Varianten für automatische Preisprüfung und Datenschutz bei veralteten Preisen.
+- Echtes lokales Dataset: 15/15 bestanden, jeder Fall genau ein Router-HTTP-Aufruf,
+  einfache Inlineantworten, Kontextanschlüsse, Cloudklasse, kombinierte Fähigkeiten und
+  zitierte Prompt-Injection. Einzelzeiten 5,83–8,70 s; kleine synthetische Stichprobe,
+  kein Beweis allgemeiner Modellqualität oder einer Produktionslast-SLA.
+- Eigene VM: echte lokale und OpenRouter-Verbindungs-/Modelltests; private komplexe Frage
+  bleibt lokal, freigegebene gleiche Frage verwendet OpenRouter. Gemeldete Kosten der
+  Cloudantwort 0,0002192 USD, vorherige Reservierung 0,0006308 USD.
+- Sendewiederholung/Retry ohne Duplikate, Edit mit erhaltenem altem Kontext, deutsche
+  Volltextsuche, Client-Disconnect ohne Jobverlust, Abbruch und persistente SSE bestanden.
+- Echter Worker-Neustart: API blieb gesund, Heartbeat-Recovery nach 83,45 s, Status
+  interrupted statt erneuter Inference. Echte eigene Relay-Unterbrechung: Fehler ohne
+  Cloud-Fallback, gleiche unveränderte Verbindung wiederhergestellt; Mac mini nicht geändert.
+- Grenzen live: deaktivierter lokaler Router, zu großer Kontext, Nullbudget und tatsächlich
+  durch Tokenlimit begrenzter OpenRouter-Stream bestanden. Kosten/Reservierungen dieser
+  Abnahme zusammen 0,0004836 USD; offene Usage bleibt unbekannt und reserviert.
+- Verschlüsselte DB/Config-Sicherung kopiert und geprüft; isolierter Restore Schema 0008,
+  Providersecret mit gesichertem Masterkey entschlüsselt. Vorhandene Proxmox-Konfiguration
+  gegen Baseline unverändert. APIs ca. 72/77 MiB, Worker 130 MiB, DB 114 MiB bei einer
+  einzelnen Messung; kein Lastbenchmark. Private Prüfbelege bleiben im ignorierten .local/.
 
-## Git-Checkpoint
-Arbeitsbranch milestone/m1-chat; M0 auf main, M1 bleibt in Draft-PR #1.
-Letzter Code-/Testcommit 78f3cf7 ist gepusht; CI #37221934013 vollständig grün.
-Der abschließende Dokumentationscommit ändert nur diesen Statusnachweis.
-Vor Freigabe/Merge den jeweils aktuellen PR-Head prüfen.
-Alle Quelländerungen werden beim Checkpoint committed/gepusht; persönliche
-Runtime-Dateien, Testdaten und Screenshots bleiben ignoriert.
+## Verbleibender V1-Umfang und Betriebsgrenzen
 
-Head-CI b83846f deckte einen mehrdeutigen Browserselektor auf: Aktionsbutton und
-neues Gespräch besitzen denselben sichtbaren Namen. Testselektor auf den
-Navigationsaktionsbutton begrenzt; lokaler Browsercheck und abschließende
-PR-CI #37220204590 bestanden. Offizielle Actions aktualisiert/gepinnt und
-Runner auf ubuntu-24.04 festgelegt; doppelte Push-/PR-Läufe entfallen. Kein Produktivfehler
-oder Datenverlust aus dieser synthetischen Prüfung. Öffentliche Provider-IP kann
-nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
+- M2: Projekte/Uploads/Quellen, echte Websuche, Obsidian und Memory-/Konflikt-/Löschsync.
+- M3: Tools/MCP/REST/Browser, Skills/Freigaben, n8n/Tasks und HA-Wartung; bestehendes n8n
+  und Vault-Sync zuerst inventarisieren, keine zweite Terminierungsengine.
+- M4: echte DOCX/PPTX/PDF/Bild-Artefakte, isolierter Runner, Vorschau/QA und Versionen.
+- M5: direkte OpenAI/Anthropic-Adapter, breite Last-/Sicherheits- und reale Geräteabnahme,
+  automatische Off-VM-Kopie/Alarmierung/Aufbewahrung und Zertifikatserneuerung.
+- HTTPS ist mit exakt verifiziertem Zertifikat an der API abgenommen; direkte Browser-
+  Zertifikatsabnahme blieb durch Browser-Sicherheitsregeln blockiert. Kein Warnungsbypass.
+  Der ausdrücklich eingerichtete SSH-Pilot bleibt als bestehender Testzugang erhalten.
+- Inference bleibt auf dem vorhandenen Mac mini; App/API/Worker auf eigener VM. Der
+  Arbeits-Mac wird für deren Ausführung nicht benötigt. Recovery-Identität getrennt sichern.
+- OpenRouter-Testbudget zunächst 0,05 USD pro UTC-Monat; andere Budgets erfordern eine
+  bewusste Änderung. Reservierungen sind Schätzungen, kein hartes Provider-Kontolimit.
+
+## Git und Fortsetzung
+
+Arbeitsbranch milestone/m1-chat, privates Repository sschluet/obdaAI, PR #1.
+Alle Quelländerungen werden pro Checkpoint geprüft, committed und gepusht. Die genaue
+Auslieferung nennt finalen Commit, Head-CI, Serverimage und uncommittete Dateien.
+Nächster Produktmeilenstein ist M2; M1-Live-Nachweise werden nicht durch Mocks ersetzt.
+
+## Historische Zwischenstände
 
 ## M1 Fortsetzung: dauerhafte Chat-Ausführung
 - Procrastinate 3.10.0 integriert; eigenes PostgreSQL-Queue-Schema via Alembic 0003.

@@ -28,6 +28,7 @@ from hub.provider_settings import (
     ProviderInput,
     decrypt,
     encrypt,
+    fresh_cloud_prices,
     local_endpoints,
     public,
     seed,
@@ -115,7 +116,11 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
         started = time.monotonic()
         async with asyncio.timeout(60):
             if external:
+                row = await fresh_cloud_prices(factory, row, p)
                 with factory() as db:
+                    current_test = db.get(ProviderTest, test_id)
+                    assert current_test is not None
+                    current_test.revision = row.revision
                     reserve(db, row, test_id, [part])
                     db.commit()
                 text = "".join(
@@ -177,7 +182,7 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 )
                 for r in rows
             }
-            tests: dict[str, dict[str, str] | None] = {}
+            tests: dict[str, dict[str, str | int] | None] = {}
             for row in rows:
                 probe = db.scalar(
                     select(ProviderTest)
@@ -185,7 +190,11 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                     .order_by(ProviderTest.created.desc())
                     .limit(1)
                 )
-                tests[row.id] = {"status": probe.status, "result": probe.result} if probe else None
+                tests[row.id] = (
+                    {"status": probe.status, "result": probe.result, "revision": probe.revision}
+                    if probe
+                    else None
+                )
             return {
                 "providers": [
                     dict(

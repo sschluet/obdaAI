@@ -4,7 +4,7 @@ Normalisierte Anforderungen des Entwicklungsauftrags vom 04.10.2026. Alle 19
 Abschnitte bleiben Pflichtumfang; M0 ist keine vollständige V1. Persönliche
 Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 
-| Abschnitt | Thema | Meilenstein | Abnahme | offen; Funktion noch nicht implementiert |
+| Abschnitt | Thema | Meilenstein | Abnahme | Verbindlicher Umfang |
 |---|---|---|---|---|
 | R01 | Produkt / V1 | M1-M5 | A01-A14 | AUTO, Projekte, Artefakte, Einstellungen, Skills, Wissen, Aufgaben; keine V1-Pflicht still verschieben |
 | R02 | Bestand / Betriebsziel | M0/M5 | A13/A14 | Eigene Linux-VM, Inference Mac mini, bestehende Dienste erhalten; n8n/Sync inventarisieren |
@@ -30,10 +30,10 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 
 | ID | Meilenstein | Beweisziel | Aktueller Nachweis |
 |---|---|---|---|
-| A01 | M1 | Einfache Frage: lokal, genau ein Router-/Antwortaufruf | Unit/API plus lokaler Live-Smoke: genau ein Routeraufruf mit Inlineantwort |
-| A02 | M1 | Freigegebene komplexe Frage: OpenRouter im selben Chat | API/Adapter mit Mocks; echte OpenRouter-Abnahme offen |
+| A01 | M1 | Einfache Frage: lokal, genau ein Router-/Antwortaufruf | Unit/API plus echte lokale Inlineantworten; Dataset 15/15, einfache Fälle mit genau einem Router-HTTP-Aufruf |
+| A02 | M1 | Freigegebene komplexe Frage: OpenRouter im selben Chat | Echter OpenRouter-Modelltest und AUTO-End-to-End auf eigener VM; gemeldete Kosten, gleicher privater Kontext bleibt lokal |
 | A03 | M0-M5 | LOCAL_ONLY aus Historie/Derivaten/Embedding/Web/n8n niemals extern | Privacy-Vertrags-/API-/HTTP-Gatewaytests bestanden; Web/Embedding/n8n noch offen |
-| A04 | M1 | Provider-/Mac-Ausfall: korrekter Status, kein verbotener Fallback | ConnectError-Mock und Run-Neustart geprüft, kein Cloudfallback; vollständige Live-Ausfallabnahme offen |
+| A04 | M1 | Provider-/Mac-Ausfall: korrekter Status, kein verbotener Fallback | ConnectError-/Gatewaytests plus echte eigene Relay-Unterbrechung und Worker-Neustart mit automatischer Recovery; kein Cloudfallback |
 | A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | offen; Funktion noch nicht implementiert |
 | A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | offen; Funktion noch nicht implementiert |
 | A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | offen; Funktion noch nicht implementiert |
@@ -42,5 +42,5 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 | A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | offen; Funktion noch nicht implementiert |
 | A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | offen; Funktion noch nicht implementiert |
 | A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | offen; Funktion noch nicht implementiert |
-| A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | Browser-/DB-Tests für Login/Historie/manuelle Titel/mobile und Reload während Chat bestanden; PostgreSQL-Queue in CI geprüft; automatische Titel und Zielbetrieb offen |
-| A14 | M0/M5 | Backup/Restore, private GitHub-Versionierung ohne Secrets/Runtime-Daten | Privates Repo und Source-/CI-gitleaks bestanden; Backup/Restore offen |
+| A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | Browser-/DB-Tests inklusive Edit/Retry und mobilen Layouts; PostgreSQL-Queue in CI; echte lokale Titel und Client-Disconnect/Cancel auf eigener VM geprüft |
+| A14 | M0/M5 | Backup/Restore, private GitHub-Versionierung ohne Secrets/Runtime-Daten | Privates Repo/Source-/CI-gitleaks; verschlüsselte eigene VM-Sicherung, Off-VM-Kopie, Prüfsummen und isolierter Restore Schema 0008 mit Provider-Masterkey bestanden |
