@@ -238,10 +238,13 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
 - AES-GCM-Secrets außerhalb des DB-Masterkeys, Einstellungsrevisionen, frische Modellpreise,
   Kostenreservierungen mit bekannten/ unbekannten Usage-Werten, Kontext-/Token-/Zeitlimits.
 - Aggregierte authentifizierte Metriken, persistent begrenzter Login, sichtbare Fehler bei
-  begrenzten Providerantworten. Zwölf synthetische Routerfälle für echte lokale Auswertung.
+  begrenzten Providerantworten. Dreizehn synthetische Routerfälle für echte lokale Auswertung.
 - Lokale Prüfung: 56 Tests bestanden, PostgreSQL-Test wird separat in CI ausgeführt;
   Lint, Typprüfung und Frontendbuild bestanden. Browser: Verbindung/Modelltest und
   Einstellungsänderung mit Revision nachgewiesen; Fixture hat keine echten Modelldaten.
 - OpenRouter-Schlüssel vom Benutzer bereitgestellt; Freigabe für eigene VM und synthetische
   Live-Abnahme bis 0,05 USD liegt vor. Serveraktualisierung und Live-Nachweise folgen;
   hiermit wird noch keine vollständige M1-Abnahme behauptet.
+
+- Vor Deployment korrigiert: SQLAlchemy-Insert quotet den reservierten PostgreSQL-Spaltennamen
+  `window` in der Login-Migration; erneute CI prüft Upgrade/Downgrade/Upgrade.

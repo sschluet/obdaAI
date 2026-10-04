@@ -16,7 +16,15 @@ def upgrade() -> None:
         sa.Column("window", sa.Float(), nullable=False),
         sa.Column("attempts", sa.Integer(), nullable=False),
     )
-    op.execute("INSERT INTO login_throttle (id, window, attempts) VALUES (1, 0, 0)")
+    op.bulk_insert(
+        sa.table(
+            "login_throttle",
+            sa.column("id", sa.Integer()),
+            sa.column("window", sa.Float()),
+            sa.column("attempts", sa.Integer()),
+        ),
+        [{"id": 1, "window": 0, "attempts": 0}],
+    )
 
 
 def downgrade() -> None:

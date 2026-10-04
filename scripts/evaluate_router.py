@@ -30,6 +30,8 @@ async def evaluate(cases: list[dict[str, object]]) -> dict[str, object]:
             decision = await provider.route(parts, ["user"])
             expected = set(case["capabilities"])
             passed = expected.issubset(set(decision.capabilities))
+            if case.get("model_class"):
+                passed = passed and decision.model_class == case["model_class"]
             if case.get("simple"):
                 passed = passed and decision.model_class == "local" and bool(decision.answer)
             results.append(

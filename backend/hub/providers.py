@@ -19,7 +19,11 @@ Return only a JSON object with exactly: capabilities (array of chat,web,retrieva
 artifact,task,workflow), model_class (local or cloud), source_scopes (array of strings),
 reason (short technical summary, not hidden reasoning), answer (string or null).
 For a simple chat question return its complete answer now, model_class local and
-capabilities [chat]. For other requests answer must be null. Multiple capabilities
+capabilities [chat]. For complex reasoning, multi-step proofs, or demanding code review
+choose model_class cloud
+and answer null. Simple drafting, translation, factual questions and arithmetic stay local.
+Requests involving tools or files need their capabilities even if the model stays local.
+For other requests answer must be null. Multiple capabilities
 are possible, independently of model_class. Never claim to have searched, used tools,
 or created files. Never grant permissions. Respond in the user's language."""
 
