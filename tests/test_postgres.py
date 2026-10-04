@@ -12,7 +12,7 @@ from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
 from hub.db import Conversation, Message, Run, RunEvent, session_factory
-from hub.jobs import enqueue, worker_app
+from hub.jobs import enqueue, requeue_stalled, worker_app
 from hub.routing import Route
 from hub.titles import reserve_title
 from sqlalchemy import create_engine, inspect, select, text
@@ -110,7 +110,7 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
             db.scalar(
                 text(
                     "SELECT count(*) FROM hub_queue.procrastinate_jobs "
-                    "WHERE status::text <> 'succeeded'"
+                    "WHERE task_name IN ('hub.chat','hub.title') AND status::text <> 'succeeded'"
                 )
             )
             == 0
@@ -131,12 +131,45 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         enqueue(db, settings, stale.id)
         db.commit()
         stale_id = stale.id
+        db.execute(
+            text(
+                "UPDATE hub_queue.procrastinate_jobs SET status='doing' WHERE args->>'run_id'=:run"
+            ),
+            {"run": stale_id},
+        )
+        db.commit()
+
+    async def recover():
+        async with queue.open_async():
+            await requeue_stalled(queue)
+
+    asyncio.run(recover())
     asyncio.run(drain())
     assert fake.calls == 1
     with factory() as db:
         assert db.get(Run, stale_id).status == "interrupted"
         partial = db.scalar(select(Message).where(Message.content == "SYNTHETIC_CRASH_PARTIAL"))
         assert partial is not None and partial.label == "LOCAL_ONLY"
+    with factory() as db:
+        db.add(Message(conversation_id=chat_id, role="user", content="Häuser wurden gebaut"))
+        db.add(
+            Message(
+                conversation_id=chat_id,
+                role="user",
+                content="archivierter Geheimbegriff",
+                active=False,
+            )
+        )
+        db.commit()
+    with TestClient(create_app(settings)) as client:
+        r = client.post(
+            "/api/login",
+            json={"password": "synthetic-postgres-password"},
+            headers={"Origin": "http://testserver"},
+        )
+        assert r.status_code == 200
+        assert client.get("/api/conversations?q=Haus").json()[0]["id"] == chat_id
+        assert client.get("/api/conversations?q=Geheimbegriff").json() == []
     engine.dispose()
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")

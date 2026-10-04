@@ -63,13 +63,16 @@ async def execute_title(
             return
         messages = db.scalars(
             select(Message)
-            .where(Message.conversation_id == chat_id)
+            .where(Message.conversation_id == chat_id, Message.active.is_(True))
             .order_by(Message.created, Message.id)
             .limit(2)
         ).all()
         parts = [
             ContextPart(
-                content=m.content[:3000], label=Privacy(m.label), source_id=m.id, revision=1
+                content=m.content[:3000],
+                label=Privacy(m.label),
+                source_id=m.id,
+                revision=m.revision,
             )
             for m in messages
         ]

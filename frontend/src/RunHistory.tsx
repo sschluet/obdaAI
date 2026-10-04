@@ -1,0 +1,6 @@
+import {useState} from 'react';
+type History={id:string;status:string;provider:string};
+type RunDetail={id:string;status:string;provider:string;error:string|null;answer:string;context:{parts?:{content:string;label:string;revision:number}[];roles?:string[]};cost:number|null};
+export function RunHistory({runs,load}:{runs:History[];load:(id:string)=>Promise<RunDetail>}){
+const [selected,setSelected]=useState<RunDetail|null>(null),[error,setError]=useState('');
+return <details className="run-history"><summary>Laufhistorie · {runs.length} Versionen</summary><div>{runs.map((run,i)=><button key={run.id} onClick={()=>load(run.id).then(setSelected).catch(()=>setError('Lauf konnte nicht geladen werden'))}>Version {i+1} · {run.status} · {run.provider}</button>)}</div>{error&&<p role="alert">{error}</p>}{selected&&<section><h3>Gespeicherte Version</h3>{selected.context.parts?.map((part,i)=><div key={i}><b>{selected.context.roles?.[i]==='user'?'Du':'Assistent'} · Revision {part.revision} · {part.label}</b><p>{part.content}</p></div>)}<b>Antwort · {selected.status}</b><p>{selected.answer||selected.error||'Keine Antwort gespeichert'}</p><p>Kosten: {selected.cost===null?'unbekannt':selected.cost+' USD (gemessen)'}</p></section>}</details>}

@@ -38,6 +38,8 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column(Text)
     label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     created: Mapped[float] = mapped_column(Float, default=time.time)
 
 
@@ -46,6 +48,9 @@ class Run(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
     status: Mapped[str] = mapped_column(String(30), default="routing")
+    request_key: Mapped[str | None] = mapped_column(String(36), unique=True, nullable=True)
+    request_digest: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    context_snapshot: Mapped[str] = mapped_column(Text, default="", server_default="")
     provider: Mapped[str] = mapped_column(String(40), default="local")
     reason: Mapped[str] = mapped_column(String(240), default="")
     error: Mapped[str | None] = mapped_column(String(240), nullable=True)

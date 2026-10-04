@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import secrets
 import time
@@ -11,15 +12,16 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import String, func, literal_column, or_, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.elements import ColumnElement
 
 from hub.auth import check_origin, require_session, token_hash, verify_password
 from hub.config import Settings
 from hub.db import Conversation, LoginSession, Message, Run, RunEvent, session_factory
 from hub.execution import execute_run
 from hub.jobs import enqueue
-from hub.policy import Privacy
+from hub.policy import ContextPart, Privacy
 from hub.providers import Providers
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
@@ -37,6 +39,7 @@ class LoginInput(Input):
 
 class ChatInput(Input):
     content: str = Field(min_length=1, max_length=16000)
+    request_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
 
 
 class ConversationInput(Input):
@@ -46,6 +49,15 @@ class ConversationInput(Input):
 class ConversationEdit(Input):
     title: str | None = Field(default=None, min_length=1, max_length=160)
     archived: bool | None = None
+
+
+class RetryInput(Input):
+    request_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+
+
+class MessageEdit(ChatInput):
+    revision: int = Field(ge=1)
+    cloud_allowed: bool = False
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -149,11 +161,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session: SessionDependency, q: str = "", archived: bool = False
     ) -> list[dict[str, object]]:
         with factory() as db:
-            chats = db.scalars(
-                select(Conversation)
-                .where(Conversation.archived == archived)
-                .order_by(Conversation.created.desc())
-            ).all()
+            statement = select(Conversation).where(Conversation.archived == archived)
+            title_match: ColumnElement[bool]
+            message_match: ColumnElement[bool]
+            if q:
+                if len(q) > 200:
+                    raise HTTPException(422, "Suchtext zu lang")
+                if db.bind is not None and db.bind.dialect.name == "postgresql":
+                    config: ColumnElement[str] = literal_column("'german'", type_=String())
+                    query = func.websearch_to_tsquery(config, q)
+                    title_match = func.to_tsvector(config, Conversation.title).op("@@")(query)
+                    message_match = func.to_tsvector(config, Message.content).op("@@")(query)
+                else:
+                    title_match = Conversation.title.icontains(q, autoescape=True)
+                    message_match = Message.content.icontains(q, autoescape=True)
+                statement = statement.where(
+                    or_(
+                        title_match,
+                        select(Message.id)
+                        .where(
+                            Message.conversation_id == Conversation.id,
+                            Message.active.is_(True),
+                            message_match,
+                        )
+                        .exists(),
+                    )
+                )
+            chats = db.scalars(statement.order_by(Conversation.created.desc()).limit(100)).all()
             return [
                 {
                     "id": c.id,
@@ -163,16 +197,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "archived": c.archived,
                 }
                 for c in chats
-                if q.lower() in c.title.lower()
-                or db.scalar(
-                    select(Message.id)
-                    .where(
-                        Message.conversation_id == c.id,
-                        Message.content.icontains(q, autoescape=True),
-                    )
-                    .limit(1)
-                )
-                is not None
             ]
 
     @app.post("/api/conversations")
@@ -197,7 +221,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not c:
                 raise HTTPException(404, "Gespräch nicht gefunden")
             messages = db.scalars(
-                select(Message).where(Message.conversation_id == chat_id).order_by(Message.created)
+                select(Message)
+                .where(Message.conversation_id == chat_id, Message.active.is_(True))
+                .order_by(Message.created, Message.id)
             ).all()
             runs = db.scalars(
                 select(Run).where(Run.conversation_id == chat_id).order_by(Run.started)
@@ -208,12 +234,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
                 "messages": [
-                    {"id": m.id, "role": m.role, "content": m.content, "label": m.label}
+                    {
+                        "id": m.id,
+                        "role": m.role,
+                        "content": m.content,
+                        "label": m.label,
+                        "revision": m.revision,
+                    }
                     for m in messages
                 ],
                 "runs": [
                     {
                         "id": x.id,
+                        "request_id": x.request_key,
                         "status": x.status,
                         "provider": x.provider,
                         "reason": x.reason,
@@ -280,19 +313,102 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> StreamingResponse:
         if not body.content.strip():
             raise HTTPException(422, "Nachricht ist leer")
+        run_id = create_run(chat_id, body.request_id, content=body.content)
+        start_development_run(run_id)
+        return response_for(run_id, request)
+
+    def create_run(
+        chat_id: str,
+        request_id: str | None,
+        *,
+        content: str | None = None,
+        edit: tuple[str, MessageEdit] | None = None,
+    ) -> str:
+        action = {
+            "chat_id": chat_id,
+            "content": content,
+            "edit": [edit[0], edit[1].model_dump()] if edit else None,
+        }
+        digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
         with factory() as db:
-            c = db.get(Conversation, chat_id)
+            if request_id:
+                previous = db.scalar(select(Run).where(Run.request_key == request_id))
+                if previous:
+                    if previous.conversation_id != chat_id or previous.request_digest != digest:
+                        raise HTTPException(409, "Anfrage-ID gehört zu anderem Gespräch")
+                    return previous.id
+            c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
             if not c or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
-            label = Privacy.CLOUD_ALLOWED if c.cloud_allowed else Privacy.LOCAL_ONLY
-            messages = db.scalars(select(Message).where(Message.conversation_id == chat_id)).all()
-            if (
-                len(messages) >= 40
-                or sum(len(m.content) for m in messages) + len(body.content) > 24000
+            if db.scalar(
+                select(Run.id).where(
+                    Run.conversation_id == chat_id, Run.status.in_(ACTIVE_STATUSES)
+                )
             ):
+                raise HTTPException(409, "In diesem Gespräch läuft bereits eine Antwort")
+            messages = list(
+                db.scalars(
+                    select(Message)
+                    .where(Message.conversation_id == chat_id, Message.active.is_(True))
+                    .order_by(Message.created, Message.id)
+                )
+            )
+            if edit:
+                message_id, change = edit
+                target = next(
+                    (m for m in messages if m.id == message_id and m.role == "user"), None
+                )
+                if not target:
+                    raise HTTPException(404, "Aktive Benutzernachricht nicht gefunden")
+                if target.revision != change.revision:
+                    raise HTTPException(409, "Nachricht wurde inzwischen geändert; neu laden")
+                if change.cloud_allowed and (not c.cloud_allowed or not cfg.cloud_enabled):
+                    raise HTTPException(409, "Cloudfreigabe für diese Änderung fehlt")
+                cut = messages.index(target)
+                for old in messages[cut + 1 :]:
+                    old.active = False
+                messages = messages[: cut + 1]
+                target.content, target.revision = change.content, target.revision + 1
+                target.label = Privacy.CLOUD_ALLOWED if change.cloud_allowed else Privacy.LOCAL_ONLY
+            elif content is not None:
+                new = Message(
+                    conversation_id=chat_id,
+                    role="user",
+                    content=content,
+                    label=Privacy.CLOUD_ALLOWED if c.cloud_allowed else Privacy.LOCAL_ONLY,
+                )
+                db.add(new)
+                db.flush()
+                messages.append(new)
+            else:
+                target = next((m for m in reversed(messages) if m.role == "user"), None)
+                if target is None:
+                    raise HTTPException(409, "Keine Nachricht zum Wiederholen vorhanden")
+                cut = messages.index(target)
+                for old in messages[cut + 1 :]:
+                    old.active = False
+                messages = messages[: cut + 1]
+            if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
-            db.add(Message(conversation_id=chat_id, role="user", content=body.content, label=label))
-            run = Run(conversation_id=chat_id, status="queued")
+            snapshot = {
+                "parts": [
+                    ContextPart(
+                        content=m.content,
+                        label=Privacy(m.label),
+                        source_id=m.id,
+                        revision=m.revision,
+                    ).model_dump(mode="json")
+                    for m in messages
+                ],
+                "roles": [m.role for m in messages],
+            }
+            run = Run(
+                conversation_id=chat_id,
+                status="queued",
+                request_key=request_id,
+                context_snapshot=json.dumps(snapshot, ensure_ascii=False),
+                request_digest=digest,
+            )
             db.add(run)
             try:
                 db.flush()
@@ -301,17 +417,76 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 db.commit()
             except IntegrityError:
                 db.rollback()
+                if request_id:
+                    previous = db.scalar(
+                        select(Run).where(
+                            Run.request_key == request_id, Run.conversation_id == chat_id
+                        )
+                    )
+                    if previous and previous.request_digest == digest:
+                        return previous.id
                 raise HTTPException(409, "In diesem Gespräch läuft bereits eine Antwort") from None
-            run_id = run.id
+            return run.id
+
+    def start_development_run(run_id: str) -> None:
         if cfg.database_url.startswith("sqlite"):
             task = asyncio.create_task(execute_run(factory, cfg, app.state.providers, run_id))
             app.state.tasks.add(task)
             task.add_done_callback(app.state.tasks.discard)
+
+    def response_for(run_id: str, request: Request) -> StreamingResponse:
         return StreamingResponse(
             watch(run_id, request),
             media_type="text/event-stream",
             headers={"X-Accel-Buffering": "no"},
         )
+
+    @app.post("/api/conversations/{chat_id}/retry")
+    async def retry(
+        chat_id: str, body: RetryInput, request: Request, session: SessionDependency
+    ) -> StreamingResponse:
+        run_id = create_run(chat_id, body.request_id)
+        start_development_run(run_id)
+        return response_for(run_id, request)
+
+    @app.patch("/api/conversations/{chat_id}/messages/{message_id}")
+    async def edit_message(
+        chat_id: str,
+        message_id: str,
+        body: MessageEdit,
+        request: Request,
+        session: SessionDependency,
+    ) -> StreamingResponse:
+        if not body.content.strip():
+            raise HTTPException(422, "Nachricht ist leer")
+        run_id = create_run(chat_id, body.request_id, edit=(message_id, body))
+        start_development_run(run_id)
+        return response_for(run_id, request)
+
+    @app.get("/api/runs/{run_id}")
+    def run_detail(run_id: str, session: SessionDependency) -> dict[str, object]:
+        with factory() as db:
+            run = db.get(Run, run_id)
+            if not run:
+                raise HTTPException(404, "Lauf nicht gefunden")
+            return {
+                "id": run.id,
+                "status": run.status,
+                "provider": run.provider,
+                "error": run.error,
+                "context": json.loads(run.context_snapshot or "{}"),
+                "answer": "".join(
+                    json.loads(e.payload).get("text", "")
+                    for e in db.scalars(
+                        select(RunEvent)
+                        .where(RunEvent.run_id == run_id, RunEvent.kind == "delta")
+                        .order_by(RunEvent.sequence)
+                    )
+                ),
+                "started": run.started,
+                "finished": run.finished,
+                "cost": run.cost,
+            }
 
     async def watch(run_id: str, request: Request, after: int = 0) -> AsyncIterator[str]:
         yield "event: run\ndata: " + json.dumps({"id": run_id}) + "\n\n"

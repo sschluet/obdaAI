@@ -49,20 +49,31 @@ async def execute_run(
         c = db.get(Conversation, chat_id)
         assert c is not None
         messages = db.scalars(
-            select(Message).where(Message.conversation_id == chat_id).order_by(Message.created)
+            select(Message)
+            .where(Message.conversation_id == chat_id, Message.active.is_(True))
+            .order_by(Message.created, Message.id)
         ).all()
         parts = [
-            ContextPart(content=m.content, label=Privacy(m.label), source_id=m.id, revision=1)
+            ContextPart(
+                content=m.content, label=Privacy(m.label), source_id=m.id, revision=m.revision
+            )
             for m in messages
         ]
         roles = [m.role for m in messages]
+        if run.context_snapshot:
+            snapshot = json.loads(run.context_snapshot)
+            parts = [ContextPart.model_validate(p) for p in snapshot["parts"]]
+            roles = snapshot["roles"]
         label = (
             Privacy.LOCAL_ONLY
             if any(p.label == Privacy.LOCAL_ONLY for p in parts)
             else Privacy.CLOUD_ALLOWED
         )
         grants = (
-            [CloudGrant(source_id=p.source_id, revision=1, provider_id="openrouter") for p in parts]
+            [
+                CloudGrant(source_id=p.source_id, revision=p.revision, provider_id="openrouter")
+                for p in parts
+            ]
             if c.cloud_allowed
             else []
         )

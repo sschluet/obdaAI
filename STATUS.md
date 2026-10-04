@@ -216,3 +216,17 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   Prüfbelege enthalten nur synthetische Abnahmedaten und liegen ausschließlich in `.local/`.
 - M1 bleibt Teilstand. Nächster Funktionsschritt: Nachrichtenedit/Retry mit revisionsgebundenen
   Labels. Direkte Browser-TLS-Abnahme, automatische Off-VM-Sicherung und Alarmierung offen.
+
+## M1: Bearbeiten, Retry, Volltextsuche und Worker-Recovery
+- Bearbeiten erzeugt eine neue Nachrichtenrevision; ohne neue explizite Freigabe LOCAL_ONLY.
+  Folgeantworten werden aus dem aktiven Zweig genommen, bleiben in alten Runs erhalten.
+  Jeder Run hält den genauen Kontext mit Label und Revision; UI-Laufhistorie zeigt alte Antworten.
+- Expliziter Retry und neue Nachrichten besitzen aktionsgebundene Idempotenzschlüssel.
+  Doppelzustellung startet keinen zweiten Modellaufruf. Aktive Runs sperren Bearbeiten/Retry.
+- PostgreSQL: deutsche Volltextsuche mit GIN, Websearch-Syntax und aktivem Nachrichtenfilter;
+  SQLite: begrenzte Entwicklungssuche. Höchstens 100 Suchresultate, kein N+1-Scan.
+- Upstream-Procrastinate-Heartbeats erkennen tote Worker; interne Queue-Wartung stellt nur
+  diese Chat-/Titeljobs zur Reconciliation zu. Keine Wiederholung bezahlter/teilweiser Antworten,
+  keine zusätzliche fachliche Terminierungsengine. Chat priorisiert vor Titeln.
+- Lokal 43 Tests bestanden, ein PostgreSQL-Test lokal übersprungen; er prüft in CI zusätzlich
+  echte Heartbeat-Recovery und deutsche Wortstämme. Providerverwaltung/Budgets weiterhin in Arbeit.

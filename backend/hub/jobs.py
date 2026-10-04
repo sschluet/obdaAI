@@ -33,7 +33,9 @@ def enqueue(db: Session, cfg: Settings, run_id: str) -> None:
     if not isinstance(raw, psycopg.Connection):
         raise ValueError("Unexpected database driver")
     raw.execute("SET LOCAL search_path TO hub_queue, public")
-    queue.configure_task(name="hub.chat", queue="chat", connection=raw).defer(run_id=run_id)
+    queue.configure_task(name="hub.chat", queue="chat", priority=10, connection=raw).defer(
+        run_id=run_id
+    )
 
 
 def enqueue_title(db: Session, cfg: Settings, chat_id: str) -> None:
@@ -42,7 +44,9 @@ def enqueue_title(db: Session, cfg: Settings, chat_id: str) -> None:
     if not isinstance(raw, psycopg.Connection):
         raise ValueError("Durable queue requires a PostgreSQL psycopg transaction")
     raw.execute("SET LOCAL search_path TO hub_queue, public")
-    queue.configure_task(name="hub.title", queue="titles", connection=raw).defer(chat_id=chat_id)
+    queue.configure_task(name="hub.title", queue="titles", priority=-10, connection=raw).defer(
+        chat_id=chat_id
+    )
 
 
 def worker_app(cfg: Settings) -> procrastinate.App:
@@ -88,15 +92,36 @@ def worker_app(cfg: Settings) -> procrastinate.App:
     async def title(chat_id: str) -> None:
         await execute_title(factory, providers, chat_id)
 
+    @queue.periodic(cron="* * * * *")
+    @queue.task(
+        name="hub.reconcile",
+        queue="maintenance",
+        priority=20,
+        queueing_lock="hub.reconcile",
+        retry=False,
+    )
+    async def reconcile(timestamp: int) -> None:
+        await requeue_stalled(queue)
+
     return queue
+
+
+async def requeue_stalled(queue: procrastinate.App) -> None:
+    # Only upstream heartbeats prove a worker stalled; never infer from job age.
+    for task in ("hub.chat", "hub.title"):
+        for job in await queue.job_manager.get_stalled_jobs(
+            task_name=task, seconds_since_heartbeat=60
+        ):
+            await queue.job_manager.retry_job(job)
 
 
 async def main() -> None:
     queue = worker_app(Settings.from_env())
     async with queue.open_async():
+        await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
-            queues=["chat", "titles"], concurrency=1, shutdown_graceful_timeout=95
+            queues=["chat", "titles", "maintenance"], concurrency=1, shutdown_graceful_timeout=95
         )
 
 
