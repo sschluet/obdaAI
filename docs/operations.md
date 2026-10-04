@@ -66,8 +66,8 @@ nicht. Das Öffnen eines laufenden Gesprächs verbindet die UI erneut. API-Neust
 ändern PostgreSQL-Runstatus nicht. SQLite bleibt ausschließlich Entwicklung: separater
 Async-Task, keine dauerhafte Queue, API-Neustart markiert offene Runs unterbrochen.
 
-Abbruch vor Workerstart setzt den Run sofort auf cancelled; danach prüft die Ausführung
-Abbruch vor/nach Routing und zwischen Streamchunks. Provider-Timeouterror spätestens
+Abbruch vor Workerstart setzt den Run sofort auf cancelled; danach überwacht die
+Ausführung alle 200 ms die Abbruchanforderung, auch während Provider-I/O. Provider-Timeouterror spätestens
 nach 30 Sekunden bzw. Gesamtlimit 90 Sekunden. Kein automatischer Provider-Retry,
 kein Cloudfallback. Worker-Shutdown lässt bis zu 95 Sekunden zum Abschluss.
 Bei hartem Workerabbruch den gestoppten Prozess zuerst nachweisen und den stalled Job

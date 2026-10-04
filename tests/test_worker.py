@@ -83,3 +83,53 @@ def test_execution_survives_display_disconnect_and_preserves_partial(setup):
         events = db.scalars(select(RunEvent).where(RunEvent.run_id == run_id)).all()
         assert any(json.loads(e.payload).get("text") == "SYNTHETIC_PARTIAL" for e in events)
     assert "PRIVATE_ERROR" not in client.get(f"/api/runs/{run_id}/events").text
+
+
+def test_cancel_interrupts_pending_provider_without_browser(setup):
+    app, client, headers, _ = setup
+    chat_id = new_chat(client, headers)
+    entered = asyncio.Event()
+
+    class Waiting(FakeProviders):
+        async def route(self, parts, roles):
+            entered.set()
+            await asyncio.sleep(60)
+            raise AssertionError("Cancellation did not interrupt provider")
+
+    provider = Waiting()
+    with app.state.sessions() as db:
+        run = Run(conversation_id=chat_id, status="queued")
+        db.add(run)
+        db.add(Message(conversation_id=chat_id, role="user", content="fixture"))
+        db.commit()
+        run_id = run.id
+
+    async def cancel_pending():
+        task = asyncio.create_task(
+            execute_run(app.state.sessions, app.state.settings, provider, run_id)
+        )
+        await entered.wait()
+        with app.state.sessions() as db:
+            current = db.get(Run, run_id)
+            current.cancel_requested = True
+            db.commit()
+        await asyncio.wait_for(task, timeout=2)
+
+    asyncio.run(cancel_pending())
+    assert client.get("/api/conversations/" + chat_id).json()["runs"][0]["status"] == "cancelled"
+
+
+def test_queued_run_blocks_second_message_and_delete(setup):
+    app, client, headers, _ = setup
+    chat_id = new_chat(client, headers)
+    with app.state.sessions() as db:
+        db.add(Run(conversation_id=chat_id, status="queued"))
+        db.commit()
+    assert (
+        client.post(
+            f"/api/conversations/{chat_id}/messages", json={"content": "fixture"}, headers=headers
+        ).status_code
+        == 409
+    )
+    assert client.delete("/api/conversations/" + chat_id, headers=headers).status_code == 409
+    assert client.get("/api/conversations/" + chat_id).json()["messages"] == []

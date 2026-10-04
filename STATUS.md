@@ -92,6 +92,10 @@ nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
 - Inhaltssuche ergänzt (Substring, keine linguistische PostgreSQL-Volltextindizierung).
 - Bei manueller Wiederaufnahme nach nachgewiesenem Workercrash: Teilantwort aus
   Ereignissen herstellen, interrupted markieren, keinen Provider automatisch wiederholen.
-- Lokal 26 Tests bestanden, PostgreSQL-Integration mangels lokaler DB übersprungen.
+- Lokal 28 Tests bestanden, PostgreSQL-Integration mangels lokaler DB übersprungen.
   Neue CI-Integration prüft echte Queue, atomaren Rollback, API-Restart und Worker.
   Dieser Abschnitt ist ein Teilcheckpoint; M1/V1 bleiben offen.
+
+Erster Queue-CI-Lauf fand psycopg-Platzhalterinterpretation im upstream SQL-Skript;
+Migration auf parameterlose Ausführung über die gleiche Treiberverbindung korrigiert.
+Browser-Reload-Prüfung lokal bestanden. Pending Provider-I/O ist jetzt gezielt abbrechbar.

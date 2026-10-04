@@ -126,7 +126,7 @@ async def execute_run(
                     raise ValueError("Empty provider response")
                 status = "succeeded"
         except asyncio.CancelledError:
-            status = "cancelled"
+            status = "cancelled" if cancelled() else "interrupted"
         except NotImplementedError:
             update(error="Benötigte Werkzeuge sind in diesem Meilenstein noch nicht verfügbar")
             yield (
@@ -162,16 +162,29 @@ async def execute_run(
                 db.commit()
         yield ("done", {"status": status})
 
-    sequence = 0
-    async for kind, value in generate():
-        sequence += 1
-        with factory() as db:
-            db.add(
-                RunEvent(
-                    run_id=run_id,
-                    sequence=sequence,
-                    kind=kind,
-                    payload=json.dumps(value, ensure_ascii=False),
+    async def persist() -> None:
+        sequence = 0
+        async for kind, value in generate():
+            sequence += 1
+            with factory() as db:
+                db.add(
+                    RunEvent(
+                        run_id=run_id,
+                        sequence=sequence,
+                        kind=kind,
+                        payload=json.dumps(value, ensure_ascii=False),
+                    )
                 )
-            )
-            db.commit()
+                db.commit()
+
+    task = asyncio.create_task(persist())
+    try:
+        while not task.done():
+            await asyncio.wait({task}, timeout=0.2)
+            if cancelled() and not task.done():
+                task.cancel()
+        await task
+    except asyncio.CancelledError:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        raise

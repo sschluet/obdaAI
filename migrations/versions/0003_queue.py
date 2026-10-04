@@ -15,7 +15,8 @@ def upgrade() -> None:
         return
     bind.exec_driver_sql("CREATE SCHEMA hub_queue")
     bind.exec_driver_sql("SET LOCAL search_path TO hub_queue, public")
-    bind.exec_driver_sql(SchemaManager.get_schema())
+    # No parameters: preserve upstream percent signs and multi-statement SQL.
+    bind.connection.driver_connection.execute(SchemaManager.get_schema())
     bind.exec_driver_sql("SET LOCAL search_path TO public")
 
 
