@@ -47,3 +47,34 @@ Lokale Backends können nach Liveprüfung `HUB_LOCAL_DISABLE_THINKING=true` verw
 Dies ergänzt ausschließlich beim lokalen Adapter das nachgewiesen unterstützte
 `enable_thinking:false`; standardmäßig wird kein vendorbezogenes Feld gesendet.
 Der Router hat 1.024 Outputtokens und maximal einen Schema-Reparaturversuch.
+
+## M1 Queue und Wiederaufnahme
+`uv run alembic upgrade head` legt unter PostgreSQL zusätzlich das dedizierte Schema
+`hub_queue` aus Procrastinate 3.10.0 an. Ausschließlich eine neue, eigene Hub-DB verwenden.
+Die Migration läuft in derselben Transaktion und installiert keinen Zeitplan.
+API und Worker verwenden dieselbe `HUB_DATABASE_URL` und Provider-Konfiguration:
+
+```sh
+uv run uvicorn hub.api:app --host 127.0.0.1 --port 8765
+uv run python -m hub.jobs
+```
+
+Beide Befehle benötigen jeweils einen eigenen Prozess. Worker-Concurrency ist 1.
+Ein Run und sein Queue-Job werden atomar auf derselben psycopg-Verbindung committed.
+Der Browser beobachtet persistierte SSE-Ereignisse; Schließen/Reload beendet den Run
+nicht. Das Öffnen eines laufenden Gesprächs verbindet die UI erneut. API-Neustarts
+ändern PostgreSQL-Runstatus nicht. SQLite bleibt ausschließlich Entwicklung: separater
+Async-Task, keine dauerhafte Queue, API-Neustart markiert offene Runs unterbrochen.
+
+Abbruch vor Workerstart setzt den Run sofort auf cancelled; danach prüft die Ausführung
+Abbruch vor/nach Routing und zwischen Streamchunks. Provider-Timeouterror spätestens
+nach 30 Sekunden bzw. Gesamtlimit 90 Sekunden. Kein automatischer Provider-Retry,
+kein Cloudfallback. Worker-Shutdown lässt bis zu 95 Sekunden zum Abschluss.
+Bei hartem Workerabbruch den gestoppten Prozess zuerst nachweisen und den stalled Job
+mit den Procrastinate-Verwaltungsfunktionen gezielt erneut dispatchen. Die Taskfunktion
+rekonstruiert gespeicherte Delta-Ereignisse als LOCAL_ONLY-Teilantwort und markiert den
+Run interrupted, ohne den Provider erneut aufzurufen. Automatische stalled-Reconciliation,
+UI-Administration und Retention für Queue/Ereignisse sind noch offen.
+
+Quelle für atomare Übergabe: [Procrastinate external connections](https://procrastinate.readthedocs.io/en/stable/howto/production/external_connection.html).
+Schema und Updates: [offizielle Migrationsanleitung](https://procrastinate.readthedocs.io/en/stable/howto/production/migrations.html).

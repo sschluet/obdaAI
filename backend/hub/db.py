@@ -1,7 +1,7 @@
 import time
 import uuid
 
-from sqlalchemy import Boolean, Float, ForeignKey, Index, String, Text, create_engine, text
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -59,10 +59,18 @@ class Run(Base):
             "one_active_run_per_chat",
             "conversation_id",
             unique=True,
-            sqlite_where=text("status IN ('routing', 'streaming')"),
-            postgresql_where=text("status IN ('routing', 'streaming')"),
+            sqlite_where=text("status IN ('queued', 'routing', 'streaming')"),
+            postgresql_where=text("status IN ('queued', 'routing', 'streaming')"),
         ),
     )
+
+
+class RunEvent(Base):
+    __tablename__ = "run_events"
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), primary_key=True)
+    sequence: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    payload: Mapped[str] = mapped_column(Text)
 
 
 def session_factory(url: str) -> sessionmaker[Session]:

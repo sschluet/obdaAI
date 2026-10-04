@@ -16,10 +16,13 @@ from sqlalchemy.exc import IntegrityError
 
 from hub.auth import check_origin, require_session, token_hash, verify_password
 from hub.config import Settings
-from hub.db import Conversation, LoginSession, Message, Run, session_factory
-from hub.policy import CloudGrant, ContextPart, Privacy
+from hub.db import Conversation, LoginSession, Message, Run, RunEvent, session_factory
+from hub.execution import execute_run
+from hub.jobs import enqueue
+from hub.policy import Privacy
 from hub.providers import Providers
-from hub.routing import Capability
+
+ACTIVE_STATUSES = ["queued", "routing", "streaming"]
 
 SessionDependency = Annotated[LoginSession, Depends(require_session)]
 
@@ -51,20 +54,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        # Restart never silently resumes an HTTP-bound generation.
+        # SQLite is a development runner; PostgreSQL runs belong to the worker.
+        if not cfg.database_url.startswith("sqlite"):
+            yield
+            return
         with factory() as db:
-            for run in db.scalars(select(Run).where(Run.status.in_(["routing", "streaming"]))):
+            for run in db.scalars(select(Run).where(Run.status.in_(ACTIVE_STATUSES))):
                 run.status = "interrupted"
                 run.error = "Serverneustart; Antwort unterbrochen"
                 run.finished = time.time()
             db.commit()
         yield
+        for task in list(application.state.tasks):
+            task.cancel()
+        await asyncio.gather(*application.state.tasks, return_exceptions=True)
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     app.state.settings = cfg
     app.state.sessions = factory
     app.state.providers = Providers(cfg)
     app.state.login_attempts = []
+    app.state.tasks = set()
 
     @app.middleware("http")
     async def security_headers(
@@ -153,6 +163,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 }
                 for c in chats
                 if q.lower() in c.title.lower()
+                or db.scalar(
+                    select(Message.id)
+                    .where(
+                        Message.conversation_id == c.id,
+                        Message.content.icontains(q, autoescape=True),
+                    )
+                    .limit(1)
+                )
+                is not None
             ]
 
     @app.post("/api/conversations")
@@ -222,11 +241,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not c:
                 raise HTTPException(404, "Gespräch nicht gefunden")
             if db.scalar(
-                select(Run).where(
-                    Run.conversation_id == chat_id, Run.status.in_(["routing", "streaming"])
-                )
+                select(Run).where(Run.conversation_id == chat_id, Run.status.in_(ACTIVE_STATUSES))
             ):
                 raise HTTPException(409, "Lauf zuerst abbrechen")
+            for run in db.scalars(select(Run).where(Run.conversation_id == chat_id)):
+                for entry in db.scalars(select(RunEvent).where(RunEvent.run_id == run.id)):
+                    db.delete(entry)
+            db.flush()
             for model in (Message, Run):
                 for row in db.scalars(select(model).where(model.conversation_id == chat_id)):
                     db.delete(row)
@@ -241,6 +262,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not run:
                 raise HTTPException(404, "Lauf nicht gefunden")
             run.cancel_requested = True
+            if run.status == "queued":
+                run.status, run.finished = "cancelled", time.time()
             db.commit()
         return {"ok": True}
 
@@ -255,142 +278,64 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not c or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
             label = Privacy.CLOUD_ALLOWED if c.cloud_allowed else Privacy.LOCAL_ONLY
+            messages = db.scalars(select(Message).where(Message.conversation_id == chat_id)).all()
+            if (
+                len(messages) >= 40
+                or sum(len(m.content) for m in messages) + len(body.content) > 24000
+            ):
+                raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
             db.add(Message(conversation_id=chat_id, role="user", content=body.content, label=label))
-            run = Run(conversation_id=chat_id)
+            run = Run(conversation_id=chat_id, status="queued")
             db.add(run)
             try:
+                db.flush()
+                if not cfg.database_url.startswith("sqlite"):
+                    enqueue(db, cfg, run.id)
                 db.commit()
             except IntegrityError:
                 db.rollback()
                 raise HTTPException(409, "In diesem Gespräch läuft bereits eine Antwort") from None
             run_id = run.id
-            messages = db.scalars(
-                select(Message).where(Message.conversation_id == chat_id).order_by(Message.created)
-            ).all()
-            if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
-                run.status, run.error, run.finished = (
-                    "failed",
-                    "Kontextgrenze erreicht",
-                    time.time(),
-                )
-                db.commit()
-                raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
-            parts = [
-                ContextPart(content=m.content, label=Privacy(m.label), source_id=m.id, revision=1)
-                for m in messages
-            ]
-            roles = [m.role for m in messages]
-            grants = (
-                [
-                    CloudGrant(source_id=p.source_id, revision=1, provider_id="openrouter")
-                    for p in parts
-                ]
-                if c.cloud_allowed
-                else []
-            )
-
-        def event(kind: str, value: object) -> str:
-            return "event: " + kind + "\ndata: " + json.dumps(value, ensure_ascii=False) + "\n\n"
-
-        def update(**values: object) -> None:
-            with factory() as db:
-                current = db.get(Run, run_id)
-                if current:
-                    for key, value in values.items():
-                        setattr(current, key, value)
-                    db.commit()
-
-        def cancelled() -> bool:
-            with factory() as db:
-                current = db.get(Run, run_id)
-                return bool(current and current.cancel_requested)
-
-        async def generate() -> AsyncIterator[str]:
-            output = ""
-            status = "failed"
-            started = time.monotonic()
-            yield event("run", {"id": run_id})
-            yield event("status", {"message": "Anfrage wird lokal eingeordnet"})
-            try:
-                async with asyncio.timeout(90):
-                    route = await app.state.providers.route(parts, roles)
-                    update(router_seconds=time.monotonic() - started, reason=route.reason)
-                    if cancelled() or await request.is_disconnected():
-                        raise asyncio.CancelledError
-                    unsupported = set(route.capabilities) - {Capability.CHAT}
-                    if unsupported:
-                        raise NotImplementedError
-                    external = route.model_class == "cloud"
-                    if external and (
-                        not cfg.cloud_enabled or any(p.label == Privacy.LOCAL_ONLY for p in parts)
-                    ):
-                        # Complex requests can still be answered locally. This is a
-                        # policy choice, not an external provider outage fallback.
-                        external = False
-                        yield event(
-                            "status", {"message": "Datenschutzregel hält diese Antwort lokal"}
-                        )
-                    provider = "openrouter" if external else "local"
-                    update(status="streaming", provider=provider)
-                    yield event("provider", {"name": provider, "reason": route.reason})
-                    if route.answer:
-                        output = route.answer
-                        update(first_content_seconds=time.monotonic() - started)
-                        yield event("delta", {"text": output})
-                    else:
-                        async for chunk in app.state.providers.stream(
-                            parts, roles, external=external, grants=grants
-                        ):
-                            if cancelled() or await request.is_disconnected():
-                                raise asyncio.CancelledError
-                            if not output:
-                                update(first_content_seconds=time.monotonic() - started)
-                            output += chunk
-                            if len(output) > 32000:
-                                raise ValueError("Output limit exceeded")
-                            yield event("delta", {"text": chunk})
-                    if not output:
-                        raise ValueError("Empty provider response")
-                    status = "succeeded"
-            except asyncio.CancelledError:
-                status = "cancelled"
-            except NotImplementedError:
-                update(error="Benötigte Werkzeuge sind in diesem Meilenstein noch nicht verfügbar")
-                yield event(
-                    "error",
-                    {
-                        "message": "Diese Anfrage benötigt Funktionen aus M2–M4. "
-                        "Es wurde kein Werkzeug ausgeführt."
-                    },
-                )
-            except Exception:
-                update(error="Provider nicht verfügbar oder ungültige Antwort")
-                yield event(
-                    "error",
-                    {
-                        "message": "Antwort fehlgeschlagen. Lokalen Dienst und Provider prüfen; "
-                        "kein Cloud-Fallback."
-                    },
-                )
-            finally:
-                with factory() as db:
-                    if output:
-                        db.add(
-                            Message(
-                                conversation_id=chat_id,
-                                role="assistant",
-                                content=output,
-                                label=label,
-                            )
-                        )
-                    current = db.get(Run, run_id)
-                    if current:
-                        current.status, current.finished = status, time.time()
-                    db.commit()
-            yield event("done", {"status": status})
-
+        if cfg.database_url.startswith("sqlite"):
+            task = asyncio.create_task(execute_run(factory, cfg, app.state.providers, run_id))
+            app.state.tasks.add(task)
+            task.add_done_callback(app.state.tasks.discard)
         return StreamingResponse(
-            generate(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"}
+            watch(run_id, request),
+            media_type="text/event-stream",
+            headers={"X-Accel-Buffering": "no"},
+        )
+
+    async def watch(run_id: str, request: Request, after: int = 0) -> AsyncIterator[str]:
+        yield "event: run\ndata: " + json.dumps({"id": run_id}) + "\n\n"
+        yield 'event: status\ndata: {"message": "Gespeicherten Lauf verfolgen"}\n\n'
+        while not await request.is_disconnected():
+            with factory() as db:
+                events = db.scalars(
+                    select(RunEvent)
+                    .where(RunEvent.run_id == run_id, RunEvent.sequence > after)
+                    .order_by(RunEvent.sequence)
+                ).all()
+                run = db.get(Run, run_id)
+            for entry in events:
+                after = entry.sequence
+                yield f"id: {after}\nevent: {entry.kind}\ndata: {entry.payload}\n\n"
+                if entry.kind == "done":
+                    return
+            if run and run.status not in ACTIVE_STATUSES and not events:
+                yield "event: done\ndata: " + json.dumps({"status": run.status}) + "\n\n"
+                return
+            await asyncio.sleep(0.1)
+
+    @app.get("/api/runs/{run_id}/events")
+    async def run_events(
+        run_id: str, request: Request, session: SessionDependency, after: int = 0
+    ) -> StreamingResponse:
+        with factory() as db:
+            if not db.get(Run, run_id):
+                raise HTTPException(404, "Lauf nicht gefunden")
+        return StreamingResponse(
+            watch(run_id, request, max(0, after)), media_type="text/event-stream"
         )
 
     static = Path(cfg.static_dir)

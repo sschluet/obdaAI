@@ -45,7 +45,8 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
 - M1: automatischer lokaler asynchroner Titelworker (Procrastinate), Nachrichtenedit/retry,
   Volltext-Historiensuche, Provider-/Modellverwaltung mit Verbindungstests und Limits,
   dauerhafter Workerbetrieb, vollständige Live-Routing-/Streamingabnahme und Budgetkontrolle.
-  Aktueller Chat bleibt HTTP-gebunden; Hintergrundaufträge sind noch nicht implementiert.
+  PostgreSQL-Queue und persistente SSE-Wiederaufnahme implementiert; Zielbetrieb und
+  automatische stalled-Reconciliation sind noch offen.
 - M2: Projekte/Uploads/Quellen, echte Websuche, Obsidian-Leseadapter und Konflikt-/Löschsync.
 - M3: Tools/MCP/REST/Browser, Skills/Freigaben, echte n8n-Workflows, Tasks und HA-Wartung.
 - M4: isolierte Artefaktpipeline mit echten Dateien, Vorschau/QA und Folgeversionen.
@@ -80,3 +81,17 @@ PR-CI #37220204590 bestanden. Offizielle Actions aktualisiert/gepinnt und
 Runner auf ubuntu-24.04 festgelegt; doppelte Push-/PR-Läufe entfallen. Kein Produktivfehler
 oder Datenverlust aus dieser synthetischen Prüfung. Öffentliche Provider-IP kann
 nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
+
+## M1 Fortsetzung: dauerhafte Chat-Ausführung
+- Procrastinate 3.10.0 integriert; eigenes PostgreSQL-Queue-Schema via Alembic 0003.
+- Atomarer Commit von Nachricht, Run und Queue-Job; aktiver Run reserviert das Gespräch
+  bereits in queued. Eigenständiger Worker, Concurrency 1, keine Zeitpläne.
+- SSE-Ereignisse persistent mit Cursor; Browser-Reload/Schließen beendet die Ausführung
+  nicht. Laufendes Gespräch erneut öffnen verbindet die UI zum Run.
+- SQLite nur lokaler Entwicklungsrunner; PostgreSQL-API-Restart lässt Runs unverändert.
+- Inhaltssuche ergänzt (Substring, keine linguistische PostgreSQL-Volltextindizierung).
+- Bei manueller Wiederaufnahme nach nachgewiesenem Workercrash: Teilantwort aus
+  Ereignissen herstellen, interrupted markieren, keinen Provider automatisch wiederholen.
+- Lokal 26 Tests bestanden, PostgreSQL-Integration mangels lokaler DB übersprungen.
+  Neue CI-Integration prüft echte Queue, atomaren Rollback, API-Restart und Worker.
+  Dieser Abschnitt ist ein Teilcheckpoint; M1/V1 bleiben offen.

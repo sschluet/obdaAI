@@ -1,5 +1,6 @@
 """Synthetic test server; never a deployment configuration or live model test."""
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -28,6 +29,8 @@ app = create_app(
 
 class SyntheticProvider:
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if any("SYNTHETIC_SLOW" in p.content for p in parts):
+            await asyncio.sleep(3)
         return Route(
             capabilities=["chat"],
             model_class="local",

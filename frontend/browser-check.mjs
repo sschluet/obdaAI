@@ -19,6 +19,15 @@ await page.locator('aside > button.new').waitFor();
 // The latest chat must reopen from persisted history after reload.
 await page.locator('.history button').first().click();
 await page.getByText('SYNTHETIC_BROWSER_REPLY:',{exact:false}).waitFor();
+// Reload while execution is active, then reattach to its durable events.
+await page.getByLabel('Nachricht',{exact:true}).fill('SYNTHETIC_SLOW');
+await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+await page.getByRole('button',{name:'Antwort abbrechen',exact:true}).waitFor();
+await page.reload();
+await page.locator('aside > button.new').waitFor();
+await page.locator('.history button').first().click();
+await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
+if(await page.locator('.message.assistant').count()!==2)throw Error('Reload lost or duplicated answer');
 await page.getByRole('button',{name:'Gespräch umbenennen',exact:true}).click();
 await page.getByLabel('Titel',{exact:true}).fill('Synthetic browser history');
 await page.getByRole('button',{name:'Speichern',exact:true}).click();
