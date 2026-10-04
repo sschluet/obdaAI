@@ -15,8 +15,7 @@ await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 if(!await page.getByText('SYNTHETIC_BROWSER_REPLY:',{exact:false}).count())throw Error('Missing persisted reply');
 await page.reload();
-await page.getByRole('button',{name:'Neues Gespräch',exact:true}).waitFor();
-await page.getByRole('button',{name:'Neues Gespräch',exact:true}).count();
+await page.locator('aside > button.new').waitFor();
 // The latest chat must reopen from persisted history after reload.
 await page.locator('.history button').first().click();
 await page.getByText('SYNTHETIC_BROWSER_REPLY:',{exact:false}).waitFor();

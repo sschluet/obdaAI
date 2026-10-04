@@ -31,3 +31,8 @@ HTTPX-IP-Pinning verwendet die dokumentierte sni_hostname-Extension, Host bleibt
 der ursprüngliche Name und TLS-Prüfung bleibt aktiv: https://www.python-httpx.org/advanced/extensions/ .
 Alle DNS-Antworten prüfen, dann direkt zur geprüften IP verbinden; keine zweite
 DNS-Auflösung und keine Redirects/Umgebungsproxies.
+
+CI: ubuntu-24.04 statt wechselndem ubuntu-latest; offizielle Actions-Releases
+checkout v7.0.1 / setup-python v7.0.0 / setup-node v7.0.0 anhand GitHub Releases
+und Tag-Commitobjekten geprüft und auf Commit-SHAs gepinnt. PR-Prüfungen und
+main-Pushes laufen; doppelte Branch-Push-/PR-Prüfungen werden vermieden.

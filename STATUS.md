@@ -71,3 +71,11 @@ M1-Baseline 25a9c57 gepusht und CI grün. Folgecommit korrigiert den live geprü
 lokalen Router und aktualisiert Nachweise. Head-CI vor Freigabe/Merge abwarten.
 Alle Quelländerungen werden beim Checkpoint committed/gepusht; persönliche
 Runtime-Dateien, Testdaten und Screenshots bleiben ignoriert.
+
+Head-CI b83846f deckte einen mehrdeutigen Browserselektor auf: Aktionsbutton und
+neues Gespräch besitzen denselben sichtbaren Namen. Testselektor auf den
+Navigationsaktionsbutton begrenzt; lokaler Browsercheck erneut bestanden. Finale
+PR-CI wird beim Checkpoint geprüft. Offizielle Actions aktualisiert/gepinnt und
+Runner auf ubuntu-24.04 festgelegt; doppelte Push-/PR-Läufe entfallen. Kein Produktivfehler
+oder Datenverlust aus dieser synthetischen Prüfung. Öffentliche Provider-IP kann
+nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
