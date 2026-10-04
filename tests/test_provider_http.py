@@ -77,3 +77,46 @@ def test_stream_requires_completion_marker(monkeypatch: pytest.MonkeyPatch) -> N
                 pass
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        '{"title":"Synthetic title"}',
+        '{"title":""}',
+        '{"title":"bad\\nline"}',
+        '{"title":"x","extra":true}',
+        '{"title":42}',
+        "not json",
+    ],
+)
+def test_title_is_local_and_rejects_invalid_derivatives(monkeypatch, content):
+    original = httpx.AsyncClient
+    calls = []
+
+    def handler(request):
+        calls.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    provider = Providers(
+        Settings(local_model="local-fixture", cloud_enabled=True, local_disable_thinking=True)
+    )
+
+    def target(external):
+        assert external is False
+        return "http://127.0.0.1/v1/chat/completions", {}, {}, ""
+
+    monkeypatch.setattr(provider, "_target", target)
+    part = ContextPart(content="synthetic private context", source_id="title-source", revision=1)
+    if content == '{"title":"Synthetic title"}':
+        assert asyncio.run(provider.title([part], ["user"])) == "Synthetic title"
+    else:
+        with pytest.raises(ValueError):
+            asyncio.run(provider.title([part], ["user"]))
+    assert len(calls) == 1
+    assert calls[0]["model"] == "local-fixture" and calls[0]["enable_thinking"] is False

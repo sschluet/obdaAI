@@ -14,9 +14,11 @@ from hub.config import Settings
 from hub.db import Conversation, Message, Run, RunEvent
 from hub.policy import CloudGrant, ContextPart, Privacy
 from hub.routing import Capability, Route
+from hub.titles import execute_title, reserve_title
 
 
 class ChatProvider(Protocol):
+    async def title(self, parts: list[ContextPart], roles: list[str]) -> str: ...
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route: ...
     def stream(
         self,
@@ -159,6 +161,8 @@ async def execute_run(
                 current = db.get(Run, run_id)
                 if current:
                     current.status, current.finished = status, time.time()
+                if status == "succeeded":
+                    reserve_title(db, cfg, chat_id)
                 db.commit()
         yield ("done", {"status": status})
 
@@ -184,6 +188,8 @@ async def execute_run(
             if cancelled() and not task.done():
                 task.cancel()
         await task
+        if cfg.database_url.startswith("sqlite"):
+            await execute_title(factory, providers, chat_id)
     except asyncio.CancelledError:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)

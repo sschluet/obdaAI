@@ -158,6 +158,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 {
                     "id": c.id,
                     "title": c.title,
+                    "title_status": c.title_status,
                     "cloud_allowed": c.cloud_allowed,
                     "archived": c.archived,
                 }
@@ -182,7 +183,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = Conversation(cloud_allowed=body.cloud_allowed)
             db.add(c)
             db.commit()
-            return {"id": c.id, "title": c.title, "cloud_allowed": c.cloud_allowed}
+            return {
+                "id": c.id,
+                "title": c.title,
+                "title_status": c.title_status,
+                "cloud_allowed": c.cloud_allowed,
+            }
 
     @app.get("/api/conversations/{chat_id}")
     def get_chat(chat_id: str, session: SessionDependency) -> dict[str, object]:
@@ -199,6 +205,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return {
                 "id": c.id,
                 "title": c.title,
+                "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
                 "messages": [
                     {"id": m.id, "role": m.role, "content": m.content, "label": m.label}
@@ -228,7 +235,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not c:
                 raise HTTPException(404, "Gespräch nicht gefunden")
             if body.title is not None:
-                c.title, c.manual_title = body.title, True
+                c.title, c.manual_title, c.title_status = body.title, True, "manual"
             if body.archived is not None:
                 c.archived = body.archived
             db.commit()

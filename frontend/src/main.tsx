@@ -5,7 +5,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {MessageSquare,Folder,ListChecks,Sparkles,BookOpen,Settings,Plus,Search,ArrowUp,Square,Sun,Moon,Menu,LockKeyhole,Copy,LogOut,Archive,Pencil,Trash2} from 'lucide-react';
 import './style.css';
-type Chat={id:string;title:string;cloud_allowed:boolean;archived?:boolean};
+type Chat={id:string;title:string;title_status?:string;cloud_allowed:boolean;archived?:boolean};
 type Msg={id:string;role:string;content:string;label:string};
 type Run={id:string;status:string;provider:string;reason:string;error:string|null};
 type Detail=Chat&{messages:Msg[];runs:Run[]};
@@ -24,6 +24,16 @@ useEffect(()=>{fetch('/api/me').then(async r=>{if(r.ok)setCsrf((await r.json()).
 async function refresh(){setChats(await api('/conversations?q='+encodeURIComponent(query)+'&archived='+archived))}
 useEffect(()=>{if(csrf){refresh().catch(e=>setError(e.message));api('/settings').then(setConfig).catch(e=>setError(e.message))}},[csrf,query,archived]);
 useEffect(()=>{bottom.current?.scrollIntoView({behavior:'smooth'})},[chat?.messages,status]);
+useEffect(()=>{
+if(!csrf||busy||!chat||!['queued','running'].includes(chat.title_status||''))return;
+const id=chat.id;let stopped=false;
+const timer=setInterval(()=>{api('/conversations/'+id).then((next:Detail)=>{
+if(stopped)return;
+setChat(old=>old?.id===id&&['queued','running'].includes(old.title_status||'')?{...old,title:next.title,title_status:next.title_status}:old);
+refresh().catch(()=>{});
+}).catch(()=>{})},1500);
+return()=>{stopped=true;clearInterval(timer)};
+},[csrf,busy,chat?.id,chat?.title_status,query,archived]);
 async function login(e:FormEvent){e.preventDefault();setError('');try{setCsrf((await api('/login','POST',{password})).csrf);setPassword('')}catch(e){setError((e as Error).message)}}
 async function open(id:string){if(busy)return;try{const detail:Detail=await api('/conversations/'+id);setChat(detail);setPage('Chat');setMobile(false);setError('');setStatus('');const active=detail.runs.find(r=>['queued','routing','streaming'].includes(r.status));if(active){setBusy(true);setRunId(active.id);setChat({...detail,messages:[...detail.messages,{id:'stream',role:'assistant',content:'',label:'LOCAL_ONLY'}]});controller.current=new AbortController();try{await follow(await fetch('/api/runs/'+active.id+'/events',{signal:controller.current.signal}));}finally{setChat(await api('/conversations/'+id));setBusy(false);setRunId('');controller.current=null}}}catch(e){if((e as Error).name!=='AbortError')setError((e as Error).message)}}
 async function newChat(){if(busy)return;try{const c=await api('/conversations','POST',{cloud_allowed:cloud});setChat({...c,messages:[],runs:[]});setPage('Chat');setMobile(false);await refresh()}catch(e){setError((e as Error).message)}}

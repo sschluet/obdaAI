@@ -28,6 +28,10 @@ app = create_app(
 
 
 class SyntheticProvider:
+    async def title(self, parts: list[ContextPart], roles: list[str]) -> str:
+        await asyncio.sleep(2)
+        return "Synthetic automatic title"
+
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
         if any("SYNTHETIC_SLOW" in p.content for p in parts):
             await asyncio.sleep(3)

@@ -24,6 +24,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     title: Mapped[str] = mapped_column(String(160), default="Neues Gespräch")
+    title_status: Mapped[str] = mapped_column(String(20), default="idle", server_default="idle")
     manual_title: Mapped[bool] = mapped_column(Boolean, default=False)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     cloud_allowed: Mapped[bool] = mapped_column(Boolean, default=False)

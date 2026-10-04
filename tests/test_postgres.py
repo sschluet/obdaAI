@@ -11,9 +11,10 @@ from fastapi.testclient import TestClient
 from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
-from hub.db import Message, Run, RunEvent, session_factory
+from hub.db import Conversation, Message, Run, RunEvent, session_factory
 from hub.jobs import enqueue, worker_app
 from hub.routing import Route
+from hub.titles import reserve_title
 from sqlalchemy import create_engine, inspect, select, text
 from test_chat import FakeProviders
 
@@ -61,6 +62,12 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         db.rollback()
         assert db.scalar(text("SELECT count(*) FROM hub_queue.procrastinate_jobs")) == 0
     with factory() as db:
+        reserve_title(db, settings, chat_id)
+        assert db.scalar(text("SELECT count(*) FROM hub_queue.procrastinate_jobs")) == 1
+        db.rollback()
+        assert db.scalar(text("SELECT count(*) FROM hub_queue.procrastinate_jobs")) == 0
+        assert db.get(Conversation, chat_id).title_status == "idle"
+    with factory() as db:
         run = Run(conversation_id=chat_id, status="queued")
         db.add(run)
         db.add(Message(conversation_id=chat_id, role="user", content="synthetic queue fixture"))
@@ -89,17 +96,24 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
     async def drain():
         async with queue.open_async():
             await queue.run_worker_async(
-                queues=["chat"], wait=False, install_signal_handlers=False, concurrency=1
+                queues=["chat", "titles"], wait=False, install_signal_handlers=False, concurrency=1
             )
 
     asyncio.run(drain())
     assert fake.calls == 1
     with factory() as db:
+        assert db.get(Conversation, chat_id).title == "Synthetic conversation"
         assert db.get(Run, run_id).status == "succeeded"
         events = db.scalars(select(RunEvent).where(RunEvent.run_id == run_id)).all()
         assert any(json.loads(e.payload).get("text") == "SYNTHETIC_QUEUE_REPLY" for e in events)
         assert (
-            db.scalar(text("SELECT status::text FROM hub_queue.procrastinate_jobs")) == "succeeded"
+            db.scalar(
+                text(
+                    "SELECT count(*) FROM hub_queue.procrastinate_jobs "
+                    "WHERE status::text <> 'succeeded'"
+                )
+            )
+            == 0
         )
     # A stalled task redispatch reconciles output without a second model call.
     with factory() as db:

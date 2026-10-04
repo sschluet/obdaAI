@@ -43,7 +43,7 @@ Proxmox-Pilotinstallation ist jetzt verfügbar; kein produktiver Dauerbetrieb.
   Draft-PR: https://github.com/sschluet/obdaAI/pull/1 .
 
 ## Offene Arbeit / echte Grenzen
-- M1: automatischer lokaler asynchroner Titelworker auf vorhandener Procrastinate-Queue, Nachrichtenedit/retry,
+- M1: Nachrichtenedit/retry,
   Volltext-Historiensuche, Provider-/Modellverwaltung mit Verbindungstests und Limits,
   abgenommener Ziel-Workerbetrieb, vollständige Live-Routing-/Streamingabnahme und Budgetkontrolle.
   PostgreSQL-Queue und persistente SSE-Wiederaufnahme implementiert; Zielbetrieb und
@@ -60,8 +60,7 @@ Proxmox-Pilotinstallation ist jetzt verfügbar; kein produktiver Dauerbetrieb.
 
 ## Fortsetzungspunkt
 Draft-PR #1 sichert den Teilstand; Head-CI vor Merge prüfen.
-Danach M1 vervollständigen: lokale
-asynchrone Titel mit Schutz manueller Titel, Edit/Retry mit revisionsgebundenen Labels,
+Danach M1 vervollständigen: Edit/Retry mit revisionsgebundenen Labels,
 Provider-/Capability-UI und Budgets; echte lokale Livechecks über den vorgesehenen
 Linux-Netzpfad. Erst danach M2. Keine Routinefreigaben, aber Produktion/Cloudtransfer
 und n8n/Vault-Schreibzugriff benötigen konkrete Policy-/Zielentscheidungen.
@@ -181,3 +180,25 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   isolierter Restore und Konfigurationsentschlüsselung separat geprüft.
 - Offen: automatische Off-VM-Kopie/Alarmierung, Aufbewahrungspolicy, DHCP-Reservierung
   und Zertifikatserneuerung. M1/V1 bleiben Teilstand.
+
+## M1-Fortsetzung: lokale automatische Titel (2026-10-04)
+
+- Nach erfolgreicher Antwort reserviert dieselbe PostgreSQL-Transaktion genau einen
+  Titelauftrag. Vorhandene Procrastinate-Queue, zusätzlicher Task `hub.title`; API und
+  Browser dürfen danach geschlossen werden. Ein Worker-Slot für Chat und Titel.
+- Titel ausschließlich über den gepinnten lokalen Provider mit finalem Privacy-Check,
+  maximal 80 Zeichen, begrenzter Kontext aus den ersten zwei Nachrichten, strukturierte
+  JSON-Validierung, keine Cloudübertragung und kein Fallback. Titel bleiben private Derivate.
+- Atomare Zustände (Alembic 0004); manuelle Titel haben Vorrang, auch bei gleichzeitigem
+  Modellaufruf. Gelöschte Gespräche werden nicht wiederhergestellt. Fehlgeschlagene oder
+  unterbrochene Titel behalten den Originaltitel; keine automatische Modellwiederholung.
+  Stalled-Redispatch markiert laufende Titel als interrupted. Automatische Stalled-Erkennung
+  bleibt wie bei Chat-Aufträgen offen.
+- UI aktualisiert ausstehende Titel ohne Neuladen und stoppt Abfragen nach Endzustand;
+  SQLite bleibt nur die Entwicklungsvariante ohne dauerhafte Queue.
+- Lokal: 40 Python-Tests bestanden, PostgreSQL-Test ohne lokale Test-DB übersprungen;
+  Ruff, Mypy, TypeScript/Build und Source-Scan bestanden. Cua-Browsercheck mit synthetischem
+  Provider: asynchroner Titel erscheint, manueller Titel und Antwort bleiben nach Reload.
+  CI prüft zusätzlich echte PostgreSQL-Transaktionsrollback, Worker und Alembic up/down.
+- Direkte HTTPS-Browserprüfung in diesem Schritt durch Browser-Sicherheitsrichtlinie
+  blockiert; keine Warnung umgangen. Zieldeployment und lokaler Live-Titeltest noch ausstehend.

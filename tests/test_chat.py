@@ -28,6 +28,9 @@ class FakeProviders:
             answer="SYNTHETIC_ANSWER",
         )
 
+    async def title(self, parts: list[ContextPart], roles: list[str]) -> str:
+        return "Synthetic conversation"
+
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
         self.calls += 1
         if self.fail:
