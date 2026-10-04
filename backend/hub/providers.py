@@ -110,8 +110,13 @@ class Providers:
                     json={
                         "model": self.settings.local_model,
                         "messages": messages,
-                        "max_tokens": 2048,
+                        "max_tokens": 1024,
                         "temperature": 0,
+                        **(
+                            {"enable_thinking": False}
+                            if self.settings.local_disable_thinking
+                            else {}
+                        ),
                     },
                 )
                 response.raise_for_status()
@@ -156,6 +161,8 @@ class Providers:
             "max_tokens": 2048,
             "stream": True,
         }
+        if not external and self.settings.local_disable_thinking:
+            body["enable_thinking"] = False
         slot = asyncio.Semaphore(1) if external else self.local_slot
         async with (
             slot,

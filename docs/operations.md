@@ -41,3 +41,8 @@ lesbar sein (0600/0400); vorhandene gruppengeschützte Altplattform-Keys werden 
 automatisch umberechtigt. Der aktuelle Adapter unterstützt nur explizit erlaubte
 lokale IPs und den festen offiziellen OpenRouter-Origin; weitere Provider-UI folgt.
 Compose und produktive Infrastruktur sind noch nicht installiert oder abgenommen.
+
+Lokale Backends können nach Liveprüfung `HUB_LOCAL_DISABLE_THINKING=true` verwenden.
+Dies ergänzt ausschließlich beim lokalen Adapter das nachgewiesen unterstützte
+`enable_thinking:false`; standardmäßig wird kein vendorbezogenes Feld gesendet.
+Der Router hat 1.024 Outputtokens und maximal einen Schema-Reparaturversuch.

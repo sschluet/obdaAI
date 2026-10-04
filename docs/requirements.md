@@ -4,7 +4,7 @@ Normalisierte Anforderungen des Entwicklungsauftrags vom 04.10.2026. Alle 19
 Abschnitte bleiben Pflichtumfang; M0 ist keine vollständige V1. Persönliche
 Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 
-| Abschnitt | Thema | Meilenstein | Abnahme | Anforderungen |
+| Abschnitt | Thema | Meilenstein | Abnahme | offen; Funktion noch nicht implementiert |
 |---|---|---|---|---|
 | R01 | Produkt / V1 | M1-M5 | A01-A14 | AUTO, Projekte, Artefakte, Einstellungen, Skills, Wissen, Aufgaben; keine V1-Pflicht still verschieben |
 | R02 | Bestand / Betriebsziel | M0/M5 | A13/A14 | Eigene Linux-VM, Inference Mac mini, bestehende Dienste erhalten; n8n/Sync inventarisieren |
@@ -30,17 +30,17 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 
 | ID | Meilenstein | Beweisziel | Aktueller Nachweis |
 |---|---|---|---|
-| A01 | M1 | Einfache Frage: lokal, genau ein Router-/Antwortaufruf | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A02 | M1 | Freigegebene komplexe Frage: OpenRouter im selben Chat | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A03 | M0-M5 | LOCAL_ONLY aus Historie/Derivaten/Embedding/Web/n8n niemals extern | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A04 | M1 | Provider-/Mac-Ausfall: korrekter Status, kein verbotener Fallback | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A08 | M3 | Skillrevision wirkt und erweitert keine Rechte | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A09 | M2 | Obsidian/App bidirektional: Konflikt/Löschung/Umbenennung/Restart | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
-| A14 | M0/M5 | Backup/Restore, private GitHub-Versionierung ohne Secrets/Runtime-Daten | offen; A03 hat zunächst nur Vertrags-Unit-Tests |
+| A01 | M1 | Einfache Frage: lokal, genau ein Router-/Antwortaufruf | Unit/API plus lokaler Live-Smoke: genau ein Routeraufruf mit Inlineantwort |
+| A02 | M1 | Freigegebene komplexe Frage: OpenRouter im selben Chat | API/Adapter mit Mocks; echte OpenRouter-Abnahme offen |
+| A03 | M0-M5 | LOCAL_ONLY aus Historie/Derivaten/Embedding/Web/n8n niemals extern | Privacy-Vertrags-/API-/HTTP-Gatewaytests bestanden; Web/Embedding/n8n noch offen |
+| A04 | M1 | Provider-/Mac-Ausfall: korrekter Status, kein verbotener Fallback | ConnectError-Mock und Run-Neustart geprüft, kein Cloudfallback; vollständige Live-Ausfallabnahme offen |
+| A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | offen; Funktion noch nicht implementiert |
+| A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | offen; Funktion noch nicht implementiert |
+| A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | offen; Funktion noch nicht implementiert |
+| A08 | M3 | Skillrevision wirkt und erweitert keine Rechte | offen; Funktion noch nicht implementiert |
+| A09 | M2 | Obsidian/App bidirektional: Konflikt/Löschung/Umbenennung/Restart | offen; Funktion noch nicht implementiert |
+| A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | offen; Funktion noch nicht implementiert |
+| A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | offen; Funktion noch nicht implementiert |
+| A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | offen; Funktion noch nicht implementiert |
+| A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | Browser-/DB-Tests für Login/Historie/Titel/mobile bestanden; dauerhafte Jobs offen |
+| A14 | M0/M5 | Backup/Restore, private GitHub-Versionierung ohne Secrets/Runtime-Daten | Privates Repo und Source-/CI-gitleaks bestanden; Backup/Restore offen |

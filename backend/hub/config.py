@@ -15,6 +15,7 @@ class Settings:
     local_model: str = ""
     local_key_file: str = ""
     local_allowed_ip: str = ""
+    local_disable_thinking: bool = False
     openrouter_model: str = ""
     openrouter_key_file: str = ""
     cloud_enabled: bool = False

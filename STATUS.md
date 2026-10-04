@@ -23,15 +23,23 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
   CI für Python/Lint/Typen/Tests, PostgreSQL, Frontend/Browser, Secrets und Containerbuild.
 
 ## Nachweise
-- Lokal: 21 Tests bestanden, 1 PostgreSQL-Test mangels isolierter lokaler DB übersprungen.
+- Lokal: 22 Tests bestanden, 1 PostgreSQL-Test mangels isolierter lokaler DB übersprungen.
 - Ruff und strikte Mypy-Prüfung bestanden; React/TypeScript/Vite-Build bestanden.
 - Browserprüfung bestanden: Login, API/SSE-Chat, Historie nach Reload, Umbenennen,
   Dark Mode, Mobilnavigation ohne horizontalen Overflow, Löschen und Logout.
   Ausschließlich synthetischer Provider; Screenshots separat lokal geprüft.
-- Alembic upgrade lokal auf SQLite bestanden; PostgreSQL-Migration in CI noch abzuwarten.
-- Live Mac mini: zwei synthetische JSON-Proben bestanden. End-to-End-Verbindung von
+- Alembic upgrade lokal auf SQLite bestanden; PostgreSQL upgrade/downgrade/upgrade und API-Persistenz in CI bestanden.
+- Live Mac mini: zwei synthetische JSON-Proben bestanden. Neuer Hub-Routercode
+  nach expliziter backendbezogener Thinking-Option live bestanden: lokale Inlineantwort
+  auf synthetische Frage, 4,720 s Einzelmessung (kein Benchmark). Initialer Test ohne
+  Option endete nach 30 s im Timeout; kein Cloudfallback. Bestehender gruppengeschützter
+  Inference-Key nur im Arbeitsspeicher für diesen Smoke eingelesen, keine Rechte geändert.
+  Zweiter Live-Smoke: genau 1 Router-HTTP-Aufruf mit Inlineantwort, 4,292 s; separater
+  lokaler Stream mit Completion-Marker bestanden, 1,092 s. Keine echte Cloudanfrage. End-to-End-Verbindung von
   Work-Mac via Tailnet-DNS derzeit nicht verfügbar; kein Zieldeployment behauptet.
-- Source-Scan / Paket- und Containerbuild / CI-Liveergebnisse bei Checkpoint ergänzen.
+- Source-Scan bestanden. CI #37219674134 am Commit 25a9c57 vollständig grün:
+  Python/PostgreSQL, Frontend/Browser, gitleaks und gepinnter Containerbuild.
+  Draft-PR: https://github.com/sschluet/obdaAI/pull/1 .
 
 ## Offene Arbeit / echte Grenzen
 - M1: automatischer lokaler asynchroner Titelworker (Procrastinate), Nachrichtenedit/retry,
@@ -49,9 +57,16 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
   Alte Deploytoken-Freigaben werden nicht automatisch für neue Ressourcen verwendet.
 
 ## Fortsetzungspunkt
-Zuerst CI-Ergebnisse prüfen/fixen und diesen M1-Teilstand per Draft-PR sichern.
+Draft-PR #1 sichert den Teilstand; Head-CI vor Merge prüfen.
 Danach M1 vervollständigen: PostgreSQL-Procrastinate-Migration/Worker und lokale
 asynchrone Titel mit Schutz manueller Titel, Edit/Retry mit revisionsgebundenen Labels,
 Provider-/Capability-UI und Budgets; echte lokale Livechecks über den vorgesehenen
 Linux-Netzpfad. Erst danach M2. Keine Routinefreigaben, aber Produktion/Cloudtransfer
 und n8n/Vault-Schreibzugriff benötigen konkrete Policy-/Zielentscheidungen.
+
+## Git-Checkpoint
+Arbeitsbranch milestone/m1-chat; M0 auf main, M1 bleibt in Draft-PR #1.
+M1-Baseline 25a9c57 gepusht und CI grün. Folgecommit korrigiert den live geprüften
+lokalen Router und aktualisiert Nachweise. Head-CI vor Freigabe/Merge abwarten.
+Alle Quelländerungen werden beim Checkpoint committed/gepusht; persönliche
+Runtime-Dateien, Testdaten und Screenshots bleiben ignoriert.

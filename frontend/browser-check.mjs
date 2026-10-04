@@ -31,6 +31,8 @@ await page.setViewportSize({width:390,height:844});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
 await page.getByRole('heading',{name:'Einstellungen',exact:true}).waitFor();
+await page.waitForFunction(()=>document.querySelector('.setting-card').getBoundingClientRect().right <= innerWidth);
+if(await page.locator('.page-content').evaluate(e=>e.scrollWidth>e.clientWidth))throw Error('Mobile panel overflow');
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile overflow');
 await page.screenshot({path:output+'/mobile.png',fullPage:true,animations:'disabled'});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
