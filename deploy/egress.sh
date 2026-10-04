@@ -5,7 +5,7 @@ set -euo pipefail
 iptables -N OBDAAI_APP 2>/dev/null || true
 iptables -F OBDAAI_APP
 iptables -A OBDAAI_APP -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A OBDAAI_APP -d 127.0.0.1/32 -p tcp -m multiport --dports 5432,8765,11443 -j ACCEPT
+iptables -A OBDAAI_APP -d 127.0.0.1/32 -p tcp -m multiport --dports 5432,8765,11444 -j ACCEPT
 iptables -A OBDAAI_APP -j REJECT
 iptables -C OUTPUT -m owner --uid-owner 10001 -j OBDAAI_APP 2>/dev/null || iptables -A OUTPUT -m owner --uid-owner 10001 -j OBDAAI_APP
 ip6tables -N OBDAAI_APP 2>/dev/null || true

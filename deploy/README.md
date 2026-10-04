@@ -37,7 +37,7 @@ docker compose --env-file /etc/obdaai/release.env up -d api worker
 ## Runtime und Zugriff
 
 `HUB_DATABASE_URL` zeigt auf die eigene Datenbank an 127.0.0.1:5432.
-`HUB_LOCAL_BASE_URL=http://127.0.0.1:11443/v1`, `HUB_LOCAL_ALLOWED_IP=127.0.0.1`,
+`HUB_LOCAL_BASE_URL=http://127.0.0.1:11444/v1`, `HUB_LOCAL_ALLOWED_IP=127.0.0.1`,
 `HUB_LOCAL_KEY_FILE=/run/secrets/local-inference.key`, `HUB_CLOUD_ENABLED=false`.
 Modell-ID ist am echten Backend zu prüfen. API hört nur an 127.0.0.1:8765.
 Der Pilot leitet diese Adresse durch SSH auf den Arbeits-Mac weiter; `HUB_ORIGIN`
@@ -45,10 +45,24 @@ muss exakt mit dessen Browseradresse übereinstimmen. `HUB_SECURE_COOKIE=false`
 ist nur für den verschlüsselten SSH-Pilot mit Browser-Loopback vorgesehen.
 Für einen permanenten Browserzugang privates HTTPS und Secure-Cookies einrichten.
 
-Die aktuelle Modellverbindung verwendet ebenfalls einen beaufsichtigten SSH-Relay
-auf dem Arbeits-Mac. Ohne diesen Relay schlägt lokaler Chat fehl; er wechselt niemals
-zur Cloud. Keine bestehende Tailnet-ACL oder Inference-/SSH-Konfiguration wurde dafür
-geändert. Neue serverseitige Berechtigungen separat und zielgebunden freigeben.
+Die Modellverbindung läuft als eigener systemd-Dienst auf der VM. Dafür gibt es
+`model-relay.service` und eine rootgeschützte `/etc/obdaai/relay.env` mit `RELAY_HOST`.
+Der private Schlüssel bleibt ausschließlich auf der VM. Den bereits verifizierten
+Mac-mini-Hostkey in die separate Known-Hosts-Datei kopieren; kein ungeprüftes TOFU.
+Ohne das lokale Backend schlägt Chat fehl; er wechselt niemals zur Cloud.
+
+Auf dem Mac mini wurde ausdrücklich ein neuer Benutzer `hub-relay` freigegeben.
+`model-relay.sshd.conf` ist eine Vorlage für einen Block **am Ende** der sshd_config,
+kein globales Include-Fragment. Vorher Backup und effektive Regeln für bestehende
+Benutzer vergleichen, danach `sshd -t` und `sshd -T -C ...` prüfen. Kein gemeinsamer
+SSH-Service-Restart war nötig. Root verwaltet dessen separate AuthorizedKeys-Datei:
+Schlüssel mit `from="<VM-IP>",restrict,port-forwarding,permitopen="127.0.0.1:11435",command="/usr/bin/false"`.
+Nur Public-Key-Authentifizierung und lokales TCP-Forwarding zum Modellport sind erlaubt.
+MaxSessions 0 sperrt Shell/Befehle/SFTP; Remote-, Unix-Socket-, Agent-, X11- und
+Tunnel-Forwarding sind gesperrt. Der Benutzer ist kein Administrator und hat kein
+nutzbares Passwort. macOS-PAM benötigt eine akzeptierte Kontoshell; `/bin/sh` wurde
+für genau diesen Benutzer separat vom Nutzer erlaubt, SSH-Sessions bleiben gesperrt.
+Bestehende Inference-Einstellungen und Tailnet-ACLs bleiben erhalten.
 
 ## Prüfung, Sicherung und Rückkehr
 

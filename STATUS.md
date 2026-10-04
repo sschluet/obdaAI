@@ -114,10 +114,13 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
 - Anmeldung, 401 ohne Anmeldung, gesperrtes Cloud-opt-in und echter lokaler Chat auf
   der installierten VM bestanden: synthetische Antwort „2 plus 2 ist 4“, Run succeeded,
   Provider local, 6,579 s Einzelmessung. Keine echte Cloudanfrage.
-- Testzugang und Modellrelay laufen über verschlüsselte SSH-Tunnel auf dem Arbeits-Mac.
-  Dieser Mac und der Tunnelprozess müssen für den Pilot erreichbar bleiben. Die VM,
-  PostgreSQL, API und Worker laufen eigenständig; ein dauerhaft unabhängiger Modellpfad
-  und privates HTTPS benötigen noch eine konkret freigegebene Infrastrukturänderung.
+- Der Modellrelay läuft jetzt direkt auf der VM als systemd-Dienst mit eigenem Schlüssel.
+  Auf dem Mac mini ist ausschließlich dafür der neue Benutzer hub-relay zugelassen:
+  Public-Key vom VM-Ursprung, nur lokaler Modellport, keine SSH-Sessions oder weiteren
+  Forwardings, kein Administrator und kein nutzbares Passwort. macOS-PAM-kompatible
+  Kontoshell /bin/sh wurde separat ausdrücklich erlaubt; SSH-Shell bleibt gesperrt.
+  Der Arbeits-Mac vermittelt keine Modellanfragen mehr. Browserzugang bleibt vorerst
+  ein SSH-Loopback-Pilot; privates HTTPS für direkten Netzwerkzugang steht noch aus.
 - Generische Installationsdateien und Betriebsgrenzen stehen in `deploy/README.md`.
   Ältere Nachweise oben beschreiben den Entwicklungsstand vor dieser Pilotinstallation.
 - Live-Unterbrechung bestanden: SSE geschlossen, ausschließlich neue API neu gestartet,
@@ -126,4 +129,16 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   mit AES-GCM verschlüsselt und entschlüsselt in eine getrennte Testdatenbank zurückgespielt:
   1 synthetisches Gespräch, 2 Nachrichten. Kein automatischer Backupplan eingerichtet.
 - Bestehende VM-, Storage-, Netzwerk-, DNS- und Firewallkonfiguration nach der Installation
-  gegen den privaten Vorherbeleg geprüft: unverändert. Vollständiger VM-Reboot nicht getestet.
+  gegen den privaten Vorherbeleg geprüft: unverändert. Vollständiger Reboot der neuen VM jetzt bestanden.
+
+## Direkter Modellrelay: Abnahme
+- Eigener systemd-SSH-Relay auf der neuen VM, eigener dort erzeugter Schlüssel;
+  bestehende Deploy-Schlüssel verbleiben auf dem Arbeits-Mac.
+- Echter lokaler Chat über den direkten Pfad bestanden. Shell/Befehle, fremder Zielport
+  und Remote-Forwarding mit dem neuen Schlüssel tatsächlich abgewiesen.
+- Bestehende effektive SSH-Regeln für codex-deploy gegen Vorherbackup unverändert geprüft.
+  Keine gemeinsame SSH- oder Modellservice-Neustarts auf dem Mac mini.
+- Neue VM vollständig neu gestartet: Relay, Egress, Docker und gesunde API automatisch
+  wieder verfügbar. Öffentliche App-Egress-Verbindung auch nach Boot blockiert.
+- Arbeits-Mac-Modellrelay beendet; nur Browser-SSH-Forwarding bleibt für den Pilot.
+  Privates HTTPS und automatischer Backupplan bleiben offen. M1/V1 bleiben Teilstand.
