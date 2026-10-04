@@ -37,7 +37,7 @@ Teilfunktion; M1 und die vollständige V1 sind noch nicht abgeschlossen. Kein pr
   Zweiter Live-Smoke: genau 1 Router-HTTP-Aufruf mit Inlineantwort, 4,292 s; separater
   lokaler Stream mit Completion-Marker bestanden, 1,092 s. Keine echte Cloudanfrage. End-to-End-Verbindung von
   Work-Mac via Tailnet-DNS derzeit nicht verfügbar; kein Zieldeployment behauptet.
-- Source-Scan bestanden. CI #37219674134 am Commit 25a9c57 vollständig grün:
+- Source-Scan bestanden. CI #37220204590 am Codecommit 012a7d0 vollständig grün:
   Python/PostgreSQL, Frontend/Browser, gitleaks und gepinnter Containerbuild.
   Draft-PR: https://github.com/sschluet/obdaAI/pull/1 .
 
@@ -67,15 +67,16 @@ und n8n/Vault-Schreibzugriff benötigen konkrete Policy-/Zielentscheidungen.
 
 ## Git-Checkpoint
 Arbeitsbranch milestone/m1-chat; M0 auf main, M1 bleibt in Draft-PR #1.
-M1-Baseline 25a9c57 gepusht und CI grün. Folgecommit korrigiert den live geprüften
-lokalen Router und aktualisiert Nachweise. Head-CI vor Freigabe/Merge abwarten.
+Letzter Codecommit 012a7d0 ist gepusht und vollständig grün in CI.
+Der abschließende Dokumentationscommit ändert nur diesen Statusnachweis.
+Vor Freigabe/Merge den jeweils aktuellen PR-Head prüfen.
 Alle Quelländerungen werden beim Checkpoint committed/gepusht; persönliche
 Runtime-Dateien, Testdaten und Screenshots bleiben ignoriert.
 
 Head-CI b83846f deckte einen mehrdeutigen Browserselektor auf: Aktionsbutton und
 neues Gespräch besitzen denselben sichtbaren Namen. Testselektor auf den
-Navigationsaktionsbutton begrenzt; lokaler Browsercheck erneut bestanden. Finale
-PR-CI wird beim Checkpoint geprüft. Offizielle Actions aktualisiert/gepinnt und
+Navigationsaktionsbutton begrenzt; lokaler Browsercheck und abschließende
+PR-CI #37220204590 bestanden. Offizielle Actions aktualisiert/gepinnt und
 Runner auf ubuntu-24.04 festgelegt; doppelte Push-/PR-Läufe entfallen. Kein Produktivfehler
 oder Datenverlust aus dieser synthetischen Prüfung. Öffentliche Provider-IP kann
 nicht als lokal deklariert werden (zusätzlicher Negativtest bestanden).
