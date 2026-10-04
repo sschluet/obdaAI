@@ -10,9 +10,12 @@ from sqlalchemy import select
 from sqlalchemy import update as sql_update
 from sqlalchemy.orm import Session, sessionmaker
 
+from hub.budgets import ExecutionLimitError, reserve, settle
 from hub.config import Settings
-from hub.db import Conversation, Message, Run, RunEvent
+from hub.db import Conversation, Message, ProviderConfig, Run, RunEvent
 from hub.policy import CloudGrant, ContextPart, Privacy
+from hub.provider_settings import runtime_provider
+from hub.providers import Providers
 from hub.routing import Capability, Route
 from hub.titles import execute_title, reserve_title
 
@@ -92,17 +95,42 @@ async def execute_run(
             return bool(current and current.cancel_requested)
 
     async def generate() -> AsyncIterator[tuple[str, object]]:
+        nonlocal cfg, providers
         output = ""
         status = "failed"
+        reserved = False
         started = time.monotonic()
         yield ("run", {"id": run_id})
         yield ("status", {"message": "Anfrage wird lokal eingeordnet"})
         try:
-            async with asyncio.timeout(90):
+            selected: dict[str, ProviderConfig] = {}
+            if isinstance(providers, Providers):
+                cfg, providers, selected = runtime_provider(factory, cfg)
+                local = selected.get("local")
+                if not local or not local.enabled:
+                    raise ExecutionLimitError("Lokaler Router ist deaktiviert")
+                limits = json.loads(local.config)
+                if not {"text", "structured"}.issubset(limits["capabilities"]):
+                    raise ExecutionLimitError(
+                        "Lokaler Router benötigt Text und strukturierte Ausgabe"
+                    )
+                input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                if (
+                    sum(len(p.content) for p in parts) > limits["context_chars"]
+                    or input_bound + min(1024, limits["output_tokens"]) > limits["context_tokens"]
+                ):
+                    raise ExecutionLimitError("Kontextgrenze des lokalen Modells erreicht")
+                if any(p.label not in limits["allowed_labels"] for p in parts):
+                    raise PermissionError("Local model privacy class not allowed")
+            async with asyncio.timeout(cfg.run_timeout):
                 if cancelled():
                     raise asyncio.CancelledError
                 route = await providers.route(parts, roles)
-                update(router_seconds=time.monotonic() - started, reason=route.reason)
+                update(
+                    router_seconds=time.monotonic() - started,
+                    reason=route.reason,
+                    capabilities=json.dumps([str(c) for c in route.capabilities]),
+                )
                 if cancelled():
                     raise asyncio.CancelledError
                 unsupported = set(route.capabilities) - {Capability.CHAT}
@@ -117,7 +145,24 @@ async def execute_run(
                     external = False
                     yield ("status", {"message": "Datenschutzregel hält diese Antwort lokal"})
                 provider = "openrouter" if external else "local"
-                update(status="streaming", provider=provider)
+                if external and selected:
+                    cloud = selected.get("openrouter")
+                    if cloud is None:
+                        raise ValueError("Cloud provider not configured")
+                    with factory() as db:
+                        estimate = reserve(db, cloud, run_id, parts)
+                        current = db.get(Run, run_id)
+                        assert current is not None
+                        current.cost_estimate = estimate
+                        db.commit()
+                    reserved = True
+                selected_provider = selected.get(provider)
+                update(
+                    status="streaming",
+                    provider=provider,
+                    model=cfg.openrouter_model if external else cfg.local_model,
+                    provider_revision=selected_provider.revision if selected_provider else None,
+                )
                 yield ("provider", {"name": provider, "reason": route.reason})
                 if route.answer:
                     output = route.answer
@@ -149,6 +194,9 @@ async def execute_run(
                     "Es wurde kein Werkzeug ausgeführt."
                 },
             )
+        except ExecutionLimitError as error:
+            update(error=str(error))
+            yield ("error", {"message": str(error)})
         except Exception:
             update(error="Provider nicht verfügbar oder ungültige Antwort")
             yield (
@@ -172,6 +220,10 @@ async def execute_run(
                 current = db.get(Run, run_id)
                 if current:
                     current.status, current.finished = status, time.time()
+                if reserved and isinstance(providers, Providers):
+                    settle(db, run_id, providers.measured_cost)
+                    if current:
+                        current.cost = providers.measured_cost
                 if status == "succeeded":
                     reserve_title(db, cfg, chat_id)
                 db.commit()

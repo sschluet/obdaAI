@@ -120,3 +120,38 @@ def test_title_is_local_and_rejects_invalid_derivatives(monkeypatch, content):
             asyncio.run(provider.title([part], ["user"]))
     assert len(calls) == 1
     assert calls[0]["model"] == "local-fixture" and calls[0]["enable_thinking"] is False
+
+
+@pytest.mark.parametrize("reason", ["length", "content_filter"])
+def test_stream_truncation_is_explicit_failure(monkeypatch, reason):
+    from hub.budgets import ExecutionLimitError
+
+    original = httpx.AsyncClient
+
+    def handler(request):
+        return httpx.Response(
+            200,
+            text="data: "
+            + json.dumps({"choices": [{"delta": {}, "finish_reason": reason}]})
+            + "\n\ndata: [DONE]\n\n",
+        )
+
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: original(transport=httpx.MockTransport(handler), **kw)
+    )
+    provider = Providers(Settings(local_model="fixture"))
+    monkeypatch.setattr(
+        provider, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
+    )
+
+    async def run():
+        with pytest.raises(ExecutionLimitError, match="Tokenlimit"):
+            async for _ in provider.stream(
+                [ContextPart(content="fixture", source_id="x", revision=1)],
+                ["user"],
+                external=False,
+                grants=[],
+            ):
+                pass
+
+    asyncio.run(run())

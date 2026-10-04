@@ -15,10 +15,19 @@ class Settings:
     local_model: str = ""
     local_key_file: str = ""
     local_allowed_ip: str = ""
+    local_allowed_labels: tuple[str, ...] = ("LOCAL_ONLY", "CLOUD_ALLOWED")
     local_disable_thinking: bool = False
     openrouter_model: str = ""
     openrouter_key_file: str = ""
     cloud_enabled: bool = False
+    secrets_key_file: str = ""
+    local_endpoints_json: str = "{}"
+    local_timeout: int = 30
+    openrouter_timeout: int = 30
+    local_max_tokens: int = 2048
+    openrouter_max_tokens: int = 2048
+    run_timeout: int = 90
+    context_limit: int = 24000
     static_dir: str = "frontend/dist"
 
     @classmethod

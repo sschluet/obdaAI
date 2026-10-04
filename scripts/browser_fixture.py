@@ -1,6 +1,7 @@
 """Synthetic test server; never a deployment configuration or live model test."""
 
 import asyncio
+import base64
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -15,6 +16,10 @@ from hub.routing import Route
 
 folder = Path(".local/browser")
 folder.mkdir(parents=True, exist_ok=True)
+key_file = folder / "fixture-encryption.key"
+if not key_file.exists():
+    key_file.write_text(base64.b64encode(os.urandom(32)).decode())
+    key_file.chmod(0o600)
 os.environ["HUB_DATABASE_URL"] = "sqlite:///" + str(folder / "fixture.sqlite")
 command.upgrade(Config("alembic.ini"), "head")
 app = create_app(
@@ -23,6 +28,11 @@ app = create_app(
         origin=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765"),
         secure_cookie=False,
         password_hash=password_hash("synthetic-ui-password"),
+        secrets_key_file=str(key_file),
+        local_base_url=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/v1",
+        local_allowed_ip="127.0.0.1",
+        local_model="synthetic-fixture",
+        local_disable_thinking=True,
     )
 )
 
@@ -58,3 +68,24 @@ class SyntheticProvider:
 
 
 app.state.providers = SyntheticProvider()
+
+
+@app.get("/v1/models")
+def fixture_models() -> dict[str, object]:
+    return {"data": [{"id": "synthetic-fixture"}]}
+
+
+@app.post("/v1/chat/completions")
+def fixture_completion(body: dict[str, object]) -> dict[str, object]:
+    return {
+        "choices": [
+            {
+                "message": {
+                    "content": (
+                        '{"capabilities":["chat"],"model_class":"local",'
+                        '"reason":"fixture","answer":"4"}'
+                    )
+                }
+            }
+        ]
+    }

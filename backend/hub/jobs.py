@@ -14,7 +14,10 @@ from hub.config import Settings
 from hub.db import Message, Run, RunEvent, session_factory
 from hub.execution import execute_run
 from hub.policy import Privacy
+from hub.provider_api import execute_probe
+from hub.provider_settings import runtime_provider
 from hub.providers import Providers
+from hub.providers import Providers as AdapterClass
 from hub.titles import execute_title
 
 
@@ -46,6 +49,17 @@ def enqueue_title(db: Session, cfg: Settings, chat_id: str) -> None:
     raw.execute("SET LOCAL search_path TO hub_queue, public")
     queue.configure_task(name="hub.title", queue="titles", priority=-10, connection=raw).defer(
         chat_id=chat_id
+    )
+
+
+def enqueue_probe(db: Session, cfg: Settings, test_id: str) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable queue requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.probe", queue="tests", priority=5, connection=raw).defer(
+        test_id=test_id
     )
 
 
@@ -90,7 +104,14 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
     @queue.task(name="hub.title", queue="titles", retry=False)
     async def title(chat_id: str) -> None:
-        await execute_title(factory, providers, chat_id)
+        title_providers = providers
+        if isinstance(providers, AdapterClass):
+            _, title_providers, _ = runtime_provider(factory, cfg)
+        await execute_title(factory, title_providers, chat_id)
+
+    @queue.task(name="hub.probe", queue="tests", retry=False)
+    async def probe(test_id: str) -> None:
+        await execute_probe(factory, cfg, test_id)
 
     @queue.periodic(cron="* * * * *")
     @queue.task(
@@ -108,7 +129,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
 async def requeue_stalled(queue: procrastinate.App) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
-    for task in ("hub.chat", "hub.title"):
+    for task in ("hub.chat", "hub.title", "hub.probe"):
         for job in await queue.job_manager.get_stalled_jobs(
             task_name=task, seconds_since_heartbeat=60
         ):
@@ -121,7 +142,9 @@ async def main() -> None:
         await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
-            queues=["chat", "titles", "maintenance"], concurrency=1, shutdown_graceful_timeout=95
+            queues=["chat", "tests", "titles", "maintenance"],
+            concurrency=1,
+            shutdown_graceful_timeout=95,
         )
 
 

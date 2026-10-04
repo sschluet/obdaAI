@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from hub.budgets import ExecutionLimitError
 from hub.config import Settings, read_secret
 from hub.policy import CloudGrant, ContextPart, check_egress
 from hub.routing import Route
@@ -67,14 +68,16 @@ def pinned_url(
 
 
 class Providers:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, keys: dict[str, str] | None = None) -> None:
         self.settings = settings
         self.local_slot = asyncio.Semaphore(1)
+        self.keys = keys or {}
+        self.measured_cost: float | None = None
 
     def _target(self, external: bool) -> tuple[str, dict[str, str], dict[str, str], str]:
         s = self.settings
         if external:
-            if not s.cloud_enabled or not s.openrouter_model or not s.openrouter_key_file:
+            if not s.cloud_enabled or not (s.openrouter_key_file or self.keys.get("openrouter")):
                 raise ValueError("OpenRouter is not enabled/configured")
             # Validate /v1 canonical path and DNS through the shared guard, then
             # append the documented OpenRouter /api prefix on the pinned URL.
@@ -82,27 +85,58 @@ class Providers:
                 "https://openrouter.ai/v1", "/chat/completions", external=True
             )
             target = target.replace("/v1/", "/api/v1/", 1)
-            return target, headers, extensions, read_secret(s.openrouter_key_file)
-        if not s.local_base_url or not s.local_model:
+            return (
+                target,
+                headers,
+                extensions,
+                (
+                    self.keys["openrouter"]
+                    if "openrouter" in self.keys
+                    else read_secret(s.openrouter_key_file)
+                ),
+            )
+        if not s.local_base_url:
             raise ValueError("Local provider is not configured")
         target, headers, extensions = pinned_url(
             s.local_base_url, "/chat/completions", external=False, allowed_ip=s.local_allowed_ip
         )
-        key = read_secret(s.local_key_file) if s.local_key_file else ""
+        key = self.keys.get("local", "")
+        if not key and s.local_key_file:
+            key = read_secret(s.local_key_file)
         return target, headers, extensions, key
 
+    async def models(self, *, external: bool) -> list[dict[str, object]]:
+        target, headers, extensions, key = self._target(external)
+        if key:
+            headers["Authorization"] = "Bearer " + key
+        target = target.removesuffix("/chat/completions") + "/models"
+        async with httpx.AsyncClient(timeout=15, trust_env=False, follow_redirects=False) as client:
+            response = await client.get(target, headers=headers, extensions=extensions)
+            response.raise_for_status()
+            value = response.json()["data"]
+            if not isinstance(value, list) or len(value) > 5000:
+                raise ValueError("Invalid model catalog")
+            return [m for m in value if isinstance(m, dict) and isinstance(m.get("id"), str)]
+
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if not self.settings.local_model:
+            raise ValueError("Local model is not configured")
         # LOCAL_ONLY check runs even for the router. No external fallback exists.
         check_egress(parts, external=False, provider_id="local", grants=[])
+        if any(p.label not in self.settings.local_allowed_labels for p in parts):
+            raise PermissionError("Local privacy class not permitted")
         target, headers, extensions, key = self._target(False)
-        headers["Authorization"] = "Bearer " + key
+        if key:
+            headers["Authorization"] = "Bearer " + key
         messages = [{"role": "system", "content": ROUTER_PROMPT}]
         messages += [
             {"role": role, "content": p.content} for role, p in zip(roles, parts, strict=True)
         ]
         async with (
             self.local_slot,
-            httpx.AsyncClient(timeout=30, trust_env=False, follow_redirects=False) as client,
+            httpx.AsyncClient(
+                timeout=self.settings.local_timeout, trust_env=False, follow_redirects=False
+            ) as client,
         ):
             for attempt in range(2):
                 response = await client.post(
@@ -112,7 +146,7 @@ class Providers:
                     json={
                         "model": self.settings.local_model,
                         "messages": messages,
-                        "max_tokens": 1024,
+                        "max_tokens": min(1024, self.settings.local_max_tokens),
                         "temperature": 0,
                         **(
                             {"enable_thinking": False}
@@ -138,10 +172,15 @@ class Providers:
         raise ValueError("Router did not return a route")
 
     async def title(self, parts: list[ContextPart], roles: list[str]) -> str:
+        if not self.settings.local_model:
+            raise ValueError("Local model is not configured")
         # Titles are private derivatives. Even cloud-enabled chats use only local inference.
         check_egress(parts, external=False, provider_id="local", grants=[])
+        if any(p.label not in self.settings.local_allowed_labels for p in parts):
+            raise PermissionError("Local privacy class not permitted")
         target, headers, extensions, key = self._target(False)
-        headers["Authorization"] = "Bearer " + key
+        if key:
+            headers["Authorization"] = "Bearer " + key
         messages = [
             {
                 "role": "system",
@@ -158,7 +197,9 @@ class Providers:
         ]
         async with (
             self.local_slot,
-            httpx.AsyncClient(timeout=30, trust_env=False, follow_redirects=False) as client,
+            httpx.AsyncClient(
+                timeout=self.settings.local_timeout, trust_env=False, follow_redirects=False
+            ) as client,
         ):
             response = await client.post(
                 target,
@@ -201,22 +242,37 @@ class Providers:
             provider_id="openrouter" if external else "local",
             grants=grants,
         )
+        if not (self.settings.openrouter_model if external else self.settings.local_model):
+            raise ValueError("Answer model is not configured")
+        if not external and any(p.label not in self.settings.local_allowed_labels for p in parts):
+            raise PermissionError("Local privacy class not permitted")
         target, headers, extensions, key = self._target(external)
-        headers["Authorization"] = "Bearer " + key
+        if key:
+            headers["Authorization"] = "Bearer " + key
         body = {
             "model": self.settings.openrouter_model if external else self.settings.local_model,
             "messages": [
                 {"role": role, "content": p.content} for role, p in zip(roles, parts, strict=True)
             ],
-            "max_tokens": 2048,
+            "max_tokens": self.settings.openrouter_max_tokens
+            if external
+            else self.settings.local_max_tokens,
             "stream": True,
         }
         if not external and self.settings.local_disable_thinking:
             body["enable_thinking"] = False
+        if external:
+            body["provider"] = {"allow_fallbacks": False}
         slot = asyncio.Semaphore(1) if external else self.local_slot
         async with (
             slot,
-            httpx.AsyncClient(timeout=30, trust_env=False, follow_redirects=False) as client,
+            httpx.AsyncClient(
+                timeout=self.settings.openrouter_timeout
+                if external
+                else self.settings.local_timeout,
+                trust_env=False,
+                follow_redirects=False,
+            ) as client,
         ):
             async with client.stream(
                 "POST", target, headers=headers, extensions=extensions, json=body
@@ -229,8 +285,23 @@ class Providers:
                     if value == "[DONE]":
                         return
                     data = json.loads(value)
+                    if data.get("error"):
+                        raise ValueError("Provider stream returned an error")
+                    usage = data.get("usage") or {}
+                    cost = usage.get("cost")
+                    if (
+                        external
+                        and isinstance(cost, (int, float))
+                        and not isinstance(cost, bool)
+                        and 0 <= cost < 1000000
+                    ):
+                        self.measured_cost = float(cost)
                     choices = data.get("choices") or []
                     if choices:
+                        if choices[0].get("finish_reason") in ("length", "content_filter"):
+                            raise ExecutionLimitError(
+                                "Antwort durch Tokenlimit oder Providerfilter beendet"
+                            )
                         chunk = choices[0].get("delta", {}).get("content")
                         if chunk:
                             yield chunk

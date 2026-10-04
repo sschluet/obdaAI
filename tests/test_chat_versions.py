@@ -82,3 +82,47 @@ def test_send_replay_avoids_duplicate_question(setup):
     assert client.post(path, headers=headers, json=body).status_code == 200
     assert client.post(path, headers=headers, json=body).status_code == 200
     assert provider.calls == 1
+
+
+def test_login_limit_survives_api_process_recreation(setup):
+    from fastapi.testclient import TestClient
+    from hub.api import create_app
+
+    app, client, _, _ = setup
+    for _ in range(4):
+        assert (
+            client.post(
+                "/api/login",
+                headers={"Origin": "http://testserver"},
+                json={"password": "wrong-fixture"},
+            ).status_code
+            == 401
+        )
+    with TestClient(create_app(app.state.settings)) as restarted:
+        assert (
+            restarted.post(
+                "/api/login",
+                headers={"Origin": "http://testserver"},
+                json={"password": "synthetic-test-password"},
+            ).status_code
+            == 429
+        )
+
+
+def test_metrics_auth_and_unknown_cost_are_not_free(setup):
+    app, client, headers, _ = setup
+    chat = new_chat(client, headers)
+    client.post(
+        f"/api/conversations/{chat}/messages",
+        headers=headers,
+        json={"content": "SYNTHETIC_METRIC_PRIVATE"},
+    )
+    metrics = client.get("/api/metrics")
+    assert metrics.status_code == 200
+    assert "SYNTHETIC_METRIC_PRIVATE" not in metrics.text
+    value = metrics.json()
+    assert value["statuses"] == {"succeeded": 1}
+    assert value["measured_cost_usd"] is None and value["cost_unknown_runs"] == 1
+    assert value["first_content_seconds_avg"] >= 0
+    client.cookies.clear()
+    assert client.get("/api/metrics").status_code == 401

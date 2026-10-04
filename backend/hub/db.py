@@ -20,6 +20,13 @@ class LoginSession(Base):
     expires: Mapped[float] = mapped_column(Float)
 
 
+class LoginThrottle(Base):
+    __tablename__ = "login_throttle"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    window: Mapped[float] = mapped_column(Float)
+    attempts: Mapped[int] = mapped_column(Integer)
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -59,6 +66,10 @@ class Run(Base):
     finished: Mapped[float | None] = mapped_column(Float, nullable=True)
     router_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     first_content_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    model: Mapped[str] = mapped_column(String(240), default="", server_default="")
+    provider_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    capabilities: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
+    cost_estimate: Mapped[float | None] = mapped_column(Float, nullable=True)
     cost: Mapped[float | None] = mapped_column(Float, nullable=True)
     __table_args__ = (
         Index(
@@ -69,6 +80,55 @@ class Run(Base):
             postgresql_where=text("status IN ('queued', 'routing', 'streaming')"),
         ),
     )
+
+
+class ProviderConfig(Base):
+    __tablename__ = "provider_configs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(20))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    config: Mapped[str] = mapped_column(Text)
+    encrypted_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    __table_args__ = (
+        Index(
+            "one_default_provider_per_kind",
+            "kind",
+            unique=True,
+            sqlite_where=text("is_default = true"),
+            postgresql_where=text("is_default = true"),
+        ),
+    )
+
+
+class ProviderTest(Base):
+    __tablename__ = "provider_tests"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    provider_id: Mapped[str] = mapped_column(String(36))
+    revision: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="queued")
+    result: Mapped[str] = mapped_column(Text, default="")
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ProviderRevision(Base):
+    __tablename__ = "provider_revisions"
+    provider_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    config: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class BudgetReservation(Base):
+    __tablename__ = "budget_reservations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    provider_id: Mapped[str] = mapped_column(String(36), index=True)
+    month: Mapped[str] = mapped_column(String(7), index=True)
+    ceiling: Mapped[float] = mapped_column(Float)
+    measured: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
 
 
 class RunEvent(Base):

@@ -9,19 +9,29 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import String, func, literal_column, or_, select
+from sqlalchemy import String, case, func, literal_column, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.elements import ColumnElement
 
 from hub.auth import check_origin, require_session, token_hash, verify_password
 from hub.config import Settings
-from hub.db import Conversation, LoginSession, Message, Run, RunEvent, session_factory
+from hub.db import (
+    Conversation,
+    LoginSession,
+    LoginThrottle,
+    Message,
+    Run,
+    RunEvent,
+    session_factory,
+)
 from hub.execution import execute_run
 from hub.jobs import enqueue
 from hub.policy import ContextPart, Privacy
+from hub.provider_api import install_provider_api
 from hub.providers import Providers
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
@@ -82,10 +92,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await asyncio.gather(*application.state.tasks, return_exceptions=True)
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
+    install_provider_api(app, cfg, factory)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:
+        # Never echo raw validation inputs, which may contain provider credentials.
+        return JSONResponse(status_code=422, content={"detail": "Ungültige Eingabe"})
+
     app.state.settings = cfg
     app.state.sessions = factory
     app.state.providers = Providers(cfg)
-    app.state.login_attempts = []
     app.state.tasks = set()
 
     @app.middleware("http")
@@ -107,16 +123,58 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok", "milestone": "M1-partial", "privacy_default": "LOCAL_ONLY"}
 
+    @app.get("/api/metrics")
+    def metrics(session: SessionDependency) -> dict[str, object]:
+        # Aggregated operational data only; no prompts, keys, titles or session IDs.
+        with factory() as db:
+            window = Run.started >= time.time() - 30 * 86400
+            statuses = dict(
+                db.execute(
+                    select(Run.status, func.count()).where(window).group_by(Run.status)
+                ).all()
+            )
+            timings = db.execute(
+                select(
+                    func.avg(Run.router_seconds),
+                    func.avg(Run.first_content_seconds),
+                    func.avg(Run.finished - Run.started),
+                    func.count(Run.cost),
+                    func.sum(Run.cost),
+                ).where(window)
+            ).one()
+            return {
+                "window_days": 30,
+                "statuses": statuses,
+                "router_seconds_avg": timings[0],
+                "first_content_seconds_avg": timings[1],
+                "duration_seconds_avg": timings[2],
+                "measured_cost_runs": timings[3],
+                "measured_cost_usd": timings[4],
+                "cost_unknown_runs": sum(statuses.values()) - timings[3],
+                "privacy_default": "LOCAL_ONLY",
+            }
+
     @app.post("/api/login")
     def login(body: LoginInput, request: Request, response: Response) -> dict[str, str]:
         check_origin(request)
         now = time.time()
-        app.state.login_attempts = [t for t in app.state.login_attempts if now - t < 60]
-        if len(app.state.login_attempts) >= 5:
-            raise HTTPException(429, "Bitte eine Minute warten")
-        app.state.login_attempts.append(now)
         if not cfg.password_hash:
             raise HTTPException(503, "Login ist noch nicht serverseitig eingerichtet")
+        with factory() as db:
+            count = db.scalar(
+                update(LoginThrottle)
+                .where(LoginThrottle.id == 1)
+                .values(
+                    attempts=case(
+                        (LoginThrottle.window < now - 60, 1), else_=LoginThrottle.attempts + 1
+                    ),
+                    window=case((LoginThrottle.window < now - 60, now), else_=LoginThrottle.window),
+                )
+                .returning(LoginThrottle.attempts)
+            )
+            db.commit()
+        if count is None or count > 5:
+            raise HTTPException(429, "Bitte eine Minute warten")
         if not verify_password(body.password, cfg.password_hash):
             raise HTTPException(401, "Anmeldung fehlgeschlagen")
         token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
@@ -252,6 +310,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         "reason": x.reason,
                         "error": x.error,
                         "cost": x.cost,
+                        "cost_estimate": x.cost_estimate,
+                        "model": x.model,
+                        "provider_revision": x.provider_revision,
+                        "capabilities": json.loads(x.capabilities),
                         "router_seconds": x.router_seconds,
                         "first_content_seconds": x.first_content_seconds,
                     }
@@ -486,6 +548,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "started": run.started,
                 "finished": run.finished,
                 "cost": run.cost,
+                "cost_estimate": run.cost_estimate,
+                "model": run.model,
+                "provider_revision": run.provider_revision,
+                "capabilities": json.loads(run.capabilities),
             }
 
     async def watch(run_id: str, request: Request, after: int = 0) -> AsyncIterator[str]:

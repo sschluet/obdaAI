@@ -14,6 +14,7 @@ x-app: &app
     - "${HUB_LOCAL_HOST:-inference.invalid}:127.0.0.1"
   volumes:
     - /etc/obdaai/secrets/local-inference.key:/run/secrets/local-inference.key:ro
+    - /etc/obdaai/secrets/provider-encryption.key:/run/secrets/provider-encryption.key:ro
   logging:
     driver: json-file
     options: {max-size: "10m", max-file: "3"}

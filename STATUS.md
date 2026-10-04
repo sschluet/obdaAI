@@ -230,3 +230,18 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   keine zusätzliche fachliche Terminierungsengine. Chat priorisiert vor Titeln.
 - Lokal 43 Tests bestanden, ein PostgreSQL-Test lokal übersprungen; er prüft in CI zusätzlich
   echte Heartbeat-Recovery und deutsche Wortstämme. Providerverwaltung/Budgets weiterhin in Arbeit.
+
+## M1: Providerverwaltung, Verschlüsselung und Laufgrenzen
+
+- Mehrere lokale/OpenRouter-Provider, AUTO-Standard je Typ, Fähigkeiten/Datenschutzklassen,
+  serverseitige Endpunktallowlist, Modellkatalog und persistente synthetische Modelltests.
+- AES-GCM-Secrets außerhalb des DB-Masterkeys, Einstellungsrevisionen, frische Modellpreise,
+  Kostenreservierungen mit bekannten/ unbekannten Usage-Werten, Kontext-/Token-/Zeitlimits.
+- Aggregierte authentifizierte Metriken, persistent begrenzter Login, sichtbare Fehler bei
+  begrenzten Providerantworten. Zwölf synthetische Routerfälle für echte lokale Auswertung.
+- Lokale Prüfung: 56 Tests bestanden, PostgreSQL-Test wird separat in CI ausgeführt;
+  Lint, Typprüfung und Frontendbuild bestanden. Browser: Verbindung/Modelltest und
+  Einstellungsänderung mit Revision nachgewiesen; Fixture hat keine echten Modelldaten.
+- OpenRouter-Schlüssel vom Benutzer bereitgestellt; Freigabe für eigene VM und synthetische
+  Live-Abnahme bis 0,05 USD liegt vor. Serveraktualisierung und Live-Nachweise folgen;
+  hiermit wird noch keine vollständige M1-Abnahme behauptet.
