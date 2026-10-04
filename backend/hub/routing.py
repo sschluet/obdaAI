@@ -1,7 +1,8 @@
+import math
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Capability(StrEnum):
@@ -21,6 +22,17 @@ class Route(BaseModel):
     source_scopes: list[str] = Field(default_factory=list, max_length=10)
     reason: str = Field(max_length=240)
     answer: str | None = Field(default=None, max_length=16000)
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def numeric_answer(cls, value: object) -> object:
+        # A JSON number is a complete arithmetic answer, not a new capability.
+        # Booleans and non-finite values remain invalid. Scope checks stay strict.
+        if isinstance(value, int) and not isinstance(value, bool):
+            return str(value)
+        if isinstance(value, float) and math.isfinite(value):
+            return str(int(value)) if value.is_integer() else str(value)
+        return value
 
     @model_validator(mode="after")
     def valid(self) -> "Route":

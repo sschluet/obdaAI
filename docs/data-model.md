@@ -21,3 +21,10 @@ PostgreSQL App-Schema mit Alembic; n8n separate Datenbank und Rolle. Queue-Schem
 nur über Procrastinate-Migrationen. Keine direkte n8n-Datenbankmanipulation.
 Memory-Markdown ist kanonisch; Index rekonstruierbar. Umbenennungen/Löschungen
 führen zu expliziten Reconciliation-Zuständen, keine Wiederbelebung aus alten Chunks.
+
+Schema 0001 implementiert Session, Conversation, Message und Run.
+0002 ergänzt RunEvent mit Run-ID und fortlaufender Sequenz als zusammengesetztem
+Primärschlüssel; Payload und Eventtyp bleiben ausschließlich in der Runtime-DB.
+0003 installiert das gepinnte upstream Procrastinate-Schema in `hub_queue` unter
+PostgreSQL. Run und Queue-Eintrag verwenden dieselbe Commit-Transaktion.
+Übrige Aggregate sind geplanter verbindlicher V1-Umfang, noch keine existierenden Tabellen.

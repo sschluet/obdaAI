@@ -1,0 +1,10 @@
+[Unit]
+Description=obdaAI private HTTPS boundaries
+After=network-pre.target
+Before=nginx.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/obdaai-https-network
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

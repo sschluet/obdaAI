@@ -1,0 +1,24 @@
+[Unit]
+Description=obdaAI restricted local-model SSH relay
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=obdaai-relay
+Group=obdaai-relay
+EnvironmentFile=/etc/obdaai/relay.env
+ExecStart=/usr/bin/ssh -F /dev/null -i /var/lib/obdaai-relay/.ssh/id_ed25519 -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ForwardAgent=no -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/var/lib/obdaai-relay/.ssh/known_hosts -o GlobalKnownHostsFile=/dev/null -o ExitOnForwardFailure=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -NT -L 127.0.0.1:11444:127.0.0.1:11435 hub-relay@${RELAY_HOST}
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

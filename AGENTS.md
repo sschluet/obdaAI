@@ -8,7 +8,7 @@ in Git. Do not inherit permissions from an older assistant deployment.
 - Python 3.12+, Node 24 LTS, uv 0.12.23; install: `uv sync --locked --all-extras`.
 - API: `uv run uvicorn hub.api:app --host 127.0.0.1 --port 8765`.
 - Python checks: `uv run ruff check .`, `uv run mypy backend/hub`, `uv run pytest`.
-- Frontend: `cd frontend && npm ci && npm run check && npm run build`.
+- Frontend: `cd frontend && pnpm install --frozen-lockfile --ignore-scripts && pnpm check && pnpm build`.
 - Secrets: `uv run python scripts/scan_secrets.py`; CI also runs gitleaks.
 - PostgreSQL schema: `uv run alembic upgrade head`; no implicit production create_all.
 - Production Compose requires a reviewed target, secrets and egress rules. Never

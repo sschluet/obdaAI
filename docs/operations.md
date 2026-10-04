@@ -3,11 +3,12 @@
 ## Aktueller Stand
 Kein Hub auf einem produktiven Server installiert. Bestehende Dienste bleiben als
 Rückfalloption. Interne Bestandsdaten stehen nur in `.local/inventory.md` (ignoriert).
-Die Ziel-VM ist noch nicht festgelegt/freigegeben. Kein Proxmox-Token wird aus alten
+Die Zielwahl (vorhandenes ai-core oder neue dedizierte VM) ist noch nicht
+festgelegt; konkrete Installation/Provisionierung ist noch nicht freigegeben. Kein Proxmox-Token wird aus alten
 Konfigurationen automatisch zum Provisionieren verwendet.
 
 ## Deployment-Gates
-1. Eigene VM-ID/Adresse und vorhandene Kapazität bestätigen; konkrete Provisionierung
+1. Zielwahl bestätigen; bei neuer VM deren ID/Adresse und Host-Kapazität prüfen; konkrete Provisionierung
    freigeben. Debian 13, Startannahme 4 vCPU/8 GiB/80 GiB.
 2. Unterstützte Docker Engine/Compose-Version und Images/Digests prüfen und pinnen.
 3. Neue App-DB/Rolle anlegen, Migration prüfen, Schlüssel außerhalb DB sichern.
@@ -32,3 +33,59 @@ Request-ID ohne Inhalt; Routerlatenz, TTFC, Dauer, Fehlerstatus, bekannte usage,
 Queuewait und Runner-RAM messen. Logs ohne Prompts/Secrets, Rotation und Retention.
 Mac-mini-Anfragen serialisieren und Chat gegenüber Batch priorisieren. Timeouts
 und Retries begrenzen. Kein Exactly-once-Versprechen; Writes vor Retry abgleichen.
+
+## M1 Entwicklungsimage
+Dockerfile baut die statische UI und die Python-App mit Lockfiles. Das Runtime-Image
+läuft als UID/GID 10001, enthält weder Runtime-Daten noch Secrets und führt keine
+Migration beim Start aus. Provider-Keyfiles müssen für diese UID ausschließlich
+lesbar sein (0600/0400); vorhandene gruppengeschützte Altplattform-Keys werden nicht
+automatisch umberechtigt. Der aktuelle Adapter unterstützt nur explizit erlaubte
+lokale IPs und den festen offiziellen OpenRouter-Origin; weitere Provider-UI folgt.
+Compose und produktive Infrastruktur sind noch nicht installiert oder abgenommen.
+
+Lokale Backends können nach Liveprüfung `HUB_LOCAL_DISABLE_THINKING=true` verwenden.
+Dies ergänzt ausschließlich beim lokalen Adapter das nachgewiesen unterstützte
+`enable_thinking:false`; standardmäßig wird kein vendorbezogenes Feld gesendet.
+Der Router hat 1.024 Outputtokens und maximal einen Schema-Reparaturversuch.
+
+## M1 Queue und Wiederaufnahme
+`uv run alembic upgrade head` legt unter PostgreSQL zusätzlich das dedizierte Schema
+`hub_queue` aus Procrastinate 3.10.0 an. Ausschließlich eine neue, eigene Hub-DB verwenden.
+Die Migration läuft in derselben Transaktion und installiert keinen Zeitplan.
+API und Worker verwenden dieselbe `HUB_DATABASE_URL` und Provider-Konfiguration:
+
+```sh
+uv run uvicorn hub.api:app --host 127.0.0.1 --port 8765
+uv run python -m hub.jobs
+```
+
+Beide Befehle benötigen jeweils einen eigenen Prozess. Worker-Concurrency ist 1.
+Ein Run und sein Queue-Job werden atomar auf derselben psycopg-Verbindung committed.
+Der Browser beobachtet persistierte SSE-Ereignisse; Schließen/Reload beendet den Run
+nicht. Das Öffnen eines laufenden Gesprächs verbindet die UI erneut. API-Neustarts
+ändern PostgreSQL-Runstatus nicht. SQLite bleibt ausschließlich Entwicklung: separater
+Async-Task, keine dauerhafte Queue, API-Neustart markiert offene Runs unterbrochen.
+
+Abbruch vor Workerstart setzt den Run sofort auf cancelled; danach überwacht die
+Ausführung alle 200 ms die Abbruchanforderung, auch während Provider-I/O. Provider-Timeouterror spätestens
+nach 30 Sekunden bzw. Gesamtlimit 90 Sekunden. Kein automatischer Provider-Retry,
+kein Cloudfallback. Worker-Shutdown lässt bis zu 95 Sekunden zum Abschluss.
+Bei hartem Workerabbruch den gestoppten Prozess zuerst nachweisen und den stalled Job
+mit den Procrastinate-Verwaltungsfunktionen gezielt erneut dispatchen. Die Taskfunktion
+rekonstruiert gespeicherte Delta-Ereignisse als LOCAL_ONLY-Teilantwort und markiert den
+Run interrupted, ohne den Provider erneut aufzurufen. Automatische stalled-Reconciliation,
+UI-Administration und Retention für Queue/Ereignisse sind noch offen.
+
+Quelle für atomare Übergabe: [Procrastinate external connections](https://procrastinate.readthedocs.io/en/stable/howto/production/external_connection.html).
+Schema und Updates: [offizielle Migrationsanleitung](https://procrastinate.readthedocs.io/en/stable/howto/production/migrations.html).
+
+## M1 Providerbetrieb
+
+[Providerkonfiguration und Limits](providers.md) beschreibt Endpunktfreigaben, AES-GCM-Keys,
+Revisionen und Budgetreservierungen. Der Masterkey wird in Compose read-only aus
+`/etc/obdaai/secrets/provider-encryption.key` eingebunden. Das Backup archiviert bereits
+`/etc/obdaai` vollständig; der isolierte Restore muss zusätzlich die Entschlüsselbarkeit
+der Providersecrets nachweisen. Metriken unter `/api/metrics` sind authentifiziert.
+OpenRouter nur nach eigener Ziel-/Budgetfreigabe aktivieren, Testdaten synthetisch halten
+und bei fehlenden frischen Preisen den Verbindungstest wiederholen. Der Operator-Marker
+für `deploy/egress.sh` ist keine Berechtigung des Assistenten für beliebige Netzwerkziele.
