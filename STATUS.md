@@ -624,7 +624,7 @@ Benutzer möchte aktuell keinen MCP-Server anbinden, sondern die Möglichkeit f�
 später. Ausführbare n8n-Zeitplanung mit einmaligen/wiederkehrenden Terminen und
 Termin-/Ergebnisübersicht bleibt nächster M3-Funktionsschritt; M3 bleibt Teilstand.
 
-### Zeitplanung: Implementierung, Live-Brücke noch ausstehend
+### Zeitplanung: installiert und mit echtem n8n-Takt abgenommen
 
 Migration 0015 und normale Terminwahl für manuell/einmalig/täglich/wöchentlich
 implementiert. Zeitpläne bleiben getrennt von unveränderten TaskSpec-Manifesten;
@@ -637,9 +637,30 @@ Maschinenzugang nur für leere Zeitimpulse sind getestet. Die GUI bietet Filter 
 geplante, wiederkehrende, pausierte und bisher ausgeführte Aufgaben; Uhrzeitänderung
 und persistente Wochentage sind im synthetischen Browser tatsächlich geprüft.
 
-Der feste n8n-Workflowentwurf enthält nur Minutentakt → eigene HTTPS-Pulse-API,
-keine Aufgabeninhalte oder Dokumente. TLS bleibt verifiziert, Redirects deaktiviert.
-Standardmäßig bleibt die Brücke aus. Neue n8n-Credentials und Aktivierung des eigenen
-Clock-Workflows benötigen die konkrete Freigabe für bestehende Dienste/Zugänge;
-bestehende n8n-Workflows und Containerkonfiguration bleiben außerhalb dieses Updates.
-Die produktive automatische Ausführung ist noch nicht abgenommen; M3 bleibt teilweise.
+Nach ausdrücklicher Freigabe wurden genau zwei eigene n8n-Credentials und ein
+eigener aktiver Minutentakt-Workflow eingerichtet. Er sendet ausschließlich leere
+Zeitimpulse an die feste eigene HTTPS-API, keine Aufgabeninhalte oder Dokumente.
+TLS bleibt verifiziert, Redirects deaktiviert. Der neue Maschinenzugang ist nur für
+`/api/scheduler/tick` gültig. Bestehende n8n-Workflowversionen und Aktivierungszustände
+sind unverändert; keine fremden Container- oder Firewalländerungen.
+
+Echte Live-Abnahme: einmalige, tägliche und wöchentliche lokale Leseaufgaben mit
+genau einem dauerhaft gespeicherten Ergebnis, korrekten Folgeterminen und Pause vor
+dem nächsten tatsächlichen n8n-Takt bestanden. Eine zeitgesteuerte lokale KI-Aufgabe
+beantwortete die synthetische Frage korrekt; keine privaten Quellen und keine
+Cloudaufrufe. Testaufgaben anschließend wiederherstellbar archiviert, übrige Aufgaben
+unverändert. Ergebnisse und Terminbelege nach eigenem API-/Worker-Neustart sowie
+nach finalem Rollout erhalten. Einstellungen zeigen echten Clock-Status/letzten Takt.
+
+Installiert: `95329de`, Schema 0015, beide APIs gesund; angemeldete HTTPS-Abnahme
+mit Zertifikatsprüfung bestanden. CI 37304161168 vollständig grün: 204 Tests inklusive
+sechs echten PostgreSQL-Checks, Browser, Container und Secrets. Verschlüsselte
+Off-VM-Sicherung und isolierter Schema-0015-Restore bestanden: fünf Zeitpläne,
+17 Planrevisionen, vier Terminbelege, drei lokale Modellbelege, 40 Originalhashes,
+sechs Memory-Dateien sowie begrenzte Zugänge und Scheduler-Konfiguration erhalten.
+Temporäre Restore-Datenbank entfernt, bestehende Proxmox-Konfiguration unverändert.
+
+M3 bleibt teilweise: externe MCP-/REST-/Browser-Ausführung, Reconciliation und
+produktive Home-Assistant-Wartungsaktionen sind weiterhin offen. Der Aktionsgateway
+bleibt pausiert. Bei folgenden eigenen Compose-Rollouts muss die zusätzliche
+`scheduler.compose.yaml` eingebunden bleiben; siehe `docs/schedules.md`.
