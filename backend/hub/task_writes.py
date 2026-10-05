@@ -46,7 +46,10 @@ def policy_lock(db: Session) -> ActionPolicy:
 
 
 def grant_info(db: Session, task_id: str) -> dict[str, Any] | None:
-    grant = db.get(TaskWriteGrant, task_id)
+    return grant_summary(db.get(TaskWriteGrant, task_id))
+
+
+def grant_summary(grant: TaskWriteGrant | None) -> dict[str, Any] | None:
     if grant is None:
         return None
     return {

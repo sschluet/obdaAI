@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import FastAPI, HTTPException
 from pydantic import Field, ValidationError, field_validator, model_validator
 from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, load_only, sessionmaker
 
 from hub.action_api import TOOLS, ArchiveParameters, StrictInput, digest, encode
 from hub.config import Settings
@@ -25,6 +25,7 @@ from hub.db import (
     TaskRun,
     TaskSchedule,
     TaskStep,
+    TaskWriteGrant,
 )
 from hub.knowledge_api import Auth
 from hub.n8n_drafts import connection_draft
@@ -149,13 +150,24 @@ def current(db: Session, task_id: str) -> tuple[Task, TaskRevision, TaskSpec]:
     if task is None:
         raise HTTPException(404, "Aufgabe nicht gefunden")
     revision = db.get(TaskRevision, (task.id, task.revision))
-    if revision is None or digest(revision.spec) != revision.sha256:
+    spec = revision_spec(task, revision)
+    assert revision is not None
+    return task, revision, spec
+
+
+def revision_spec(task: Task, revision: TaskRevision | None) -> TaskSpec:
+    if (
+        revision is None
+        or revision.task_id != task.id
+        or revision.revision != task.revision
+        or digest(revision.spec) != revision.sha256
+    ):
         raise HTTPException(409, "Aufgabenvorgabe beschädigt")
     try:
         spec = TaskSpec.model_validate_json(revision.spec)
     except ValidationError:
         raise HTTPException(409, "Aufgabenvorgabe nicht mehr unterstützt") from None
-    return task, revision, spec
+    return spec
 
 
 def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
@@ -227,21 +239,29 @@ def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
     }
 
 
-def task_info(db: Session, task_id: str) -> dict[str, Any]:
-    task, revision, spec = current(db, task_id)
-    last = db.scalar(
-        select(TaskRun)
-        .where(TaskRun.task_id == task.id)
-        .order_by(TaskRun.created.desc(), TaskRun.id.desc())
-        .limit(1)
-    )
-    from hub.schedule_api import schedule_info
-
-    plan = db.get(TaskSchedule, task.id)
-    from hub.task_writes import grant_info
+def task_info(
+    db: Session,
+    task_id: str,
+    loaded: tuple[Task, TaskRevision, TaskRun | None, TaskSchedule | None, TaskWriteGrant | None]
+    | None = None,
+) -> dict[str, Any]:
+    if loaded is None:
+        task, revision, spec = current(db, task_id)
+        last = db.scalar(
+            select(TaskRun)
+            .where(TaskRun.task_id == task.id)
+            .order_by(TaskRun.created.desc(), TaskRun.id.desc())
+            .limit(1)
+        )
+        plan, grant = db.get(TaskSchedule, task.id), db.get(TaskWriteGrant, task.id)
+    else:
+        task, revision, last, plan, grant = loaded
+        spec = revision_spec(task, revision)
+    from hub.schedule_api import schedule_summary
+    from hub.task_writes import grant_summary
 
     return {
-        "write_grant": grant_info(db, task.id),
+        "write_grant": grant_summary(grant),
         "id": task.id,
         "revision": task.revision,
         "control_revision": task.control_revision,
@@ -250,12 +270,67 @@ def task_info(db: Session, task_id: str) -> dict[str, Any]:
         "spec": spec.model_dump(mode="json"),
         "spec_sha256": revision.sha256,
         "created": task.created,
-        "schedule": schedule_info(db, task),
+        "schedule": schedule_summary(task, plan),
         "next_run": plan.next_due if plan else None,
         "last_run": {"id": last.id, "status": last.status, "created": last.created}
         if last
         else None,
     }
+
+
+def task_listing(db: Session) -> list[dict[str, Any]]:
+    tasks = list(db.scalars(select(Task).order_by(Task.created.desc())))
+    if not tasks:
+        return []
+    ids = [task.id for task in tasks]
+    revisions = {
+        r.task_id: r
+        for r in db.scalars(
+            select(TaskRevision)
+            .join(
+                Task, (Task.id == TaskRevision.task_id) & (Task.revision == TaskRevision.revision)
+            )
+            .where(Task.id.in_(ids))
+        )
+    }
+    plans = {
+        p.task_id: p for p in db.scalars(select(TaskSchedule).where(TaskSchedule.task_id.in_(ids)))
+    }
+    grants = {
+        g.task_id: g
+        for g in db.scalars(select(TaskWriteGrant).where(TaskWriteGrant.task_id.in_(ids)))
+    }
+    ranked = (
+        select(
+            TaskRun.id.label("run_id"),
+            func.row_number()
+            .over(
+                partition_by=TaskRun.task_id, order_by=[TaskRun.created.desc(), TaskRun.id.desc()]
+            )
+            .label("rank"),
+        )
+        .where(TaskRun.task_id.in_(ids))
+        .subquery()
+    )
+    lasts = {
+        r.task_id: r
+        for r in db.scalars(
+            select(TaskRun)
+            .join(ranked, TaskRun.id == ranked.c.run_id)
+            .where(ranked.c.rank == 1)
+            .options(load_only(TaskRun.id, TaskRun.task_id, TaskRun.status, TaskRun.created))
+        )
+    }
+    if any(task.id not in revisions for task in tasks):
+        raise HTTPException(409, "Aufgabenliste inzwischen geändert; erneut laden")
+    return [
+        task_info(
+            db,
+            task.id,
+            (task, revisions[task.id], lasts.get(task.id), plans.get(task.id), grants.get(task.id)),
+        )
+        for task in tasks
+    ]
 
 
 def run_info(db: Session, run: TaskRun) -> dict[str, Any]:
@@ -374,9 +449,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
     @app.get("/api/tasks")
     def listing(auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:
-            return [
-                task_info(db, t.id) for t in db.scalars(select(Task).order_by(Task.created.desc()))
-            ]
+            return task_listing(db)
 
     @app.post("/api/tasks")
     def create(spec: TaskSpec, auth: Auth) -> dict[str, Any]:

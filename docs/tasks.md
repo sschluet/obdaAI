@@ -94,3 +94,22 @@ transferred and are never silently truncated. No model or API is called until th
 user saves normally. The title can be edited; the new task is stored paused and
 requires the existing separate activation. Cancelling the dialog saves nothing.
 The transfer draft is consumed once, so reopening Tasks does not duplicate it.
+
+
+## Ordered local evidence and bounded listing queries
+
+An explicitly reviewed hub-status → local-analysis task passes the exact persisted
+read receipt into the final local model prompt, labelled LOCAL_ONLY and audited as
+`task-step:<run>:<sequence>`. Source/skill limits and final provider revision checks
+still apply. The real two-stage local model run and natural-language ordered draft
+passed on the own VM, with no cloud call; the test task was archived afterward.
+
+Task listing fetches tasks, current immutable revisions, schedules, write grants and
+latest run metadata in five bulk reads. Ranking uses created time and ID as a stable
+tiebreaker. Full run snapshots/steps are not loaded by that list. The same strict spec
+hash/revision validation and schedule/grant serializers remain in the detail path.
+A 26-task regression checks constant query count, identical summaries, archived
+entries, latest-run ties, paused/drifted plans, consumed grants and corrupted hashes.
+The change responds to a measured 120-request HTTPS sample (concurrency four), where
+the previous per-task queries caused task-list p95 around 1.64 seconds. Its actual
+post-deployment latency is recorded separately; this is not a full-load certification.

@@ -236,3 +236,75 @@ def test_corrupt_manifest_stops_without_a_read_receipt(setup, snapshot):
     result = terminal(c, task)
     assert result["status"] == "failed" and result["error"] == "Laufvorgabe verändert"
     assert not result["steps"]
+
+
+def test_task_listing_batches_history_and_preserves_schedule_and_grant_state(setup):
+    from hub.db import Task, TaskRevision, TaskSchedule, TaskWriteGrant
+    from hub.task_api import TaskSpec, task_info, task_listing
+    from sqlalchemy import event
+
+    app, c, h, _ = setup
+    task = create(c, h)
+    first = queued(
+        app, task, status="succeeded", created=10, id="00000000-0000-4000-8000-000000000001"
+    )
+    latest = queued(
+        app, task, status="failed", created=10, id="ffffffff-ffff-4fff-8fff-ffffffffffff"
+    )
+    assert first != latest
+    with app.state.sessions() as db:
+        db.add(
+            TaskSchedule(
+                task_id=task["id"],
+                task_revision=1,
+                control_revision=0,
+                spec_sha256=task["spec_sha256"],
+                definition=encode({"kind": "manual"}),
+                paused=False,
+                next_due=123,
+            )
+        )
+        db.add(
+            TaskWriteGrant(
+                task_id=task["id"],
+                task_revision=1,
+                control_revision=1,
+                spec_sha256=task["spec_sha256"],
+                policy_revision=1,
+                expires=123,
+                used=True,
+            )
+        )
+        for index in range(25):
+            row = Task(created=20 + index, archived=bool(index % 2))
+            db.add(row)
+            db.flush()
+            document = encode(
+                TaskSpec(title=f"Batch {index}", goal="Read only").model_dump(mode="json")
+            )
+            db.add(TaskRevision(task_id=row.id, revision=1, spec=document, sha256=digest(document)))
+        db.commit()
+    statements = []
+    with app.state.sessions() as db:
+        engine = db.get_bind()
+
+        def capture(conn, cursor, statement, params, context, many):
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", capture)
+        try:
+            listing = task_listing(db)
+        finally:
+            event.remove(engine, "before_cursor_execute", capture)
+        assert len(statements) == 5
+        assert listing == [task_info(db, item["id"]) for item in listing]
+    assert len(listing) == 26
+    tested = next(item for item in listing if item["id"] == task["id"])
+    assert tested["last_run"]["id"] == latest
+    assert tested["schedule"]["paused"] and tested["schedule"]["needs_review"]
+    assert tested["write_grant"]["used"] and tested["write_grant"]["expires"] == 123
+    with app.state.sessions() as db:
+        db.get(TaskRevision, (task["id"], 1)).sha256 = "0" * 64
+        db.commit()
+    assert c.get("/api/tasks").status_code == 409

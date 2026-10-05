@@ -107,7 +107,10 @@ class ScheduleControl(StrictInput):
 
 
 def schedule_info(db: Session, task: Task) -> dict[str, Any] | None:
-    plan = db.get(TaskSchedule, task.id)
+    return schedule_summary(task, db.get(TaskSchedule, task.id))
+
+
+def schedule_summary(task: Task, plan: TaskSchedule | None) -> dict[str, Any] | None:
     if plan is None:
         return None
     changed = task.revision != plan.task_revision or task.control_revision != plan.control_revision
