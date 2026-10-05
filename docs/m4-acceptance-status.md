@@ -11,10 +11,10 @@ verifizierten Rollout nicht mit dem installierten Stand gleichzusetzen.
 | Bilder | Echter Zuschnitt, Größenanpassung, Collage, PNG/JPEG; EXIF entfernt | Pixel-/Formatprüfung und Erhaltung des Originals; keine KI-Bildgenerierung |
 | Offline-Runner | Nonroot, netzwerkfrei, readonly Runtime, ohne DB/Secrets/Vault; Landlock pro Auftrag | Eigene Linux-VM: vier Dateien, sechs Vorschaubilder, Replay ohne Überschreiben bestanden |
 | Projektoberfläche | Normale Dialoge für alle vier Formate, Vorschau aller Seiten, explizite Freigabe, Download | Synthetischer mobiler Browsercheck bestanden; Vorschauen der UI-Fixture sind ausdrücklich keine Layoutabnahme |
-| Versionen | Schema 0019, immutable Vorgaben/Quellhashes, revisionsgebundene Folgeversion, kein Überschreiben | Auth/CSRF/Scope/Quell- und Ausgabedrift/Replay/Review-Gate per API geprüft |
-| Dispatch | Queue und Artefaktversion in derselben PG-Transaktion; eigener Worker, Wiederanlauf gleicht Ergebnis ab | Echte PostgreSQL-Abnahme des neuen Artefaktworkers und Live-Rollout noch ausstehend |
-| Modell / Chat | Noch offen | Lokaler strukturierter Entwurf aus Chat, Quellenbelege und semantische Qualitätsprüfung fehlen |
-| Betrieb | Eigener Compose-Overlay, Speicher-/CPU-/Zeitlimits, Sicherung eigener Dateien und DB vorbereitet | Produktive Installation und verschlüsselter Schema-0019-Restore noch ausstehend |
+| Versionen | Schema 0020, immutable Vorgaben/Quellhashes, revisionsgebundene Folgeversion, kein Überschreiben | Auth/CSRF/Scope/Quell- und Ausgabedrift/Replay/Review-Gate per API geprüft |
+| Dispatch | Queue und Artefaktversion in derselben PG-Transaktion; eigener Worker, Wiederanlauf gleicht Ergebnis ab | Echte PG-Abnahme der Dateiqueue bestanden; vollständiger PG-Gesamtcheck und Live-Rollout noch ausstehend |
+| Modell / Chat | Lokale DOCX-/PPTX-Entwürfe aus Ziel und expliziten Quellenauszügen; Folgeänderung bindet konkrete Ausgangsversion; Chatantwort als Word übernehmen | API-/UI-Abnahme synthetisch bestanden; echte lokale Modellabnahme offen. Fakten und Layout benötigen menschliche Prüfung |
+| Betrieb | Eigener Compose-Overlay, Speicher-/CPU-/Zeitlimits, Sicherung eigener Dateien und DB vorbereitet | Produktive Installation und verschlüsselter Schema-0020-Restore noch ausstehend |
 
 Eine gültige Datei oder erfolgreiches Rendering ist keine visuelle Freigabe.
 Der Status bleibt `needs_review`, bis der angemeldete Nutzer alle Vorschauseiten
@@ -33,3 +33,20 @@ Je Auftrag maximal 20 Quellen / 100 MiB, einzelne Quelle 20 MiB, Ausgabe 40 MiB,
 Vorschauen insgesamt 100 MiB, gesamte temporäre Ausgabe 220 MiB / 5000 Einträge.
 Vier aktive Aufträge, maximal 1000 Versionen und 2 GiB eigener Spool inklusive
 320-MiB-Reserve pro Auftrag. Der getrennte Worker blockiert den Chat nicht.
+
+Lokale Entwürfe erhalten maximal vier ausgewählte Quellen mit jeweils zwei
+passenden Textauszügen. Verwendete Quellrevisionen, Hashes, Fundstellen, lokale
+Providerrevision, Prompt-/Zielhash und Ausgangsversion werden an ein 30 Minuten
+gültiges authentifiziertes Entwurfsreceipt gebunden. Die bestätigte Dateiversion
+speichert den Beleg samt Kennzeichnung manueller Änderungen. Keine Dateierstellung
+beim Entwurf und keine Cloudfreigabe. Falsche Anzahl Folien, unbekannte Schemafelder,
+Quelle/Projekt/Provider/Ausgangsversion-/Textdrift werden abgewiesen.
+
+Chatübernahme bindet eine vorhandene aktive Antwort an Gespräch/Revision/Hash und
+speichert ihren unveränderten lokalen Herkunftssnapshot. Fremde Projektgespräche
+und Vault-Chats sind nicht exportierbar. Manuelle Folgeversionen behalten diesen
+Snapshot. Diese Funktion verschiebt keine anderen Gespräche oder Quellen.
+
+Weiter offen: Bilder in DOCX, optionale DOCX→PDF-Ausgabe, PDF-Erstellung aus Text,
+Bildbeschriftung, direkte natürliche Chat-Dateiplanung und umfassende Layout-/
+semantische Qualitätsabnahme. Die App bietet keine überprüfte echte Schwärzung.

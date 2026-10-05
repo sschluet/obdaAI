@@ -74,10 +74,36 @@ try{
   await view.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
   await card.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  }
+ for(const kind of ['docx','pptx']){
+  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
+  await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Create an editable synthetic local draft.');
+  if(kind==='pptx')await dialog.getByLabel('Gewünschte Folienanzahl',{exact:true}).fill('2');
+  await dialog.getByRole('button',{name:'Lokal entwerfen',exact:true}).click();
+  await dialog.getByText('Lokaler Entwurf bereit',{exact:false}).waitFor();
+  if(kind==='docx'&&await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='Editable synthetic draft text.')throw Error('Local draft did not populate editor');
+  if(kind==='pptx'&&await dialog.getByLabel('Folientitel',{exact:true}).count()!==2)throw Error('Requested slide count lost');
+  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
+  await page.getByText(kind==='docx'?'Synthetic local document draft · Version 1':'Synthetic local presentation draft · Version 1',{exact:true}).waitFor();
+ }
+ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();
+ await page.getByLabel('Nachricht',{exact:true}).fill('A synthetic short answer for Word export.');
+ await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+ await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).click();
+ await page.getByRole('button',{name,exact:true}).click();
+ await page.getByRole('button',{name:'Chatantwort als Word übernehmen',exact:true}).click();
+ dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ if(!(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()).length)throw Error('Chat export lost content');
+ await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
+ await page.getByText('Aus Chatantwort · Revision 1 · lokal gespeichert',{exact:true}).waitFor();
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile artifact overflow');
  await page.screenshot({path:output+'/artifact-version-mobile.png',fullPage:true,animations:'disabled'});
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Synthetic artifact UI passed: review, download, reload, editable version, old version retained, mobile.');
+ console.log('Synthetic artifact UI passed: review, download, reload, editable version, old version retained, all four formats, local draft forms, chat export, mobile.');
 }catch(e){
  await page.screenshot({path:output+'/artifact-focused-failure.png',fullPage:true});
  console.error('Visible state:',await page.locator('body').innerText());

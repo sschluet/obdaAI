@@ -1,7 +1,9 @@
 """Synthetic file boundary tests; real Linux/Office rendering is a separate smoke."""
 
+import base64
 import hashlib
 import json
+import os
 import time
 import uuid
 from pathlib import Path
@@ -30,6 +32,9 @@ def setup(tmp_path, monkeypatch):
     requests, results = tmp_path / "requests", tmp_path / "results"
     requests.mkdir()
     results.mkdir()
+    key = tmp_path / "synthetic-key"
+    key.write_bytes(base64.b64encode(os.urandom(32)))
+    key.chmod(0o600)
     cfg = Settings(
         database_url=url,
         origin="http://testserver",
@@ -38,6 +43,7 @@ def setup(tmp_path, monkeypatch):
         source_dir=str(tmp_path / "sources"),
         artifact_request_dir=str(requests),
         artifact_result_dir=str(results),
+        secrets_key_file=str(key),
     )
     app = create_app(cfg)
     with TestClient(app) as c:

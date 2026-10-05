@@ -112,7 +112,7 @@ def test_artifact_commit_rollback_and_duplicate_workers(tmp_path, monkeypatch):
             enqueue_artifact(db, cfg, aid, 1)
             enqueue_artifact(db, cfg, aid, 1)
             db.commit()
-        queue = worker_app(cfg)
+        queue = worker_app(cfg, include_maintenance=False)
 
         async def local_file_boundary():
             request = requests / (aid + "-1")

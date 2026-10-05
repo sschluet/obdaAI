@@ -4,6 +4,7 @@ import asyncio
 import json
 import sys
 import time
+from typing import Any
 
 import procrastinate
 import psycopg
@@ -97,7 +98,7 @@ def enqueue_artifact(db: Session, cfg: Settings, artifact_id: str, revision: int
     )
 
 
-def worker_app(cfg: Settings) -> procrastinate.App:
+def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
             conninfo=conninfo(cfg),
@@ -108,6 +109,9 @@ def worker_app(cfg: Settings) -> procrastinate.App:
     )
     factory = session_factory(cfg.database_url)
     providers = Providers(cfg)
+
+    def maintenance_schedule(task: Any) -> Any:
+        return queue.periodic(cron="* * * * *")(task) if include_maintenance else task
 
     @queue.task(name="hub.artifact", queue="artifacts", retry=False)
     async def artifact(artifact_id: str, revision: int) -> None:
@@ -169,7 +173,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
         await execute_task(factory, cfg, run_id)
 
-    @queue.periodic(cron="* * * * *")
+    @maintenance_schedule
     @queue.task(
         name="hub.vault-reconcile",
         queue="vault-maintenance",
@@ -191,7 +195,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
                 )
                 db.commit()
 
-    @queue.periodic(cron="* * * * *")
+    @maintenance_schedule
     @queue.task(
         name="hub.reconcile",
         queue="maintenance",
@@ -222,7 +226,7 @@ async def requeue_stalled(queue: procrastinate.App) -> None:
 
 
 async def main() -> None:
-    queue = worker_app(Settings.from_env())
+    queue = worker_app(Settings.from_env(), include_maintenance="--artifacts" not in sys.argv)
     async with queue.open_async():
         await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.

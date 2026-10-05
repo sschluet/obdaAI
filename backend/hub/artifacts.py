@@ -285,5 +285,11 @@ def info(row: ArtifactRevision) -> dict[str, Any]:
         "error": row.error,
         "created": row.created,
         "accepted": row.accepted,
+        "draft": json.loads(row.draft_metadata) if row.draft_metadata else None,
+        "chat": {
+            key: value for key, value in json.loads(row.chat_metadata).items() if key != "content"
+        }
+        if row.chat_metadata
+        else None,
         "output": json.loads(row.manifest) if row.manifest else None,
     }

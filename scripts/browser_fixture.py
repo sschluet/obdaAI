@@ -184,6 +184,39 @@ class SyntheticProvider:
         external: bool,
         grants: list[CloudGrant],
     ) -> AsyncIterator[str]:
+        if parts and parts[0].source_id == "artifact-draft-policy":
+            assert not external and not grants
+            if '"slides"' in parts[0].content:
+                import re
+
+                count = int(re.search(r"Exactly ([0-9]+) slides", parts[0].content)[1])
+                yield json.dumps(
+                    {
+                        "title": "Synthetic local presentation draft",
+                        "slides": [
+                            {
+                                "title": "Slide " + str(i + 1),
+                                "bullets": ["Editable synthetic bullet"],
+                                "notes": "Synthetic note",
+                            }
+                            for i in range(count)
+                        ],
+                    }
+                )
+            else:
+                yield json.dumps(
+                    {
+                        "title": "Synthetic local document draft",
+                        "sections": [
+                            {
+                                "heading": "Draft result",
+                                "paragraphs": ["Editable synthetic draft text."],
+                                "table": [["Column A", "Column B"], ["Synthetic", "42"]],
+                            }
+                        ],
+                    }
+                )
+            return
         if parts and parts[0].source_id == "task-draft-policy":
             assert not external and not grants
             if "SYNTHETIC_TASK_PLAN" in parts[-1].content:

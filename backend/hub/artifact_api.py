@@ -1,10 +1,12 @@
 """Authenticated project artifact drafts, previews, acceptance and immutable versions."""
 
 import asyncio
+import json
 import time
 import uuid
 from typing import Annotated, Any
 
+from cryptography.exceptions import InvalidTag
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,9 +30,16 @@ from hub.artifacts import (
 )
 from hub.auth import require_session
 from hub.config import Settings
-from hub.db import Artifact, ArtifactRevision, LoginSession, Project
+from hub.db import Artifact, ArtifactRevision, Conversation, LoginSession, Message, Project
 
 Auth = Annotated[LoginSession, Depends(require_session)]
+
+
+class ChatSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    conversation_id: uuid.UUID
+    message_id: uuid.UUID
+    revision: int = Field(ge=1)
 
 
 class CreateArtifact(BaseModel):
@@ -38,6 +47,8 @@ class CreateArtifact(BaseModel):
     request_id: uuid.UUID
     spec: ArtifactSpec
     expected_revision: int | None = Field(default=None, ge=1)
+    draft_token: str | None = Field(default=None, min_length=1, max_length=40000, repr=False)
+    chat_source: ChatSource | None = None
 
 
 class AcceptArtifact(BaseModel):
@@ -104,6 +115,55 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             bind_sources(db, cfg, project_id, body.spec)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
+        chat_metadata = ""
+        if body.chat_source:
+            chat = db.get(Conversation, str(body.chat_source.conversation_id))
+            message = db.scalar(
+                select(Message)
+                .where(Message.id == str(body.chat_source.message_id))
+                .with_for_update()
+            )
+            if (
+                not chat
+                or chat.memory_scope
+                or (chat.project_id and chat.project_id != project_id)
+                or not message
+                or message.conversation_id != chat.id
+                or not message.active
+                or message.role != "assistant"
+                or message.revision != body.chat_source.revision
+                or not 0 < len(message.content) <= 16000
+            ):
+                raise HTTPException(409, "Chatantwort oder Projektraum inzwischen geändert")
+            chat_metadata = json.dumps(
+                {
+                    "conversation_id": chat.id,
+                    "message_id": message.id,
+                    "revision": message.revision,
+                    "sha256": digest(message.content),
+                    "label": "LOCAL_ONLY",
+                    "content": message.content,
+                },
+                ensure_ascii=False,
+            )
+        metadata = ""
+        if body.draft_token:
+            from hub.artifact_drafts import verify_token
+
+            try:
+                metadata = verify_token(
+                    db,
+                    cfg,
+                    body.draft_token,
+                    project_id,
+                    body.spec,
+                    artifact_id,
+                    body.expected_revision,
+                )
+            except (ValueError, InvalidTag, KeyError, TypeError):
+                raise HTTPException(
+                    409, "Dateientwurf abgelaufen oder verändert; erneut entwerfen"
+                ) from None
         if db.bind is not None and db.bind.dialect.name == "postgresql":
             db.execute(text("SELECT pg_advisory_xact_lock(791103043)"))
         active = (
@@ -131,6 +191,9 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 raise HTTPException(404, "Artefakt nicht gefunden")
             if body.expected_revision != artifact.revision:
                 raise HTTPException(409, "Artefakt wurde inzwischen geändert")
+            previous = db.get(ArtifactRevision, (artifact.id, artifact.revision))
+            if previous and not body.chat_source:
+                chat_metadata = previous.chat_metadata
             artifact.revision += 1
         else:
             if body.expected_revision is not None:
@@ -144,6 +207,8 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             request_key=str(body.request_id),
             spec=document,
             spec_sha256=digest(document),
+            draft_metadata=metadata,
+            chat_metadata=chat_metadata,
         )
         db.add(row)
         db.flush()

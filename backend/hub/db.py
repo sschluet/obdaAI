@@ -211,6 +211,8 @@ class ArtifactRevision(Base):
     status: Mapped[str] = mapped_column(String(24), default="queued")
     manifest: Mapped[str] = mapped_column(Text, default="")
     error: Mapped[str] = mapped_column(String(240), default="")
+    draft_metadata: Mapped[str] = mapped_column(Text, default="", server_default="")
+    chat_metadata: Mapped[str] = mapped_column(Text, default="", server_default="")
     created: Mapped[float] = mapped_column(Float, default=time.time)
     started: Mapped[float | None] = mapped_column(Float, nullable=True)
     accepted: Mapped[float | None] = mapped_column(Float, nullable=True)

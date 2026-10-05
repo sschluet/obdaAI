@@ -5,9 +5,9 @@
 Produktiv ist weiterhin `1aa2c6e` / Schema 0017 installiert. Im aktuellen
 Entwicklungsbranch `milestone/m3-actions` sind zusätzlich die begrenzten
 Aufgaben-Schreibprofile (0018) sowie vier lokale Dateidialoge mit dauerhaften
-Versionen, Vorschau-Freigabe und Offline-Runner (0019) implementiert.
-365 lokale Tests bestanden; zehn echte PG-Fälle ohne Fixture übersprungen.
-Ruff/mypy (49 Module), TS/Build und Source-Secret-Scan bestanden. Die synthetische
+Versionen, Vorschau-Freigabe und Offline-Runner (0019/0020) implementiert.
+377 lokale Tests bestanden; zehn echte PG-Fälle ohne Fixture übersprungen.
+Ruff/mypy (50 Module), TS/Build und Source-Secret-Scan bestanden. Die synthetische
 mobile Abnahme aller vier Dateidialoge einschließlich Word-Tabelle und erhaltener
 Folgeversion bestanden. Echte isolierte Linux-Abnahme für vier Dateien und sechs
 Vorschauseiten bestanden. Neuer PG-Gesamtcheck, CI und Rollout noch ausstehend.
@@ -1054,3 +1054,21 @@ ohne lokale Fixture übersprungen; Ruff und mypy (47 Module) sowie Source-Secret
 erfolgreich. Aufgabenprofil-CI 37368721985: Browser und Chromium-Smoke erfolgreich;
 Python/Container/Secrets warten noch auf GitHub-Runner. Daher bisher kein Rollout
 der Aufgabenprofile auf die produktive VM.
+
+### 2026-10-05: lokale Dateientwürfe, Folgeänderungen und Chatübernahme
+
+Zusätzlich zum Quellstand f1194a2: Schema 0020 bewahrt authentifizierte lokale
+Modellherkunft und Chatantwort-Snapshots pro Datei. Normale Word-/PowerPoint-
+Entwurfsdialoge, genaue Folienanzahl, explizite Quellenauszüge und serverseitige
+Fundstellen; keine Cloud und keine Rechte durch Modelloutput. Folgeentwürfe nutzen
+den alten Datenplan und benötigen dessen genaue Revision. Direkte Chatantwort-
+Übernahme als Word mit serverseitigem Gespräch-/Projekt-/Revisionscheck.
+Synthetische API-/mobile UI-Abnahme einschließlich aller vier Dateiarten bestanden.
+377 lokale Tests bestanden, zehn PG-Fälle ohne Fixture übersprungen.
+
+Eigenes App- und Offline-Image f1194a2 gebaut; vier echte Linux-Dateien/sechs
+Vorschauen erfolgreich. Artefakt-PG-Fall selbst erfolgreich; Gesamtcheck erkannte
+zwei zusätzliche periodische Wartungsjobs in der gemeinsamen Testqueue. Der eigene
+Artefaktworker erhält nun keine periodische Registrierung; Wartung verbleibt beim
+bestehenden Worker. Korrigierter Gesamtcheck, CI und Rollout folgen. Produktiv
+bleibt 1aa2c6e/0017. Keine M3/M4/M5-Vollabnahme behauptet.
