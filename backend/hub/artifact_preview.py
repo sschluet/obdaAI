@@ -39,13 +39,13 @@ def previews(path: Path) -> list[dict[str, Any]]:
                     str(folder),
                     str(path),
                 ]
-                result = subprocess.run(command, capture_output=True, timeout=60)
+                process = subprocess.run(command, capture_output=True, timeout=60)
                 # LibreOffice's normal first-profile initialization requests a
                 # restart (EXITHELPER_NORMAL_RESTART=81). Retry that exact fixed
                 # command once, never a crash or an arbitrary renderer failure.
-                if sys.platform == "linux" and result.returncode == 81:
-                    result = subprocess.run(command, capture_output=True, timeout=60)
-                result.check_returncode()
+                if sys.platform == "linux" and process.returncode == 81:
+                    process = subprocess.run(command, capture_output=True, timeout=60)
+                process.check_returncode()
             pdf = folder / "artifact.pdf"
         elif path.suffix != ".pdf":
             raise ValueError("Vorschauformat nicht unterstützt")

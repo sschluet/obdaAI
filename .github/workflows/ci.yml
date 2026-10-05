@@ -70,8 +70,10 @@ jobs:
             if curl --fail --silent http://127.0.0.1:18765/api/health > /dev/null; then break; fi
             sleep 1
           done
+          uv run python scripts/artifact_ui_inputs.py
           cd frontend
           node browser-check.mjs
+          node artifact-check.mjs
   container:
     runs-on: ubuntu-24.04
     steps:

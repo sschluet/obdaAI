@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.elements import ColumnElement
 
 from hub.action_api import install_action_api
+from hub.artifact_api import install_artifact_api
 from hub.auth import check_origin, require_session, token_hash, verify_password
 from hub.config import Settings
 from hub.connection_api import install_connection_api
@@ -114,6 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     install_provider_api(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
+    install_artifact_api(app, cfg, factory)
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
     install_action_api(app, factory, cfg)

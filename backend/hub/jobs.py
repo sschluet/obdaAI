@@ -86,6 +86,17 @@ def enqueue_task_read(db: Session, cfg: Settings, run_id: str) -> None:
     )
 
 
+def enqueue_artifact(db: Session, cfg: Settings, artifact_id: str, revision: int) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable artifact requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.artifact", queue="artifacts", priority=-5, connection=raw).defer(
+        artifact_id=artifact_id, revision=revision
+    )
+
+
 def worker_app(cfg: Settings) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
@@ -97,6 +108,12 @@ def worker_app(cfg: Settings) -> procrastinate.App:
     )
     factory = session_factory(cfg.database_url)
     providers = Providers(cfg)
+
+    @queue.task(name="hub.artifact", queue="artifacts", retry=False)
+    async def artifact(artifact_id: str, revision: int) -> None:
+        from hub.artifacts import execute_artifact
+
+        await execute_artifact(factory, cfg, artifact_id, revision)
 
     @queue.task(name="hub.chat", queue="chat", retry=False)
     async def chat(run_id: str) -> None:
@@ -190,7 +207,14 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
 async def requeue_stalled(queue: procrastinate.App) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
-    for task in ("hub.chat", "hub.title", "hub.probe", "hub.extract", "hub.task-read"):
+    for task in (
+        "hub.chat",
+        "hub.title",
+        "hub.probe",
+        "hub.extract",
+        "hub.task-read",
+        "hub.artifact",
+    ):
         for job in await queue.job_manager.get_stalled_jobs(
             task_name=task, seconds_since_heartbeat=60
         ):
@@ -203,7 +227,9 @@ async def main() -> None:
         await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
-            queues=["sources", "vault-maintenance"]
+            queues=["artifacts"]
+            if "--artifacts" in sys.argv
+            else ["sources", "vault-maintenance"]
             if "--sources" in sys.argv
             else ["chat", "tests", "tasks", "titles", "maintenance"],
             concurrency=1,

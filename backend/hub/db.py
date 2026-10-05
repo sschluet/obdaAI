@@ -193,6 +193,29 @@ class SourceChunk(Base):
     structured: Mapped[str] = mapped_column(Text, default="")
 
 
+class Artifact(Base):
+    __tablename__ = "artifacts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ArtifactRevision(Base):
+    __tablename__ = "artifact_revisions"
+    artifact_id: Mapped[str] = mapped_column(ForeignKey("artifacts.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    request_key: Mapped[str] = mapped_column(String(36), unique=True)
+    spec: Mapped[str] = mapped_column(Text)
+    spec_sha256: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24), default="queued")
+    manifest: Mapped[str] = mapped_column(Text, default="")
+    error: Mapped[str] = mapped_column(String(240), default="")
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+    started: Mapped[float | None] = mapped_column(Float, nullable=True)
+    accepted: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
 class Memory(Base):
     __tablename__ = "memories"
     origin: Mapped[str] = mapped_column(String(100), default="vault")

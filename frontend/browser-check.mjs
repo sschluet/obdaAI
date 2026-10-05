@@ -307,6 +307,42 @@ for(const profile of ['confirm_each','bounded_autonomous']){
  await dialog.getByRole('button',{name:'Globale Aktionspause einschalten',exact:true}).click();
  await page.getByRole('button',{name:'Schließen',exact:true}).click();
 }
+// Immutable project file versions through the regular mobile form. Preview is
+// explicitly a synthetic UI fixture; Linux runner checks the actual layout.
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Projekte',exact:true}).click();
+await page.getByRole('button',{name:'Neues Projekt',exact:true}).click();
+await page.getByLabel('Projektname',{exact:true}).fill('Synthetic artifact project');
+await page.getByRole('button',{name:'Projektraum erstellen',exact:true}).click();
+await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+let artifactDialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+await artifactDialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic editable Word report');
+await artifactDialog.getByLabel('Dokumenttext',{exact:true}).fill('One immutable version with editable local text.');
+await artifactDialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
+await page.getByRole('button',{name:'Vorschau öffnen',exact:true}).click();
+let previewDialog=page.getByRole('dialog',{name:'Dateivorschau',exact:true});
+await previewDialog.getByAltText('Vorschauseite 1',{exact:true}).waitFor();
+await page.waitForFunction(()=>document.querySelector('.artifact-preview')?.complete&&document.querySelector('.artifact-preview')?.naturalWidth>0);
+if(await previewDialog.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).isEnabled())throw Error('Unreviewed artifact was accepted');
+await previewDialog.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
+if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Artifact review mobile overflow');
+await page.screenshot({path:output+'/artifact-review-mobile.png',fullPage:true,animations:'disabled'});
+await previewDialog.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
+await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+await page.reload();
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Projekte',exact:true}).click();
+await page.getByRole('button',{name:'Synthetic artifact project',exact:true}).click();
+await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+await page.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
+artifactDialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+try{if(await artifactDialog.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='One immutable version with editable local text.')throw Error('Artifact version lost editable text')}
+catch(e){await page.screenshot({path:output+'/artifact-version-failure.png',fullPage:true});throw Error(String(e)+'\nVisible state: '+await page.locator('body').innerText()+'\nErrors: '+errors.join('\n'))}
+await artifactDialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic editable Word report revision 2');
+await artifactDialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
+await page.getByText('Synthetic editable Word report revision 2 · Version 2',{exact:true}).waitFor();
+await page.getByText('Synthetic editable Word report · Version 1',{exact:true}).waitFor();
+if(await page.getByRole('link',{name:'Datei herunterladen',exact:true}).count()!==1)throw Error('Old artifact version disappeared or new version bypassed review');
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();

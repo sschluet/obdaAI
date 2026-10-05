@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import hub.action_api as fixture_action_api
+import hub.artifact_api as fixture_artifact_api
 import hub.browser_read as fixture_browser
 import hub.chat_tools as fixture_chat_tools
 import hub.ha_maintenance as fixture_maintenance
@@ -16,12 +17,17 @@ from alembic.config import Config
 from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
+from hub.db import Artifact, ArtifactRevision
 from hub.mcp_client import schema_digest
 from hub.policy import CloudGrant, ContextPart
 from hub.routing import Route
 
 folder = Path(os.getenv("HUB_BROWSER_FIXTURE_DIR", ".local/browser"))
 folder.mkdir(parents=True, exist_ok=True)
+artifact_requests = folder / "artifact-requests"
+artifact_results = folder / "artifact-results"
+artifact_requests.mkdir(exist_ok=True)
+artifact_results.mkdir(exist_ok=True)
 vault = folder / "vault"
 vault.mkdir(exist_ok=True)
 key_file = folder / "fixture-encryption.key"
@@ -63,6 +69,8 @@ app = create_app(
         ha_token_file="synthetic-fixture-only",
         ha_allowed_ip="192.0.2.1",
         source_dir=str(folder / "sources"),
+        artifact_request_dir=str(artifact_requests),
+        artifact_result_dir=str(artifact_results),
         vault_dir=str(vault),
         vault_writable=True,
         search_url=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/search",
@@ -73,6 +81,65 @@ app = create_app(
         local_disable_thinking=True,
     )
 )
+
+
+async def synthetic_artifact(factory, cfg, artifact_id, revision):
+    # UI boundary fixture only. Real Office/Poppler preview acceptance belongs to
+    # the separate Linux offline-runner test, never to this synthetic image.
+    import hashlib
+
+    from hub.artifact_render import render
+    from hub.artifacts import reconcile, spec_for, spool
+    from PIL import Image, ImageDraw
+
+    with factory() as db:
+        row = db.get(ArtifactRevision, (artifact_id, revision))
+        artifact = db.get(Artifact, artifact_id)
+        if not row or not artifact or row.status != "queued":
+            return
+        spool(db, cfg, artifact, row)
+        row.status = "rendering"
+        db.commit()
+        spec = spec_for(row)
+        request = artifact_requests / (artifact_id + "-" + str(revision))
+        output = artifact_results / request.name
+        output.mkdir()
+        manifest = render(
+            spec,
+            [request / ("source-" + str(i)) for i in range(len(spec.sources))],
+            output / "version",
+        )
+        manifest["spec_sha256"] = row.spec_sha256
+        manifest["status"] = "needs_review"
+        previews = output / "version/previews"
+        previews.mkdir()
+        count = (
+            len(spec.plan.slides)
+            if spec.plan.kind == "pptx"
+            else (len(spec.plan.pages) if spec.plan.kind == "pdf" else 1)
+        )
+        manifest["previews"] = []
+        for page in range(1, count + 1):
+            path = previews / ("page-" + str(page) + ".png")
+            image = Image.new("RGB", (600, 400), "#f4f7fd")
+            ImageDraw.Draw(image).text(
+                (25, 30), "SYNTHETIC UI PREVIEW - not layout acceptance", fill="#153976"
+            )
+            image.save(path)
+            manifest["previews"].append(
+                {
+                    "page": page,
+                    "filename": "previews/" + path.name,
+                    "bytes": path.stat().st_size,
+                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                }
+            )
+        (output / "manifest.json").write_text(json.dumps(manifest))
+        reconcile(db, cfg, row)
+        db.commit()
+
+
+fixture_artifact_api.execute_artifact = synthetic_artifact
 
 
 class SyntheticProvider:

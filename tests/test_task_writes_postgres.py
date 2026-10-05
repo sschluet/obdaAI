@@ -117,6 +117,7 @@ def test_bounded_write_duplicate_pg_queue_delivery(monkeypatch):
             assert len(links) == 1 and db.get(ActionReceipt, links[0].action_id)
     finally:
         with factory() as db:
+            db.execute(text("SET LOCAL search_path TO hub_queue, public"))
             db.execute(
                 text(
                     "DELETE FROM hub_queue.procrastinate_jobs "

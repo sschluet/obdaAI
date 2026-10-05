@@ -43,3 +43,5 @@ input[type=checkbox]{accent-color:var(--accent)}
 .schedule-fields .weekday-grid input[type=checkbox]{width:18px;min-width:18px;height:18px;margin:0;padding:0;flex:0 0 18px;accent-color:var(--accent)}
 
 [aria-label="Home-Assistant-Prüfergebnis"]{overflow-wrap:anywhere}
+
+.artifact-preview{display:block;max-width:100%;height:auto;border:1px solid var(--border);border-radius:8px;background:white}

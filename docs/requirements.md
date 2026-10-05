@@ -35,8 +35,8 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 | A03 | M0-M5 | LOCAL_ONLY aus Historie/Derivaten/Embedding/Web/n8n niemals extern | Privacy-Vertrags-/API-/HTTP-Gatewaytests und echte lokale Chat-Websuche mit synthetischer privater Historie bestanden; Embedding/n8n noch offen |
 | A04 | M1 | Provider-/Mac-Ausfall: korrekter Status, kein verbotener Fallback | ConnectError-/Gatewaytests plus echte eigene Relay-Unterbrechung und Worker-Neustart mit automatischer Recovery; kein Cloudfallback |
 | A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | bestanden auf eigener VM: neun Formate, lokale OCR, SHA-Originale, PDF-Fundstelle, Decimal-Summen, Scopeisolation und echter lokaler Quellenchat |
-| A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | offen; Funktion noch nicht implementiert |
-| A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | offen; Funktion noch nicht implementiert |
+| A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | teilweise: native editierbare Dateien, isolierte Linux-Vorschauen und mobile Projekt-Dialoge geprüft; Modellplanung und Live-Rollout offen |
+| A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | teilweise: echte PDF-Auswahl/Rotation und Bildzuschnitt/Collage mit Originalhash- und Pixelprüfungen; Live-Abnahme offen |
 | A08 | M3 | Skillrevision wirkt und erweitert keine Rechte | implementiert und live geprüft: versionierte Regeln, Vertrauensprüfung, Auswahl und Audit; keine Rechteausweitung |
 | A09 | M2 | Obsidian/App bidirektional: Konflikt/Löschung/Umbenennung/Restart | bestanden am vorhandenen Vault: kanonische Writes, externer Sync, Peer-Verfügbarkeit, Hash-Konfliktvergleich, Rename/Versionen/Archiv, Neustart-Reconcile; isolierte PG-Ausfalltests ohne produktive Mountunterbrechung |
 | A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | teilweise: normales Task-Center, lokale Entwürfe, echter n8n-Minutenworkflow und genehmigte aufgabenbezogene n8n-Vorlage mit Callback/PG-Run live; freie Graphgenerierung nicht unterstützt |

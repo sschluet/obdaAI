@@ -1,6 +1,24 @@
 # obdaAI — Status 05.10.2026
 
-## Aktueller Stand · M3 erweitert und live installiert
+## Aktueller Stand: M3-Schreibprofile und M4-Dateidialoge vor Rollout
+
+Produktiv ist weiterhin `1aa2c6e` / Schema 0017 installiert. Im aktuellen
+Entwicklungsbranch `milestone/m3-actions` sind zusätzlich die begrenzten
+Aufgaben-Schreibprofile (0018) sowie vier lokale Dateidialoge mit dauerhaften
+Versionen, Vorschau-Freigabe und Offline-Runner (0019) implementiert.
+365 lokale Tests bestanden; zehn echte PG-Fälle ohne Fixture übersprungen.
+Ruff/mypy (49 Module), TS/Build und Source-Secret-Scan bestanden. Die synthetische
+mobile Abnahme aller vier Dateidialoge einschließlich Word-Tabelle und erhaltener
+Folgeversion bestanden. Echte isolierte Linux-Abnahme für vier Dateien und sechs
+Vorschauseiten bestanden. Neuer PG-Gesamtcheck, CI und Rollout noch ausstehend.
+
+GitHub konnte mehrere Jobs wegen nicht verfügbarer Hosted Runner nicht starten;
+fehlgeschlagene Allokation ist kein bestandener Test. Der konkrete Officefehler
+wurde am eigenen Linux-Container diagnostiziert und behoben, ohne den
+Dateisystemschutz oder die Netzwerksperre abzuschalten. Aktuelle M4-Grenzen:
+[Dateiabnahme](docs/m4-acceptance-status.md). M3/M4/M5 sind noch nicht vollständig.
+
+## Historischer Stand · M3 erweitert und live installiert
 
 Installierte Funktionsquelle `6eeba62`, Branch `milestone/m3-actions`, Schema 0016.
 CI 37315411367 vollständig grün: Python, sieben echte PostgreSQL-Prüfungen,

@@ -30,6 +30,8 @@ class Settings:
     context_limit: int = 24000
     source_dir: str = ".local/sources"
     parser_result_dir: str = ""
+    artifact_request_dir: str = ""
+    artifact_result_dir: str = ""
     vault_dir: str = ""
     vault_fs_type: str = ""
     vault_writable: bool = False

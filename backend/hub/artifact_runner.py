@@ -76,21 +76,47 @@ def process(request: Path, results: Path) -> bool:
         return True
     task = subprocess.Popen(
         [sys.executable, "-m", "hub.artifact_runner", "--child", str(request), str(temporary)],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
     )
-    try:
-        code = task.wait(timeout=150)
-    except subprocess.TimeoutExpired:
-        os.killpg(task.pid, signal.SIGKILL)
-        task.wait()
-        code = -1
+    deadline = time.monotonic() + 150
+    exceeded = False
+    while True:
+        used, count = 0, 0
+        for path in temporary.rglob("*"):
+            count += 1
+            try:
+                used += path.lstat().st_size
+            except FileNotFoundError:
+                continue  # Profile/cache file removed during the bounded scan.
+            if count > 5000 or used > 220 * 1024 * 1024 or path.is_symlink():
+                exceeded = True
+                break
+        if exceeded or time.monotonic() >= deadline:
+            try:
+                os.killpg(task.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            task.wait()
+            exceeded = True
+            break
+        if task.poll() is not None:
+            break
+        time.sleep(0.25)
+    code = -1 if exceeded else task.wait()
     if not temporary.exists():
         temporary.mkdir(mode=0o700)
     if code != 0:
-        (temporary / "manifest.json").write_text(json.dumps({
-            "status": "failed", "error": "Datei oder Vorschau konnte nicht erstellt werden",
-            "spec_sha256": hashlib.sha256(canonical(spec).encode()).hexdigest(),
-        }))
+        (temporary / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "status": "failed",
+                    "error": "Datei oder Vorschau konnte nicht erstellt werden",
+                    "spec_sha256": hashlib.sha256(canonical(spec).encode()).hexdigest(),
+                }
+            )
+        )
     os.rename(temporary, target)
     return True
 

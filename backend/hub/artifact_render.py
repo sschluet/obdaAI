@@ -123,7 +123,9 @@ def _pdf(plan: PdfPlan, inputs: list[Path], path: Path) -> None:
         reader = readers[selection.source]
         if selection.page > len(reader.pages):
             raise ValueError("PDF-Seite existiert nicht")
-        page = writer.add_page(reader.pages[selection.page - 1], excluded_keys=["/AA", "/Annots"])
+        page = writer.add_page(
+            reader.pages[selection.page - 1], excluded_keys=["/AA", "/Annots", "/B"]
+        )
         if selection.rotation:
             page.rotate(selection.rotation)
     writer.add_metadata({"/Title": plan.title, "/Producer": "obdaAI"})
@@ -137,9 +139,7 @@ def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
     from PIL import Image, ImageOps
 
     rows = math.ceil(len(plan.tiles) / plan.columns)
-    canvas = Image.new(
-        "RGB", (plan.columns * plan.tile_width, rows * plan.tile_height), "#f4f7fd"
-    )
+    canvas = Image.new("RGB", (plan.columns * plan.tile_width, rows * plan.tile_height), "#f4f7fd")
     for number, tile in enumerate(plan.tiles):
         with Image.open(inputs[tile.source]) as original:
             if original.width * original.height > 24_000_000:
@@ -148,13 +148,22 @@ def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
                 raise ValueError("Bildformat nicht freigegeben")
             image = ImageOps.exif_transpose(original).convert("RGB")
         left, top, right, bottom = tile.crop
-        crop = (int(left * image.width), int(top * image.height),
-                int(right * image.width), int(bottom * image.height))
+        crop = (
+            int(left * image.width),
+            int(top * image.height),
+            int(right * image.width),
+            int(bottom * image.height),
+        )
         if crop[2] <= crop[0] or crop[3] <= crop[1]:
             raise ValueError("Zuschnitt enthält keine Pixel")
         fitted = ImageOps.fit(image.crop(crop), (plan.tile_width, plan.tile_height))
-        canvas.paste(fitted, ((number % plan.columns) * plan.tile_width,
-                             (number // plan.columns) * plan.tile_height))
+        canvas.paste(
+            fitted,
+            (
+                (number % plan.columns) * plan.tile_width,
+                (number // plan.columns) * plan.tile_height,
+            ),
+        )
     canvas.save(path, format="PNG" if plan.format == "png" else "JPEG")
     with Image.open(path) as check:
         check.verify()
