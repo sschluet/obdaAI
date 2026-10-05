@@ -89,6 +89,7 @@ def test_gateway_read_and_strict_schema_before_effect(gateway):
         "project.archive",
         "n8n.workflow.provision",
         "n8n.workflow.activate",
+        "mcp.read",
     }
     action, body = proposal(c, h)
     result = execute(c, h, action)

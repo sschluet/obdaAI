@@ -206,6 +206,8 @@ await page.getByRole('button',{name:'MCP-Verbindung speichern',exact:true}).clic
 await page.getByRole('button',{name:'MCP-Verbindung prüfen',exact:true}).click();
 await page.getByText('1 angebotene Werkzeuge ansehen',{exact:true}).click();
 await page.getByRole('heading',{name:'synthetic.read',exact:true}).waitFor();
+await page.getByRole('button',{name:'Lesewerkzeug ausführen: synthetic.read',exact:true}).click();
+await page.getByText('SYNTHETIC_MCP_READ_RESULT',{exact:true}).waitFor();
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('MCP mobile overflow');
 await page.screenshot({path:output+'/mcp-connections-mobile.png',fullPage:true,animations:'disabled'});
 await page.reload();

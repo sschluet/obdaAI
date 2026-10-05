@@ -14,7 +14,7 @@ from hub.action_api import StrictInput, digest, encode
 from hub.config import Settings
 from hub.db import ToolConnection, ToolConnectionCheck, ToolConnectionRevision, new_id
 from hub.knowledge_api import Auth
-from hub.mcp_client import VERSIONS, discover, endpoint
+from hub.mcp_client import VERSIONS, discover, endpoint, schema_digest
 from hub.provider_settings import decrypt, encrypt
 
 
@@ -52,6 +52,21 @@ def install_connection_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Se
             .order_by(ToolConnectionCheck.created.desc())
         )
         allowed = json.loads(cfg.mcp_endpoints_json)
+        all_rules = json.loads(cfg.mcp_read_tools_json)
+        rules = all_rules.get(data["url"], {}) if isinstance(all_rules, dict) else {}
+        if not isinstance(rules, dict):
+            rules = {}
+        read_permissions = {}
+        if (
+            not row.archived
+            and checked
+            and checked.revision == row.revision
+            and data["url"] in allowed
+        ):
+            for tool in json.loads(checked.result).get("tools", []):
+                sha = schema_digest(tool["input_schema"])
+                if rules.get(tool["name"]) == sha:
+                    read_permissions[tool["name"]] = sha
         return {
             "id": row.id,
             "name": row.name,
@@ -60,6 +75,7 @@ def install_connection_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Se
             "config": data,
             "secret_saved": bool(row.encrypted_secret),
             "target_approved": data["url"] in allowed,
+            "read_permissions": read_permissions,
             "last_check": {
                 "revision": checked.revision,
                 "created": checked.created,
@@ -81,6 +97,7 @@ def install_connection_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Se
                 "encrypted_secrets_available": bool(cfg.secrets_key_file),
                 "supported_transport": "streamable_http",
                 "remote_execution_available": False,
+                "remote_reads_available": bool(json.loads(cfg.mcp_read_tools_json)),
             }
 
     def lock_mutation(db: Session) -> None:

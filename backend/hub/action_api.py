@@ -1,8 +1,8 @@
-"""Fixed local actions and one bounded external read adapter.
+"""Reviewed local/read adapters and separately granted n8n workflow stages.
 
-Human approval is separate from proposals and execution. Local database effects
-and receipts commit together. External writes/reconciliation are not implemented.
-The optional fixed HA read accepts no model or request-provided target or payload.
+Human grants are bound to parameters and versions. Local effects/receipts commit
+together; n8n uses durable intents and bounded reconciliation in workflow_operator.
+No model-provided URLs or arbitrary executable payloads are accepted.
 """
 
 import hashlib
@@ -40,6 +40,13 @@ class WorkflowParameters(StrictInput):
     workflow_version: UUID | None = None
 
 
+class MCPReadParameters(StrictInput):
+    connection_id: UUID
+    expected_revision: int = Field(ge=1)
+    tool_name: str = Field(pattern=r"^[A-Za-z0-9_.-]{1,128}$")
+    schema_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class ProposalInput(StrictInput):
     request_id: UUID
     tool_id: str = Field(max_length=80)
@@ -59,6 +66,15 @@ class PauseInput(StrictInput):
 
 # These schemas and adapters are code-reviewed, never supplied by a model/document.
 TOOLS: dict[str, dict[str, Any]] = {
+    "mcp.read": {
+        "id": "mcp.read",
+        "name": "Freigegebenes MCP-Lesewerkzeug ausführen",
+        "revision": 1,
+        "effect": "read",
+        "system": "MCP",
+        "external": True,
+        "parameters_schema": MCPReadParameters.model_json_schema(),
+    },
     "hub.inspect": {
         "id": "hub.inspect",
         "name": "Hub-Status lesen",
@@ -122,7 +138,9 @@ def digest(value: str) -> str:
 def parameters(tool_id: str, value: dict[str, Any]) -> dict[str, Any]:
     try:
         model = (
-            WorkflowParameters
+            MCPReadParameters
+            if tool_id == "mcp.read"
+            else WorkflowParameters
             if tool_id.startswith("n8n.workflow.")
             else ArchiveParameters
             if tool_id == "project.archive"
@@ -175,7 +193,11 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             {
                 **t,
                 "configured": (
-                    bool(cfg.n8n_api_key_file and cfg.n8n_allowed_ip and cfg.n8n_ca_credential_id)
+                    bool(json.loads(cfg.mcp_read_tools_json))
+                    if t["id"] == "mcp.read"
+                    else bool(
+                        cfg.n8n_api_key_file and cfg.n8n_allowed_ip and cfg.n8n_ca_credential_id
+                    )
                     if t["id"].startswith("n8n.workflow.")
                     else t["id"] not in ("ha.inspect", "ha.backups.inspect")
                     or bool(cfg.ha_token_file and cfg.ha_allowed_ip)
@@ -245,6 +267,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                 from hub.workflow_operator import validate_binding
 
                 validate_binding(db, json.loads(params), body.tool_id)
+            if body.tool_id == "mcp.read":
+                from hub.mcp_actions import validate_connection
+
+                validate_connection(db, cfg, json.loads(params))
             row = ActionIntent(
                 request_key=str(body.request_id),
                 tool_id=body.tool_id,
@@ -318,7 +344,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             if (
                 not tool
                 or row.tool_revision != tool["revision"]
-                or (tool["external"] and row.tool_id not in ("ha.inspect", "ha.backups.inspect"))
+                or (
+                    tool["external"]
+                    and row.tool_id not in ("ha.inspect", "ha.backups.inspect", "mcp.read")
+                )
             ):
                 raise HTTPException(409, "Werkzeugversion oder Systemgrenze geändert")
             params = parameters(row.tool_id, json.loads(row.parameters))
@@ -357,6 +386,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                     "archived": True,
                     "revision": params["expected_revision"] + 1,
                 }
+            elif row.tool_id == "mcp.read":
+                from hub.mcp_actions import read_connection
+
+                result = read_connection(db, cfg, params)
             elif row.tool_id == "ha.backups.inspect":
                 result = inspect_ha_backups(cfg)
             elif row.tool_id == "ha.inspect":

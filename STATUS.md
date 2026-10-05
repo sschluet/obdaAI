@@ -831,3 +831,24 @@ abgleichen; Veröffentlichung über exakte aktive Version. Vor Start und Callbac
 Remoteversion prüfen, dann atomare PG-Queue/Laufbindung. Lokale Tests bestanden;
 PG-/Browser-/reale n8n-Abnahme und Installation noch ausstehend. Aktuell live bleibt
 6eeba62/Schema 0016. Siehe docs/task-workflows.md. M3 noch nicht abgeschlossen.
+
+### 2026-10-05: n8n-Vorlage installiert, MCP-Lesevertikale geprüft
+
+Quelle 940d601 mit Schema 0017 auf eigener obdaAI-VM installiert. Beide APIs gesund;
+alte Compose-Overlays und Firewall unverändert. Neue n8n-Key-Mounts nur readonly an
+API/API-HTTPS. Synthetische Vorlage wurde eingerichtet/veröffentlicht, echter
+Callback mit Execution-ID 276 führte zu erfolgreichem lokalen PostgreSQL-TaskRun.
+Testaufgabe archiviert, eigener Testworkflow deaktiviert, globale Schreibpause
+wiederhergestellt. Ein zusätzlicher n8n-Historienabruf lieferte keinen Beleg, weil
+saveDataSuccessExecution=none ausdrücklich gesetzt ist; dauerhafte App-Belege
+sind der Nachweis. Erweiterter Backup/Restore für Schema 0017 steht noch aus.
+
+MCP-Lesewerkzeuge: eigener serverseitiger URL/Name/Schema-Digest, keine Parameter,
+aktueller Katalog und Verbindungsrevision, Textlimits, kein Modellkontext. 290 lokale
+Tests bestanden, acht echte PostgreSQL-Tests lokal übersprungen (CI erforderlich).
+Ruff, mypy, Frontend-Build und Quell-Secret-Scan grün. Synthetischer echter HTTP-Aufruf
+über UI plus Reload zeigt gespeicherten Ergebnisbeleg. Keine realen MCP-Ziele
+angefordert oder auf der VM freigegeben. Produktionsrollout dieser Ergänzung und
+CI noch ausstehend. M3 insgesamt weiterhin offen: Browservertikale, weitere
+API-/MCP-Operationen, HA-Wartung mit verifiziertem Wiederherstellungsweg und
+vollständige Abnahme/Restore.

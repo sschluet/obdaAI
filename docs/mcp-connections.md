@@ -16,7 +16,7 @@ geänderter Eintrag verwirft das Ergebnis. Jede Änderung hat eine neue Revision
 Streamable HTTP mit JSON oder Request-SSE ist unterstützt. Protokoll 2026-07-28
 verwendet die stateless Request-Metadaten und Method-/Version-Header; 2025-11-25
 und 2025-06-18 verwenden Initialize und eine begrenzte Session-ID. OAuth, stdio,
-altes HTTP+SSE, interaktive Ergebnisse und entfernte Ausführung sind noch offen.
+altes HTTP+SSE, interaktive Ergebnisse und entfernte Schreibaktionen sind noch offen.
 
 Der Operator muss vor echten Prüfungen `HUB_MCP_ENDPOINTS_JSON` als exakte
 URL→IP-Zuordnung einrichten und das konkrete Netzwerkziel separat freigeben.
@@ -40,3 +40,20 @@ Archivieren/Wiederherstellen, mobile CI sowie PostgreSQL-Parallelrevision und
 Prüfdrift. Dies belegt den Adapter, noch keine reale Drittanbieteranbindung.
 
 Spezifikation: https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
+
+## Begrenzte Lesewerkzeuge
+
+`HUB_MCP_READ_TOOLS_JSON` bindet URL, Werkzeugname und SHA-256 des kanonischen
+Eingabeschemas. Nur Schemas für ein leeres Objekt mit `additionalProperties:false`
+werden unterstützt. Keine Eingabeparameter und kein Modellcode. Ein aktueller
+Katalogcheck und unveränderte Verbindungsrevision sind zusätzlich erforderlich.
+Vor jedem Aufruf wird der Katalog erneut gelesen und der Digest geprüft.
+Anmerkungen wie `readOnlyHint` erteilen keine Rechte.
+
+Unter Verbindungen erscheint für freigegebene Werkzeuge ein eigener Lesebutton.
+Der Action-Gateway speichert einen dauerhaften Ergebnisbeleg; dieselbe Aktions-ID
+liefert diesen ohne erneuten RPC. Archivierung und Revision sind am letzten
+Ausführungsrand gesperrt geprüft. Ergebnisse sind untrusted LOCAL_ONLY und
+werden niemals automatisch in Modellkontext übernommen. Maximal 16 Textblöcke
+mit insgesamt 64.000 Zeichen; Bilder, Ressourcen und interaktive Antworten werden
+abgewiesen. Keine echten MCP-Ziele freigegeben: Produktion bleibt `{}`.

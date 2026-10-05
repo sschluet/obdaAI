@@ -1,5 +1,6 @@
 """Bounded MCP HTTP catalog discovery. Remote metadata grants no execution rights."""
 
+import hashlib
 import ipaddress
 import json
 import re
@@ -60,12 +61,34 @@ def target(cfg: Settings, value: str) -> tuple[str, dict[str, str], dict[str, st
     )
 
 
+def schema_digest(schema: dict[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(schema, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    ).hexdigest()
+
+
 def discover(
-    client: httpx.Client, cfg: Settings, url: str, version: str, token: str
+    client: httpx.Client,
+    cfg: Settings,
+    url: str,
+    version: str,
+    token: str,
+    *,
+    read_tool: str | None = None,
+    expected_schema: str = "",
 ) -> dict[str, Any]:
     if version not in VERSIONS:
         raise ValueError("Unsupported configured MCP version")
     pinned, headers, extensions = target(cfg, url)
+    if read_tool is not None:
+        rules = json.loads(cfg.mcp_read_tools_json)
+        if (
+            not isinstance(rules, dict)
+            or not expected_schema
+            or not isinstance(rules.get(url), dict)
+            or rules[url].get(read_tool) != expected_schema
+        ):
+            raise ValueError("MCP read operation not operator approved")
     headers.update(
         {
             "Accept": "application/json, text/event-stream",
@@ -223,4 +246,44 @@ def discover(
         raise ValueError("MCP pagination limit")
     if len({t["name"] for t in tools}) != len(tools):
         raise ValueError("Duplicate MCP tool identity")
+    if read_tool is not None:
+        tool = next((t for t in tools if t["name"] == read_tool), None)
+        if not tool or schema_digest(tool["input_schema"]) != expected_schema:
+            raise ValueError("MCP tool/schema drift")
+        schema = tool["input_schema"]
+        if (
+            set(schema)
+            - {"type", "properties", "required", "additionalProperties", "title", "description"}
+            or schema.get("properties", {}) != {}
+            or schema.get("required", []) != []
+            or schema.get("additionalProperties") is not False
+        ):
+            raise ValueError("Only reviewed empty-argument read tools are supported")
+        result_data = rpc("tools/call", {"name": read_tool, "arguments": {}})
+        if result_data.get("isError", False) is not False:
+            raise ValueError("MCP tool reported failure")
+        content = result_data.get("content")
+        if not isinstance(content, list) or not 1 <= len(content) <= 16:
+            raise ValueError("MCP read content limit")
+        output = []
+        total = 0
+        for item in content:
+            if (
+                not isinstance(item, dict)
+                or item.get("type") != "text"
+                or not isinstance(item.get("text"), str)
+            ):
+                raise ValueError("Only plain MCP text results are supported")
+            total += len(item["text"])
+            if total > 64000:
+                raise ValueError("MCP text size limit")
+            output.append(item["text"])
+        return {
+            "tool_name": read_tool,
+            "schema_sha256": expected_schema,
+            "content": output,
+            "label": "LOCAL_ONLY",
+            "untrusted": True,
+            "automatic_model_context": False,
+        }
     return {"protocol": version, "tools": tools, "label": "LOCAL_ONLY", "execution_allowed": False}

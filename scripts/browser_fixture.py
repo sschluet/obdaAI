@@ -13,6 +13,7 @@ from alembic.config import Config
 from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
+from hub.mcp_client import schema_digest
 from hub.policy import CloudGrant, ContextPart
 from hub.routing import Route
 
@@ -31,6 +32,15 @@ app = create_app(
         database_url=os.environ["HUB_DATABASE_URL"],
         mcp_endpoints_json=json.dumps(
             {os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/mcp": "127.0.0.1"}
+        ),
+        mcp_read_tools_json=json.dumps(
+            {
+                os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/mcp": {
+                    "synthetic.read": schema_digest(
+                        {"type": "object", "additionalProperties": False}
+                    )
+                }
+            }
         ),
         origin=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765"),
         secure_cookie=False,
@@ -169,7 +179,17 @@ fixture_action_api.inspect_ha = synthetic_ha_inspect
 
 @app.post("/mcp")
 def fixture_mcp(body: dict) -> dict:
-    assert body["method"] == "tools/list", "No execution in synthetic MCP fixture"
+    if body["method"] == "tools/call":
+        assert body["params"]["name"] == "synthetic.read" and body["params"]["arguments"] == {}
+        return {
+            "jsonrpc": "2.0",
+            "id": body["id"],
+            "result": {
+                "resultType": "complete",
+                "content": [{"type": "text", "text": "SYNTHETIC_MCP_READ_RESULT"}],
+            },
+        }
+    assert body["method"] == "tools/list"
     return {
         "jsonrpc": "2.0",
         "id": body["id"],
@@ -178,8 +198,8 @@ def fixture_mcp(body: dict) -> dict:
             "tools": [
                 {
                     "name": "synthetic.read",
-                    "description": "Synthetischer Werkzeugkatalog ohne Ausführungsrechte",
-                    "inputSchema": {"type": "object", "properties": {}},
+                    "description": "Synthetisches freigegebenes Lesewerkzeug",
+                    "inputSchema": {"type": "object", "additionalProperties": False},
                 }
             ],
         },

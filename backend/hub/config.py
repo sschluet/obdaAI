@@ -37,6 +37,7 @@ class Settings:
     search_url: str = ""
     search_allowed_ip: str = ""
     mcp_endpoints_json: str = "{}"
+    mcp_read_tools_json: str = "{}"
     ha_token_file: str = ""
     ha_allowed_ip: str = ""
     n8n_api_key_file: str = ""
