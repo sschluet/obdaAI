@@ -31,6 +31,7 @@ class Settings:
     source_dir: str = ".local/sources"
     parser_result_dir: str = ""
     vault_dir: str = ""
+    vault_fs_type: str = ""
     vault_writable: bool = False
     web_domains_json: str = "[]"
     search_url: str = ""

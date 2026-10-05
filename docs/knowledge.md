@@ -87,3 +87,11 @@ widerrufen die Freigabe. Rechercheergebnisse mit URL und Zeitpunkt werden als lo
 untrusted Quellen im Lauf gespeichert; der finale Antwortkontext wird erneut gegen
 Modellgrenzen geprüft. Ohne angebundenen Suchdienst bleibt die Funktion gesperrt.
 Schema 0010 ergänzt explizite globale Vault-Wissenschats, 0011 globale Rechercheläufe.
+
+Bei produktiver SSHFS-Anbindung erzwingt HUB_VAULT_FS_TYPE=fuse.sshfs den tatsächlichen
+Mount im Container. Abgleich prüft dessen Identität vor und nach dem Scan; leere
+Ersatzverzeichnisse und Transportfehler invalidieren den ganzen Abgleich. Parallele
+API-/Worker-Abgleiche werden durch PostgreSQL- und Dateisperren geordnet; persistierte
+Schreibintents bleiben vor dem atomaren Dateiaustausch erhalten. Der globale Wissenschat
+filtert passende Inhalte vor dem 500-Treffer-Limit, statt ältere Quellen zu übergehen
+oder unpassende aktuelle Notizen automatisch beizumischen.

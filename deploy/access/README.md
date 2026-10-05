@@ -39,12 +39,14 @@ existing sessions and public/private server host identity unchanged.
 Pinned existing public hostkey only; no global TLS/SSH verification bypass. Vault
 private key root-readable, search key readable only by its unprivileged relay user.
 SSHFS uses reconnect, bounded ConnectTimeout/ServerAlive, allow_other with
-kernel default_permissions and fixed app UID/GID mapping. Protect the underlying
+kernel default_permissions and fixed app UID/GID mapping. Disable directory and
+attribute/name caches and use direct_io so compare-before-write sees canonical
+changes without the default directory cache delay. Protect the underlying
 unmounted mountpoint with mode 000 so a lost mount cannot look like an empty Vault.
 Validate real FUSE I/O error handling and preserve index on outage.
 
 Only API/chat worker and source/memory worker get /vault via the reviewed compose
-override; parser has no Vault or secrets. Configure HUB_VAULT_DIR=/vault and bounded
+override; parser has no Vault or secrets. Configure HUB_VAULT_DIR=/vault, HUB_VAULT_FS_TYPE=fuse.sshfs and bounded
 Memory writes. Search relay binds loopback only; app UID egress permits only that
 specific loopback port in addition to its existing rules. No general private-network
 allow rule. Restore compose/runtime/egress and disable only the new units on rollback.

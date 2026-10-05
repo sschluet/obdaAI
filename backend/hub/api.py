@@ -23,6 +23,7 @@ from hub.db import (
     Conversation,
     LoginSession,
     LoginThrottle,
+    Memory,
     Message,
     Project,
     Run,
@@ -34,6 +35,7 @@ from hub.execution import execute_run
 from hub.jobs import enqueue
 from hub.knowledge import context as project_context
 from hub.knowledge_api import install_knowledge_api
+from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
 from hub.provider_api import install_provider_api
@@ -523,6 +525,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "roles": [m.role for m in messages],
             }
             try:
+                needs_vault = c.memory_scope or (
+                    c.project_id
+                    and db.scalar(
+                        select(Memory.id)
+                        .where(Memory.project_id == c.project_id, Memory.deleted.is_(False))
+                        .limit(1)
+                    )
+                )
+                if needs_vault and cfg.vault_fs_type:
+                    validate_mount(Path(cfg.vault_dir), cfg.vault_fs_type)
                 sources = project_context(
                     db, c.project_id, messages[-1].content, global_memory=c.memory_scope == "global"
                 )

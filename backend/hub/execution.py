@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.budgets import ExecutionLimitError, reserve, settle
 from hub.config import Settings
 from hub.db import Conversation, Memory, Message, ProviderConfig, Research, Run, RunEvent
-from hub.memory import digest, serialize
+from hub.memory import digest, serialize, validate_mount
 from hub.memory import write as write_memory
 from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 from hub.provider_settings import fresh_cloud_prices, runtime_provider
@@ -127,6 +127,7 @@ async def execute_run(
                     raise ExecutionLimitError(
                         "Memory nicht gespeichert: Vault-Schreibbereich fehlt"
                     )
+                validate_mount(Path(cfg.vault_dir), cfg.vault_fs_type)
                 identifier = str(
                     uuid.uuid5(
                         uuid.NAMESPACE_URL, "hub-memory:" + latest.id + ":" + str(latest.revision)

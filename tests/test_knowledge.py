@@ -543,3 +543,59 @@ def test_chat_web_requires_exact_user_query_grant_and_never_sends_private_contex
         "/api/conversations/" + cid + "/retry", json={"request_id": str(uuid.uuid4())}, headers=h
     )
     assert "failed" in retried.text and len(sent) == 1
+
+
+def test_vault_file_transport_failure_rolls_back_entire_scan(knowledge, monkeypatch):
+    import errno
+    from pathlib import Path
+
+    app, c, h, cfg, vault = knowledge
+    note = vault / "stable.md"
+    note.write_text("# Stable synthetic memory\noriginal")
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
+    before = c.get("/api/memories").json()
+    original_read = Path.read_text
+
+    def failed_read(path, *args, **kwargs):
+        if path == note:
+            raise OSError(errno.EIO, "synthetic lost SFTP connection")
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", failed_read)
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 409
+    assert c.get("/api/memories").json() == before
+
+
+def test_global_vault_matches_before_recent_limit_and_avoids_unrelated_context(knowledge):
+    app, c, h, cfg, vault = knowledge
+    with app.state.sessions() as db:
+        db.add(
+            Memory(
+                path="older.md",
+                content="UNIQUE_OLDER_VAULT_FACT 42",
+                sha256=hashlib.sha256(b"UNIQUE_OLDER_VAULT_FACT 42").hexdigest(),
+                updated=1,
+            )
+        )
+        db.add_all(
+            Memory(
+                path=f"newer-{i}.md",
+                content="Unrelated synthetic note",
+                sha256=hashlib.sha256(b"Unrelated synthetic note").hexdigest(),
+                updated=10 + i,
+            )
+            for i in range(501)
+        )
+        db.commit()
+        parts = context(db, None, "UNIQUE_OLDER_VAULT_FACT", global_memory=True)
+        assert len(parts) == 1 and "older.md" in parts[0].content
+        with pytest.raises(ValueError, match="Keine passenden"):
+            context(db, None, "NO_MATCH_MARKER", global_memory=True)
+
+
+def test_existing_empty_directory_does_not_satisfy_required_vault_mount(tmp_path):
+    from hub.memory import validate_mount
+
+    (tmp_path / "AI/Memory").mkdir(parents=True)
+    with pytest.raises(ValueError, match="Mount nicht verfügbar"):
+        validate_mount(tmp_path, "fuse.sshfs")

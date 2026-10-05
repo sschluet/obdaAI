@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.config import Settings
 from hub.db import Memory, MemoryRevision, Project
 from hub.knowledge_api import Auth
-from hub.memory import digest, reconcile, revision, serialize, vault_path, write
+from hub.memory import digest, reconcile, revision, serialize, validate_mount, vault_path, write
 
 
 class MemoryInput(BaseModel):
@@ -47,8 +47,8 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
             raise HTTPException(409, "Vault noch nicht angebunden; kein Abgleich durchgeführt")
         path = Path(cfg.vault_dir)
         try:
-            vault_path(path, "AI/Memory")
-        except ValueError as error:
+            validate_mount(path, cfg.vault_fs_type)
+        except (ValueError, OSError) as error:
             raise HTTPException(409, str(error)) from None
         return path
 
@@ -72,7 +72,12 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
     def sync(auth: Auth) -> dict[str, Any]:
         with factory() as db:
             try:
-                result = reconcile(db, root(), allow_memory_writes=cfg.vault_writable)
+                result = reconcile(
+                    db,
+                    root(),
+                    allow_memory_writes=cfg.vault_writable,
+                    expected_fs=cfg.vault_fs_type,
+                )
                 db.commit()
                 return result
             except (ValueError, OSError):

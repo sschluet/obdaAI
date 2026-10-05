@@ -9,7 +9,7 @@ from decimal import Context, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
@@ -151,19 +151,24 @@ def context(
     if not project_id:
         if not global_memory:
             return []
-        terms = [t.casefold() for t in query.split() if len(t) > 2]
+        terms = list(dict.fromkeys(t.casefold() for t in query.split() if len(t) > 2))[:12]
+        if not terms:
+            raise ValueError("Für den Vault-Wissenschat einen konkreten Suchtext eingeben")
         memories = list(
             db.scalars(
                 select(Memory)
                 .where(
-                    Memory.project_id.is_(None), Memory.deleted.is_(False), Memory.conflict == ""
+                    Memory.project_id.is_(None),
+                    Memory.deleted.is_(False),
+                    Memory.conflict == "",
+                    or_(*(Memory.content.icontains(t, autoescape=True) for t in terms)),
                 )
                 .order_by(Memory.updated.desc())
                 .limit(500)
             )
         )
         if not memories:
-            raise ValueError("Keine Vault-Quellen indexiert; zuerst ausdrücklich synchronisieren")
+            raise ValueError("Keine passenden Vault-Quellen; Suchtext und Synchronisation prüfen")
         ranked = sorted(
             memories, key=lambda m: sum(t in m.content.casefold() for t in terms), reverse=True
         )

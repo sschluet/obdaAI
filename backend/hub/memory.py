@@ -1,5 +1,6 @@
 """Canonical Markdown memory, explicit scope and compare-before-write reconciliation."""
 
+import errno
 import fcntl
 import hashlib
 import json
@@ -69,17 +70,47 @@ def serialize(db: Session) -> None:
         db.execute(text("SELECT pg_advisory_xact_lock(791103043)"))
 
 
+def validate_mount(root: Path, expected_fs: str = "") -> str | None:
+    identity = None
+    if expected_fs:
+        try:
+            mountinfo = Path("/proc/self/mountinfo").read_text()
+        except OSError:
+            raise ValueError("Kanonischer Vault-Mount nicht verfügbar; Index unverändert") from None
+        for line in mountinfo.splitlines():
+            fields, separator, details = line.partition(" - ")
+            if separator and fields.split()[4] == str(root.absolute()):
+                if details.split()[0] == expected_fs:
+                    identity = fields.split()[0]
+        if identity is None:
+            raise ValueError("Kanonischer Vault-Mount nicht verfügbar; Index unverändert")
+    try:
+        vault_path(root, "AI/Memory")
+    except OSError:
+        raise ValueError("Kanonischer Vault nicht erreichbar; Index unverändert") from None
+    return identity
+
+
 def reconcile(
-    db: Session, root: Path, *, allow_memory_writes: bool | None = None
+    db: Session,
+    root: Path,
+    *,
+    allow_memory_writes: bool | None = None,
+    expected_fs: str = "",
 ) -> dict[str, Any]:
+    mount_identity = validate_mount(root, expected_fs)
     serialize(db)
     if allow_memory_writes:
         lock = vault_path(root, "AI/Memory/.obdaai-write.lock")
         lock.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
         with lock.open("a+") as guard:
             fcntl.flock(guard, fcntl.LOCK_EX)
-            return _reconcile(db, root, allow_memory_writes=allow_memory_writes)
-    return _reconcile(db, root, allow_memory_writes=allow_memory_writes)
+            result = _reconcile(db, root, allow_memory_writes=allow_memory_writes)
+    else:
+        result = _reconcile(db, root, allow_memory_writes=allow_memory_writes)
+    if validate_mount(root, expected_fs) != mount_identity:
+        raise ValueError("Vault-Mount während des Abgleichs geändert; Index unverändert")
+    return result
 
 
 def _reconcile(
@@ -111,7 +142,19 @@ def _reconcile(
                     errors.append(relative)
                     continue
                 text = path.read_text(encoding="utf-8")
-            except (OSError, ValueError, UnicodeError):
+            except OSError as error:
+                if error.errno in {
+                    errno.EIO,
+                    errno.ENOTCONN,
+                    errno.ETIMEDOUT,
+                    errno.ECONNRESET,
+                    errno.ENETUNREACH,
+                    errno.ESTALE,
+                }:
+                    raise  # A transport outage invalidates this whole scan.
+                errors.append(relative)
+                continue
+            except (ValueError, UnicodeError):
                 errors.append(relative)
                 continue
             identity, body = decode(text)
