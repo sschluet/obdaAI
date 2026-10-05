@@ -689,3 +689,9 @@ Aufruf. Ergänzte CI prüft die mobile Berichtsansicht und Persistenz. M3 bleibt
 Teilstand; produktive Wartungsänderungen und Restore-Abnahme sind weiterhin offen.
 Lokal 214 Tests bestanden, sechs PostgreSQL-Checks separat für CI; Ruff/mypy,
 Frontendbuild und Secret-Scan bestanden. Siehe `docs/home-assistant.md`.
+
+HA-Lesequelle `75c7f04`: CI 37306828415 vollständig grün (Python/PostgreSQL,
+Browser samt mobilem Bericht/Reload, Container und Secrets). Das eigene VM-Image
+ist gebaut; laufende Installation bleibt 95329de, bis die angefragte eigene
+Tokenmount-/HA-Egress-Freigabe vorliegt. Kein HA-Write, kein neuer n8n-Workflow
+und keine Firewalländerung in diesem Schritt durchgeführt.
