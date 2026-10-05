@@ -47,6 +47,7 @@ from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
 from hub.task_drafts import install_task_drafts
 from hub.websearch import install_web_api
+from hub.workflow_api import install_workflow_api
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
 
@@ -120,6 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
     install_schedule_api(app, cfg, factory)
+    install_workflow_api(app, cfg, factory)
     install_task_drafts(app, cfg, factory)
 
     @app.exception_handler(RequestValidationError)

@@ -405,3 +405,40 @@ class ToolConnectionCheck(Base):
     revision: Mapped[int] = mapped_column(Integer)
     result: Mapped[str] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class WorkflowBinding(Base):
+    __tablename__ = "workflow_bindings"
+    __table_args__ = (UniqueConstraint("task_id", "task_revision"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    task_revision: Mapped[int] = mapped_column(Integer)
+    control_revision: Mapped[int] = mapped_column(Integer)
+    spec_sha256: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24), default="draft")
+    encrypted_secret: Mapped[str] = mapped_column(Text)
+    graph: Mapped[str | None] = mapped_column(Text, nullable=True)
+    remote_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    remote_version: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    header_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class WorkflowDispatch(Base):
+    __tablename__ = "workflow_dispatches"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    binding_id: Mapped[str] = mapped_column(ForeignKey("workflow_bindings.id"), index=True)
+    status: Mapped[str] = mapped_column(String(24), default="prepared")
+    control_revision: Mapped[int] = mapped_column(Integer)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("task_runs.id"), unique=True)
+    execution_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+    __table_args__ = (
+        Index(
+            "one_pending_workflow_dispatch",
+            "binding_id",
+            unique=True,
+            sqlite_where=text("status IN ('prepared', 'uncertain')"),
+            postgresql_where=text("status IN ('prepared', 'uncertain')"),
+        ),
+    )

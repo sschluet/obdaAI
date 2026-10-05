@@ -815,3 +815,19 @@ Die instrumentierte Browserdiagnose zeigte den Dialog samt übernommenem Ziel
 bereits korrekt an. Ursache der bisherigen CI-Fehler war der zusammengesetzte
 Labeltext eines initial befüllten Textarea. Ein expliziter zugänglicher Feldname
 wurde ergänzt; der Test behält exakte Zielgleichheit und deaktivierten Start bei.
+
+### M3: echte aufgabenbezogene n8n-Vorlage in Entwicklung
+
+Neue feste Webhook → Gateway-Vorlage (2.7.5, Webhook 2.1 / HTTP Request 4.4).
+Chat-Aufgaben können eine revisionierte Bindung vorbereiten; Task-Center ergänzt
+getrennte Einrichtung, Veröffentlichung, Freigabe und Aufruf samt n8n-Execution-ID.
+Neue Schema-0017-Tabellen: WorkflowBinding und WorkflowDispatch. Keine privaten
+Aufgabeninhalte in n8n, kein zusätzlicher Zeitplan. Externe Einrichtung und
+Veröffentlichung gehen durch das Aktionsgateway mit persistiertem Intent vor I/O,
+Pause/Widerruf/Expiry-Prüfung pro POST und Abgleich statt blindem Retry.
+
+Unklare Credential-Erstellung stoppt; Workflowerstellung über Namen/exakten Graph
+abgleichen; Veröffentlichung über exakte aktive Version. Vor Start und Callback
+Remoteversion prüfen, dann atomare PG-Queue/Laufbindung. Lokale Tests bestanden;
+PG-/Browser-/reale n8n-Abnahme und Installation noch ausstehend. Aktuell live bleibt
+6eeba62/Schema 0016. Siehe docs/task-workflows.md. M3 noch nicht abgeschlossen.

@@ -39,6 +39,9 @@ class Settings:
     mcp_endpoints_json: str = "{}"
     ha_token_file: str = ""
     ha_allowed_ip: str = ""
+    n8n_api_key_file: str = ""
+    n8n_allowed_ip: str = ""
+    n8n_ca_credential_id: str = ""
     scheduler_enabled: bool = False
     scheduler_token_file: str = ""
     static_dir: str = "frontend/dist"

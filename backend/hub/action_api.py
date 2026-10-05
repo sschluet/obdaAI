@@ -32,6 +32,14 @@ class ArchiveParameters(StrictInput):
     expected_revision: int = Field(ge=1)
 
 
+class WorkflowParameters(StrictInput):
+    binding_id: UUID
+    expected_revision: int = Field(ge=1)
+    expected_control_revision: int = Field(ge=1)
+    spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    workflow_version: UUID | None = None
+
+
 class ProposalInput(StrictInput):
     request_id: UUID
     tool_id: str = Field(max_length=80)
@@ -88,6 +96,19 @@ TOOLS: dict[str, dict[str, Any]] = {
         "parameters_schema": ArchiveParameters.model_json_schema(),
     },
 }
+for _id, _name in (
+    ("n8n.workflow.provision", "Aufgabenworkflow in n8n einrichten"),
+    ("n8n.workflow.activate", "Geprüften Aufgabenworkflow veröffentlichen"),
+):
+    TOOLS[_id] = {
+        "id": _id,
+        "name": _name,
+        "revision": 1,
+        "effect": "write",
+        "system": "n8n",
+        "external": True,
+        "parameters_schema": WorkflowParameters.model_json_schema(),
+    }
 
 
 def encode(value: Any) -> str:
@@ -100,7 +121,13 @@ def digest(value: str) -> str:
 
 def parameters(tool_id: str, value: dict[str, Any]) -> dict[str, Any]:
     try:
-        model = ArchiveParameters if tool_id == "project.archive" else StrictInput
+        model = (
+            WorkflowParameters
+            if tool_id.startswith("n8n.workflow.")
+            else ArchiveParameters
+            if tool_id == "project.archive"
+            else StrictInput
+        )
         return model.model_validate(value).model_dump(mode="json")
     except ValidationError:
         raise HTTPException(422, "Parameter passen nicht zum festen Werkzeugschema") from None
@@ -147,8 +174,12 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
         return [
             {
                 **t,
-                "configured": t["id"] not in ("ha.inspect", "ha.backups.inspect")
-                or bool(cfg.ha_token_file and cfg.ha_allowed_ip),
+                "configured": (
+                    bool(cfg.n8n_api_key_file and cfg.n8n_allowed_ip and cfg.n8n_ca_credential_id)
+                    if t["id"].startswith("n8n.workflow.")
+                    else t["id"] not in ("ha.inspect", "ha.backups.inspect")
+                    or bool(cfg.ha_token_file and cfg.ha_allowed_ip)
+                ),
             }
             for t in TOOLS.values()
         ]
@@ -210,6 +241,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                     raise HTTPException(404, "Zielprojekt fehlt")
                 if target.archived or target.revision != json.loads(params)["expected_revision"]:
                     raise HTTPException(409, "Zielprojekt inzwischen geändert oder archiviert")
+            if body.tool_id.startswith("n8n.workflow."):
+                from hub.workflow_operator import validate_binding
+
+                validate_binding(db, json.loads(params), body.tool_id)
             row = ActionIntent(
                 request_key=str(body.request_id),
                 tool_id=body.tool_id,
@@ -267,6 +302,13 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
 
     @app.post("/api/actions/{action_id}/execute")
     def execute(action_id: str, body: StrictInput, auth: Auth) -> dict[str, Any]:
+        with factory() as lookup:
+            action = get_action(lookup, action_id)
+            external_workflow = action.tool_id.startswith("n8n.workflow.")
+        if external_workflow:
+            from hub.workflow_operator import execute_workflow_action
+
+            return execute_workflow_action(factory, cfg, action_id)
         with factory() as db:
             policy = lock(db)
             row = get_action(db, action_id)

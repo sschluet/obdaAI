@@ -82,7 +82,14 @@ def project(c, h):
 def test_gateway_read_and_strict_schema_before_effect(gateway):
     app, c, h, cfg = gateway
     assert c.get("/api/action-policy").json() == {"paused": True, "revision": 1}
-    assert len(c.get("/api/tools").json()) == 4
+    assert {t["id"] for t in c.get("/api/tools").json()} == {
+        "hub.inspect",
+        "ha.inspect",
+        "ha.backups.inspect",
+        "project.archive",
+        "n8n.workflow.provision",
+        "n8n.workflow.activate",
+    }
     action, body = proposal(c, h)
     result = execute(c, h, action)
     assert result.status_code == 200 and result.json()["receipt"]["label"] == "LOCAL_ONLY"
