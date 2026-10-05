@@ -10,20 +10,21 @@ Memory mit Herkunft, Revisionen und Konfliktvergleich; kanonisches Markdown,
 read-only Allgemeinvault, begrenzte Memorywrites, Tombstones und Crash-Reconciliation.
 Direktes `Merke dir:` ist source-/revisiongebunden und idempotent, ohne Modellwrite.
 
-Bisher lokal 84 Tests bestanden, PostgreSQL separat in CI. Browser mit synthetischen
-Dateien: Projekt anlegen, Mehrfachupload, Fundstellensuche, exakte Summe 12.50,
-Quellenchat und explizites Memory bestanden. Keine echte Obsidian-Abnahme behauptet.
+Lokal 90 Tests bestanden; der PostgreSQL-Migrationstest läuft zusätzlich in CI.
+Die eigene VM hat die echte isolierte Dateipipeline bestanden: neun Formate inklusive
+OCR, Originaldownload mit SHA-Abgleich, Decimal-Summen, Projektisolation und echte
+Quellenantwort mit dem unveränderten lokalen Mac-mini-Modell. Parser ohne Netzwerk,
+Landlock-Zugriffsgrenzen und getrennte Quellenworker sind aktiv. Die finale Version
+mit globalem Wissenschat und revisionsgebundener öffentlicher Chat-Webfreigabe wird
+noch durch CI und die eigene Installation abgenommen.
 
-Noch offen vor vollständiger M2-Abnahme: finale CI und eigener Serverrollout einschließlich
-Offline-Parser/Landlock/OCR, echte Quellenantwort und Sicherungsrestore; echte vorhandene
-Vault- und Suchanbindung mit eigenen begrenzten Zugängen. Vorhandener Vault und JSON-
-Suchdienst wurden ausschließlich lesend bestätigt. Separate Zugriffsfreigabe für allgemeinen
-Vault readonly und AI/Memory write wurde angefragt und steht noch aus. Bestehender Sync
-und andere Plattformressourcen wurden nicht verändert.
-
-M2 bleibt bis zu diesen Nachweisen unvollständig. Nächster Schritt: getesteten Checkpoint
-pushen, CI/Browser/Container prüfen, own-VM-Dateipipeline installieren und live abnehmen;
-dauerhafte vorhandene Verbindungen erst innerhalb bestätigter Zugriffsfreigabe einrichten.
+Noch offen vor vollständiger M2-Abnahme: finale Sicherungsrestore-Abnahme sowie echte
+vorhandene Vault- und Suchanbindung mit eigenen begrenzten Zugängen. Vorhandener Vault
+und JSON-Suchdienst wurden ausschließlich lesend bestätigt. Die separaten Freigaben
+für allgemeinen Vault readonly plus AI/Memory write und einen begrenzten Suchzugang
+stehen noch aus. Der konkrete Plan liegt in deploy/vault-access-plan.md. Bestehender
+Sync und andere Plattformressourcen wurden nicht verändert. M2 bleibt bis zur echten
+Abnahme dieser Verbindungen unvollständig; synthetische Tests ersetzen sie nicht.
 
 ---
 

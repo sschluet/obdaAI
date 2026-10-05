@@ -149,7 +149,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
             from hub.memory import reconcile as reconcile_vault
 
             with factory() as db:
-                reconcile_vault(db, Path(cfg.vault_dir))
+                reconcile_vault(db, Path(cfg.vault_dir), allow_memory_writes=cfg.vault_writable)
                 db.commit()
 
     @queue.periodic(cron="* * * * *")

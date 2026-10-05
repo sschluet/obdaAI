@@ -72,7 +72,7 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
     def sync(auth: Auth) -> dict[str, Any]:
         with factory() as db:
             try:
-                result = reconcile(db, root())
+                result = reconcile(db, root(), allow_memory_writes=cfg.vault_writable)
                 db.commit()
                 return result
             except (ValueError, OSError):
@@ -99,6 +99,7 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
                 id=body.id,
                 path="AI/Memory/" + body.id + ".md",
                 project_id=body.project_id,
+                origin="app",
                 writable=True,
                 content="",
                 base_content="",

@@ -29,6 +29,7 @@ class LoginThrottle(Base):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    memory_scope: Mapped[str | None] = mapped_column(String(20), nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(160), default="Neues Gespräch")
@@ -209,7 +210,9 @@ class MemoryRevision(Base):
 class Research(Base):
     __tablename__ = "research"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("projects.id"), nullable=True, index=True
+    )
     query: Mapped[str] = mapped_column(String(500))
     results: Mapped[str] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float, default=time.time)

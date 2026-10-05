@@ -34,6 +34,8 @@ app = create_app(
         source_dir=str(folder / "sources"),
         vault_dir=str(vault),
         vault_writable=True,
+        search_url=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/search",
+        search_allowed_ip="127.0.0.1",
         local_base_url=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/v1",
         local_allowed_ip="127.0.0.1",
         local_model="synthetic-fixture",
@@ -48,6 +50,13 @@ class SyntheticProvider:
         return "Synthetic automatic title"
 
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if any("SYNTHETIC_WEB_QUERY" in p.content for p in parts):
+            return Route(
+                capabilities=["web"],
+                model_class="local",
+                reason="synthetic web fixture",
+                answer=None,
+            )
         if any("SYNTHETIC_SLOW" in p.content for p in parts):
             await asyncio.sleep(3)
         return Route(
@@ -68,13 +77,12 @@ class SyntheticProvider:
         external: bool,
         grants: list[CloudGrant],
     ) -> AsyncIterator[str]:
-        if not any(p.content.startswith("Projekt:") for p in parts):
+        if not any(p.content.startswith(("Projekt:", "VAULT ", "WEBQUELLE ")) for p in parts):
             raise RuntimeError("Simple synthetic fixture must not make a second model call")
         yield "SYNTHETIC_SOURCE_REPLY: project-only evidence."
         for part in parts:
             if part.content.startswith("QUELLE"):
                 yield "\n" + part.content.split("\n")[0]
-
 
 
 app.state.providers = SyntheticProvider()
@@ -96,6 +104,19 @@ def fixture_completion(body: dict[str, object]) -> dict[str, object]:
                         '"reason":"fixture","answer":"4"}'
                     )
                 }
+            }
+        ]
+    }
+
+
+@app.get("/search")
+def fixture_search(q: str, format: str = "json") -> dict[str, object]:
+    return {
+        "results": [
+            {
+                "url": "https://example.org/synthetic-source",
+                "title": "Synthetic public source",
+                "content": "SYNTHETIC_WEB_EVIDENCE",
             }
         ]
     }

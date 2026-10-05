@@ -64,13 +64,19 @@ def encoded(row: Memory) -> str:
     return "<!-- obdaai-memory: " + json.dumps({"id": row.id}) + " -->\n" + row.content
 
 
-def reconcile(db: Session, root: Path) -> dict[str, Any]:
+def reconcile(
+    db: Session, root: Path, *, allow_memory_writes: bool | None = None
+) -> dict[str, Any]:
     vault_path(root, "AI/Memory")
     found: set[str] = set()
     errors: list[str] = []
     # No followsymlinks; exclude Obsidian configuration and dotfolders.
     count = 0
-    for folder, dirs, files in os.walk(root, followlinks=False):
+
+    def unavailable(error: OSError) -> None:
+        raise error  # Never interpret a disconnected/unreadable mount as deletion.
+
+    for folder, dirs, files in os.walk(root, followlinks=False, onerror=unavailable):
         dirs[:] = sorted(
             d for d in dirs if not d.startswith(".") and not (Path(folder) / d).is_symlink()
         )
@@ -113,7 +119,7 @@ def reconcile(db: Session, root: Path) -> dict[str, Any]:
                         content=body,
                         base_content=body,
                         sha256=digest(body),
-                        writable=False,
+                        writable=bool(allow_memory_writes and relative.startswith("AI/Memory/")),
                     )
                 )
                 db.add(row)
@@ -122,6 +128,8 @@ def reconcile(db: Session, root: Path) -> dict[str, Any]:
             # Arbitrary vault files can never self-grant scope, privacy or writes.
             if not relative.startswith("AI/Memory/"):
                 row.writable = False
+            elif allow_memory_writes is not None:
+                row.writable = allow_memory_writes
             if by_path is not None and by_path.id != row.id:
                 row.conflict = "Zielpfad gehört zu anderem Memory"
                 continue

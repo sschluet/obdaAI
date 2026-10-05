@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -54,11 +54,13 @@ class LoginInput(Input):
 
 
 class ChatInput(Input):
+    web_search_allowed: bool = False
     content: str = Field(min_length=1, max_length=16000)
     request_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
 
 
 class ConversationInput(Input):
+    memory_scope: Literal["global"] | None = None
     project_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     cloud_allowed: bool = False
 
@@ -131,7 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "milestone": "M1", "privacy_default": "LOCAL_ONLY"}
+        return {"status": "ok", "milestone": "M2-partial", "privacy_default": "LOCAL_ONLY"}
 
     @app.get("/api/metrics")
     def metrics(session: SessionDependency) -> dict[str, object]:
@@ -220,6 +222,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "cloud_enabled": cfg.cloud_enabled,
             "privacy_default": "LOCAL_ONLY",
             "providers": ["local", "openrouter"],
+            "web_search_configured": bool(cfg.search_url),
             "version": "0.1.0-dev",
             "autonomous_changes": "paused",
         }
@@ -260,6 +263,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 {
                     "id": c.id,
                     "project_id": c.project_id,
+                    "memory_scope": c.memory_scope,
                     "title": c.title,
                     "title_status": c.title_status,
                     "cloud_allowed": c.cloud_allowed,
@@ -279,12 +283,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     raise HTTPException(404, "Aktives Projekt nicht gefunden")
                 if body.cloud_allowed:
                     raise HTTPException(409, "Projektquellen bleiben LOCAL_ONLY")
-            c = Conversation(cloud_allowed=body.cloud_allowed, project_id=body.project_id)
+            if body.memory_scope and (body.cloud_allowed or body.project_id):
+                raise HTTPException(409, "Vault-Wissenschat nur lokal und ohne Projektmischung")
+            c = Conversation(
+                cloud_allowed=body.cloud_allowed,
+                project_id=body.project_id,
+                memory_scope=body.memory_scope,
+            )
             db.add(c)
             db.commit()
             return {
                 "id": c.id,
                 "project_id": c.project_id,
+                "memory_scope": c.memory_scope,
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
@@ -307,6 +318,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return {
                 "id": c.id,
                 "project_id": c.project_id,
+                "memory_scope": c.memory_scope,
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
@@ -413,7 +425,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> StreamingResponse:
         if not body.content.strip():
             raise HTTPException(422, "Nachricht ist leer")
-        run_id = create_run(chat_id, body.request_id, content=body.content)
+        run_id = create_run(
+            chat_id,
+            body.request_id,
+            content=body.content,
+            web_search_allowed=body.web_search_allowed,
+        )
         start_development_run(run_id)
         return response_for(run_id, request)
 
@@ -422,11 +439,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request_id: str | None,
         *,
         content: str | None = None,
+        web_search_allowed: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
         action = {
             "chat_id": chat_id,
             "content": content,
+            "web_search_allowed": web_search_allowed,
             "edit": [edit[0], edit[1].model_dump()] if edit else None,
         }
         digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
@@ -491,6 +510,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
             snapshot: dict[str, Any] = {
+                "web_search_allowed": web_search_allowed,
                 "parts": [
                     ContextPart(
                         content=m.content,
@@ -503,7 +523,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "roles": [m.role for m in messages],
             }
             try:
-                sources = project_context(db, c.project_id, messages[-1].content)
+                sources = project_context(
+                    db, c.project_id, messages[-1].content, global_memory=c.memory_scope == "global"
+                )
             except ValueError as error:
                 raise HTTPException(409, str(error)) from None
             snapshot["sources"] = [p.model_dump(mode="json") for p in sources]
@@ -568,7 +590,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> StreamingResponse:
         if not body.content.strip():
             raise HTTPException(422, "Nachricht ist leer")
-        run_id = create_run(chat_id, body.request_id, edit=(message_id, body))
+        run_id = create_run(
+            chat_id,
+            body.request_id,
+            edit=(message_id, body),
+            web_search_allowed=body.web_search_allowed,
+        )
         start_development_run(run_id)
         return response_for(run_id, request)
 

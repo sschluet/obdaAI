@@ -406,3 +406,140 @@ def test_extensionless_xlsx_original_and_reindex(knowledge, tmp_path):
     assert c.post(f"/api/projects/{pid}/sources/{sid}/retry", json={}, headers=h).status_code == 200
     row = wait(app, sid)
     assert row.status == "ready" and row.revision == 2 and row.sha256 == checksum
+
+
+def test_global_vault_chat_requires_explicit_scope_and_stays_local(knowledge):
+    app, c, h, cfg, v = knowledge
+    (v / "global.md").write_text("# Global synthetic note\nGLOBAL_VAULT_FACT 42")
+    c.post("/api/memories/sync", json={}, headers=h)
+    pid = project(c, h)
+    with app.state.sessions() as db:
+        assert context(db, None, "GLOBAL_VAULT_FACT") == []
+        assert not any(
+            "GLOBAL_VAULT_FACT" in p.content for p in context(db, pid, "GLOBAL_VAULT_FACT")
+        )
+    chat = c.post("/api/conversations", json={"memory_scope": "global"}, headers=h).json()["id"]
+    result = c.post(
+        "/api/conversations/" + chat + "/messages", json={"content": "GLOBAL_VAULT_FACT"}, headers=h
+    )
+    assert "succeeded" in result.text
+    detail = c.get("/api/conversations/" + chat).json()
+    assert detail["memory_scope"] == "global" and detail["context_sources"]
+    assert app.state.providers.stream_calls == [False]
+    assert (
+        c.post(
+            "/api/conversations", json={"memory_scope": "global", "cloud_allowed": True}, headers=h
+        ).status_code
+        == 409
+    )
+
+
+def test_vault_disconnect_is_not_mistaken_for_deletions(knowledge, monkeypatch):
+    app, c, h, cfg, vault = knowledge
+    (vault / "stable.md").write_text("# Stable synthetic memory\nkeep on disconnect")
+    c.post("/api/memories/sync", json={}, headers=h)
+    before = c.get("/api/memories").json()
+
+    def broken_walk(root, *, followlinks, onerror):
+        onerror(OSError("synthetic disconnected filesystem"))
+        return iter(())
+
+    monkeypatch.setattr("hub.memory.os.walk", broken_walk)
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 409
+    assert c.get("/api/memories").json() == before
+
+
+def test_existing_memory_area_editable_only_with_folder_policy(knowledge):
+    app, c, h, cfg, vault = knowledge
+    (vault / "AI" / "Memory").mkdir(parents=True)
+    (vault / "AI" / "Memory" / "human.md").write_text("# Human synthetic memory\nexisting fact")
+    (vault / "ordinary.md").write_text("# Human general vault\nread only")
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
+    rows = c.get("/api/memories").json()
+    scoped = next(r for r in rows if r["path"].startswith("AI/Memory/"))
+    assert scoped["writable"]
+    assert not next(r for r in rows if r["path"] == "ordinary.md")["writable"]
+    body = {
+        "id": scoped["id"],
+        "title": "Explicit revised memory",
+        "content": "updated fact",
+        "revision": scoped["revision"],
+    }
+    assert c.patch("/api/memories/" + scoped["id"], json=body, headers=h).status_code == 200
+    assert "updated fact" in (vault / scoped["path"]).read_text()
+
+
+def test_table_decimal_precision_and_ambiguous_formats_are_auditable(knowledge):
+    app, c, h, cfg, v = knowledge
+    pid = project(c, h)
+    data = b'Value\n123456789012345678901234567890.12\n0.01\n"1,234.56"\nNaN\n'
+    sid = upload(c, h, pid, "precision.csv", data)
+    assert wait(app, sid).status == "ready"
+    receipt = c.get(f"/api/projects/{pid}/sources/{sid}/sum?column=0").json()
+    assert receipt["total"] == "123456789012345678901234567890.13"
+    assert any(row["raw"] == "1,234.56" for row in receipt["skipped"])
+
+
+def test_chat_web_requires_exact_user_query_grant_and_never_sends_private_context(
+    knowledge, monkeypatch
+):
+    from dataclasses import replace
+
+    app, c, h, cfg, vault = knowledge
+    # Replace only the fixture worker configuration, never network/firewall policy.
+    app.state.providers = FakeProviders(
+        Route(capabilities=["web"], model_class="cloud", reason="public web fixture", answer=None)
+    )
+    import hub.api as api_module
+
+    original_execute = api_module.execute_run
+
+    async def configured_execute(factory, settings, providers, run_id):
+        await original_execute(
+            factory,
+            replace(settings, search_url="http://synthetic.local/search"),
+            providers,
+            run_id,
+        )
+
+    monkeypatch.setattr(api_module, "execute_run", configured_execute)
+    sent = []
+
+    async def web_fixture(settings, body):
+        assert body.public_query_approved
+        sent.append(body.query)
+        return [
+            {
+                "url": "https://example.org/synthetic",
+                "title": "Synthetic public evidence",
+                "content": "PUBLIC_WEB_FACT",
+                "retrieved_at": 1.0,
+                "provider": "searxng",
+            }
+        ]
+
+    monkeypatch.setattr("hub.websearch.search", web_fixture)
+    cid = c.post("/api/conversations", json={}, headers=h).json()["id"]
+    first = c.post(
+        "/api/conversations/" + cid + "/messages",
+        json={"content": "PRIVATE_HISTORY_MARKER"},
+        headers=h,
+    )
+    assert "failed" in first.text and sent == []
+    second = c.post(
+        "/api/conversations/" + cid + "/messages",
+        json={"content": "Exact public query", "web_search_allowed": True},
+        headers=h,
+    )
+    assert "succeeded" in second.text and sent == ["Exact public query"]
+    assert "PRIVATE_HISTORY_MARKER" not in sent[0]
+    assert app.state.providers.stream_calls == [False]
+    detail = c.get("/api/conversations/" + cid).json()
+    assert any(
+        s["reference"].startswith("WEBQUELLE https://example.org/")
+        for s in detail["context_sources"]
+    )
+    retried = c.post(
+        "/api/conversations/" + cid + "/retry", json={"request_id": str(uuid.uuid4())}, headers=h
+    )
+    assert "failed" in retried.text and len(sent) == 1

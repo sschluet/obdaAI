@@ -1,7 +1,9 @@
 # M2: Projekte, Quellen und kanonisches Memory
 
 Projekte isolieren Chats, Originaldateien, Fundstellen, Webrecherchen und zugeordnetes
-Memory. Globale Memories werden nicht automatisch einem Projektchat beigemischt.
+Memory. Globale Memories werden nicht automatisch einem Projektchat beigemischt. Ein ausdrücklich
+über den Wissensbereich gestarteter globaler Vault-Chat liest ausschließlich diesen
+Bereich lokal; normaler Chat und Projektchat erhalten ihn nicht automatisch.
 Alle Projekt-, Quellen-, Memory- und Antwortableitungen bleiben LOCAL_ONLY.
 Ein Projektgespräch lässt sich nicht pauschal für OpenRouter freigeben.
 
@@ -77,3 +79,11 @@ Benutzertext im Gesprächsscope, lokal und ohne Modellinterpretation. Nachricht-
 Revision ergeben eine stabile Idempotenz-ID. Quellen, Modellantworten und Webtexte
 können diesen Write nicht auslösen. Automatische Memory-Vorschläge/Übernahme bleiben
 deaktiviert. Allgemeiner Vault bleibt readonly; Cloudfreigaben vererben sich nicht.
+
+Webfähige Chatläufe benötigen eine Freigabe für den exakten aktuellen Nachrichtentext
+(maximal 500 Zeichen). Chatverlauf, Vault, Dateiquellen und abgeleitete Routerqueries
+werden nicht als Suchanfrage übertragen. Bearbeitung, Gesprächswechsel und Retry
+widerrufen die Freigabe. Rechercheergebnisse mit URL und Zeitpunkt werden als lokale,
+untrusted Quellen im Lauf gespeichert; der finale Antwortkontext wird erneut gegen
+Modellgrenzen geprüft. Ohne angebundenen Suchdienst bleibt die Funktion gesperrt.
+Schema 0010 ergänzt explizite globale Vault-Wissenschats, 0011 globale Rechercheläufe.
