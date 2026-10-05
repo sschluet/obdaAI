@@ -386,3 +386,23 @@ def test_explicit_remember_is_local_idempotent_and_not_from_sources(knowledge):
     with app.state.sessions() as db:
         assert len(list(db.scalars(select(Memory)))) == 1
     assert app.state.providers.calls == 0
+
+
+def test_extensionless_xlsx_original_and_reindex(knowledge, tmp_path):
+    from openpyxl import Workbook
+
+    app, c, h, cfg, v = knowledge
+    wb = Workbook()
+    wb.active.append(["A", 10.2])
+    wb.active.append(["B", 2.3])
+    path = tmp_path / "checksum_without_extension"
+    wb.save(path)
+    result = isolated_parse(path, ".xlsx")
+    assert result["chunks"][0]["locator"] == "Sheet!A1:B1"
+    pid = project(c, h)
+    sid = upload(c, h, pid, "test.xlsx", path.read_bytes())
+    assert wait(app, sid).status == "ready"
+    checksum = wait(app, sid).sha256
+    assert c.post(f"/api/projects/{pid}/sources/{sid}/retry", json={}, headers=h).status_code == 200
+    row = wait(app, sid)
+    assert row.status == "ready" and row.revision == 2 and row.sha256 == checksum

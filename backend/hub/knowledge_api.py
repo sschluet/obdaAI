@@ -191,3 +191,32 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
                 return calculate(db, project_id, source_id, column)
             except ValueError as error:
                 raise HTTPException(404, str(error)) from None
+
+    @app.post("/api/projects/{project_id}/sources/{source_id}/retry")
+    async def retry(
+        project_id: str, source_id: str, request: Request, auth: Auth
+    ) -> dict[str, Any]:
+        with factory() as db:
+            source = db.scalar(select(Source).where(Source.id == source_id).with_for_update())
+            if not source or source.project_id != project_id:
+                raise HTTPException(404, "Quelle im Projekt nicht gefunden")
+            project = db.get(Project, project_id)
+            if not project or project.archived:
+                raise HTTPException(409, "Projekt archiviert")
+            if source.status in {"queued", "extracting"}:
+                raise HTTPException(409, "Extraktion bereits aktiv")
+            if source.revision >= 1000:
+                raise HTTPException(409, "Revisionslimit erreicht")
+            source.revision += 1
+            source.status, source.error = "queued", ""
+            if not cfg.database_url.startswith("sqlite"):
+                from hub.jobs import enqueue_source
+
+                enqueue_source(db, cfg, source_id)
+            db.commit()
+            info = source_info(source)
+        if cfg.database_url.startswith("sqlite"):
+            task = asyncio.create_task(extract_source(factory, cfg, source_id))
+            app.state.tasks.add(task)
+            task.add_done_callback(app.state.tasks.discard)
+        return info

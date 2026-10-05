@@ -51,6 +51,7 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
         source = db.get(Source, source_id)
         if source is None or source.status == "ready":
             return
+        revision = source.revision
         source.status, source.error = "extracting", ""
         db.commit()
         try:
@@ -67,23 +68,36 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
             job = inbox / (source_id + ".json")
             temporary = inbox / ("." + source_id + ".tmp")
             temporary.write_text(
-                json.dumps({"id": source_id, "sha256": source.sha256, "suffix": suffix})
+                json.dumps(
+                    {
+                        "id": source_id,
+                        "sha256": source.sha256,
+                        "suffix": suffix,
+                        "revision": revision,
+                    }
+                )
             )
             os.replace(temporary, job)
-            output = Path(cfg.parser_result_dir) / (source_id + ".json")
+            output = Path(cfg.parser_result_dir) / (source_id + "-" + str(revision) + ".json")
             async with asyncio.timeout(150):
                 while not output.exists():
                     await asyncio.sleep(0.5)
             if output.is_symlink() or output.stat().st_size > 4_000_000:
                 raise ValueError("Unsicheres Parsergebnis")
             result = json.loads(output.read_text())
-            if "error" in result or result.get("sha256") != source.sha256:
+            if (
+                "error" in result
+                or result.get("sha256") != source.sha256
+                or result.get("revision") != revision
+            ):
                 raise ValueError("Parser fehlgeschlagen oder falsches Original")
         else:
             result = await asyncio.to_thread(isolated_parse, path, suffix)
         with factory() as db:
             source = db.get(Source, source_id)
             assert source is not None
+            if source.revision != revision:
+                return
             # Reconciliation after interruption replaces only derived chunks.
             for old in db.scalars(select(SourceChunk).where(SourceChunk.source_id == source_id)):
                 db.delete(old)

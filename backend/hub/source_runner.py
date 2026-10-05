@@ -18,6 +18,9 @@ def process(root: Path, output: Path, job: Path) -> None:
         identifier = str(uuid.UUID(spec["id"]))
         digest = spec["sha256"]
         suffix = spec["suffix"]
+        revision = spec.get("revision", 1)
+        if not isinstance(revision, int) or not 1 <= revision <= 1000:
+            return
         if (
             len(digest) != 64
             or any(c not in "0123456789abcdef" for c in digest)
@@ -28,19 +31,21 @@ def process(root: Path, output: Path, job: Path) -> None:
         original = root / identifier / digest
         if original.is_symlink() or original.parent.is_symlink():
             return
-        result_file = output / (identifier + ".json")
+        result_file = output / (identifier + "-" + str(revision) + ".json")
         if result_file.exists():
             return
         if hashlib.sha256(original.read_bytes()).hexdigest() != digest:
             raise ValueError("Original verändert")
         result = isolated_parse(original, suffix)
         result["sha256"] = digest
-    except (ValueError, OSError, KeyError, TimeoutError):
+        result["revision"] = revision
+    except (ValueError, OSError, KeyError, TimeoutError, TypeError):
         result = {"error": "Extraktion fehlgeschlagen; Format, Schutz, OCR und Limits prüfen"}
         identifier = job.stem
-    temporary = output / ("." + identifier + ".tmp")
+        revision = spec.get("revision", 1) if "spec" in locals() and isinstance(spec, dict) else 1
+    temporary = output / ("." + identifier + "-" + str(revision) + ".tmp")
     temporary.write_text(json.dumps(result))
-    os.replace(temporary, output / (identifier + ".json"))
+    os.replace(temporary, output / (identifier + "-" + str(revision) + ".json"))
 
 
 def main() -> None:

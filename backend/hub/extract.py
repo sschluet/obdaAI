@@ -124,7 +124,9 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
         from openpyxl import load_workbook  # type: ignore[import-untyped]
         from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
 
-        wb = load_workbook(path, read_only=True, data_only=False, keep_links=False)
+        wb = load_workbook(
+            io.BytesIO(path.read_bytes()), read_only=True, data_only=False, keep_links=False
+        )
         try:
             for sheet in wb:
                 if sheet.max_row > MAX_UNITS or sheet.max_column > 200:

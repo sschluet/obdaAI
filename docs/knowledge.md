@@ -11,7 +11,8 @@ DOCX/PPTX/PDF/CSV/XLSX/MD/TXT sowie PNG/JPEG/WebP/TIFF werden unverändert und m
 SHA256 gespeichert. Alte Office- und Makroformate werden abgewiesen. Limits: 20 MiB
 pro Datei, 100 Dateien / 200 MiB pro Projekt, 2 GiB Originaldateien insgesamt;
 zusätzlich Seiten-, Tabellen-, Bildpixel-, ZIP-Verhältnis-, Text-, Zeit- und RAM-Grenzen.
-Downloads prüfen den Originalhash und autorisieren den Projektscope.
+Downloads prüfen den Originalhash und autorisieren den Projektscope. Erneute Verarbeitung
+erstellt eine neue Extraktionsrevision und verwendet keine alte Ergebnis-/Fehlercachedatei.
 
 Die PostgreSQL-Queue dispatcht Extraktion atomar mit dem Source-Datensatz. Ein eigener
 Source-Worker hält Parsing vom Chat-Inference-Slot getrennt. Der Offline-Parsercontainer
