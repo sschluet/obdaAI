@@ -19,6 +19,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from hub.db import Memory, MemoryRevision
+from hub.db_locks import MEMORY_INDEX
 
 MARKER = re.compile(r"^<!-- obdaai-memory: (\{[^\n]+\}) -->\n")
 MAX_NOTE = 200_000
@@ -144,7 +145,7 @@ def encoded(row: Memory) -> str:
 
 def serialize(db: Session) -> None:
     if db.bind is not None and db.bind.dialect.name == "postgresql":
-        db.execute(text("SELECT pg_advisory_xact_lock(791103043)"))
+        db.execute(text(f"SELECT pg_advisory_xact_lock({MEMORY_INDEX})"))
 
 
 def validate_mount(root: Path, expected_fs: str = "") -> str | None:

@@ -17,6 +17,7 @@ from hub.artifact_specs import ArtifactSpec
 from hub.artifacts import digest
 from hub.config import Settings
 from hub.db import Artifact, ArtifactRevision, Project, Source, session_factory
+from hub.db_locks import ARTIFACT_STORAGE, MEMORY_INDEX
 from hub.jobs import enqueue_artifact, worker_app
 from hub.knowledge import store
 from PIL import Image
@@ -40,6 +41,16 @@ def test_artifact_commit_rollback_and_duplicate_workers(tmp_path, monkeypatch):
         artifact_result_dir=str(results),
     )
     factory = session_factory(url)
+    # A long SSHFS transaction must not hold the independent artifact quota lock.
+    with factory() as memory_db, factory() as artifact_db:
+        memory_db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": MEMORY_INDEX})
+        assert (
+            artifact_db.scalar(
+                text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": ARTIFACT_STORAGE}
+            )
+            is True
+        )
+
     image = tmp_path / "synthetic.png"
     Image.new("RGB", (128, 128), "#153976").save(image)
     content = image.read_bytes()

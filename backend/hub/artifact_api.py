@@ -31,6 +31,7 @@ from hub.artifacts import (
 from hub.auth import require_session
 from hub.config import Settings
 from hub.db import Artifact, ArtifactRevision, Conversation, LoginSession, Message, Project
+from hub.db_locks import ARTIFACT_STORAGE
 
 Auth = Annotated[LoginSession, Depends(require_session)]
 
@@ -165,7 +166,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                     409, "Dateientwurf abgelaufen oder verändert; erneut entwerfen"
                 ) from None
         if db.bind is not None and db.bind.dialect.name == "postgresql":
-            db.execute(text("SELECT pg_advisory_xact_lock(791103043)"))
+            db.execute(text(f"SELECT pg_advisory_xact_lock({ARTIFACT_STORAGE})"))
         active = (
             db.scalar(
                 select(func.count())
@@ -219,19 +220,26 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
         project_id: str, artifact_id: str | None, body: CreateArtifact
     ) -> dict[str, Any]:
         enabled()
-        with factory() as db:
-            try:
-                row, created = create_row(db, project_id, artifact_id, body)
-                db.commit()
-                result = info(row)
-            except IntegrityError as exc:
-                db.rollback()
-                raise HTTPException(
-                    409, "Dateianfrage inzwischen gespeichert; Status prüfen"
-                ) from exc
+
+        def transaction() -> tuple[dict[str, Any], bool]:
+            with factory() as db:
+                try:
+                    row, created = create_row(db, project_id, artifact_id, body)
+                    db.commit()
+                    result = info(row)
+                except IntegrityError as exc:
+                    db.rollback()
+                    raise HTTPException(
+                        409, "Dateianfrage inzwischen gespeichert; Status prüfen"
+                    ) from exc
+            return result, created
+
+        result, created = await asyncio.to_thread(transaction)
         if created and cfg.database_url.startswith("sqlite"):
             # Development only. Production always dispatches in its PG transaction.
-            asyncio.create_task(execute_artifact(factory, cfg, row.artifact_id, row.revision))
+            asyncio.create_task(
+                execute_artifact(factory, cfg, result["artifact_id"], result["revision"])
+            )
         return result
 
     @app.get("/api/artifact-status")

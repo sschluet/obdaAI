@@ -243,3 +243,32 @@ def test_unconfigured_runner_has_no_hidden_fallback(setup):
     assert create(c, h, pid, spec).status_code == 503
     with app.state.sessions() as db:
         assert not db.scalars(select(ArtifactRevision)).all()
+
+
+def test_waiting_artifact_transaction_does_not_freeze_health(setup, monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    import hub.artifact_api as api
+
+    _, c, h, _, pid, spec = setup
+    entered, release = threading.Event(), threading.Event()
+    original = api.bind_sources
+
+    def waiting(*args):
+        entered.set()
+        assert release.wait(3)
+        return original(*args)
+
+    monkeypatch.setattr(api, "bind_sources", waiting)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        result = pool.submit(create, c, h, pid, spec)
+        try:
+            assert entered.wait(2)
+            start = time.monotonic()
+            assert c.get("/api/health").status_code == 200
+            assert time.monotonic() - start < 1
+            assert not result.done()
+        finally:
+            release.set()
+        assert result.result(timeout=3).status_code == 200

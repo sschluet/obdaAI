@@ -1085,3 +1085,13 @@ zurückhalten. Eigene getrennte Queue-Consumer für Uploads und Vault; der synch
 Vault-Scan läuft mit eigener DB-Transaktion in einem Thread, damit Heartbeats weiter
 arbeiten. Mount, vorhandener Sync und Rechte bleiben erhalten. Native Anbietertests
 sind ein separater Entwicklungsschritt und derzeit nicht im produktiven Router aktiv.
+
+### Live-Regressionsfund: unabhängige Speicher-Locks
+
+Der Artefaktquota-Lock hatte versehentlich die bestehende Memory-ID 791103043
+wiederverwendet. Ein langer Vault-Scan konnte damit ein neues Dateiprojekt blockieren;
+die synchrone DB-Warteoperation im async API-Handler verzögerte weitere HTTP-Anfragen.
+Artefakte erhalten die eigene registrierte Lock-ID 791103047. Die Dateitransaktion
+läuft in einem Thread mit eigener Session; der API-Ereignisloop bleibt responsiv.
+Regressionen prüfen Health während wartender Dateitransaktion und zwei unabhängig
+gehaltene echte PG-Locks. Live-Timeouts sind erfasst; Dateiabnahme wird wiederholt.
