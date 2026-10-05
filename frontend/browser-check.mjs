@@ -97,7 +97,7 @@ await page.getByText('Revision 2',{exact:true}).waitFor();
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile memory overflow');
 await page.screenshot({path:output+'/m2-memory.png',fullPage:true,animations:'disabled'});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
-await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();
+await page.locator('button.new').and(page.getByRole('button',{name:'Neues Gespräch',exact:true})).click();
 await page.getByLabel('Nachricht',{exact:true}).fill('SYNTHETIC_WEB_QUERY public documentation');
 await page.getByLabel('Genauen Nachrichtentext für externe Websuche freigeben',{exact:true}).check();
 await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
