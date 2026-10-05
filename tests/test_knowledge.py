@@ -623,3 +623,28 @@ def test_vault_descriptor_read_denies_symlink_and_oversize(tmp_path):
     (root / "large.md").write_bytes(b"x" * (MAX_NOTE + 1))
     with pytest.raises(ValueError):
         read_note(root, "large.md")
+
+
+def test_duplicate_content_does_not_probe_every_existing_candidate_path(knowledge, monkeypatch):
+    import hub.memory as memory
+
+    app, c, h, cfg, vault = knowledge
+    for i in range(30):
+        (vault / f"duplicate-{i}.md").write_text("# Identical synthetic template")
+    original = memory.vault_path
+    probed = []
+
+    def tracked(root, relative):
+        probed.append(relative)
+        return original(root, relative)
+
+    monkeypatch.setattr(memory, "vault_path", tracked)
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
+    assert len(c.get("/api/memories").json()) == 30
+    assert not any(p.startswith("duplicate-") for p in probed)
+    (vault / "duplicate-0.md").rename(vault / "renamed-template.md")
+    before = c.get("/api/memories").json()
+    expected = next(m["id"] for m in before if m["path"] == "duplicate-0.md")
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
+    after = c.get("/api/memories").json()
+    assert next(m["id"] for m in after if m["path"] == "renamed-template.md") == expected
