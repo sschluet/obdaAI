@@ -938,3 +938,14 @@ Validator; manuelle TaskSpec bleibt getrennt von Zeitplanvorschlag. UI-Abnahme z
 HA-Wartungsbericht / Samstag / 02:00, ohne Aufgabe anzulegen. n8n-Details in eigener
 erweiterter Auswahl verborgen. 329 lokale Tests bestanden, acht PG-Tests lokal
 übersprungen; Ruff/mypy/TS/Build/Secret-Scan grün. CI und Rollout dieser Ergänzung folgen.
+
+### 2026-10-05: echte Entwurfsabnahme erkennt Wochentagfehler
+
+cd9e7d2 installiert; CI 37343904014 vollständig grün. Echte lokale Entwurfsabnahme
+wurde sicher mit 422 abgewiesen: Modell lieferte Samstag als ISO-6, Plan erwartet
+Montag=0/Samstag=5. Keine Aufgabe oder Zeitplan angelegt/aktiviert. Diagnose nur mit
+synthetischem Ziel, ohne Cloud oder HA-Eingriff. Prompt ergänzt explizite deutsche/
+englische Zuordnung aller sieben Tage sowie vollständiges verschachteltes JSON-
+Beispiel. Isolierter Testprozess mit dem echten lokalen Modell liefert nun Samstag=5
+und gültigen HA-Wartungsbericht-Entwurf. Regression für falsches Samstag=6 abgewiesen.
+19 Entwurfstests grün; CI und erneute Abnahme des installierten Endpoints folgen.

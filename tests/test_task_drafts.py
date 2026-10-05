@@ -135,6 +135,7 @@ def test_explicit_weekly_preview_saves_no_task_or_schedule(setup):
     [
         ("HA in der Samstagnacht prüfen", {"kind": "weekly", "time": "02:00", "weekdays": [5]}),
         ("HA samstags 02:00 prüfen", {"kind": "weekly", "time": "02:00", "weekdays": [0]}),
+        ("HA samstags 02:00 prüfen", {"kind": "weekly", "time": "02:00", "weekdays": [6]}),
         ("HA um 02:00 prüfen", {"kind": "daily", "time": "02:00"}),
         ("HA am 2099-01-01 02:00 prüfen", {"kind": "once", "time": "02:00", "date": "2099-01-02"}),
         ("HA am 2000-01-01 02:00 prüfen", {"kind": "once", "time": "02:00", "date": "2000-01-01"}),

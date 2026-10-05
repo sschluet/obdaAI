@@ -53,8 +53,15 @@ async def preview(factory: Any, cfg: Any, goal: str, provider: Any = None) -> di
                 "A schedule proposal needs an exact HH:MM stated in the goal; "
                 "vague times or relative dates mean null. Fields: kind (once/daily/weekly), "
                 "time, timezone (Europe/Berlin), date (YYYY-MM-DD or null), weekdays "
-                "(Monday=0 through Sunday=6). once requires an explicit ISO date; "
+                "(Monday/Montag=0, Tuesday/Dienstag=1, Wednesday/Mittwoch=2, "
+                "Thursday/Donnerstag=3, Friday/Freitag=4, Saturday/Samstag=5, "
+                "Sunday/Sonntag=6; NOT ISO weekday numbering). "
+                "once requires an explicit ISO date; "
                 "weekly requires explicitly named weekdays. Never invent dates or times. "
+                "Example for a requested HA maintenance report every Saturday at 02:00: "
+                '{"title":"HA Wochenbericht","kind":"ha_maintenance","schedule":'
+                '{"kind":"weekly","time":"02:00","timezone":"Europe/Berlin",'
+                '"date":null,"weekdays":[5]}}. '
                 "Use the goal language."
             ),
         ),
