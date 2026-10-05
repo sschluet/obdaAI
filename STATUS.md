@@ -132,7 +132,8 @@ Vergleich und behält den Entwurf. Normales Speichern bleibt während des Vergle
 gesperrt. Eine Übernahme prüft den verglichenen Hash auch nach bereits erfolgtem
 Hintergrundabgleich. Synthetischer mobiler Browsercheck: externe Änderung ->
 Sync -> veralteter Editor abgelehnt -> Entwurf erhalten -> Vergleich -> ausdrücklich
-bestätigte Übernahme, Revision 4. Screenshot nur lokale Fixture. Backend lokal
+bestätigte Übernahme, Revision 6. Gezielter Einzelnotizabruf nach HTTP 409
+verifiziert; der Vergleich ist unabhängig von der 100-Treffer-Listenbegrenzung. Screenshot nur lokale Fixture. Backend lokal
 98 Tests bestanden, ein PostgreSQL-Test für CI; Ruff/mypy und Frontendbuild grün.
 Diese Editor-Korrektur ist noch nicht auf der VM installiert.
 

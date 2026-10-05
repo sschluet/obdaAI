@@ -77,6 +77,14 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
                 info(m) for m in db.scalars(statement.order_by(Memory.updated.desc()).limit(100))
             ]
 
+    @app.get("/api/memories/{memory_id}")
+    def current(memory_id: str, auth: Auth, project_id: str | None = None) -> dict[str, Any]:
+        with factory() as db:
+            row = db.get(Memory, memory_id)
+            if not row or row.deleted or row.project_id != project_id:
+                raise HTTPException(404, "Aktives Memory im Scope nicht gefunden")
+            return info(row)
+
     @app.post("/api/memories/sync")
     def sync(auth: Auth) -> dict[str, Any]:
         with factory() as db:

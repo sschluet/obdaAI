@@ -704,6 +704,10 @@ def test_memory_synced_external_revision_requires_fresh_compared_digest(knowledg
     identifier = str(uuid.uuid4())
     body = {"id": identifier, "title": "Synthetic", "content": "initial"}
     row = c.post("/api/memories", json=body, headers=h).json()
+    assert c.get("/api/memories/" + identifier).json()["id"] == identifier
+    assert (
+        c.get("/api/memories/" + identifier + "?project_id=" + str(uuid.uuid4())).status_code == 404
+    )
     path = vault / row["path"]
     path.write_text(path.read_text().replace("initial", "external"))
     assert c.post("/api/memories/sync", headers=h).status_code == 200
