@@ -81,8 +81,12 @@ def test_preview_context_limit_rejects_before_inference(setup):
 
 @pytest.mark.parametrize(
     "kind,tool",
-    [("ha_status", "ha.inspect"), ("ha_backups", "ha.backups.inspect"),
-     ("ha_maintenance", "ha.maintenance.plan"), ("hub_status", "hub.inspect")],
+    [
+        ("ha_status", "ha.inspect"),
+        ("ha_backups", "ha.backups.inspect"),
+        ("ha_maintenance", "ha.maintenance.plan"),
+        ("hub_status", "hub.inspect"),
+    ],
 )
 def test_natural_read_draft_is_manual_review_only(setup, kind, tool):
     import json
@@ -96,3 +100,50 @@ def test_natural_read_draft_is_manual_review_only(setup, kind, tool):
     assert body["spec"]["trigger"] == "manual" and body["spec"]["autonomy"] == "analyze_only"
     assert body["requires_review"] and not body["saved"] and not body["started"]
     assert c.get("/api/tasks").json() == []
+
+
+def test_explicit_weekly_preview_saves_no_task_or_schedule(setup):
+    import json
+
+    from hub.db import TaskSchedule
+
+    app, c, h, _ = setup
+    proposal = {"kind": "weekly", "time": "02:00", "weekdays": [5], "timezone": "Europe/Berlin"}
+    app.state.providers = DraftProvider(
+        json.dumps(
+            {
+                "title": "HA Wochenbericht",
+                "kind": "ha_maintenance",
+                "schedule": proposal,
+            }
+        )
+    )
+    goal = "Prüfe Home Assistant wöchentlich samstags um 02:00."
+    r = c.post("/api/task-drafts", headers=h, json={"goal": goal})
+    assert r.status_code == 200
+    b = r.json()
+    assert b["schedule"]["weekdays"] == [5] and b["schedule"]["time"] == "02:00"
+    assert b["spec"]["trigger"] == "manual" and b["spec"]["autonomy"] == "analyze_only"
+    assert not b["saved"] and not b["started"]
+    with app.state.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(TaskSchedule)) == 0
+        assert db.scalar(select(func.count()).select_from(Task)) == 0
+
+
+@pytest.mark.parametrize(
+    "goal,proposal",
+    [
+        ("HA in der Samstagnacht prüfen", {"kind": "weekly", "time": "02:00", "weekdays": [5]}),
+        ("HA samstags 02:00 prüfen", {"kind": "weekly", "time": "02:00", "weekdays": [0]}),
+        ("HA um 02:00 prüfen", {"kind": "daily", "time": "02:00"}),
+        ("HA am 2099-01-01 02:00 prüfen", {"kind": "once", "time": "02:00", "date": "2099-01-02"}),
+        ("HA am 2000-01-01 02:00 prüfen", {"kind": "once", "time": "02:00", "date": "2000-01-01"}),
+    ],
+)
+def test_invented_or_past_schedule_proposal_rejected(setup, goal, proposal):
+    import json
+
+    app, c, h, _ = setup
+    app.state.providers = DraftProvider(json.dumps({"title": "HA", "schedule": proposal}))
+    r = c.post("/api/task-drafts", headers=h, json={"goal": goal})
+    assert r.status_code == 422 and c.get("/api/tasks").json() == []

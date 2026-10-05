@@ -11,9 +11,16 @@ Kontext zum lokalen Antwortmodell. Selbst bei Cloudfreigabe bleibt diese Antwort
 lokal. Fehlender HA-Zugang erzeugt einen Fehler, keinen erfundenen Systembericht.
 
 Der Aufgabenentwurf aus natürlicher Sprache wählt Titel und einen dieser festen
-Berichtstypen oder lokale Analyse. Er speichert/aktiviert nichts. Der normale
+Berichtstypen oder lokale Analyse. Ein ausdrücklich genannter HH:MM-Termin kann als separater Zeitplan vorgeschlagen
+werden. Einmalige Termine benötigen ein ausdrückliches ISO-Datum, wöchentliche
+Termine ausdrücklich genannte Wochentage. Unklare Uhrzeiten, erfundene Wochentage,
+vergangene Termine und unbekannte Vorgaben werden abgewiesen. Der Entwurf
+speichert/aktiviert nichts. Der normale
 Aufgabendialog dient der Prüfung, Terminwahl und anschließenden Aktivierung.
-Das Modell vergibt keine Berechtigungen und bestimmt keine Zeitpläne.
+Das Modell vergibt keine Berechtigungen. Zeitplanvorschläge sind getrennt von der
+manuellen TaskSpec; Speichern und Aktivieren bleiben ausdrückliche UI-Aktionen.
+Aufgaben-/Workflow-Anfragen im Chat zeigen den Weg über „Als Aufgabe planen“,
+statt eine ausgeführte Aktion zu behaupten.
 
 Abnahme: Test weist Cloud-Unterdrückung, dauerhaften Beleg, Replay, begrenzten
 Kontext und Ablehnung unbekannter Werkzeuge nach. Synthetische UI-Abnahme zeigt

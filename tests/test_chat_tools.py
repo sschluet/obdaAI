@@ -74,3 +74,17 @@ def test_router_rejects_unbounded_selector(selector):
 def test_selector_requires_tool_capability():
     with pytest.raises(ValidationError):
         Route(capabilities=["chat"], model_class="local", reason="test", read_tool="ha.inspect")
+
+
+@pytest.mark.parametrize("capability", ["task", "workflow"])
+def test_task_chat_guides_to_review_without_creating_or_executing(setup, capability):
+    from hub.db import Task
+
+    app, c, h, provider = setup
+    provider.decision = Route(capabilities=[capability], model_class="cloud", reason="planning")
+    chat = test_chat.new_chat(c, h, cloud=True)
+    r = c.post(f"/api/conversations/{chat}/messages", headers=h, json={"content": "Plane HA"})
+    assert "Als Aufgabe planen" in r.text and "succeeded" in r.text
+    assert provider.stream_calls == []
+    with app.state.sessions() as db:
+        assert db.scalar(select(Task)) is None and db.scalar(select(ActionReceipt)) is None

@@ -922,3 +922,19 @@ Aufgabendialog lagen. Korrigiert: bei geöffnetem Dialog stehen beide darin, nac
 Schließen weiterhin in der Übersicht. Regression prüft Bericht und bedienbaren
 Laufmanifest-Klappbereich innerhalb des Dialogs. UI-/CI-/Rollout der Korrektur folgt.
 M3-Lücken explizit in docs/m3-acceptance-status.md; keine vollständige Abnahme behauptet.
+
+### 2026-10-05: Dialogfix live, Planungsübergang erweitert
+
+8c59f62 installiert, CI 37342938561 in allen fünf Jobs grün. APIs gesund,
+Schema 0017 unverändert; Overlays/Firewall/Browsercode identisch. Ergebnis- und
+Workflowbereiche im offenen Aufgabendialog bedienbar; lokal per UI geprüft.
+
+Nächste Ergänzung: Task-/Workflow-Chatklassifikationen geben einen klaren Weg über
+„Als Aufgabe planen“ statt eines technischen Meilensteinfehlers. Neue Entwürfe
+können Aufgabenart und ausdrückliche HH:MM-/Wochentag-/ISO-Datum-Vorgaben vorschlagen.
+Keine Speicherung, Aktivierung, Workflow-/HA-Aktion oder Berechtigung im Entwurf.
+Explizite Zeit/Tag-/Vergangenheitsprüfung zusätzlich zum bestehenden Zeitzonen-/DST-
+Validator; manuelle TaskSpec bleibt getrennt von Zeitplanvorschlag. UI-Abnahme zeigt
+HA-Wartungsbericht / Samstag / 02:00, ohne Aufgabe anzulegen. n8n-Details in eigener
+erweiterter Auswahl verborgen. 329 lokale Tests bestanden, acht PG-Tests lokal
+übersprungen; Ruff/mypy/TS/Build/Secret-Scan grün. CI und Rollout dieser Ergänzung folgen.

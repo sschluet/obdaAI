@@ -81,9 +81,13 @@ class SyntheticProvider:
         return "Synthetic automatic title"
 
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if any("SYNTHETIC_TASK_PLAN" in p.content for p in parts):
+            return Route(capabilities=["task"], model_class="cloud", reason="synthetic planning")
         if any("SYNTHETIC_HA_QUERY" in p.content for p in parts):
             return Route(
-                capabilities=["tool"], model_class="cloud", reason="synthetic HA read",
+                capabilities=["tool"],
+                model_class="cloud",
+                reason="synthetic HA read",
                 read_tool="ha.maintenance.plan",
             )
         if any("SYNTHETIC_WEB_QUERY" in p.content for p in parts):
@@ -115,6 +119,20 @@ class SyntheticProvider:
     ) -> AsyncIterator[str]:
         if parts and parts[0].source_id == "task-draft-policy":
             assert not external and not grants
+            if "SYNTHETIC_TASK_PLAN" in parts[-1].content:
+                yield json.dumps(
+                    {
+                        "title": "Synthetischer HA Wochenbericht",
+                        "kind": "ha_maintenance",
+                        "schedule": {
+                            "kind": "weekly",
+                            "time": "02:00",
+                            "weekdays": [5],
+                            "timezone": "Europe/Berlin",
+                        },
+                    }
+                )
+                return
             yield '{"title":"Synthetischer lokaler Analyseentwurf"}'
             return
         if any(p.source_id.startswith("tool:") for p in parts):

@@ -206,7 +206,18 @@ async def execute_run(
                 unsupported = set(route.capabilities) - supported
                 if c.project_id or c.memory_scope:
                     route.answer = None
-                if unsupported:
+                if unsupported and set(route.capabilities).issubset(
+                    {Capability.CHAT, Capability.TASK, Capability.WORKFLOW}
+                ):
+                    route.model_class = "local"
+                    route.answer = (
+                        "Du kannst diese Anfrage als Aufgabe vorbereiten: Klicke bei deiner "
+                        "Nachricht auf „Als Aufgabe planen“. Im Dialog prüfst du Aufgabenart, "
+                        "Dokumente und Termin und speicherst die Aufgabe zunächst pausiert. "
+                        "Für n8n steht anschließend eine geprüfte Workflowvorlage bereit. "
+                        "Es wurde noch keine Aufgabe angelegt, aktiviert oder ausgeführt."
+                    )
+                elif unsupported:
                     raise NotImplementedError
                 if route.read_tool:
                     from hub.chat_tools import context_result
