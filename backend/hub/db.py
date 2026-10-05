@@ -29,6 +29,7 @@ class LoginThrottle(Base):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    skill_selection: Mapped[str | None] = mapped_column(Text, nullable=True)
     memory_scope: Mapped[str | None] = mapped_column(String(20), nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
@@ -255,3 +256,21 @@ class ActionReceipt(Base):
     action_id: Mapped[str] = mapped_column(ForeignKey("action_intents.id"), primary_key=True)
     result: Mapped[str] = mapped_column(Text)
     finished: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class Skill(Base):
+    __tablename__ = "skills"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    trusted_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+
+
+class SkillRevision(Base):
+    __tablename__ = "skill_revisions"
+    skill_id: Mapped[str] = mapped_column(ForeignKey("skills.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created: Mapped[float] = mapped_column(Float, default=time.time)

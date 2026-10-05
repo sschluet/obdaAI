@@ -41,6 +41,7 @@ from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
+from hub.skill_api import install_skill_api, select_skills
 from hub.websearch import install_web_api
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
@@ -109,6 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
     install_action_api(app, factory)
+    install_skill_api(app, factory)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:
@@ -545,6 +547,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             snapshot["sources"] = [p.model_dump(mode="json") for p in sources]
             snapshot["parts"].extend(p.model_dump(mode="json") for p in sources)
             snapshot["roles"].extend("user" for _ in sources)
+            skill_parts, skill_audit = select_skills(db, c, messages[-1].content)
+            snapshot["skills"] = skill_audit
+            snapshot["parts"].extend(p.model_dump(mode="json") for p in skill_parts)
+            snapshot["roles"].extend("user" for _ in skill_parts)
             if sum(len(p["content"]) for p in snapshot["parts"]) > cfg.context_limit:
                 raise HTTPException(413, "Projektkontext zu groß; Quellen gezielter durchsuchen")
             run = Run(

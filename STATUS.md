@@ -15,12 +15,28 @@ Browsercheck bestanden: Vorschlag ohne Änderung, Freigabe noch ohne Ausführung
 Archivierung Revision 2, Beleg nach Reload, finale Pause; 390px ohne horizontalen
 Überlauf. Screenshot nur Fixture. Zwölf Gateway-API-/Kontrakttests bestanden;
 PostgreSQL-Duplikat-/Sperrentest separat für CI vorbereitet. Lokal 110 Tests bestanden, zwei PostgreSQL-Tests für CI; Ruff/mypy, Frontendbuild
-und Secret-Scan bestanden. CI/VM-Installation steht noch aus; M3 nicht als fertig abgenommen.
+und Secret-Scan bestanden. Gateway-Commit `49b50b4`: CI 37285653819 vollständig grün, auf VM installiert,
+Schema 0012. Echte synthetische Gateway-Abnahme bestanden: pausierte Writes
+abgewiesen, getrennte Einzelfreigabe, Archivierung Revision 2, Duplikat ohne
+zweiten Effekt, persistenter Beleg, finale Pause. Verschlüsselte Off-VM-Sicherung
+und isolierter Restore auf Schema 0012 bestanden; 40 Originalhashes und sechs
+Memory-Dateien erhalten. M3 nicht als fertig abgenommen.
 
-Nächste unabhängige Vertikalen: portable revisionierte Skills, Toolverbindungen,
-TaskSpec/Task-Center. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
-Modellaktionen sind noch nicht implementiert. Eigener n8n-Zugang und HA-Adresse
-wurden beim Benutzer erfragt; vorhandene Dienste unverändert. Keine externen
+Skills-Chat-Vertikale implementiert: portables Markdown mit strengem JSON-Frontmatter,
+Import/Export, unveränderliche Revisionen, ausdrückliches Hash-/Revisionsvertrauen,
+Global-/Projektscope, Stichwortauswahl und manueller Override je Gespräch. Jeder
+Lauf speichert Dokumentrevision und Hash; Bearbeitung deaktiviert die neue Revision.
+Neun neue API-Kontrakttests bestanden; lokal insgesamt 119 bestanden, zwei PG-Checks
+für CI. Browser: deaktivierter Import, explizite Aktivierung, neuer Entwurf sperrt
+Aktivierung, Revision 2 wieder deaktiviert, beide Revisionen erhalten, Reload und
+390px mit Hashumbruch. Fixture ersetzt nicht den echten A08-Modellnachweis.
+Skills-CI und VM-Installation stehen bei diesem Sourcecheckpoint noch aus.
+
+Nächste Vertikalen: Toolverbindungen, TaskSpec/Task-Center und aufgabenbezogene Skills. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
+Modellaktionen sind noch nicht implementiert. Beide Benutzerzugänge am 05.10.2026 über verifiziertes HTTPS lesend bestätigt:
+n8n Workflows-API 200, Home Assistant Config-API 200 / Version 2026.9.3. Secrets nur
+im geschützten ignorierten Bereich, keine bestehenden Workflows oder HA-Einstellungen
+geändert. Adapterinstallation und begrenzte neue Egressregeln noch offen. Keine externen
 Retry-/Exactly-once- oder HA-Wartungsgarantie aus dem lokalen Gateway ableiten.
 Siehe `docs/actions.md` und `docs/m3-plan.md`.
 

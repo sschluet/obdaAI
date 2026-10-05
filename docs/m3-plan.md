@@ -71,3 +71,9 @@ Vorhandenes n8n auf dem Mac mini: laufende Version 2.7.5, Container mit
 `n8nio/n8n:latest`, Health HTTP 200. Public-API ohne eigenen Schlüssel HTTP 401.
 Keine Workflows/Credentials ausgelesen oder übernommen und keine Einstellung
 geändert. Adapter und neues begrenztes Zugriffsmodell sind noch zu implementieren.
+
+Benutzerzugänge am 05.10.2026 bereitgestellt und über die benannten HTTPS-Ziele
+lesend getestet: n8n GET workflows 200; HA GET config 200, Version 2026.9.3.
+Keine Workflows aktiviert, Credentials übernommen oder HA-Zustände verändert.
+Secrets liegen nur im geschützten ignorierten Bereich. Neue App-Adapter und deren
+konkrete Netzwerkfreigaben stehen aus. Skills-Chat-Vertrag: `docs/skills.md`.

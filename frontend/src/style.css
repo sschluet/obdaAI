@@ -30,3 +30,5 @@ h1{font-weight:600;letter-spacing:-1.1px}
 input[type=checkbox]{accent-color:var(--accent)}
 
 .action-card{padding:1rem 0;border-top:1px solid var(--border);overflow-wrap:anywhere}.action-card button{margin:.3rem .4rem .3rem 0}.action-card pre{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.setting-card .hint,.run-history .hint{overflow-wrap:anywhere}
