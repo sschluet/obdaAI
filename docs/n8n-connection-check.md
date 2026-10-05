@@ -15,7 +15,7 @@ Creation needs explicit human authorization for the specific reviewed payload.
 The operator flag enforces a procedural gate; it is not an action grant and must
 never be exposed to model-produced arguments or untrusted workflow content.
 
-A mode-0600 journal records intent before POST, then the returned workflow ID and
+A mode-0600 journal records intent before POST, then the returned workflow ID/version and
 verified receipt. A filesystem lock serializes operators using that journal. Use
 exactly one protected journal for this binding on this workstation. The API does
 not provide a verified create-idempotency contract: this is not an exactly-once
@@ -27,9 +27,9 @@ workflows, data injection or drift require operator review; existing workflows
 are not overwritten. Both the creation response and a subsequent GET must match
 the inactive reviewed template. A successful check does not execute the task.
 
-Validation on 05.10.2026: 17 tests cover creation/GET verification, duplicate and
+Validation on 05.10.2026: 19 tests cover creation/GET verification, duplicate and
 concurrent operators, unapproved operation, unknown outcome and recovery, graph/
-state drift, response limits, auth failures and redirects without secret output.
+state/version drift, response limits, auth failures and redirects without secret output.
 Real read-only lookup via the installed public API succeeded; creation stopped at
 the approval gate, with no POST. Live creation is pending separate user approval.
 No new VM egress rule or n8n setting is installed by this step.

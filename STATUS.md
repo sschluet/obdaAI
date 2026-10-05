@@ -75,7 +75,7 @@ führt noch keine Aufgabe aus; A10 bleibt offen. Vertrag: `docs/tasks.md`.
 Begrenzter Operator-n8n-Adapter ergänzt: gepinntes HTTPS-Ziel, keine Redirects,
 Graph-/Statusvergleich, geschütztes Intentjournal vor POST, Sperre gegen parallele
 Operatoren und Reconciliation ohne blindes Wiederholen bei unklarem Ausgang.
-17 neue Tests bestanden. Echte lesende Namenssuche erfolgreich; Erstellung ohne
+19 neue Tests bestanden, inklusive unverändertem Graph mit geänderter n8n-Version. Echte lesende Namenssuche erfolgreich; Erstellung ohne
 konkrete Freigabe verweigert, kein Workflow verändert. Live-Erstellung weiterhin
 angefragt; keine Aktivierungs-/Ausführungsfunktion. `docs/n8n-connection-check.md`.
 

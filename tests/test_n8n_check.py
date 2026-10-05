@@ -11,7 +11,13 @@ REVIEW["payload"] = connection_draft(TASK, 1, "a" * 64)
 
 
 def remote(**changes):
-    return {**REVIEW["payload"], "id": "synthetic123", "active": False, **changes}
+    return {
+        **REVIEW["payload"],
+        "id": "synthetic123",
+        "versionId": TASK,
+        "active": False,
+        **changes,
+    }
 
 
 def fixture(handler):
@@ -105,6 +111,7 @@ def test_unknown_outcome_matching_workflow_is_recovered(tmp_path):
         {"pinData": {"private": "synthetic"}},
         {"activeVersionId": "published"},
         {"id": "../../credentials"},
+        {"versionId": "invalid"},
     ],
 )
 def test_drift_stops_without_overwriting_existing_workflow(tmp_path, changed):
@@ -172,3 +179,25 @@ def test_concurrent_operator_attempt_cannot_create_a_second_workflow(tmp_path):
             release.set()
         assert first.result()["status"] == "verified"
     assert len(posts) == 1
+
+
+def test_workflow_version_change_stops_even_when_graph_matches(tmp_path):
+    version = TASK
+    posts = 0
+
+    def handler(request):
+        nonlocal posts
+        if request.method == "POST":
+            posts += 1
+            return httpx.Response(200, json=remote())
+        if request.url.path.endswith("/synthetic123"):
+            return httpx.Response(200, json=remote(versionId=version))
+        return httpx.Response(200, json={"data": []})
+
+    adapter = fixture(handler)
+    journal = tmp_path / "receipt.json"
+    assert adapter.ensure(REVIEW, journal, approved=True)["workflow_version_id"] == TASK
+    version = "00000000-0000-4000-8000-000000000002"
+    with pytest.raises(CheckError, match="version drift"):
+        adapter.ensure(REVIEW, journal, approved=True)
+    assert posts == 1

@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import httpx
 
@@ -30,6 +31,10 @@ def remote_check(workflow: dict[str, Any], payload: dict[str, Any]) -> str:
     wid = workflow.get("id")
     if not isinstance(wid, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", wid):
         raise CheckError("Invalid workflow identity")
+    try:
+        UUID(workflow["versionId"])
+    except (KeyError, TypeError, ValueError, AttributeError):
+        raise CheckError("Invalid workflow version identity") from None
     if workflow.get("active") is not False or workflow.get("isArchived", False):
         raise CheckError("Workflow must remain inactive and unarchived")
     if workflow.get("activeVersionId") is not None:
@@ -123,11 +128,14 @@ class ConnectionCheck:
             raise CheckError("Invalid operator journal")
         if record is not None and record.get("payload_sha256") != expected:
             raise CheckError("Journal belongs to another reviewed draft")
+        existing: dict[str, Any] | None
         if record and record.get("workflow_id"):
             wid = record["workflow_id"]
             if not isinstance(wid, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", wid):
                 raise CheckError("Invalid journal workflow identity")
-            existing: dict[str, Any] | None = self.request("workflows/" + wid)
+            existing = self.request("workflows/" + wid)
+            if existing.get("versionId") != record.get("workflow_version_id"):
+                raise CheckError("Workflow version drift; operator review required")
         else:
             existing = self.find(payload)
         if existing is None:
@@ -140,14 +148,23 @@ class ConnectionCheck:
             existing = self.request("workflows", payload=payload)
             wid = remote_check(existing, payload)
             self.save(
-                journal, {"payload_sha256": expected, "status": "created", "workflow_id": wid}
+                journal,
+                {
+                    "payload_sha256": expected,
+                    "status": "created",
+                    "workflow_id": wid,
+                    "workflow_version_id": existing["versionId"],
+                },
             )
         wid = remote_check(existing, payload)
         verified = self.request("workflows/" + wid)
         remote_check(verified, payload)
+        if verified["versionId"] != existing["versionId"]:
+            raise CheckError("Workflow changed during verification")
         receipt = {
             "payload_sha256": expected,
             "workflow_id": wid,
+            "workflow_version_id": verified["versionId"],
             "status": "verified",
             "inactive": True,
             "executes_task": False,
