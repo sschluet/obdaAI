@@ -9,6 +9,9 @@ import re
 import stat
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from itertools import groupby
 from pathlib import Path
 from typing import Any
 
@@ -41,29 +44,45 @@ def vault_path(root: Path, relative: str) -> Path:
     return current
 
 
-def read_note(root: Path, relative: str) -> str:
-    """Read through directory descriptors: no symlink following or path replacement race."""
+@contextmanager
+def note_directory(root: Path, relative: str) -> Iterator[int]:
+    """Anchor one directory for a scan group without following replacement symlinks."""
     parts = Path(relative).parts
-    if not parts or Path(relative).is_absolute() or any(p in {"..", ".obsidian"} for p in parts):
+    if Path(relative).is_absolute() or any(p in {"..", ".obsidian"} for p in parts):
         raise ValueError("Ungültiger Vault-Pfad")
     directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        for part in parts[:-1]:
+        for part in parts:
             child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
             os.close(directory)
             directory = child
-        descriptor = os.open(
-            parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory
-        )
-        with os.fdopen(descriptor, "rb") as source:
-            if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
-                raise ValueError("Vault-Notiz ist keine reguläre Datei")
-            data = source.read(MAX_NOTE + 1)
-            if len(data) > MAX_NOTE:
-                raise ValueError("Vault-Notiz überschreitet Dateilimit")
-            return data.decode("utf-8")
+        yield directory
     finally:
         os.close(directory)
+
+
+def read_descriptor(directory: int, filename: str) -> str:
+    if (
+        len(Path(filename).parts) != 1
+        or Path(filename).name != filename
+        or filename in {"..", ".obsidian"}
+    ):
+        raise ValueError("Ungültiger Vault-Dateiname")
+    descriptor = os.open(filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    with os.fdopen(descriptor, "rb") as source:
+        if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+            raise ValueError("Vault-Notiz ist keine reguläre Datei")
+        data = source.read(MAX_NOTE + 1)
+        if len(data) > MAX_NOTE:
+            raise ValueError("Vault-Notiz überschreitet Dateilimit")
+        return data.decode("utf-8")
+
+
+def read_note(root: Path, relative: str) -> str:
+    """Read one bounded regular note through directory descriptors, without symlinks."""
+    path = Path(relative)
+    with note_directory(root, str(path.parent)) as directory:
+        return read_descriptor(directory, path.name)
 
 
 def revision(db: Session, row: Memory) -> None:
@@ -168,93 +187,99 @@ def _reconcile(
                     raise ValueError("Vault-Dateilimit überschritten; Index unverändert")
     available_paths = set(paths)
     count = len(paths)
-    for relative in paths:
-        try:
-            text = read_note(root, relative)
-        except OSError as error:
-            if error.errno in {
-                errno.EIO,
-                errno.ENOTCONN,
-                errno.ETIMEDOUT,
-                errno.ECONNRESET,
-                errno.ENETUNREACH,
-                errno.ESTALE,
-            }:
-                raise  # A transport outage invalidates this whole scan.
-            errors.append(relative)
-            continue
-        except (ValueError, UnicodeError):
-            errors.append(relative)
-            continue
-        identity, body = decode(text)
-        by_path = db.scalar(select(Memory).where(Memory.path == relative))
-        row = db.get(Memory, identity) if identity else by_path
-        if row is not None and row.id in found:
-            row.conflict = "Doppelte Memory-ID im Vault; Dateien manuell vergleichen"
-            continue
-        if row is None:
-            # Filename/hash matching supports a rename of ordinary read-only notes.
-            candidates = list(db.scalars(select(Memory).where(Memory.sha256 == digest(body))))
-            moved = [
-                m
-                for m in candidates
-                if m.path not in available_paths and m.id not in found and not m.deleted
-            ]
-            row = (
-                moved[0]
-                if len(moved) == 1
-                else Memory(
-                    id=str(uuid.uuid4()),
-                    path=relative,
-                    content=body,
-                    base_content=body,
-                    sha256=digest(body),
-                    writable=bool(allow_memory_writes and relative.startswith("AI/Memory/")),
-                )
-            )
-            db.add(row)
-            db.flush()
-        found.add(row.id)
-        # Arbitrary vault files can never self-grant scope, privacy or writes.
-        if not relative.startswith("AI/Memory/"):
-            row.writable = False
-        elif allow_memory_writes is not None:
-            row.writable = allow_memory_writes
-        if by_path is not None and by_path.id != row.id:
-            row.conflict = "Zielpfad gehört zu anderem Memory"
-            continue
-        row.path = relative
-        if row.conflict and row.conflict.startswith("pending:"):
-            path = vault_path(root, relative)
-            expected = row.conflict[len("pending:") :].removesuffix(":creating")
-            if digest(body) == row.sha256:
-                row.conflict, row.base_content = "", body
-            elif digest(body) != expected:
-                row.conflict = body
-            elif row.writable and relative.startswith("AI/Memory/"):
-                # Complete an already approved persisted intent, never invent a new write.
-                temporary = path.parent / (".obdaai-" + str(uuid.uuid4()) + ".tmp")
+    for parent, grouped in groupby(paths, key=lambda path: str(Path(path).parent)):
+        with note_directory(root, parent) as directory:
+            for relative in grouped:
                 try:
-                    temporary.write_text(encoded(row), encoding="utf-8")
-                    temporary.chmod(0o640)
-                    _, latest = decode(path.read_text(encoding="utf-8"))
-                    if digest(latest) == expected:
-                        os.replace(temporary, path)
-                        row.conflict, row.base_content = "", row.content
+                    text = read_descriptor(directory, Path(relative).name)
+                except OSError as error:
+                    if error.errno in {
+                        errno.EIO,
+                        errno.ENOTCONN,
+                        errno.ETIMEDOUT,
+                        errno.ECONNRESET,
+                        errno.ENETUNREACH,
+                        errno.ESTALE,
+                    }:
+                        raise  # A transport outage invalidates this whole scan.
+                    errors.append(relative)
+                    continue
+                except (ValueError, UnicodeError):
+                    errors.append(relative)
+                    continue
+                identity, body = decode(text)
+                by_path = db.scalar(select(Memory).where(Memory.path == relative))
+                row = db.get(Memory, identity) if identity else by_path
+                if row is not None and row.id in found:
+                    row.conflict = "Doppelte Memory-ID im Vault; Dateien manuell vergleichen"
+                    continue
+                if row is None:
+                    # Filename/hash matching supports a rename of ordinary read-only notes.
+                    candidates = list(
+                        db.scalars(select(Memory).where(Memory.sha256 == digest(body)))
+                    )
+                    moved = [
+                        m
+                        for m in candidates
+                        if m.path not in available_paths and m.id not in found and not m.deleted
+                    ]
+                    row = (
+                        moved[0]
+                        if len(moved) == 1
+                        else Memory(
+                            id=str(uuid.uuid4()),
+                            path=relative,
+                            content=body,
+                            base_content=body,
+                            sha256=digest(body),
+                            writable=bool(
+                                allow_memory_writes and relative.startswith("AI/Memory/")
+                            ),
+                        )
+                    )
+                    db.add(row)
+                    db.flush()
+                found.add(row.id)
+                # Arbitrary vault files can never self-grant scope, privacy or writes.
+                if not relative.startswith("AI/Memory/"):
+                    row.writable = False
+                elif allow_memory_writes is not None:
+                    row.writable = allow_memory_writes
+                if by_path is not None and by_path.id != row.id:
+                    row.conflict = "Zielpfad gehört zu anderem Memory"
+                    continue
+                row.path = relative
+                if row.conflict and row.conflict.startswith("pending:"):
+                    path = vault_path(root, relative)
+                    expected = row.conflict[len("pending:") :].removesuffix(":creating")
+                    if digest(body) == row.sha256:
+                        row.conflict, row.base_content = "", body
+                    elif digest(body) != expected:
+                        row.conflict = body
+                    elif row.writable and relative.startswith("AI/Memory/"):
+                        # Complete an already approved persisted intent, never invent a new write.
+                        temporary = path.parent / (".obdaai-" + str(uuid.uuid4()) + ".tmp")
+                        try:
+                            temporary.write_text(encoded(row), encoding="utf-8")
+                            temporary.chmod(0o640)
+                            _, latest = decode(path.read_text(encoding="utf-8"))
+                            if digest(latest) == expected:
+                                os.replace(temporary, path)
+                                row.conflict, row.base_content = "", row.content
+                            else:
+                                row.conflict = latest
+                        finally:
+                            temporary.unlink(missing_ok=True)
+                elif row.sha256 != digest(body):
+                    if row.conflict:
+                        row.conflict = body
                     else:
-                        row.conflict = latest
-                finally:
-                    temporary.unlink(missing_ok=True)
-        elif row.sha256 != digest(body):
-            if row.conflict:
-                row.conflict = body
-            else:
+                        revision(db, row)
+                        row.content, row.base_content = body, body
+                        row.sha256, row.revision = digest(body), row.revision + 1
+                        row.updated = time.time()
+                row.deleted = False
                 revision(db, row)
-                row.content, row.base_content = body, body
-                row.sha256, row.revision = digest(body), row.revision + 1
-                row.updated = time.time()
-        row.deleted = False
-        revision(db, row)
     # Never delete a note whose current path could not be read.
     for row in db.scalars(select(Memory)):
         if row.id not in found and row.path not in errors:

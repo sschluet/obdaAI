@@ -648,3 +648,28 @@ def test_duplicate_content_does_not_probe_every_existing_candidate_path(knowledg
     assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
     after = c.get("/api/memories").json()
     assert next(m["id"] for m in after if m["path"] == "renamed-template.md") == expected
+
+
+def test_vault_scan_opens_shared_parent_once_and_rejects_fifo(knowledge, monkeypatch):
+    import os
+
+    from hub.memory import read_note
+
+    app, c, h, cfg, vault = knowledge
+    for i in range(20):
+        (vault / f"shared-{i}.md").write_text(f"# Synthetic {i}")
+    original = os.open
+    roots = []
+
+    def opened(path, *args, **kwargs):
+        if path == vault:
+            roots.append(path)
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "open", opened)
+    assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
+    assert len(c.get("/api/memories").json()) == 20
+    assert len(roots) == 1
+    os.mkfifo(vault / "pipe.md")
+    with pytest.raises(ValueError, match="reguläre Datei"):
+        read_note(vault, "pipe.md")
