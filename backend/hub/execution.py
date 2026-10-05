@@ -467,8 +467,11 @@ async def execute_run(
                 },
             )
         except ExecutionLimitError as error:
-            update(error=str(error))
-            yield ("error", {"message": str(error)})
+            message = str(error)[:1000]
+            # The persisted error column is 240 characters in PostgreSQL. A
+            # verbose schema error must not prevent recording a failed run.
+            update(error=message[:240])
+            yield ("error", {"message": message})
         except Exception as error:
             # Class only: never emit prompts, SQL parameters, response bodies or
             # credentials to operational logs while retaining a useful diagnosis.

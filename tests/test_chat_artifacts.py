@@ -78,8 +78,11 @@ def test_explicit_project_documents_are_bound_locally_and_rechecked(setup, drift
             SourceChunk(source_id=source_id, locator="Synthetic page 1", content="Blue evidence.")
         )
         other = Source(
-            project_id=foreign, name="Foreign private document", sha256="b" * 64,
-            size=1, status="ready",
+            project_id=foreign,
+            name="Foreign private document",
+            sha256="b" * 64,
+            size=1,
+            status="ready",
         )
         db.add(other)
         db.flush()
@@ -99,9 +102,11 @@ def test_explicit_project_documents_are_bound_locally_and_rechecked(setup, drift
     provider = FileProvider(DOCUMENT, change)
     app.state.providers = provider
     chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
-    response = c.post("/api/conversations/" + chat + "/messages", headers=h, json={
-        "content": "Erstelle aus den Projektunterlagen eine Word-Datei mit einem Abschnitt."
-    })
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle aus den Projektunterlagen eine Word-Datei mit einem Abschnitt."},
+    )
     assert provider.calls == 1
     assert any("Blue evidence." in part.content for part in provider.parts)
     assert all("Never include foreign text." not in part.content for part in provider.parts)
@@ -124,6 +129,25 @@ def test_project_document_selection_is_explicit_and_conflicts_are_rejected():
         requests_project_sources(
             "Erstelle aus Projektunterlagen Word, aber ohne Projektunterlagen."
         )
+
+
+def test_invalid_model_plan_records_bounded_failure_and_creates_no_file(setup):
+    app, c, h, cfg, pid, _ = setup
+    invalid = json.loads(DOCUMENT)
+    invalid["title"] = "X" * 1000
+    app.state.providers = FileProvider(json.dumps(invalid))
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle eine Word-Datei."},
+    )
+    assert "failed" in response.text and "succeeded" not in response.text
+    with app.state.sessions() as db:
+        run = db.scalar(select(Run))
+        assert run.status == "failed" and run.finished is not None
+        assert run.error and len(run.error) <= Run.__table__.c.error.type.length
+        assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 0
 
 
 @pytest.mark.parametrize("effect", ["cancel", "message_drift", "archive"])

@@ -35,7 +35,8 @@ plans = [
                 "title": ("Breite Wörter für eine lesbare deutsche Überschrift " * 3).strip(),
                 "bullets": [
                     "Langer Punkt mit überprüfbaren deutschen Wörtern und lesbarem Text. " * 2
-                ] * 5,
+                ]
+                * 5,
             },
         ],
     },
@@ -78,8 +79,9 @@ def prepare() -> None:
                 writer.add_blank_page(width=300, height=400)
                 writer.write(str(source))
             else:
-                image = Image.new("RGB", (512, 256), "#163976")
+                image = Image.new("RGBA", (512, 256), "#163976")
                 image.paste("#598ce8", (256, 0, 512, 256))
+                image.paste((255, 0, 0, 0), (0, 0, 128, 128))
                 exif = Image.Exif()
                 exif[315] = "Synthetic private author"
                 image.save(
@@ -115,6 +117,14 @@ def check() -> None:
                 assert len(media) == 1
                 with Image.open(io.BytesIO(archive.read(media[0]))) as image:
                     assert not image.getexif() and not image.info
+                    assert image.mode == "RGBA" and image.getpixel((0, 0))[3] == 0
+    collage = next(
+        p / "version/artifact.png"
+        for p in results.iterdir()
+        if (p / "version/artifact.png").exists()
+    )
+    with Image.open(collage) as image:
+        assert image.getpixel((0, 0)) == (244, 247, 253)
     for folder in requests.iterdir():
         assert not process(folder, results), "Duplicate overwrote an immutable output"
     print(

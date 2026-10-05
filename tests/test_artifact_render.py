@@ -22,12 +22,18 @@ def test_word_embedded_image_drops_metadata_and_preserves_orientation(tmp_path: 
     exif[270] = "Private location"
     original.save(source, exif=exif, icc_profile=b"private-profile")
     before = source.read_bytes()
-    spec = ArtifactSpec.model_validate({
-        "sources": [binding(source)],
-        "plan": {"kind": "docx", "title": "Bildprüfung", "sections": [
-            {"heading": "Bild", "images": [{"source": 0, "caption": "Orientiert"}]}
-        ]},
-    })
+    spec = ArtifactSpec.model_validate(
+        {
+            "sources": [binding(source)],
+            "plan": {
+                "kind": "docx",
+                "title": "Bildprüfung",
+                "sections": [
+                    {"heading": "Bild", "images": [{"source": 0, "caption": "Orientiert"}]}
+                ],
+            },
+        }
+    )
     render(spec, [source], tmp_path / "word")
     with zipfile.ZipFile(tmp_path / "word/artifact.docx") as archive:
         media = [name for name in archive.namelist() if name.startswith("word/media/")]
@@ -36,6 +42,56 @@ def test_word_embedded_image_drops_metadata_and_preserves_orientation(tmp_path: 
             assert embedded.size == (40, 80)
             assert not embedded.getexif()
             assert not embedded.info
+    assert source.read_bytes() == before
+
+
+@pytest.mark.parametrize("palette", [False, True])
+def test_transparent_image_keeps_alpha_in_word_and_blends_collage(tmp_path, palette):
+    source = tmp_path / "transparent.png"
+    original = Image.new("RGBA", (256, 128), (255, 0, 0, 0))
+    original.paste((0, 0, 255, 255), (128, 0, 256, 128))
+    if palette:
+        original = original.convert("P", palette=Image.Palette.ADAPTIVE)
+    exif = Image.Exif()
+    exif[315] = "Private author"
+    original.save(source, exif=exif, icc_profile=b"private-profile")
+    before = source.read_bytes()
+    word = ArtifactSpec.model_validate(
+        {
+            "sources": [binding(source)],
+            "plan": {
+                "kind": "docx",
+                "title": "Transparentes Bild",
+                "sections": [{"heading": "Bild", "images": [{"source": 0}]}],
+            },
+        }
+    )
+    render(word, [source], tmp_path / "word")
+    with zipfile.ZipFile(tmp_path / "word/artifact.docx") as archive:
+        media = next(n for n in archive.namelist() if n.startswith("word/media/"))
+        with Image.open(io.BytesIO(archive.read(media))) as embedded:
+            assert embedded.mode == "RGBA"
+            assert embedded.getpixel((64, 64))[3] == 0
+            assert embedded.getpixel((192, 64)) == (0, 0, 255, 255)
+            assert not embedded.info and not embedded.getexif()
+    collage = ArtifactSpec.model_validate(
+        {
+            "sources": [binding(source)],
+            "plan": {
+                "kind": "image",
+                "title": "Transparenz",
+                "columns": 1,
+                "tile_width": 256,
+                "tile_height": 128,
+                "tiles": [{"source": 0}],
+            },
+        }
+    )
+    render(collage, [source], tmp_path / "collage")
+    with Image.open(tmp_path / "collage/artifact.png") as output:
+        assert output.getpixel((64, 64)) == (244, 247, 253)
+        assert output.getpixel((192, 64)) == (0, 0, 255)
+        assert not output.info and not output.getexif()
     assert source.read_bytes() == before
 
 
@@ -108,10 +164,15 @@ def test_powerpoint_has_requested_count_and_editable_notes(tmp_path: Path) -> No
 def test_powerpoint_fits_dense_text_without_losing_native_content(tmp_path: Path) -> None:
     title = ("Breite Wörter für eine lesbare deutsche Überschrift " * 3).strip()
     bullets = [("Langer Punkt mit überprüfbaren deutschen Wörtern und lesbarem Text. " * 2)] * 5
-    spec = ArtifactSpec.model_validate({"plan": {
-        "kind": "pptx", "title": "Layoutprüfung",
-        "slides": [{"title": title, "bullets": bullets}],
-    }})
+    spec = ArtifactSpec.model_validate(
+        {
+            "plan": {
+                "kind": "pptx",
+                "title": "Layoutprüfung",
+                "slides": [{"title": title, "bullets": bullets}],
+            }
+        }
+    )
     render(spec, [], tmp_path / "dense")
     slide = Presentation(str(tmp_path / "dense/artifact.pptx")).slides[0]
     assert slide.shapes[0].text == title
@@ -125,10 +186,15 @@ def test_powerpoint_fits_dense_text_without_losing_native_content(tmp_path: Path
 
 
 def test_powerpoint_rejects_text_that_would_be_unreadable(tmp_path: Path) -> None:
-    spec = ArtifactSpec.model_validate({"plan": {
-        "kind": "pptx", "title": "Layoutprüfung",
-        "slides": [{"title": "W" * 160, "bullets": ["Kurzer Punkt"]}],
-    }})
+    spec = ArtifactSpec.model_validate(
+        {
+            "plan": {
+                "kind": "pptx",
+                "title": "Layoutprüfung",
+                "slides": [{"title": "W" * 160, "bullets": ["Kurzer Punkt"]}],
+            }
+        }
+    )
     with pytest.raises(ValueError, match="Text kürzen"):
         render(spec, [], tmp_path / "unreadable")
 

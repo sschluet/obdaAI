@@ -209,8 +209,10 @@ def _read_image(path: Path) -> Any:
             raise ValueError("Bildformat nicht freigegeben")
         # Apply orientation before removing metadata. A new pixel-only image also
         # drops EXIF/GPS, comments and profiles when embedded in Word or text PDFs.
-        oriented = ImageOps.exif_transpose(original).convert("RGB")
-        clean = Image.new("RGB", oriented.size)
+        transposed = ImageOps.exif_transpose(original)
+        alpha = "A" in transposed.getbands() or "transparency" in transposed.info
+        oriented = transposed.convert("RGBA" if alpha else "RGB")
+        clean = Image.new(oriented.mode, oriented.size)
         clean.paste(oriented)
         return clean
 
@@ -272,6 +274,7 @@ def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
         canvas.paste(
             fitted,
             (x, y),
+            fitted.getchannel("A") if fitted.mode == "RGBA" else None,
         )
         for line_number, line in enumerate(lines):
             draw.text(
