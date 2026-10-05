@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import re
 import time
 import uuid
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import httpx
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy import update as sql_update
 from sqlalchemy.orm import Session, sessionmaker
@@ -217,6 +219,10 @@ async def execute_run(
                     yield ("status", {"message": "Lokaler Dateientwurf wird erstellt"})
                     try:
                         artifact = await create_from_chat(factory, cfg, run_id, providers)
+                    except HTTPException as exc:
+                        raise ExecutionLimitError(
+                            "Dateianfrage konnte nicht gespeichert werden: " + str(exc.detail)
+                        ) from None
                     except ValueError as exc:
                         if cancelled():
                             raise asyncio.CancelledError from None
@@ -226,9 +232,15 @@ async def execute_run(
                         "Die " + artifact["kind"].upper() + "-Datei wird lokal erstellt. "
                         "Öffne den Dateibereich dieses Projekts, prüfe alle Vorschauseiten "
                         "und gib die Version anschließend zum Download frei. "
-                        "Verwendet wurde nur dein konkreter Dateiwunsch; Projektquellen "
-                        "kannst du im Dateidialog ausdrücklich ergänzen."
+                        + (
+                            "Verwendet wurden dein Dateiwunsch und die ausdrücklich angeforderten "
+                            "Projektquellen; die genauen Belege stehen bei der Dateiversion."
+                            if artifact["spec"]["sources"]
+                            else "Verwendet wurde nur dein konkreter Dateiwunsch; Projektquellen "
+                            "kannst du im Dateidialog ausdrücklich ergänzen."
+                        )
                     )
+                    update(first_content_seconds=time.monotonic() - started)
                     yield (
                         "artifact",
                         {
@@ -457,7 +469,10 @@ async def execute_run(
         except ExecutionLimitError as error:
             update(error=str(error))
             yield ("error", {"message": str(error)})
-        except Exception:
+        except Exception as error:
+            # Class only: never emit prompts, SQL parameters, response bodies or
+            # credentials to operational logs while retaining a useful diagnosis.
+            logging.getLogger(__name__).warning("Chat execution failed (%s)", type(error).__name__)
             update(error="Provider nicht verfügbar oder ungültige Antwort")
             yield (
                 "error",

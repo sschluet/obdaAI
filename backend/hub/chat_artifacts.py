@@ -10,9 +10,21 @@ from sqlalchemy.orm import Session
 
 from hub.artifact_api import CreateArtifact, artifact_service
 from hub.artifact_drafts import DraftInput, preview
-from hub.artifact_specs import ArtifactSpec
+from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import digest
-from hub.db import ArtifactRevision, Conversation, Message, Run
+from hub.db import ArtifactRevision, Conversation, Message, Run, Source
+
+
+def requests_project_sources(goal: str) -> bool:
+    """Only an explicit request for this project's complete document collection."""
+    names = r"(?:projektunterlagen|projektdokumente(?:n)?|projektquellen|project documents)"
+    positive = re.search(r"\b(?:aus|anhand|from|using)\b.{0,50}\b" + names + r"\b", goal, re.I)
+    negative = re.search(
+        r"\b(?:keine|ohne|nicht|no|without)\b.{0,25}\b" + names + r"\b", goal, re.I
+    )
+    if positive and negative:
+        raise ValueError("Quellenauswahl ist widersprüchlich; Quellen im Dateidialog auswählen")
+    return bool(positive)
 
 
 def request_format(goal: str) -> tuple[str, int]:
@@ -105,14 +117,26 @@ async def create_from_chat(
         revision, goal, sha = message.revision, message.content, digest(message.content)
         if len(goal) > 4000:
             raise ValueError("Dateiwunsch darf höchstens 4000 Zeichen enthalten")
+        sources = []
+        if requests_project_sources(goal):
+            originals = list(db.scalars(select(Source).where(Source.project_id == project_id)))
+            if not originals or len(originals) > 4 or any(s.status != "ready" for s in originals):
+                raise ValueError(
+                    "Projektquellen benötigen 1 bis 4 fertig eingelesene Originale; "
+                    "eine Teilmenge im Dateidialog auswählen"
+                )
+            sources = [
+                SourceBinding(id=s.id, revision=s.revision, sha256=s.sha256)
+                for s in sorted(originals, key=lambda source: source.id)
+            ]
     kind, count = request_format(goal)
-    # Only the explicit user's goal is supplied. History, memory and automatic
-    # retrieval cannot become an implicit source selection or write instruction.
+    # The latest user's goal and explicitly requested current project originals
+    # are bound. History/memory/retrieval never supply implicit write instructions.
     section_count = (
         1 if re.search(r"\b(?:ein(?:en|em)?|1|one)\s+(?:abschnitt|section)\b", goal, re.I) else None
     )
     body = DraftInput(
-        goal=goal, kind=kind, slide_count=count, section_count=section_count, sources=[]  # type: ignore[arg-type]
+        goal=goal, kind=kind, slide_count=count, section_count=section_count, sources=sources  # type: ignore[arg-type]
     )
     proposal = await preview(factory, cfg, project_id, body, provider)
 
@@ -161,7 +185,7 @@ async def create_from_chat(
             "message_id": message_id,
             "message_revision": revision,
             "message_sha256": sha,
-            "sources": [],
+            "sources": [source.model_dump(mode="json") for source in sources],
             "requires_review": True,
         }
         current.context_snapshot = json.dumps(snapshot, ensure_ascii=False)

@@ -2,8 +2,8 @@ import json
 
 import pytest
 import test_artifact_api
-from hub.chat_artifacts import request_format
-from hub.db import ArtifactRevision, Message, Run
+from hub.chat_artifacts import request_format, requests_project_sources
+from hub.db import ArtifactRevision, Message, Run, Source, SourceChunk
 from hub.routing import Route
 from sqlalchemy import func, select
 
@@ -24,7 +24,8 @@ class FileProvider:
         return "Synthetic file chat"
 
     async def stream(self, parts, roles, *, external, grants):
-        assert not external and not grants and len(parts) == 2
+        assert not external and not grants and 2 <= len(parts) <= 10
+        self.parts = parts
         self.calls += 1
         if self.effect:
             self.effect()
@@ -64,6 +65,65 @@ def test_chat_file_uses_same_review_gate_and_links_exact_request(setup):
         message = db.get(Message, receipt["message_id"])
         assert message.active and message.revision == receipt["message_revision"]
         assert run.cost is None and run.provider == "local"
+        assert run.first_content_seconds is not None
+
+
+@pytest.mark.parametrize("drift", [False, True])
+def test_explicit_project_documents_are_bound_locally_and_rechecked(setup, drift):
+    app, c, h, cfg, pid, spec = setup
+    source_id = spec["sources"][0]["id"]
+    foreign = c.post("/api/projects", headers=h, json={"name": "Foreign evidence"}).json()["id"]
+    with app.state.sessions() as db:
+        db.add(
+            SourceChunk(source_id=source_id, locator="Synthetic page 1", content="Blue evidence.")
+        )
+        other = Source(
+            project_id=foreign, name="Foreign private document", sha256="b" * 64,
+            size=1, status="ready",
+        )
+        db.add(other)
+        db.flush()
+        db.add(
+            SourceChunk(
+                source_id=other.id, locator="Private", content="Never include foreign text."
+            )
+        )
+        db.commit()
+
+    def change():
+        if drift:
+            with app.state.sessions() as db:
+                db.get(Source, source_id).revision += 1
+                db.commit()
+
+    provider = FileProvider(DOCUMENT, change)
+    app.state.providers = provider
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    response = c.post("/api/conversations/" + chat + "/messages", headers=h, json={
+        "content": "Erstelle aus den Projektunterlagen eine Word-Datei mit einem Abschnitt."
+    })
+    assert provider.calls == 1
+    assert any("Blue evidence." in part.content for part in provider.parts)
+    assert all("Never include foreign text." not in part.content for part in provider.parts)
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    if drift:
+        assert "succeeded" not in response.text and not rows
+    else:
+        assert "succeeded" in response.text
+        assert rows[0]["spec"]["sources"] == spec["sources"]
+        assert rows[0]["draft"]["citations"][0]["source_id"] == source_id
+        detail = c.get("/api/conversations/" + chat).json()
+        assert detail["runs"][0]["artifact"]["sources"] == spec["sources"]
+
+
+def test_project_document_selection_is_explicit_and_conflicts_are_rejected():
+    assert requests_project_sources("Erstelle aus den Projektunterlagen eine Präsentation.")
+    assert not requests_project_sources("Erstelle ohne Projektunterlagen eine Word-Datei.")
+    assert not requests_project_sources("Erstelle eine Word-Datei.")
+    with pytest.raises(ValueError, match="widersprüchlich"):
+        requests_project_sources(
+            "Erstelle aus Projektunterlagen Word, aber ohne Projektunterlagen."
+        )
 
 
 @pytest.mark.parametrize("effect", ["cancel", "message_drift", "archive"])

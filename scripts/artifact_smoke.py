@@ -31,7 +31,12 @@ plans = [
         "title": "Synthetische Präsentation",
         "slides": [
             {"title": "Lokaler Stand", "bullets": ["Editierbare Folie", "Keine Cloud"]},
-            {"title": "Abnahme", "bullets": ["Vorschau und Original geprüft"]},
+            {
+                "title": ("Breite Wörter für eine lesbare deutsche Überschrift " * 3).strip(),
+                "bullets": [
+                    "Langer Punkt mit überprüfbaren deutschen Wörtern und lesbarem Text. " * 2
+                ] * 5,
+            },
         ],
     },
     {

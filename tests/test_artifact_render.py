@@ -105,6 +105,34 @@ def test_powerpoint_has_requested_count_and_editable_notes(tmp_path: Path) -> No
     assert Presentation(str(tmp_path / "edited.pptx")).slides[0].shapes[0].text == "Geändert"
 
 
+def test_powerpoint_fits_dense_text_without_losing_native_content(tmp_path: Path) -> None:
+    title = ("Breite Wörter für eine lesbare deutsche Überschrift " * 3).strip()
+    bullets = [("Langer Punkt mit überprüfbaren deutschen Wörtern und lesbarem Text. " * 2)] * 5
+    spec = ArtifactSpec.model_validate({"plan": {
+        "kind": "pptx", "title": "Layoutprüfung",
+        "slides": [{"title": title, "bullets": bullets}],
+    }})
+    render(spec, [], tmp_path / "dense")
+    slide = Presentation(str(tmp_path / "dense/artifact.pptx")).slides[0]
+    assert slide.shapes[0].text == title
+    assert slide.shapes[1].text.splitlines() == ["• " + point for point in bullets]
+    for index, minimum in [(0, 18), (1, 16)]:
+        sizes = [
+            run.font.size.pt for p in slide.shapes[index].text_frame.paragraphs for run in p.runs
+        ]
+        assert sizes and min(sizes) >= minimum
+    assert max(p.font.size.pt for p in slide.shapes[0].text_frame.paragraphs) < 30
+
+
+def test_powerpoint_rejects_text_that_would_be_unreadable(tmp_path: Path) -> None:
+    spec = ArtifactSpec.model_validate({"plan": {
+        "kind": "pptx", "title": "Layoutprüfung",
+        "slides": [{"title": "W" * 160, "bullets": ["Kurzer Punkt"]}],
+    }})
+    with pytest.raises(ValueError, match="Text kürzen"):
+        render(spec, [], tmp_path / "unreadable")
+
+
 def test_pdf_reorders_rotates_removes_and_preserves_original(tmp_path: Path) -> None:
     source = tmp_path / "input.pdf"
     writer = PdfWriter()

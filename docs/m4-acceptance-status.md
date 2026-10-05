@@ -102,3 +102,27 @@ der Collage zeigte einen Umlautfehler; `5b76a5f` verwendet feste installierte lo
 Unicode-Schriften und weist nicht unterstützte Zeichen ab. Die korrigierte Collage
 benötigt noch ihre neue visuelle Live-Version. Keine falsche Vollabnahme der ersten
 Collage aufgrund eines formal gültigen PNG.
+
+
+## Quellfortsetzung: Typografie und explizite Chat-Projektquellen
+
+PowerPoint passt native Textgrößen anhand fester Schriftdateien an. Absatzabstände
+werden reserviert; Titel unter 18 pt, Text unter 16 pt und Footer unter 8 pt werden
+abgewiesen statt unlesbar veröffentlicht. Dichte deutsche Inhalte und unteilbare
+zu lange Wörter sind getestet; dieser Folgestand braucht seine Linux-Vorschauprüfung.
+Die Inhalte bleiben native editierbare Texte.
+
+„Erstelle aus den Projektunterlagen …“ bindet ausdrücklich die vollständige aktuelle
+Sammlung dieses Projekts (1 bis 4 fertig eingelesene Originale). Bei größeren oder
+unvollständigen Sammlungen muss eine konkrete Teilmenge im Dateidialog gewählt werden.
+Andere Projekte, globales Memory und Chatgeschichte werden nicht ergänzt. Quellrevisionen,
+Hash und Fundstellen werden am letzten Speicherboundary erneut geprüft und im Receipt
+festgehalten. Ein Quellenabschnitt ist zusätzlich zu explizit verlangten Inhaltsabschnitten.
+Die synthetischen API-Prüfungen ersetzen die noch offene echte Quellen-Chat-Abnahme nicht.
+
+Release 8473a4e ist mit allen sechs GitHub-Jobs grün und auf eigener VM installiert.
+Eingebettete Word-Bilder verlieren EXIF/Profile nach angewandter Ausrichtung; Originale
+bleiben unverändert. Linux-Dateismoke prüft die tatsächlichen eingebetteten Mediendaten.
+Die Unicode-Collage v2 ist visuell und per authentifiziertem Download abgenommen.
+Der normale lokale Ein-Abschnitt-Dateientwurf wurde real gespeichert. Der vollständige
+Chatpfad scheitert noch; gespeicherte Vorgaben sind keine behauptete Chatabnahme.

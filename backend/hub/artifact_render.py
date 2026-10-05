@@ -94,6 +94,7 @@ def _presentation(plan: PresentationPlan, path: Path) -> None:
         paragraph.font.size = Pt(30)
         paragraph.font.bold = True
         paragraph.font.color.rgb = RGBColor(0x15, 0x39, 0x76)  # type: ignore[no-untyped-call]
+        _fit_slide_text(title.text_frame, maximum=30, minimum=18, bold=True)
         box = slide.shapes.add_textbox(Inches(0.9), Inches(2), Inches(11.5), Inches(4.6))
         box.text_frame.word_wrap = True
         for index, text in enumerate(item.bullets):
@@ -105,17 +106,53 @@ def _presentation(plan: PresentationPlan, path: Path) -> None:
             paragraph.font.size = Pt(22)
             paragraph.font.color.rgb = RGBColor(0x18, 0x28, 0x42)  # type: ignore[no-untyped-call]
             paragraph.space_after = Pt(18)
+        _fit_slide_text(box.text_frame, maximum=22, minimum=16, spacing=18)
         footer = slide.shapes.add_textbox(Inches(0.8), Inches(7), Inches(11.8), Inches(0.3))
         paragraph = footer.text_frame.paragraphs[0]
         paragraph.text = f"{plan.title[:100]} · {number}/{len(plan.slides)}"
         paragraph.font.name = "Liberation Sans"
         paragraph.font.size = Pt(10)
         paragraph.font.color.rgb = RGBColor(0x52, 0x64, 0x83)  # type: ignore[no-untyped-call]
+        _fit_slide_text(footer.text_frame, maximum=10, minimum=8)
         slide.notes_slide.notes_text_frame.text = item.notes
     deck.core_properties.title, deck.core_properties.author = plan.title, "obdaAI"
     deck.save(str(path))
     if len(Presentation(str(path)).slides) != len(plan.slides):
         raise ValueError("PowerPoint-Folienzahl stimmt nicht")
+
+
+def _fit_slide_text(
+    frame: Any, *, maximum: int, minimum: int, bold: bool = False, spacing: int = 0
+) -> None:
+    from pptx.util import Pt
+
+    suffix = "Bold" if bold else "Regular"
+    candidates = (
+        [f"/System/Library/Fonts/Supplemental/Arial{' Bold' if bold else ''}.ttf"]
+        if sys.platform == "darwin"
+        else [
+            f"/usr/share/fonts/truetype/liberation/LiberationSans-{suffix}.ttf",
+            f"/usr/share/fonts/truetype/liberation2/LiberationSans-{suffix}.ttf",
+        ]
+    )
+    font = next((path for path in candidates if Path(path).is_file()), None)
+    if font is None:
+        raise ValueError("Schrift für die Folienlayoutprüfung fehlt")
+    # TextFitter measures glyph widths and line heights, but not paragraph spacing.
+    # Reserve that space and retain a small safety margin for Office line wrapping.
+    bottom = frame.margin_bottom
+    frame.margin_bottom = bottom + Pt(spacing * len(frame.paragraphs) + 4)
+    try:
+        frame.fit_text(font_family="Liberation Sans", max_size=maximum, bold=bold, font_file=font)
+    except (TypeError, ValueError):
+        raise ValueError("Folientext passt nicht in das Layout; Text kürzen") from None
+    finally:
+        frame.margin_bottom = bottom
+    sizes = [run.font.size.pt for paragraph in frame.paragraphs for run in paragraph.runs]
+    if not sizes or min(sizes) < minimum:
+        raise ValueError("Folientext wäre zu klein; Text kürzen")
+    for paragraph in frame.paragraphs:
+        paragraph.font.size = Pt(min(sizes))
 
 
 def _pdf(plan: PdfPlan, inputs: list[Path], path: Path) -> None:
