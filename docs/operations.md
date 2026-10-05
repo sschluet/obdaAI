@@ -30,7 +30,7 @@ Restore ohne produktives Netz: DB migrieren, Files/Hashes prüfen, Memory reconc
 Jobs mit unklarem Ausgang markieren, Writes/global autonomy pausieren. n8n-Zeitpläne
 nicht automatisch nachholen. VM-Snapshot/GitHub ersetzen diese Sicherung nicht.
 `deploy/backup.sh` erstellt verschlüsselte eigene VM-Sicherungen; die separate
-Wiederherstellungsidentität bleibt auf dem WorkMac. M2-Restore auf Schema 0011 prüft
+Wiederherstellungsidentität bleibt auf dem WorkMac. Aktueller isolierter Restore auf Schema 0016 prüft
 Originalhashes, Provider-Masterkey, begrenzte SSH-Identitäten/Units und Memory-Dateien.
 Fehlender Mount und Transportfehler wurden an einer isolierten restaurierten
 PostgreSQL-Kopie geprüft, ohne den produktiven Mount zu unterbrechen. n8n-/HA-Daten
@@ -99,3 +99,21 @@ der Providersecrets nachweisen. Metriken unter `/api/metrics` sind authentifizie
 OpenRouter nur nach eigener Ziel-/Budgetfreigabe aktivieren, Testdaten synthetisch halten
 und bei fehlenden frischen Preisen den Verbindungstest wiederholen. Der Operator-Marker
 für `deploy/egress.sh` ist keine Berechtigung des Assistenten für beliebige Netzwerkziele.
+
+
+## Eigener Rollout mit Schemaänderung
+
+Vor dem eigenen Release aktuellen DB-Dump, Releasekonfiguration, sämtliche aktiven
+Compose-Overlays und IPv4-/IPv6-Regeln sichern. Neues Image bauen, dann den expliziten
+Maintenance-Dienst `migrate` mit allen aktuell eingesetzten Overlays einmalig ausführen;
+erst anschließend API, Worker und Parser auf das geprüfte Image aktualisieren.
+Aktuell aktiv: compose.yaml, https.compose.yaml, vault.compose.yaml,
+scheduler.compose.yaml und home-assistant.compose.yaml. Kein API-Start migriert implizit.
+
+Vor Abschluss Alembic-Version, Image aller fünf App-Container, beide Healthchecks,
+TLS, Secretmounts, unveränderte Regeln und bestehende Terminbelege prüfen. Ein
+fehlender Schemawechsel ist ein fehlgeschlagener Abschluss, auch bei gesunden APIs.
+Nach Schemaänderungen eine verschlüsselte Off-VM-Sicherung separat wiederherstellen,
+inklusive verschlüsselter Verbindungsdaten und dauerhafter Ausführungsbelege.
+Rollbackinformationen des aktuellen Releases liegen geschützt auf der eigenen VM;
+keine ungeprüften Downgrades gegen nichtleere Auditdaten durchführen.

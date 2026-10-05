@@ -1,6 +1,50 @@
 # obdaAI — Status 05.10.2026
 
-## M3 in Entwicklung · Aktionsgateway, Chat-Skills und manuelle Aufgaben
+## Aktueller Stand · M3 erweitert und live installiert
+
+Installierte Funktionsquelle `6eeba62`, Branch `milestone/m3-actions`, Schema 0016.
+CI 37315411367 vollständig grün: Python, sieben echte PostgreSQL-Prüfungen,
+Frontend inklusive Desktop/Mobile/Browser, Container und Secrets. Lokal 260 Tests
+bestanden; sieben PostgreSQL-Fälle separat in CI. Ruff/mypy, TypeScript und Build
+bestanden. Die folgenden historischen Abschnitte dokumentieren frühere Lieferungen.
+
+Neu verfügbar: normale MCP-Verbindungsdialoge unter Einstellungen mit verschlüsselten
+Tokens, revisionsgebundener Bearbeitung und wiederherstellbarem Archiv; eigene
+Chatnachricht über „Als Aufgabe planen“ in den normalen pausierten Aufgabendialog
+übernehmen; Home-Assistant-Installation und Sicherungsmetadaten als lesender Bericht.
+Kein realer MCP-Server gewünscht: Produktionsallowlist leer, entfernte Ausführung
+nicht freigegeben. MCP ist damit noch keine vollständige externe Toolausführung.
+
+Live auf eigener VM: beide APIs gesund, HTTPS zertifikatsgeprüft, n8n-Zeitimpuls
+gesund und alle vier früheren automatischen Ergebnisse/Terminbelege erhalten.
+HA-WebSocket-Lesebericht bestätigt HA OS 18.3, Core 2026.9.3, Supervisor 2026.09.3,
+61 vorhandene Sicherungen, idle, null Agentfehler und laut HA zuletzt am 03.10.2026
+abgeschlossene automatische Sicherung. Beleg gespeichert; Replay ohne erneuten
+HA-Aufruf. Kein HA-Write, kein Backupdownload und keine Restore-Abnahme von HA.
+
+Synthetische MCP-Verbindung auf VM angelegt, verschlüsselt, vor nicht freigegebenem
+Netzwerkaufruf abgewiesen, archiviert/wiederhergestellt und abschließend archiviert;
+vier Revisionen erhalten. Sonstige Projekte, Aufgaben und Aktionen unverändert.
+HA-Secret nur in beiden APIs readonly; alle bestehenden IPv4-/IPv6-Regeln und fünf
+Compose-Dateien bytegleich erhalten. Globale externe Schreibaktionen bleiben pausiert.
+Beim Rollout erkannte die Abschlussprüfung den fehlenden expliziten Migrationslauf;
+Maintenance-Migration 0015 → 0016 anschließend erfolgreich, Rollouthelper korrigiert.
+
+Neue verschlüsselte Off-VM-Sicherung und isolierter Schema-0016-Restore bestanden:
+MCP-Secret mit restauriertem Masterkey entschlüsselt, HA-Bericht wiederhergestellt,
+fünf Skillrevisionen, fünf Aktionsbelege, neun Aufgabenrevisionen, acht lokale
+Taskbelege (drei Modellbelege), fünf Zeitpläne, 17 Planrevisionen und vier Terminbelege
+geprüft. 40 Originalhashes, sechs Memory-Dateien, begrenzte SSH-Schlüssel/Units,
+Provider-/HA-/Scheduler-Konfiguration erhalten. Temporäre Restore-DB entfernt;
+bestehende Proxmox-Konfiguration unverändert. Dies ist ein obdaAI-Restore.
+
+M3 bleibt Teilstand: generische validierte Chat-zu-n8n-Workflows, externe
+MCP-/REST-Ausführung mit Reconciliation, MCP OAuth/stdio, eingeschränkter
+Browserrunner und konkret abgenommene HA-Wartung sind offen. HA-Schreibwartung
+benötigt weiterhin einen tatsächlich überprüften Wiederherstellungsweg. Aktuelle
+Begrenzungen stehen in docs/m3-plan.md und docs/requirements.md.
+
+## Historische M3-Lieferungen · Aktionsgateway, Chat-Skills und manuelle Aufgaben
 
 Branch `milestone/m3-actions`, auf M2 aufbauend. Implementiert: feste Werkzeuge
 Hub-Status lesen und Projekt wiederherstellbar archivieren; strikte Schemas,

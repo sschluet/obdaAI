@@ -65,7 +65,7 @@ Bibliotheken mit Lizenz prüfen. Abnahme bleibt Unit/API/Browser plus gekennzeic
 Livechecks. Jede Lieferung erhält STATUS, Tests, Commit/Push und Milestone-PR;
 M3 wird erst nach A08/A10/A11/A12 und den Integrations-/Restartnachweisen fertig.
 
-## Aktuelle lesende Bestandsprüfung 05.10.2026
+## Historische lesende Bestandsprüfung 05.10.2026
 
 Vorhandenes n8n auf dem Mac mini: laufende Version 2.7.5, Container mit
 `n8nio/n8n:latest`, Health HTTP 200. Public-API ohne eigenen Schlüssel HTTP 401.
@@ -81,3 +81,20 @@ konkrete Netzwerkfreigaben stehen aus. Skills-Chat-Vertrag: `docs/skills.md`.
 Manuelle Task-Center-Lesevertikale (0014) und nebenwirkungsfreier n8n-Checkexport
 sind implementiert: `docs/tasks.md`. A10/A11/A13 bleiben bis echter n8n-Ausführung,
 Zeitplanung, Drift-/Restart- und externen Reconcillenachweisen offen.
+
+
+## Aktuelle Fortsetzung nach Quelle 6eeba62
+
+Lokale Skills und Aufgabenanalyse, n8n-Minutenzeitplanung, normale Aufgabendialoge,
+Chatübernahme, MCP-Verbindungsentwürfe/Katalogprüfung sowie feste HA-Status- und
+Backupmetadaten-Leseadapter sind implementiert und getrennt live geprüft. Quelle
+6eeba62 ist auf eigener VM mit Schema 0016 installiert; vollständige CI grün.
+Keine frühere Bestandsnotiz in diesem Dokument ersetzt STATUS.md als aktuellen Stand.
+
+Weiterer Umfang: geprüfte fachliche Workflowvorlagen und Zuordnung ihrer Revisionen
+zu Task/Execution; externe feste Dispatcher samt uncertain-state/Reconciliation;
+MCP-Ausführung/Auth und beschränkter Browserrunner. Echte MCP-Anbindung erst an
+konkret benanntem Ziel (Benutzer wünscht derzeit keines). Produktions-HA bleibt das
+benannte Ziel; ohne tatsächlich verifizierten Restoreweg keine Wartungsfreigabe aus
+bloßer Existenz der 61 Sicherungen ableiten. Unabhängige Implementierung und Tests
+benötigen keine wiederholte Routinefreigabe.
