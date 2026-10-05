@@ -119,6 +119,8 @@ await page.getByLabel('Name der Aufgabe',{exact:true}).fill('Synthetic form task
 await page.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Summarize the bound synthetic document.');
 await page.getByLabel('Projektraum (optional)',{exact:true}).selectOption({label:'Synthetic browser project'});
 await page.getByLabel('synthetic.md',{exact:true}).check();
+await page.getByLabel('Art der Aufgabe',{exact:true}).selectOption('hub_analysis');
+if(await page.getByRole('group',{name:'Geplante Schritte',exact:true}).getByRole('listitem').count()!==2)throw Error('Readable workflow steps missing');
 let unavailableWrites=0;
 await page.route('**/api/tasks',route=>{
  if(route.request().method()!=='POST')return route.continue();

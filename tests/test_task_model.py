@@ -219,3 +219,30 @@ def test_only_explicit_source_chunks_enter_task_model_context(setup):
     assert terminal(c, t)["status"] == "succeeded"
     text = "\n".join(p.content for p in provider.parts)
     assert "ALLOWED_SYNTHETIC" in text and "UNBOUND_PRIVATE_SYNTHETIC" not in text
+
+
+def test_local_analysis_consumes_real_prior_read_evidence_once(setup):
+    app, c, h, _ = setup
+    provider = AnalysisProvider()
+    app.state.providers = provider
+    t = control(
+        c,
+        h,
+        create(
+            c,
+            h,
+            goal="Read the workspace, then analyze that result.",
+            steps=[{"tool_id": "hub.inspect"}, {"tool_id": "ai.analyze"}],
+        ),
+    ).json()
+    c.post("/api/tasks/" + t["id"] + "/runs", headers=h, json=run_body(t))
+    receipt = terminal(c, t)
+    assert receipt["status"] == "succeeded" and len(receipt["steps"]) == 2
+    prior = receipt["steps"][0]["result"]
+    analysis = receipt["steps"][1]["result"]
+    evidence = [p for p in analysis["input"] if p["source_id"].startswith("task-step:")]
+    assert len(evidence) == 1 and evidence[0]["label"] == "LOCAL_ONLY"
+    assert json.loads(evidence[0]["content"].split("\n", 1)[1]) == prior
+    assert analysis["input"][-1]["content"] == t["spec"]["goal"]
+    asyncio.run(execute_task(app.state.sessions, app.state.settings, receipt["id"], provider))
+    assert provider.stream_calls == [False]

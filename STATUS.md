@@ -1130,3 +1130,17 @@ Spec-, Ausgabe- und Vorschauhashes sowie 42 Originalhashes, sechs Memory-Dateien
 Masterkey/Providersecret, SSH-Schlüssel/Units, bestehende Task-/Workflowbelege geprüft.
 Temporäre Restore-DB entfernt; produktive DB und HA unverändert. Kein HA-Restore
 und kein voller Server-RTO-Nachweis. HTTPS antwortet wieder zertifikatsgeprüft vom Mac.
+
+### 06.10.2026: Schrittfolgen, Live-Schreibprofile und Frontend-Ladeumfang
+
+431 lokale Tests, Ruff/mypy (53 Module), Source-Scan bestanden. Geordnete feste
+Aufgabenentwürfe und sichtbare Schrittfolgen ergänzt; lokale Analyse verwendet
+nun den tatsächlichen Beleg vorheriger Arbeitsraumprüfung. Einzelfreigabe und
+begrenzte Autonomie auf der eigenen VM mit leeren synthetischen Projekten geprüft:
+genau eine Archivierung pro Ziel, unverändertes Replay, globale Schreibpause danach
+wieder aktiv. Keine externen Writes. Allgemeine n8n-Graphgenerierung bleibt offen.
+
+Aufgaben und Einstellungen laden erst bei Bedarf. Build-Hauptpaket 500,83 → 446,06
+kB (gzip 148,65 → 135,71 kB), keine erhöhten Chunklimits zur Unterdrückung der
+Warnung. Normale Desktop-/Mobile-Gesamtabnahme mit sichtbaren Schritten bestanden.
+CI erhält eine explizite lokale Liberation-Schriftabhängigkeit für Bildtests.

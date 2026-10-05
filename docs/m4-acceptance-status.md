@@ -93,3 +93,11 @@ mit der Dateibindung atomar gespeichert. Abbruch/Archivierung/Textdrift während
 Modellantwort erzeugen keine Datei. Eine mehrdeutige Format-/Folienangabe wird
 abgewiesen. Kombinierte Webrecherche-Dateierstellung und KI-Änderungen anhand
 impliziter Chatquellen sind noch nicht umgesetzt.
+
+Echte Erweiterungsabnahme auf `bee17a4`: Word mit gebundenem Bild und Tabelle,
+zusätzlicher PDF-Export und neue PDF aus Text/Bild wurden gerendert, visuell geprüft
+und per authentifiziertem HTTPS-Download samt SHA-256 abgenommen. Die Beschriftung
+der Collage zeigte einen Umlautfehler; `5b76a5f` verwendet feste installierte lokale
+Unicode-Schriften und weist nicht unterstützte Zeichen ab. Die korrigierte Collage
+benötigt noch ihre neue visuelle Live-Version. Keine falsche Vollabnahme der ersten
+Collage aufgrund eines formal gültigen PNG.

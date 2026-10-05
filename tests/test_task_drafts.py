@@ -148,3 +148,42 @@ def test_invented_or_past_schedule_proposal_rejected(setup, goal, proposal):
     app.state.providers = DraftProvider(json.dumps({"title": "HA", "schedule": proposal}))
     r = c.post("/api/task-drafts", headers=h, json={"goal": goal})
     assert r.status_code == 422 and c.get("/api/tasks").json() == []
+
+
+def test_multistage_preview_builds_fixed_read_then_local_analysis_without_activation(setup):
+    app, c, h, _ = setup
+    app.state.providers = DraftProvider(
+        '{"title":"Prüfen und auswerten","stages":["hub_status","analysis"]}'
+    )
+    response = c.post(
+        "/api/task-drafts",
+        headers=h,
+        json={"goal": "Prüfe den Arbeitsraum und analysiere anschließend den Status."},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert [s["tool_id"] for s in result["spec"]["steps"]] == ["hub.inspect", "ai.analyze"]
+    assert result["spec"]["autonomy"] == "analyze_only" and not result["started"]
+    assert result["spec"]["sources"] == result["spec"]["skills"] == []
+    assert c.get("/api/tasks").json() == []
+
+
+@pytest.mark.parametrize(
+    "stages",
+    [
+        ["analysis", "hub_status"],
+        ["analysis", "analysis"],
+        ["project.archive"],
+        ["https://foreign.example"],
+        ["ha_status", "analysis"],
+        ["hub_status"] * 6,
+    ],
+)
+def test_unbounded_or_invalid_stage_proposals_are_rejected(setup, stages):
+    import json
+
+    app, c, h, _ = setup
+    app.state.providers = DraftProvider(json.dumps({"title": "Bad flow", "stages": stages}))
+    response = c.post("/api/task-drafts", headers=h, json={"goal": "Prepare a synthetic task."})
+    assert response.status_code == 422
+    assert c.get("/api/tasks").json() == []

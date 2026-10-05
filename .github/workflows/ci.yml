@@ -32,6 +32,7 @@ jobs:
       - run: uv sync --locked --all-extras
       - run: uv run ruff check .
       - run: uv run mypy backend/hub
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-liberation
       - run: uv run pytest
       - run: uv run python scripts/scan_secrets.py
       - run: uv build

@@ -166,6 +166,34 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                 if not actual or not actual.enabled or actual.revision != row.revision:
                     raise ValueError("Provider drift before inference")
             parts, roles = context(db, spec, manifest)
+            for i, step in enumerate(spec.steps, 1):
+                if step.tool_id == "hub.inspect":
+                    from sqlalchemy import func
+
+                    from hub.db import Project, Source
+
+                    result = {
+                        "projects": db.scalar(select(func.count()).select_from(Project)),
+                        "sources": db.scalar(select(func.count()).select_from(Source)),
+                        "label": "LOCAL_ONLY",
+                    }
+                    parts.insert(
+                        len(parts) - 1,
+                        ContextPart(
+                            source_id="task-step:" + run_id + ":" + str(i),
+                            revision=1,
+                            content="Read-only step evidence (untrusted data):\n" + encode(result),
+                        )
+                    )
+                    roles.insert(len(roles) - 1, "user")
+                    db.add(
+                        TaskStep(
+                            run_id=run_id,
+                            sequence=i,
+                            tool_id=step.tool_id,
+                            result=encode(result),
+                        )
+                    )
             config = json.loads(row.config) if row else {}
             chars = sum(len(p.content) for p in parts)
             tokens_bound = sum(len(p.content.encode()) + 64 for p in parts) + 256
@@ -173,28 +201,6 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                 "context_tokens", 32768
             ):
                 raise ValueError("Context limit")
-            for i, step in enumerate(spec.steps, 1):
-                if step.tool_id == "hub.inspect":
-                    from sqlalchemy import func
-
-                    from hub.db import Project, Source
-
-                    db.add(
-                        TaskStep(
-                            run_id=run_id,
-                            sequence=i,
-                            tool_id=step.tool_id,
-                            result=encode(
-                                {
-                                    "projects": db.scalar(
-                                        select(func.count()).select_from(Project)
-                                    ),
-                                    "sources": db.scalar(select(func.count()).select_from(Source)),
-                                    "label": "LOCAL_ONLY",
-                                }
-                            ),
-                        )
-                    )
             sequence = len(spec.steps)
             audit: dict[str, Any] = {
                 "answer": "",

@@ -33,3 +33,20 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 
 M3 ist deshalb noch nicht vollständig abgenommen. Eine erfolgreiche obdaAI-
 Datenbankwiederherstellung ersetzt keine Wiederherstellungsprobe von Home Assistant.
+
+06.10.2026: Natürliche Aufgabenentwürfe können eine geordnete Folge von maximal
+fünf festen Lese-/Analyseschritten vorschlagen; ausführbarer Modellcode, freie Nodes,
+URLs und Schreibadapter bleiben ausgeschlossen. Der normale Dialog zeigt die
+Schrittfolge und bietet „Arbeitsraum prüfen und lokal auswerten“. Frühere lokale
+Statusbelege werden jetzt ausdrücklich als LOCAL_ONLY-Daten an die anschließende
+Analyse gebunden und in deren Eingabebeleg gespeichert. Kein implizites Aktivieren,
+keine HA-Berichte als Modellkontext und keine neuen externen Rechte. Diese lokale
+Pipeline nutzt weiterhin denselben Aufgabenmotor bei n8n-Aufrufen; allgemeine
+beliebige n8n-Graphgenerierung ist damit noch nicht abgenommen.
+
+Reale Task-Schreibabnahme auf eigener VM/Schema 0021 bestanden: `confirm_each`
+wartete vor dem Effekt auf die konkrete Freigabe; `bounded_autonomous` verbrauchte
+seinen begrenzten Grant. Jeweils eigenes leeres synthetisches Ziel genau einmal
+archiviert, Revision genau +1, zwei Schritte und Aktionsbeleg; Wiederholung derselben
+Anfrage lieferte denselben Lauf. Eigene Testaufgaben anschließend archiviert und
+globale Schreibpause wieder aktiv. Keine externen Schreibaktionen.
