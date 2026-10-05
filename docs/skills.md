@@ -38,8 +38,12 @@ Spätere Cloud- und Task-Skills brauchen eigene Revisions-/Datenschutzverträge.
 Migration 0013 ergänzt Skills/Revisionen und Chat-Auswahl additiv. Downgrade mit
 vorhandenen Skills wird zum Schutz der Historie verweigert. API-/Kontrakttests
 prüfen Importvertrauen, Hashbindung, Revisionen, Scope, Override, Deaktivierung
-und Rechte-/Labelinjektion. Der synthetische Snapshot-Test ersetzt nicht A08 mit
-dem tatsächlichen lokalen Modell; dieser Live-Nachweis steht zunächst aus.
+und Rechte-/Labelinjektion. A08 mit dem echten lokalen Modell ist bestanden: gleiche synthetische Frage,
+Revision 1 Deutsch, Revision 2 Englisch, unterschiedliche Antworten und dokumentierte
+Hashes. Skills danach deaktiviert. Ein Tabellenversuch wurde als artifact klassifiziert
+und vor Ausführung gestoppt; diese Klassifikation bleibt offen. Skillmutation und
+Vault-Abgleich erhalten getrennte PostgreSQL-Sperren; ein echter PG-Test hält die
+Vault-Sperre während einer Skill-Erstellung und prüft deren unabhängigen Abschluss.
 
 Offen im gesamten M3: aufgabenbezogene Skills und automatische Auswahl jenseits
 expliziter Stichwörter, TaskSpec/Task-Center, externe Adapter und deren Abnahmen.

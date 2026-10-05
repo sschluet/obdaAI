@@ -1,6 +1,6 @@
 # obdaAI — Status 05.10.2026
 
-## M3 in Entwicklung · erstes lokales Aktionsgateway
+## M3 in Entwicklung · Aktionsgateway und Chat-Skills
 
 Branch `milestone/m3-actions`, auf M2 aufbauend. Implementiert: feste Werkzeuge
 Hub-Status lesen und Projekt wiederherstellbar archivieren; strikte Schemas,
@@ -29,8 +29,17 @@ Lauf speichert Dokumentrevision und Hash; Bearbeitung deaktiviert die neue Revis
 Neun neue API-Kontrakttests bestanden; lokal insgesamt 119 bestanden, zwei PG-Checks
 für CI. Browser: deaktivierter Import, explizite Aktivierung, neuer Entwurf sperrt
 Aktivierung, Revision 2 wieder deaktiviert, beide Revisionen erhalten, Reload und
-390px mit Hashumbruch. Fixture ersetzt nicht den echten A08-Modellnachweis.
-Skills-CI und VM-Installation stehen bei diesem Sourcecheckpoint noch aus.
+390px mit Hashumbruch, gespeicherter Override nach erneutem Laden bestätigt.
+Skill-Commit `ab00975`: CI 37287217841 grün, 121 Tests einschließlich PostgreSQL
+bestanden; auf VM installiert, Schema 0013, HTTPS zertifikatsgeprüft HTTP 200.
+A08 mit echtem lokalen Modell bestanden: dieselbe synthetische Frage mit Revision 1
+auf Deutsch, Revision 2 auf Englisch; unterschiedliche Antworten und geladene
+Revisionen/Hashes im Run bestätigt. Testskills danach deaktiviert; Gateway pausiert.
+Der erste Tabellen-Skill wurde vom Router als artifact eingestuft und sicher
+gestoppt; diese Klassifikation bleibt offen. Bei der Live-Abnahme entdeckt:
+Skill-Änderungen warteten unnötig auf die Vault-Sperre. Getrennte Skill-Sperre und
+ein zusätzlicher echter PostgreSQL-Isolationstest sind als Korrektur vorbereitet.
+Deren CI/Installation und die erweiterte Schema-0013-Restore-Abnahme stehen noch aus.
 
 Nächste Vertikalen: Toolverbindungen, TaskSpec/Task-Center und aufgabenbezogene Skills. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
 Modellaktionen sind noch nicht implementiert. Beide Benutzerzugänge am 05.10.2026 über verifiziertes HTTPS lesend bestätigt:

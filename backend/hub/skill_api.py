@@ -63,7 +63,7 @@ def lock(db: Session) -> None:
     if db.bind is not None and db.bind.dialect.name == "sqlite":
         db.execute(text("BEGIN IMMEDIATE"))
     else:
-        db.execute(text("SELECT pg_advisory_xact_lock(791103043)"))
+        db.execute(text("SELECT pg_advisory_xact_lock(791103044)"))
 
 
 def get(db: Session, skill_id: str) -> tuple[Skill, SkillRevision]:
