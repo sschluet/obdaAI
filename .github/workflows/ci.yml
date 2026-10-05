@@ -84,3 +84,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker build --tag obdaai-browser-ci browser-runner
       - run: bash browser-runner/smoke.sh
+
+  artifact-runner:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build --file artifact-runner/Dockerfile --tag obdaai-artifacts-ci .
+      - run: bash artifact-runner/smoke.sh

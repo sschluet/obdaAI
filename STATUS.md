@@ -1015,3 +1015,24 @@ Task-Center zeigt Profile, konkrete Ziele, Ablauf, Widerruf und Historie ohne
 JSON-Eingabe. Natural-language-Entwürfe bleiben rechtefrei. Neue Queue-/mobile
 Browserabnahme verwendet ausschließlich eigene synthetische Projekte. HA-Writes
 bleiben gesperrt. CI und Live-Rollout folgen nach lokalen Checks.
+
+### 2026-10-05: M4-Dateirenderer und isolierte Vorschauen begonnen
+
+Strikte reine Datenpläne erzeugen echte editierbare DOCX/PPTX, PDF-Seitenauswahlen
+und Bildzuschnitte/Collagen. Vor jeder Verarbeitung werden die gebundenen
+Originalhashes geprüft; vorhandene Ausgabeversionen bleiben unverändert. Kein
+Modellcode, Cloudaufruf, beliebiger Dateipfad oder URL-Download. Synthetische DOCX
+und beide PPTX-Folien mit LibreOffice/Poppler gerendert und visuell geprüft.
+
+Separater nonroot Offline-Runner mit Landlock pro Auftrag, CPU-/Datei-/Zeitlimits,
+ohne Netzwerk, DB, Secrets oder Vault vorbereitet. Neue Linux-Containerabnahme
+prüft vier Formate, sechs Vorschauseiten und doppelte Zustellung. Ihr Ergebnis
+steht noch aus; produktiver Runner noch nicht installiert. API, dauerhafte
+Anwendungsversionen, Projekt-/Chat-Dialog und lokale Modellplanung sind noch offen
+(docs/m4-acceptance-status.md). M4 ist ausdrücklich noch nicht fertig.
+
+Lokale Gesamtprüfung dieses Standes: 360 passed, neun PostgreSQL-Integrationsfälle
+ohne lokale Fixture übersprungen; Ruff und mypy (47 Module) sowie Source-Secretscan
+erfolgreich. Aufgabenprofil-CI 37368721985: Browser und Chromium-Smoke erfolgreich;
+Python/Container/Secrets warten noch auf GitHub-Runner. Daher bisher kein Rollout
+der Aufgabenprofile auf die produktive VM.

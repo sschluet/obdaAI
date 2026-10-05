@@ -40,9 +40,12 @@ def restrict(source: Path, workdir: Path) -> None:
             (Path("/etc/ld.so.cache"), 1 << 2),
             (Path("/etc/mime.types"), 1 << 2),
             (Path("/etc/fonts"), READ),
+            (Path("/etc/passwd"), 1 << 2),
+            (Path("/dev/null"), (1 << 2) | WRITE),
+            (Path("/dev/urandom"), 1 << 2),
             (Path(sys.prefix), READ | EXEC),
             (Path(sys.base_prefix), READ | EXEC),
-            (source, 1 << 2),
+            (source, READ if source.is_dir() else 1 << 2),
             (workdir, ALL_FS),
         ]
         for path, access in grants:

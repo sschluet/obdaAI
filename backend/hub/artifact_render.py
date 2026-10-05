@@ -1,0 +1,198 @@
+"""Deterministic local file creation from validated plans and verified inputs.
+
+This module belongs in the offline artifact runner. It has no provider, database,
+HTTP client or model-code execution. Office preview rendering is a separate stage.
+"""
+
+import hashlib
+import math
+from pathlib import Path
+from typing import Any
+
+from hub.artifact_specs import (
+    ArtifactSpec,
+    DocumentPlan,
+    ImagePlan,
+    PdfPlan,
+    PresentationPlan,
+)
+
+MAX_INPUT = 20 * 1024 * 1024
+MAX_OUTPUT = 40 * 1024 * 1024
+
+
+def verified_inputs(spec: ArtifactSpec, inputs: list[Path]) -> list[Path]:
+    if len(inputs) != len(spec.sources):
+        raise ValueError("Quellenbindung unvollständig")
+    for binding, path in zip(spec.sources, inputs, strict=True):
+        if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
+            raise ValueError("Verknüpfte Quelldatei nicht erlaubt")
+        if not path.is_file() or not 0 < path.stat().st_size <= MAX_INPUT:
+            raise ValueError("Ungültige Quellengröße")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != binding.sha256:
+            raise ValueError("Quelldatei wurde verändert")
+    return inputs
+
+
+def _document(plan: DocumentPlan, path: Path) -> None:
+    from docx import Document
+    from docx.shared import Inches, Pt, RGBColor
+
+    document = Document()
+    section = document.sections[0]
+    section.top_margin = section.bottom_margin = Inches(0.8)
+    section.left_margin = section.right_margin = Inches(0.85)
+    normal = document.styles["Normal"]
+    normal.font.name = "Liberation Sans"
+    normal.font.size = Pt(11)
+    normal.font.color.rgb = RGBColor(0x18, 0x28, 0x42)
+    normal.paragraph_format.space_after = Pt(8)
+    document.add_heading(plan.title, 0)
+    for item in plan.sections:
+        document.add_heading(item.heading, 1)
+        for text in item.paragraphs:
+            document.add_paragraph(text)
+        if item.table:
+            table = document.add_table(rows=0, cols=len(item.table[0]))
+            table.style = "Light Shading Accent 1"
+            for row in item.table:
+                for cell, text in zip(table.add_row().cells, row, strict=True):
+                    cell.text = text
+    document.core_properties.title = plan.title
+    document.core_properties.author = "obdaAI"
+    document.save(str(path))
+    check = Document(str(path))
+    if check.paragraphs[0].text != plan.title:
+        raise ValueError("Word-Dateiprüfung fehlgeschlagen")
+
+
+def _presentation(plan: PresentationPlan, path: Path) -> None:
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+    from pptx.util import Inches, Pt
+
+    deck = Presentation()
+    deck.slide_width, deck.slide_height = Inches(13.333), Inches(7.5)
+    for number, item in enumerate(plan.slides, 1):
+        slide = deck.slides.add_slide(deck.slide_layouts[6])
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = RGBColor(0xF4, 0xF7, 0xFD)  # type: ignore[no-untyped-call]
+        title = slide.shapes.add_textbox(Inches(0.7), Inches(0.5), Inches(11.9), Inches(1.2))
+        title.text_frame.word_wrap = True
+        paragraph = title.text_frame.paragraphs[0]
+        paragraph.text = item.title
+        paragraph.font.size = Pt(30)
+        paragraph.font.bold = True
+        paragraph.font.color.rgb = RGBColor(0x15, 0x39, 0x76)  # type: ignore[no-untyped-call]
+        box = slide.shapes.add_textbox(Inches(0.9), Inches(2), Inches(11.5), Inches(4.6))
+        box.text_frame.word_wrap = True
+        for index, text in enumerate(item.bullets):
+            paragraph = (
+                box.text_frame.paragraphs[0] if index == 0 else box.text_frame.add_paragraph()
+            )
+            paragraph.text = "• " + text
+            paragraph.font.size = Pt(22)
+            paragraph.font.color.rgb = RGBColor(0x18, 0x28, 0x42)  # type: ignore[no-untyped-call]
+            paragraph.space_after = Pt(18)
+        footer = slide.shapes.add_textbox(Inches(0.8), Inches(7), Inches(11.8), Inches(0.3))
+        paragraph = footer.text_frame.paragraphs[0]
+        paragraph.text = f"{plan.title[:100]} · {number}/{len(plan.slides)}"
+        paragraph.font.size = Pt(10)
+        paragraph.font.color.rgb = RGBColor(0x52, 0x64, 0x83)  # type: ignore[no-untyped-call]
+        slide.notes_slide.notes_text_frame.text = item.notes
+    deck.core_properties.title, deck.core_properties.author = plan.title, "obdaAI"
+    deck.save(str(path))
+    if len(Presentation(str(path)).slides) != len(plan.slides):
+        raise ValueError("PowerPoint-Folienzahl stimmt nicht")
+
+
+def _pdf(plan: PdfPlan, inputs: list[Path], path: Path) -> None:
+    from pypdf import PdfReader, PdfWriter
+
+    readers = [PdfReader(str(source), strict=True) for source in inputs]
+    for reader in readers:
+        if reader.is_encrypted:
+            raise ValueError("Geschützte PDF vor der Bearbeitung entsperren")
+        # A modified signed document would no longer validate. Require a separate
+        # explicitly reviewed policy rather than silently invalidating signatures.
+        fields = reader.get_fields() or {}
+        if any(field.get("/FT") == "/Sig" for field in fields.values()):
+            raise ValueError("Signierte PDF kann hier nicht verändert werden")
+    writer = PdfWriter()
+    for selection in plan.pages:
+        reader = readers[selection.source]
+        if selection.page > len(reader.pages):
+            raise ValueError("PDF-Seite existiert nicht")
+        page = writer.add_page(reader.pages[selection.page - 1], excluded_keys=["/AA", "/Annots"])
+        if selection.rotation:
+            page.rotate(selection.rotation)
+    writer.add_metadata({"/Title": plan.title, "/Producer": "obdaAI"})
+    with path.open("wb") as stream:
+        writer.write(stream)
+    if len(PdfReader(str(path), strict=True).pages) != len(plan.pages):
+        raise ValueError("PDF-Seitenzahl stimmt nicht")
+
+
+def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
+    from PIL import Image, ImageOps
+
+    rows = math.ceil(len(plan.tiles) / plan.columns)
+    canvas = Image.new(
+        "RGB", (plan.columns * plan.tile_width, rows * plan.tile_height), "#f4f7fd"
+    )
+    for number, tile in enumerate(plan.tiles):
+        with Image.open(inputs[tile.source]) as original:
+            if original.width * original.height > 24_000_000:
+                raise ValueError("Quelldatei überschreitet das Pixellimit")
+            if original.format not in {"PNG", "JPEG", "WEBP"}:
+                raise ValueError("Bildformat nicht freigegeben")
+            image = ImageOps.exif_transpose(original).convert("RGB")
+        left, top, right, bottom = tile.crop
+        crop = (int(left * image.width), int(top * image.height),
+                int(right * image.width), int(bottom * image.height))
+        if crop[2] <= crop[0] or crop[3] <= crop[1]:
+            raise ValueError("Zuschnitt enthält keine Pixel")
+        fitted = ImageOps.fit(image.crop(crop), (plan.tile_width, plan.tile_height))
+        canvas.paste(fitted, ((number % plan.columns) * plan.tile_width,
+                             (number // plan.columns) * plan.tile_height))
+    canvas.save(path, format="PNG" if plan.format == "png" else "JPEG")
+    with Image.open(path) as check:
+        check.verify()
+
+
+def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, Any]:
+    """Write into a fresh private directory, never overwrite an existing version.
+
+    The caller supplies only server-bound input paths and a new job output directory.
+    No title, model parameter or source value becomes a filesystem path.
+    """
+    verified_inputs(spec, inputs)
+    if output.exists() or output.is_symlink() or any(p.is_symlink() for p in output.parents):
+        raise ValueError("Ausgabeversion existiert bereits")
+    output.mkdir(mode=0o700)
+    plan = spec.plan
+    suffix = plan.format if isinstance(plan, ImagePlan) else plan.kind
+    path = output / ("artifact." + suffix)
+    try:
+        if isinstance(plan, DocumentPlan):
+            _document(plan, path)
+        elif isinstance(plan, PresentationPlan):
+            _presentation(plan, path)
+        elif isinstance(plan, PdfPlan):
+            _pdf(plan, inputs, path)
+        else:
+            _image(plan, inputs, path)
+        if not 0 < path.stat().st_size <= MAX_OUTPUT:
+            raise ValueError("Ausgabe überschreitet das Größenlimit")
+        path.chmod(0o400)
+        return {
+            "filename": path.name,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "bytes": path.stat().st_size,
+            "label": "LOCAL_ONLY",
+            "preview_verified": False,
+        }
+    except Exception:
+        path.unlink(missing_ok=True)
+        output.rmdir()
+        raise
