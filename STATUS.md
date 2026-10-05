@@ -606,3 +606,20 @@ Darstellung und Standardmodus für neue Gespräche werden im Browser gespeichert
 situative Chatwahl bleibt getrennt. Standardmodus nach Reload und neuer
 Gesprächsanlage im Browser geprüft; Testpräferenz danach auf AUTO zurückgesetzt.
 Modellverbindungsdialog mit Basisfeldern und zugeklappten erweiterten Grenzen geprüft.
+
+Usability-Quellstand `6c77532`: CI 37298796667 vollständig grün, 194 Tests mit fünf
+PostgreSQL-Prüfungen, erweiterte Browserabläufe, Container und Secret-Prüfung.
+Auf eigener VM installiert, Schema 0014, beide APIs gesund, blaue Hell-/Dunkelassets.
+Zertifikatsgeprüfte angemeldete HTTPS-Abnahme bestanden: neue Formularassets,
+eigenes Test Projekt erhalten, genau 18 bekannte Abnahmeprojekte archiviert;
+realer lokaler Titelentwurf speichert/startet nichts; echte lokale Chatantwort
+bei Nur-lokal-Override trotz Gesprächs-Cloudfreigabe, null Cloudaufrufe.
+Synthetisches Gespräch anschließend archiviert. Zwei durch Abnahmebelege bekannte
+Testaufgaben wiederherstellbar archiviert, übrige Aufgaben unverändert.
+Neue verschlüsselte Off-VM-Sicherung und isolierter Restore auf Schema 0014
+bestanden: 40 Originalhashes, sechs Memory-Dateien, Modell-/Task-/Skill-/Aktionsaudit,
+begrenzte Zugangsschlüssel und Units erhalten; bestehende Proxmox-Konfigurationen
+unverändert. Arbeitsverzeichnis sauber nach Dokumentationscommit.
+Benutzer möchte aktuell keinen MCP-Server anbinden, sondern die Möglichkeit für
+später. Ausführbare n8n-Zeitplanung mit einmaligen/wiederkehrenden Terminen und
+Termin-/Ergebnisübersicht bleibt nächster M3-Funktionsschritt; M3 bleibt Teilstand.
