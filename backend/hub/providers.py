@@ -82,7 +82,11 @@ def pinned_url(
         or u.path.rstrip("/") != "/v1"
     ):
         raise ValueError("Invalid provider base URL")
-    if external and base != "https://openrouter.ai/v1":
+    if external and base not in {
+        "https://openrouter.ai/v1",
+        "https://api.openai.com/v1",
+        "https://api.anthropic.com/v1",
+    }:
         # The native OpenRouter path is handled separately below.
         raise ValueError("External provider must use the official fixed endpoint")
     addresses = sorted(
