@@ -28,7 +28,7 @@ from hub.db import (
 from hub.jobs import enqueue_task_read, worker_app
 from hub.task_api import TaskSpec, check_bindings
 from hub.task_writes import prepare_run
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 
 
 @pytest.mark.skipif(not os.getenv("HUB_CI_DATABASE_URL"), reason="Disposable PG fixture required")
@@ -117,6 +117,13 @@ def test_bounded_write_duplicate_pg_queue_delivery(monkeypatch):
             assert len(links) == 1 and db.get(ActionReceipt, links[0].action_id)
     finally:
         with factory() as db:
+            db.execute(
+                text(
+                    "DELETE FROM hub_queue.procrastinate_jobs "
+                    "WHERE task_name='hub.task-read' AND args->>'run_id'=:rid"
+                ),
+                {"rid": rid},
+            )
             ids = list(
                 db.scalars(select(TaskActionLink.action_id).where(TaskActionLink.run_id == rid))
             )

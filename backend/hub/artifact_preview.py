@@ -2,6 +2,7 @@
 
 import hashlib
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -24,12 +25,27 @@ def previews(path: Path) -> list[dict[str, Any]]:
         pdf = path
         if path.suffix in {".docx", ".pptx"}:
             with tempfile.TemporaryDirectory(prefix="profile-", dir=folder) as profile:
-                subprocess.run(
-                    ["soffice", "-env:UserInstallation=" + Path(profile).as_uri(),
-                     "--headless", "--norestore", "--convert-to", "pdf", "--outdir",
-                     str(folder), str(path)],
-                    check=True, capture_output=True, timeout=60,
-                )
+                command = [
+                    "/usr/lib/libreoffice/program/soffice.bin"
+                    if sys.platform == "linux"
+                    else "soffice",
+                    "-env:UserInstallation=" + Path(profile).as_uri(),
+                    "-env:OSL_SOCKET_PATH=/run/ipc",
+                    "--headless",
+                    "--norestore",
+                    "--convert-to",
+                    "pdf",
+                    "--outdir",
+                    str(folder),
+                    str(path),
+                ]
+                result = subprocess.run(command, capture_output=True, timeout=60)
+                # LibreOffice's normal first-profile initialization requests a
+                # restart (EXITHELPER_NORMAL_RESTART=81). Retry that exact fixed
+                # command once, never a crash or an arbitrary renderer failure.
+                if sys.platform == "linux" and result.returncode == 81:
+                    result = subprocess.run(command, capture_output=True, timeout=60)
+                result.check_returncode()
             pdf = folder / "artifact.pdf"
         elif path.suffix != ".pdf":
             raise ValueError("Vorschauformat nicht unterstützt")
@@ -43,10 +59,29 @@ def previews(path: Path) -> list[dict[str, Any]]:
                 raise ValueError("Vorschau überschreitet das Seitenformat")
             if not 0 < float(page.mediabox.height) <= 2400:
                 raise ValueError("Vorschau überschreitet das Seitenformat")
-        subprocess.run(
-            ["pdftoppm", "-png", "-scale-to", "1400", str(pdf), str(folder / "page")],
-            check=True, capture_output=True, timeout=60,
-        )
+        used = 0
+        for number in range(1, len(reader.pages) + 1):
+            subprocess.run(
+                [
+                    "pdftoppm",
+                    "-png",
+                    "-scale-to",
+                    "1400",
+                    "-f",
+                    str(number),
+                    "-l",
+                    str(number),
+                    "-singlefile",
+                    str(pdf),
+                    str(folder / ("page-" + str(number))),
+                ],
+                check=True,
+                capture_output=True,
+                timeout=30,
+            )
+            used += (folder / ("page-" + str(number) + ".png")).stat().st_size
+            if used > 100 * 1024 * 1024:
+                raise ValueError("Vorschauen überschreiten das Gesamtgrößenlimit")
     paths = sorted(folder.glob("page-*.png"), key=lambda p: int(p.stem.split("-")[-1]))
     expected = 1 if path.suffix in {".png", ".jpeg"} else len(reader.pages)
     if len(paths) != expected:
@@ -56,8 +91,12 @@ def previews(path: Path) -> list[dict[str, Any]]:
         with Image.open(image_path) as image:
             image.verify()
         image_path.chmod(0o400)
-        result.append({
-            "page": number, "filename": image_path.relative_to(path.parent).as_posix(),
-            "sha256": hashlib.sha256(image_path.read_bytes()).hexdigest(),
-        })
+        result.append(
+            {
+                "page": number,
+                "filename": image_path.relative_to(path.parent).as_posix(),
+                "sha256": hashlib.sha256(image_path.read_bytes()).hexdigest(),
+                "bytes": image_path.stat().st_size,
+            }
+        )
     return result

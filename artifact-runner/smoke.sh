@@ -5,7 +5,8 @@ mkdir "$fixture_dir/requests" "$fixture_dir/results"
 chmod 0777 "$fixture_dir" "$fixture_dir/requests" "$fixture_dir/results"
 image=${1:-obdaai-artifacts-ci}
 limits=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
-  --pids-limit 80 --memory 1g --cpus 1 --tmpfs /tmp:size=128m,mode=1777)
+  --pids-limit 80 --memory 1g --cpus 1 --tmpfs /tmp:size=1m,mode=0555 \
+  --tmpfs /run/ipc:size=1m,mode=0700,uid=10001,gid=10001)
 cleanup() {
   # Child directories are private and owned by the nonroot container user.
   # Remove only this freshly generated fixture through that same identity.

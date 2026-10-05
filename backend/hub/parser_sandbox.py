@@ -55,6 +55,12 @@ def restrict(source: Path, workdir: Path, *, office: bool = False) -> None:
                 (Path("/etc/libreoffice"), READ),
                 (Path("/var/lib/libreoffice"), READ),
                 (Path("/var/spool/libreoffice"), READ),
+                (Path("/etc/nsswitch.conf"), 1 << 2),
+                (Path("/etc/group"), 1 << 2),
+                # Only Unix socket entries, not arbitrary temporary files. The
+                # private container tmpfs is short enough for sun_path and has
+                # no input, credential or host socket mounts.
+                (Path("/run/ipc"), READ | (1 << 9) | (1 << 5)),
             ]
         for path, access in grants:
             if not path.exists():

@@ -12,7 +12,8 @@ services:
     mem_limit: 1g
     cpus: 1
     tmpfs:
-      - /tmp:size=128m,mode=1777
+      - /tmp:size=1m,mode=0555
+      - /run/ipc:size=1m,mode=0700,uid=10001,gid=10001
     volumes:
       - ${HUB_ARTIFACT_REQUESTS:?Set private request directory}:/requests:ro
       - ${HUB_ARTIFACT_RESULTS:?Set private result directory}:/results:rw
