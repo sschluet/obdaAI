@@ -25,6 +25,32 @@ from hub.providers import Providers
 AAD = b"obdaai-artifact-draft-v1"
 
 
+def parse_plan(answer: str) -> tuple[Any, str]:
+    """Normalize two bounded model formatting defects, never arbitrary suffixes."""
+    text = answer.strip()
+    repairs = []
+    if text.startswith("```json\n") and text.endswith("\n```"):
+        text = text[8:-4].strip()
+        repairs.append("json_fence")
+
+    def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Doppeltes Feld im Datenplan")
+            result[key] = value
+        return result
+
+    decoder = json.JSONDecoder(object_pairs_hook=unique_pairs)
+    value, end = decoder.raw_decode(text)
+    suffix = text[end:].strip()
+    if suffix == "}":
+        repairs.append("trailing_brace")
+    elif suffix:
+        raise ValueError("Zusätzliche Ausgabe nach dem Datenplan")
+    return value, "+".join(repairs) or "none"
+
+
 class DraftInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=4000)
@@ -231,7 +257,7 @@ async def preview(
                 answer += chunk
                 if len(answer) > 24000:
                     raise ValueError("Dateientwurf überschreitet die Ausgabegrenze")
-    value = json.loads(answer)
+    value, syntax_repair = parse_plan(answer)
     if not isinstance(value, dict) or "kind" in value:
         raise ValueError("Ungültiger Datenplan")
     value["kind"] = body.kind
@@ -282,6 +308,8 @@ async def preview(
         },
         "prompt_sha256": digest(policy),
         "goal_sha256": digest(body.goal),
+        "raw_output_sha256": digest(answer),
+        "syntax_repair": syntax_repair,
         "proposal_sha256": digest(canonical(spec)),
         "created": time.time(),
         "expires": time.time() + 1800,

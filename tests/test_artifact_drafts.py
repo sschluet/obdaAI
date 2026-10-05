@@ -99,6 +99,11 @@ def test_draft_is_local_editable_audited_and_grants_no_file_execution(setup):
     [
         "not JSON",
         DOCUMENT[:-1],
+        DOCUMENT + DOCUMENT,
+        DOCUMENT + "}}",
+        DOCUMENT + " execute this",
+        "```python\n" + DOCUMENT + "\n```",
+        '{"title":"First","title":"Second","sections":[{"heading":"X"}]}',
         '{"title":"Injected","sections":[{"heading":"X"}],"command":"sh"}',
         '{"title":"Injected","sections":[{"heading":"X"}],"sources":[]}',
         '{"title":"Injected","sections":[{"heading":"X"}],"kind":"docx"}',
@@ -110,6 +115,32 @@ def test_invalid_model_output_never_saves_or_executes(setup, output):
     spec["sources"] = []
     assert draft(app, c, h, pid, spec, DraftProvider(output)).status_code == 422
     assert c.get("/api/projects/" + pid + "/artifacts").json() == []
+
+
+@pytest.mark.parametrize(
+    ("output", "repair"),
+    [
+        (DOCUMENT, "none"),
+        (DOCUMENT + "}", "trailing_brace"),
+        ("```json\n" + DOCUMENT + "\n```", "json_fence"),
+        ("```json\n" + DOCUMENT + "}\n```", "json_fence+trailing_brace"),
+    ],
+)
+def test_bounded_syntax_normalization_is_audited_without_second_model_call(setup, output, repair):
+    import hashlib
+
+    app, c, h, cfg, pid, spec = setup
+    spec["sources"] = []
+    provider = DraftProvider(output)
+    result = draft(app, c, h, pid, spec, provider)
+    assert result.status_code == 200, result.text
+    stored = save(c, h, pid, result.json())
+    assert stored.status_code == 200, stored.text
+    audit = stored.json()["draft"]
+    assert audit["syntax_repair"] == repair
+    assert audit["raw_output_sha256"] == hashlib.sha256(output.encode()).hexdigest()
+    assert provider.calls == 1
+    assert stored.json()["accepted"] is None
 
 
 def test_foreign_project_forgery_and_excerpt_drift_denied(setup):
