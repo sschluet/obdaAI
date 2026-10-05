@@ -179,29 +179,34 @@ def tick(db: Session, cfg: Settings, now: float) -> list[str]:
                 continue
             if db.scalar(
                 select(TaskRun.id).where(
-                    TaskRun.task_id == task.id, TaskRun.status.in_(["queued", "running"])
+                    TaskRun.task_id == task.id,
+                    TaskRun.status.in_(["queued", "running", "awaiting_approval"]),
                 )
             ):
                 occurrence.reason = "Vorheriger Lauf noch aktiv; keine parallele Ausführung"
                 continue
-            run = TaskRun(
-                task_id=task.id,
-                task_revision=task.revision,
-                control_revision=task.control_revision,
-                request_key=str(uuid4()),
-                request_digest=digest(
-                    encode({"task_id": task.id, "schedule_revision": plan.revision, "due": due})
-                ),
-                snapshot=encode(snapshot),
-            )
-            db.add(run)
-            db.flush()
-            occurrence.run_id, occurrence.status = run.id, "queued"
-            if not cfg.database_url.startswith("sqlite"):
-                from hub.jobs import enqueue_task_read
+            with db.begin_nested():
+                run = TaskRun(
+                    task_id=task.id,
+                    task_revision=task.revision,
+                    control_revision=task.control_revision,
+                    request_key=str(uuid4()),
+                    request_digest=digest(
+                        encode({"task_id": task.id, "schedule_revision": plan.revision, "due": due})
+                    ),
+                    snapshot=encode(snapshot),
+                )
+                db.add(run)
+                db.flush()
+                from hub.task_writes import prepare_run
 
-                enqueue_task_read(db, cfg, run.id)
-            jobs.append(run.id)
+                prepare_run(db, run, spec)
+                occurrence.run_id, occurrence.status = run.id, run.status
+                if run.status == "queued" and not cfg.database_url.startswith("sqlite"):
+                    from hub.jobs import enqueue_task_read
+
+                    enqueue_task_read(db, cfg, run.id)
+                jobs.append(run.id)
         except HTTPException as error:
             plan.paused, plan.error = True, str(error.detail)[:240]
             occurrence.status, occurrence.reason = "blocked", plan.error

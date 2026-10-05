@@ -13,6 +13,7 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 | Passive Browserprüfung mit Bild und Text | echter Chromium-Container, Sandbox und Netzwerksperre geprüft; nur fest freigegebene Ziele |
 | HA-Status, Backupmetadaten und Wartungsplan als Hintergrundaufgabe | realer PostgreSQL-Worker mit HA 2026.9.3 / 61 Backupmetadaten, null Writes |
 | Systemberichte im Chat / natürliche Aufgabenentwürfe | lokale Grenzen, gespeicherte Belege, echte lokale Router-/HA-Abnahme und installierter Samstag-02:00-Entwurf bestanden |
+| Aufgabenprofile und Schreibfreigaben | implementiert für genau eine wiederherstellbare lokale Projektarchivierung: Einzelfreigabe oder revisionsgebundene Autonomie mit Ablaufzeit, Widerruf, Verbrauch und unveränderlicher Historie; keine externen Writes |
 | obdaAI-Backup / temporärer Restore | Schema 0017, Originalhashes, Schlüssel und Workflowbelege geprüft |
 
 ## Noch fehlend
@@ -22,8 +23,9 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 - Allgemeine mehrstufige n8n-Graphgenerierung aus dem Chat. Die vorhandene Vorlage
   nutzt einen geprüften festen Graph; Modellcode oder beliebige Nodes fehlen.
 - Weitere explizite MCP-/API-Aktionen und externe Writes mit eigener Abnahme.
-- Task-Writes mit Einzelfreigabe und begrenzter Autonomie. Aktuelle TaskSpecs
-  unterstützen Analyse und feste Leseschritte; Aktionsgateway-Writes sind getrennt.
+- Zusätzliche Task-Schreibadapter, insbesondere externe Wartung. Die drei Profile
+  sind für eine konkrete lokale Projektarchivierung implementiert; daraus entstehen
+  keine Freigaben für andere Systeme, Schritte oder Folgeaktionen.
 - HA-Wartung mit Komponenten-/Versionsgrenzen, verifizierter Archivintegrität,
   Wiederherstellungsschlüssel und nachgewiesenem Restore. Gemeldete Backups
   bestätigen diese Voraussetzungen nicht. Produktiver Restore wurde nicht getestet.

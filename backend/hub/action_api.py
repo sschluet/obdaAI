@@ -19,7 +19,15 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
-from hub.db import ActionGrant, ActionIntent, ActionPolicy, ActionReceipt, Project, Source
+from hub.db import (
+    ActionGrant,
+    ActionIntent,
+    ActionPolicy,
+    ActionReceipt,
+    Project,
+    Source,
+    TaskActionLink,
+)
 from hub.ha_backups import inspect as inspect_ha_backups
 from hub.ha_maintenance import inspect as inspect_ha_maintenance
 from hub.home_assistant import inspect as inspect_ha
@@ -218,6 +226,48 @@ def get_action(db: Session, action_id: str) -> ActionIntent:
     return action
 
 
+def archive_write(db: Session, row: ActionIntent, policy: ActionPolicy) -> dict[str, Any]:
+    """Final archive boundary, within the caller-owned policy/receipt transaction."""
+    if row.tool_id != "project.archive" or row.tool_revision != 1 or row.label != "LOCAL_ONLY":
+        raise HTTPException(409, "Archivierungsgrenze geändert")
+    params = parameters(row.tool_id, json.loads(row.parameters))
+    if digest(encode(params)) != row.parameters_sha256:
+        raise HTTPException(409, "Archivierungsparameter verändert")
+    grant = db.get(ActionGrant, row.id)
+    if policy.paused:
+        raise HTTPException(409, "Gateway-Schreibaktionen pausiert")
+    if row.status != "approved":
+        raise HTTPException(403, "Archivierung nicht aktuell freigegeben")
+    if (
+        row.policy_revision != policy.revision
+        or not grant
+        or grant.revoked
+        or grant.expires <= time.time()
+        or grant.policy_revision != policy.revision
+        or grant.parameters_sha256 != row.parameters_sha256
+        or grant.tool_revision != row.tool_revision
+    ):
+        raise HTTPException(403, "Keine aktuelle aktionsgebundene Freigabe")
+    # No external I/O here: conditional local effect and receipt are one transaction.
+    changed = db.execute(
+        update(Project)
+        .where(
+            Project.id == params["project_id"],
+            Project.revision == params["expected_revision"],
+            Project.archived.is_(False),
+        )
+        .values(archived=True, revision=Project.revision + 1)
+    )
+    if changed.rowcount != 1:  # type: ignore[attr-defined]
+        raise HTTPException(409, "Projektrevision geändert; keine Archivierung")
+    result: dict[str, Any] = {
+        "project_id": params["project_id"],
+        "archived": True,
+        "revision": params["expected_revision"] + 1,
+    }
+    return result
+
+
 def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settings) -> None:
     @app.get("/api/tools")
     def catalog(auth: Auth) -> list[dict[str, Any]]:
@@ -359,6 +409,8 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
         with factory() as db:
             policy = lock(db)
             row = get_action(db, action_id)
+            if db.get(TaskActionLink, row.id):
+                raise HTTPException(409, "Aufgabenaktionen im Task-Center freigeben")
             if row.status != "proposed" or row.policy_revision != policy.revision:
                 raise HTTPException(409, "Vorschlag nicht aktuell; neue Aktion vorbereiten")
             if policy.paused:
@@ -408,6 +460,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
         with factory() as db:
             policy = lock(db)
             row = get_action(db, action_id)
+            if db.get(TaskActionLink, row.id):
+                raise HTTPException(
+                    409, "Aufgabenaktionen werden nur durch den Aufgabenworker ausgeführt"
+                )
             if db.get(ActionReceipt, row.id):
                 return info(db, row)  # Read-only receipt replay, even while paused.
             tool = TOOLS.get(row.tool_id)
@@ -433,36 +489,7 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             if row.status == "revoked":
                 raise HTTPException(403, "Aktionsvorschlag widerrufen")
             if tool["effect"] == "write":
-                grant = db.get(ActionGrant, row.id)
-                if policy.paused:
-                    raise HTTPException(409, "Gateway-Schreibaktionen pausiert")
-                if (
-                    row.policy_revision != policy.revision
-                    or not grant
-                    or grant.revoked
-                    or grant.expires <= time.time()
-                    or grant.policy_revision != policy.revision
-                    or grant.parameters_sha256 != row.parameters_sha256
-                    or grant.tool_revision != row.tool_revision
-                ):
-                    raise HTTPException(403, "Keine aktuelle aktionsgebundene Freigabe")
-                # No external I/O here: conditional local effect and receipt are one transaction.
-                changed = db.execute(
-                    update(Project)
-                    .where(
-                        Project.id == params["project_id"],
-                        Project.revision == params["expected_revision"],
-                        Project.archived.is_(False),
-                    )
-                    .values(archived=True, revision=Project.revision + 1)
-                )
-                if changed.rowcount != 1:  # type: ignore[attr-defined]
-                    raise HTTPException(409, "Projektrevision geändert; keine Archivierung")
-                result: dict[str, Any] = {
-                    "project_id": params["project_id"],
-                    "archived": True,
-                    "revision": params["expected_revision"] + 1,
-                }
+                result = archive_write(db, row, policy)
             elif row.tool_id == "browser.inspect":
                 from hub.browser_read import snapshot
 

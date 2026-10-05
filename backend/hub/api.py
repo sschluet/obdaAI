@@ -120,6 +120,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_connection_api(app, cfg, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
+    from hub.task_writes import install_task_writes
+
+    install_task_writes(app, cfg, factory)
     install_schedule_api(app, cfg, factory)
     install_workflow_api(app, cfg, factory)
     install_task_drafts(app, cfg, factory)

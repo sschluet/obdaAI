@@ -997,3 +997,21 @@ isolierter Prüfablauf 73.6 Sekunden; dies ist keine vollständige Server- oder 
 
 Diese abschließende Dokumentation ändert den installierten Code 1aa2c6e nicht.
 M3 verbleibt teilweise umgesetzt; offene Funktionen in docs/m3-acceptance-status.md.
+
+### 2026-10-05: dauerhafte Aufgabenfreigaben und begrenzte Schreibprofile
+
+Schema 0018 ergänzt verbrauchbare Aufgabenfreigaben, unveränderliche Freigabe-
+Ereignisse und Aktions-/Run-Verknüpfung. Nur analysieren bleibt Standard. Für genau
+eine wiederherstellbare Projektarchivierung gibt es confirm_each und bounded_autonomous.
+Einzelfreigaben warten dauerhaft ohne Workerjob; n8n/Termine umgehen sie nicht.
+Begrenzte Freigaben gelten für konkrete Vorgaben-, Steuerungs- und Policyrevision
+bis zum Ablauf, maximal ein Write. Widerruf, Projekt-/Task-/Skill-/Policy-Drift,
+Aktionspause und doppelte Zustellung werden am finalen gemeinsamen Gateway geprüft.
+Direkte Gateway-Ausführung einer aufgabenbezogenen Aktion wird abgewiesen.
+
+Lokaler Effekt, Freigabeverbrauch, Aktionsbeleg und Teilschritt werden gemeinsam
+committet; ein Timeout nach dem Effekt rollt die gesamte lokale Änderung zurück.
+Task-Center zeigt Profile, konkrete Ziele, Ablauf, Widerruf und Historie ohne
+JSON-Eingabe. Natural-language-Entwürfe bleiben rechtefrei. Neue Queue-/mobile
+Browserabnahme verwendet ausschließlich eigene synthetische Projekte. HA-Writes
+bleiben gesperrt. CI und Live-Rollout folgen nach lokalen Checks.

@@ -1,4 +1,4 @@
-"""Manual read-only task vertical. No scheduler, model code or external dispatch."""
+"""Durable task contracts and atomic local reads/writes; no model-executed code."""
 
 import asyncio
 import json
@@ -12,7 +12,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from hub.action_api import TOOLS, StrictInput, digest, encode
+from hub.action_api import TOOLS, ArchiveParameters, StrictInput, digest, encode
 from hub.config import Settings
 from hub.db import (
     Project,
@@ -51,7 +51,13 @@ class AnalyzeStep(StrictInput):
     parameters: StrictInput = Field(default_factory=StrictInput)
 
 
-def default_steps() -> list[ReadStep | AnalyzeStep]:
+class WriteStep(StrictInput):
+    tool_id: Literal["project.archive"]
+    tool_revision: Literal[1] = 1
+    parameters: ArchiveParameters
+
+
+def default_steps() -> list[ReadStep | AnalyzeStep | WriteStep]:
     return [ReadStep()]
 
 
@@ -63,12 +69,12 @@ class TaskSpec(StrictInput):
     skills: list[Binding] = Field(default_factory=list, max_length=3)
     timezone: str = Field(default="Europe/Berlin", max_length=80)
     trigger: Literal["manual"] = "manual"
-    autonomy: Literal["analyze_only"] = "analyze_only"
+    autonomy: Literal["analyze_only", "confirm_each", "bounded_autonomous"] = "analyze_only"
     label: Literal["LOCAL_ONLY"] = "LOCAL_ONLY"
-    steps: list[ReadStep | AnalyzeStep] = Field(
+    steps: list[ReadStep | AnalyzeStep | WriteStep] = Field(
         default_factory=default_steps, min_length=1, max_length=5
     )
-    success_criterion: Literal["all_reads_completed"] = "all_reads_completed"
+    success_criterion: Literal["all_reads_completed", "all_steps_completed"] = "all_reads_completed"
     output: Literal["task_center"] = "task_center"
     max_cost_usd: Literal[0] = 0
     timeout_seconds: int = Field(default=15, ge=1, le=30)
@@ -81,6 +87,23 @@ class TaskSpec(StrictInput):
         external = [s for s in self.steps if s.tool_id.startswith("ha.")]
         if len(external) > 1 or (external and analyses):
             raise ValueError("One fixed HA report per task; no implicit model context transfer")
+        writes = [i for i, step in enumerate(self.steps) if step.tool_id == "project.archive"]
+        if writes:
+            if (
+                writes != [len(self.steps) - 1]
+                or self.autonomy == "analyze_only"
+                or analyses
+                or external
+                or self.sources
+                or self.skills
+                or self.project_id
+                or self.success_criterion != "all_steps_completed"
+            ):
+                raise ValueError(
+                    "One reversible archive at the end, explicit write profile, no model/context"
+                )
+        elif self.autonomy != "analyze_only" or self.success_criterion != "all_reads_completed":
+            raise ValueError("Write profiles require an explicit supported write")
         return self
 
     @field_validator("timezone")
@@ -175,6 +198,15 @@ def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
     for step in spec.steps:
         if step.tool_id == "ai.analyze":
             continue  # Fixed local text analysis; never a model-selected external tool.
+        if step.tool_id == "project.archive":
+            target = db.get(Project, str(step.parameters.project_id))
+            if (
+                target is None
+                or target.archived
+                or target.revision != step.parameters.expected_revision
+            ):
+                raise HTTPException(409, "Archivierungsziel fehlt oder wurde geändert")
+            continue
         tool = TOOLS.get(step.tool_id)
         if (
             tool is None
@@ -206,7 +238,10 @@ def task_info(db: Session, task_id: str) -> dict[str, Any]:
     from hub.schedule_api import schedule_info
 
     plan = db.get(TaskSchedule, task.id)
+    from hub.task_writes import grant_info
+
     return {
+        "write_grant": grant_info(db, task.id),
         "id": task.id,
         "revision": task.revision,
         "control_revision": task.control_revision,
@@ -224,7 +259,10 @@ def task_info(db: Session, task_id: str) -> dict[str, Any]:
 
 
 def run_info(db: Session, run: TaskRun) -> dict[str, Any]:
+    from hub.task_writes import approval_info
+
     return {
+        "approval": approval_info(db, run),
         "id": run.id,
         "task_id": run.task_id,
         "task_revision": run.task_revision,
@@ -266,63 +304,70 @@ def execute_task_read(
         if run is None or run.status != "queued":
             return  # Persisted receipt or cancellation wins, including duplicate delivery.
         try:
-            check_schedule(db, run)
-            task, revision, spec = current(db, run.task_id)
-            if (
-                task.paused
-                or task.archived
-                or task.revision != run.task_revision
-                or task.control_revision != run.control_revision
-            ):
-                raise HTTPException(409, "Aufgabe pausiert, archiviert oder inzwischen geändert")
-            try:
-                snapshot = json.loads(run.snapshot)
-                valid_snapshot = digest(
-                    encode(snapshot["spec"])
-                ) == revision.sha256 and snapshot == check_bindings(db, spec)
-            except (ValueError, KeyError, TypeError):
-                valid_snapshot = False
-            if not valid_snapshot:
-                raise HTTPException(409, "Laufvorgabe verändert")
-            if any(step.tool_id == "ai.analyze" for step in spec.steps):
-                raise HTTPException(409, "Modellschritt benötigt den lokalen Analyseworker")
-            started = time.monotonic()
-            for sequence, step in enumerate(spec.steps, 1):
-                if time.monotonic() - started > spec.timeout_seconds:
-                    raise HTTPException(409, "Aufgabenzeitgrenze erreicht")
-                # Fixed read adapter. Goal, documents and metadata never become code.
-                if step.tool_id.startswith("ha."):
-                    from hub.ha_backups import inspect as backups
-                    from hub.ha_maintenance import inspect as maintenance
-                    from hub.home_assistant import inspect as health
-
-                    adapter = {
-                        "ha.inspect": health,
-                        "ha.backups.inspect": backups,
-                        "ha.maintenance.plan": maintenance,
-                    }[step.tool_id]
-                    result = adapter(cfg or Settings.from_env())
-                else:
-                    result = {
-                        "projects": db.scalar(select(func.count()).select_from(Project)),
-                        "sources": db.scalar(select(func.count()).select_from(Source)),
-                        "label": "LOCAL_ONLY",
-                    }
-                if time.monotonic() - started > spec.timeout_seconds:
-                    raise HTTPException(409, "Aufgabenzeitgrenze nach Leseprüfung erreicht")
-                db.add(
-                    TaskStep(
-                        run_id=run.id,
-                        sequence=sequence,
-                        tool_id=step.tool_id,
-                        result=encode(result),
+            with db.begin_nested():
+                check_schedule(db, run)
+                task, revision, spec = current(db, run.task_id)
+                if (
+                    task.paused
+                    or task.archived
+                    or task.revision != run.task_revision
+                    or task.control_revision != run.control_revision
+                ):
+                    raise HTTPException(
+                        409, "Aufgabe pausiert, archiviert oder inzwischen geändert"
                     )
-                )
-            run.status = "succeeded"
+                try:
+                    snapshot = json.loads(run.snapshot)
+                    valid_snapshot = digest(
+                        encode(snapshot["spec"])
+                    ) == revision.sha256 and snapshot == check_bindings(db, spec)
+                except (ValueError, KeyError, TypeError):
+                    valid_snapshot = False
+                if not valid_snapshot:
+                    raise HTTPException(409, "Laufvorgabe verändert")
+                if any(step.tool_id == "ai.analyze" for step in spec.steps):
+                    raise HTTPException(409, "Modellschritt benötigt den lokalen Analyseworker")
+                started = time.monotonic()
+                for sequence, step in enumerate(spec.steps, 1):
+                    if time.monotonic() - started > spec.timeout_seconds:
+                        raise HTTPException(409, "Aufgabenzeitgrenze erreicht")
+                    # Fixed read adapter. Goal, documents and metadata never become code.
+                    if step.tool_id == "project.archive":
+                        from hub.task_writes import archive_step
+
+                        result = archive_step(db, run, spec, sequence)
+                    elif step.tool_id.startswith("ha."):
+                        from hub.ha_backups import inspect as backups
+                        from hub.ha_maintenance import inspect as maintenance
+                        from hub.home_assistant import inspect as health
+
+                        adapter = {
+                            "ha.inspect": health,
+                            "ha.backups.inspect": backups,
+                            "ha.maintenance.plan": maintenance,
+                        }[step.tool_id]
+                        result = adapter(cfg or Settings.from_env())
+                    else:
+                        result = {
+                            "projects": db.scalar(select(func.count()).select_from(Project)),
+                            "sources": db.scalar(select(func.count()).select_from(Source)),
+                            "label": "LOCAL_ONLY",
+                        }
+                    if time.monotonic() - started > spec.timeout_seconds:
+                        raise HTTPException(409, "Aufgabenzeitgrenze nach Leseprüfung erreicht")
+                    db.add(
+                        TaskStep(
+                            run_id=run.id,
+                            sequence=sequence,
+                            tool_id=step.tool_id,
+                            result=encode(result),
+                        )
+                    )
+                run.status = "succeeded"
         except HTTPException as error:
             run.status, run.error = "failed", str(error.detail)
         run.finished = time.time()
-        db.commit()  # Local reads and receipts are atomic; no external side effect to retry.
+        db.commit()  # Local effects, authority and receipts commit together.
 
 
 def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
@@ -414,7 +459,8 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
                 raise HTTPException(409, "Geprüfte Aufgabe nicht aktuell oder pausiert")
             if db.scalar(
                 select(TaskRun.id).where(
-                    TaskRun.task_id == task_id, TaskRun.status.in_(["queued", "running"])
+                    TaskRun.task_id == task_id,
+                    TaskRun.status.in_(["queued", "running", "awaiting_approval"]),
                 )
             ):
                 raise HTTPException(409, "Für diese Aufgabe läuft bereits ein Lauf")
@@ -429,7 +475,10 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
             )
             db.add(run)
             db.flush()
-            if not cfg.database_url.startswith("sqlite"):
+            from hub.task_writes import prepare_run
+
+            prepare_run(db, run, spec)
+            if run.status == "queued" and not cfg.database_url.startswith("sqlite"):
                 from hub.jobs import enqueue_task_read
 
                 enqueue_task_read(db, cfg, run.id)
@@ -464,7 +513,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
             run = db.get(TaskRun, run_id)
             if run is None:
                 raise HTTPException(404, "Aufgabenlauf fehlt")
-            if run.status == "queued":
+            if run.status in ("queued", "awaiting_approval"):
                 run.status, run.finished = "cancelled", time.time()
                 db.commit()
             elif run.status == "running":

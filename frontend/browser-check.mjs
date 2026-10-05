@@ -268,6 +268,46 @@ if(await page.getByLabel('Uhrzeit',{exact:true}).inputValue()!=='02:00')throw Er
 if(!await page.getByLabel('Samstag',{exact:true}).isChecked())throw Error('Explicit draft weekday lost');
 await page.getByRole('button',{name:'Schließen',exact:true}).click();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+// Task-bound write authority through normal dialogs, using only new synthetic projects.
+await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
+for(const profile of ['confirm_each','bounded_autonomous']){
+ const projectName='Synthetic '+profile+' archive target';
+ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Projekte',exact:true}).click();
+ await page.getByRole('button',{name:'Neues Projekt',exact:true}).click();
+ await page.getByLabel('Projektname',{exact:true}).fill(projectName);
+ await page.getByRole('button',{name:'Projektraum erstellen',exact:true}).click();
+ await page.getByRole('heading',{name:projectName,exact:true}).waitFor();
+ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
+ await page.getByRole('button',{name:'Neue Aufgabe',exact:true}).click();
+ await page.getByLabel('Name der Aufgabe',{exact:true}).fill('Synthetic '+profile+' task');
+ await page.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Archive only this synthetic project, recoverably.');
+ await page.getByLabel('Art der Aufgabe',{exact:true}).selectOption('project.archive');
+ await page.getByLabel('Autonomieprofil',{exact:true}).selectOption(profile);
+ await page.getByLabel('Zu archivierendes Projekt',{exact:true}).selectOption({label:projectName});
+ await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
+ await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true});
+ if(profile==='confirm_each'){
+  await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).click();
+  await dialog.getByRole('heading',{name:'Lauf wartet auf deine Freigabe',exact:true}).waitFor();
+  if(await dialog.getByRole('button',{name:'Diese Archivierung freigeben und ausführen',exact:true}).isEnabled())throw Error('Global pause did not block task approval');
+  await dialog.getByRole('button',{name:'Globale Aktionspause aufheben',exact:true}).click();
+  await dialog.getByRole('button',{name:'Diese Archivierung freigeben und ausführen',exact:true}).click();
+ }else{
+  await dialog.getByRole('button',{name:'Globale Aktionspause aufheben',exact:true}).click();
+  await dialog.getByRole('button',{name:'Eine Archivierung innerhalb der Grenze freigeben',exact:true}).click();
+  await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).click();
+ }
+ await dialog.getByText(/Schritt 1: Projekt wiederherstellbar archiviert/).waitFor();
+ if(profile==='bounded_autonomous')await dialog.getByText(/Freigabe: Verbraucht/).waitFor();
+ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Task write dialog mobile overflow');
+ await page.screenshot({path:output+'/task-write-'+profile+'.png',fullPage:true,animations:'disabled'});
+ await dialog.getByRole('button',{name:'Globale Aktionspause einschalten',exact:true}).click();
+ await page.getByRole('button',{name:'Schließen',exact:true}).click();
+}
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();
 if(errors.length)throw Error(errors.join('\n'));

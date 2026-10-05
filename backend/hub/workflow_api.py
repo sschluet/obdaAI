@@ -276,7 +276,8 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 raise HTTPException(409, "Vorherigen Workflowaufruf zuerst abgleichen")
             if db.scalar(
                 select(TaskRun.id).where(
-                    TaskRun.task_id == task.id, TaskRun.status.in_(["queued", "running"])
+                    TaskRun.task_id == task.id,
+                    TaskRun.status.in_(["queued", "running", "awaiting_approval"]),
                 )
             ):
                 raise HTTPException(409, "Aufgabe läuft bereits")
@@ -406,7 +407,8 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 raise HTTPException(409, "Auftrag widerrufen, pausiert oder geändert")
             if db.scalar(
                 select(TaskRun.id).where(
-                    TaskRun.task_id == task.id, TaskRun.status.in_(["queued", "running"])
+                    TaskRun.task_id == task.id,
+                    TaskRun.status.in_(["queued", "running", "awaiting_approval"]),
                 )
             ):
                 raise HTTPException(409, "Aufgabe läuft bereits")
@@ -421,7 +423,10 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             )
             db.add(run)
             db.flush()
-            if not cfg.database_url.startswith("sqlite"):
+            from hub.task_writes import prepare_run
+
+            prepare_run(db, run, spec)
+            if run.status == "queued" and not cfg.database_url.startswith("sqlite"):
                 from hub.jobs import enqueue_task_read
 
                 enqueue_task_read(db, cfg, run.id)

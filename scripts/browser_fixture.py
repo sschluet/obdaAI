@@ -20,7 +20,7 @@ from hub.mcp_client import schema_digest
 from hub.policy import CloudGrant, ContextPart
 from hub.routing import Route
 
-folder = Path(".local/browser")
+folder = Path(os.getenv("HUB_BROWSER_FIXTURE_DIR", ".local/browser"))
 folder.mkdir(parents=True, exist_ok=True)
 vault = folder / "vault"
 vault.mkdir(exist_ok=True)

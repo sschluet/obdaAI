@@ -324,10 +324,40 @@ class TaskRun(Base):
             "one_active_task_run",
             "task_id",
             unique=True,
-            sqlite_where=text("status IN ('queued', 'running')"),
-            postgresql_where=text("status IN ('queued', 'running')"),
+            sqlite_where=text("status IN ('queued', 'running', 'awaiting_approval')"),
+            postgresql_where=text("status IN ('queued', 'running', 'awaiting_approval')"),
         ),
     )
+
+
+class TaskWriteGrant(Base):
+    __tablename__ = "task_write_grants"
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), primary_key=True)
+    task_revision: Mapped[int] = mapped_column(Integer)
+    control_revision: Mapped[int] = mapped_column(Integer)
+    spec_sha256: Mapped[str] = mapped_column(String(64))
+    policy_revision: Mapped[int] = mapped_column(Integer)
+    expires: Mapped[float] = mapped_column(Float)
+    used: Mapped[bool] = mapped_column(Boolean, default=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class TaskWriteGrantEvent(Base):
+    __tablename__ = "task_write_grant_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    document: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class TaskActionLink(Base):
+    __tablename__ = "task_action_links"
+    action_id: Mapped[str] = mapped_column(ForeignKey("action_intents.id"), primary_key=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("task_runs.id"), index=True)
+    sequence: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (UniqueConstraint("run_id", "sequence"),)
 
 
 class TaskStep(Base):
