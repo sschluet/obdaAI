@@ -71,3 +71,14 @@ partial failure, cancel, recovery, duplicates, strict schemas and unloaded cloud
 secrets. A real PostgreSQL session-lock independence/release test runs in CI.
 Browser fixture confirms completed analysis, recorded context and 390px width.
 Real model acceptance and deployment are recorded separately in STATUS.md.
+
+## Human task editor and local title preview
+
+The UI accepts a title, goal, fixed task kind, optional project and explicit
+ready-source/trusted-skill checkboxes. It constructs the strict specification;
+users need no JSON input. Natural-language preview uses only the local model
+to propose a title. Goal and all permissions remain code-owned: manual, local
+analysis, no sources, no skills, no execution, zero cloud cost. The authenticated
+CSRF-protected endpoint saves nothing. Invalid JSON, extra model fields, output
+limits, context bounds and provider revision drift reject the preview. Scheduling
+and MCP registration remain open; the interface does not advertise them as active.

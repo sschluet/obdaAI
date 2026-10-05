@@ -593,3 +593,9 @@ Speichern/Aktivieren/Ausführen, Ergebnis nach Reload erhalten, finale Pause;
 390px Formular und Chat ohne horizontalen Überlauf. 18 eindeutig zugeordnete
 M2/M3-Abnahmeprojekte auf eigener VM wiederherstellbar archiviert; andere Projekte,
 Quellen-IDs und Originalhashes unverändert.
+
+Verhaltensregeln (Skills) ebenfalls mit Formular und getrenntem Prüfen/Aktivieren;
+technisches portables Format nur unter Erweitert. Synthetischer Browsercheck
+bestätigt zwei Stichwörter, gespeicherten Text und deaktivierte erste Revision.
+CI de87b5f fand mehrdeutige Beschriftung am Aufgaben-Projektfeld; explizite
+Beschriftungen in 763cf82 korrigiert, dessen Browserprüfung bestanden.
