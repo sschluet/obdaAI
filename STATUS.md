@@ -739,3 +739,12 @@ Produktionsallowlist bleibt leer. OAuth, stdio und entfernte Ausführung offen.
 Weitere reine HA-Backup-/Supervisor-GETs antworten mit HTTP 401. Dies belegt eine
 Zugangsgrenze, keine Aussage über vorhandene Backups. Keine HA-Schreibaktionen
 oder Änderung fremder Dienste durchgeführt; HA-Restore-Abnahme weiterhin offen.
+
+### Chat → normaler Aufgabendialog
+
+Eigene Nachricht über „Als Aufgabe planen“ mit unverändertem Ziel und optionalem
+Projekt in den Dialog übernehmen. Keine geerbten Dokument-/Skill-/Cloudfreigaben,
+keine automatische Planung oder Ausführung. Titel, Dokumente und Termine normal
+auswählen; Speichern bleibt pausiert. Lange Nachrichten werden nicht abgeschnitten.
+Browserabnahme prüft Zielgleichheit und gesperrten Start der gespeicherten Aufgabe.
+Dies ersetzt noch keine generische Chat-zu-n8n-Workflowgenerierung.

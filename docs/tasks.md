@@ -43,9 +43,10 @@ browser: paused creation, resume, read receipt, reload, revision 2 with preserve
 revision 1/receipt, archive/restore paused; 390px without horizontal overflow.
 Production integration evidence is recorded separately in STATUS.md.
 
-Remaining M3: natural-language TaskSpec generation, actual n8n
-execution binding and scheduling/DST, external reconciliation,
-MCP/REST/browser adapters and separately approved Home Assistant maintenance.
+Remaining M3: chat-generated arbitrary validated n8n workflows, external
+reconciliation/execution, OAuth/stdio MCP and isolated browser adapters, plus
+separately accepted Home Assistant maintenance. Real minute-clock scheduling and
+local task execution are installed; see schedules.md and STATUS.md.
 
 ## Fixed local model step
 
@@ -80,5 +81,16 @@ users need no JSON input. Natural-language preview uses only the local model
 to propose a title. Goal and all permissions remain code-owned: manual, local
 analysis, no sources, no skills, no execution, zero cloud cost. The authenticated
 CSRF-protected endpoint saves nothing. Invalid JSON, extra model fields, output
-limits, context bounds and provider revision drift reject the preview. Scheduling
-and MCP registration remain open; the interface does not advertise them as active.
+limits, context bounds and provider revision drift reject the preview. Scheduling uses the human date/time form and the installed n8n minute clock.
+MCP connection drafts and bounded catalog checks are described in mcp-connections.md.
+
+## From a chat message to a task
+
+An explicit “Als Aufgabe planen” button on an own message opens the normal task
+editor with that exact message as its goal and the optional project. No assistant
+answer, hidden history, source selection, skill, cloud permission or schedule is
+automatically inherited. Messages above the 4000-character task limit cannot be
+transferred and are never silently truncated. No model or API is called until the
+user saves normally. The title can be edited; the new task is stored paused and
+requires the existing separate activation. Cancelling the dialog saves nothing.
+The transfer draft is consumed once, so reopening Tasks does not duplicate it.
