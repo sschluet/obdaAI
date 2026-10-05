@@ -186,14 +186,18 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
 
             from hub.memory import reconcile as reconcile_vault
 
-            with factory() as db:
-                reconcile_vault(
-                    db,
-                    Path(cfg.vault_dir),
-                    allow_memory_writes=cfg.vault_writable,
-                    expected_fs=cfg.vault_fs_type,
-                )
-                db.commit()
+            def scan() -> None:
+                with factory() as db:
+                    reconcile_vault(
+                        db,
+                        Path(cfg.vault_dir),
+                        allow_memory_writes=cfg.vault_writable,
+                        expected_fs=cfg.vault_fs_type,
+                    )
+                    db.commit()
+
+            # SSHFS/SQL indexing must not block Procrastinate heartbeat or shutdown.
+            await asyncio.to_thread(scan)
 
     @maintenance_schedule
     @queue.task(
@@ -226,15 +230,20 @@ async def requeue_stalled(queue: procrastinate.App) -> None:
 
 
 async def main() -> None:
-    queue = worker_app(Settings.from_env(), include_maintenance="--artifacts" not in sys.argv)
+    queue = worker_app(
+        Settings.from_env(),
+        include_maintenance=not any(flag in sys.argv for flag in ("--artifacts", "--sources")),
+    )
     async with queue.open_async():
         await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
             queues=["artifacts"]
             if "--artifacts" in sys.argv
-            else ["sources", "vault-maintenance"]
+            else ["sources"]
             if "--sources" in sys.argv
+            else ["vault-maintenance"]
+            if "--vault" in sys.argv
             else ["chat", "tests", "tasks", "titles", "maintenance"],
             concurrency=1,
             shutdown_graceful_timeout=95,

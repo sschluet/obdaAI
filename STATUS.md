@@ -1,16 +1,21 @@
 # obdaAI — Status 05.10.2026
 
-## Aktueller Stand: M3-Schreibprofile und M4-Dateidialoge vor Rollout
+## Aktueller Stand: M3-Schreibprofile und M4-Dateidialoge installiert
 
-Produktiv ist weiterhin `1aa2c6e` / Schema 0017 installiert. Im aktuellen
-Entwicklungsbranch `milestone/m3-actions` sind zusätzlich die begrenzten
-Aufgaben-Schreibprofile (0018) sowie vier lokale Dateidialoge mit dauerhaften
-Versionen, Vorschau-Freigabe und Offline-Runner (0019/0020) implementiert.
-377 lokale Tests bestanden; zehn echte PG-Fälle ohne Fixture übersprungen.
-Ruff/mypy (50 Module), TS/Build und Source-Secret-Scan bestanden. Die synthetische
-mobile Abnahme aller vier Dateidialoge einschließlich Word-Tabelle und erhaltener
-Folgeversion bestanden. Echte isolierte Linux-Abnahme für vier Dateien und sechs
-Vorschauseiten bestanden. Neuer PG-Gesamtcheck, CI und Rollout noch ausstehend.
+Produktiv ist `00f72bf` / Schema 0020 installiert. Die begrenzten Aufgaben-
+Schreibprofile und vier lokale Dateidialoge mit dauerhaften Versionen, Vorschau-
+Freigabe und Offline-Runner sind ausgerollt. Beide APIs gesund; vorhandene
+IPv4-/IPv6-Regeln, übrige Overlays und Browsercode unverändert. Vorherige
+verschlüsselte Sicherung erfolgreich; neuer eigener Overlay enthält die Dateidienste.
+
+377 lokale Tests bestanden; alle zehn echten PostgreSQL-Integrationsfälle auf der
+eigenen VM bestanden. Ruff/mypy, TS/Build und Secret-Scan bestanden. Mobile
+synthetische Browserabnahme einschließlich Tabellen, Folgeversionen, lokaler Entwürfe
+und Chatübernahme bestanden. Echte Linux-Abnahme: vier Dateien, sechs Vorschauen.
+Die erste Live-Abnahme zeigt einen bestehenden Engpass: lange Vault-Abgleiche
+blockieren den gemeinsamen Upload-Worker. Queue-Trennung und nicht blockierender
+Abgleich werden gerade geprüft und ausgerollt. Produktive Dateiabnahme und
+verschlüsselter Schema-0020-Restore sind noch nicht abgeschlossen.
 
 GitHub konnte mehrere Jobs wegen nicht verfügbarer Hosted Runner nicht starten;
 fehlgeschlagene Allokation ist kein bestandener Test. Der konkrete Officefehler
@@ -1072,3 +1077,11 @@ zwei zusätzliche periodische Wartungsjobs in der gemeinsamen Testqueue. Der eig
 Artefaktworker erhält nun keine periodische Registrierung; Wartung verbleibt beim
 bestehenden Worker. Korrigierter Gesamtcheck, CI und Rollout folgen. Produktiv
 bleibt 1aa2c6e/0017. Keine M3/M4/M5-Vollabnahme behauptet.
+
+## Live-Abnahme: Upload-Verarbeitung vom Vault trennen
+
+Der gemeinsame Source-/Vault-Worker kann neue Uploads hinter langen SSHFS-Abgleichen
+zurückhalten. Eigene getrennte Queue-Consumer für Uploads und Vault; der synchrone
+Vault-Scan läuft mit eigener DB-Transaktion in einem Thread, damit Heartbeats weiter
+arbeiten. Mount, vorhandener Sync und Rechte bleiben erhalten. Native Anbietertests
+sind ein separater Entwicklungsschritt und derzeit nicht im produktiven Router aktiv.

@@ -58,3 +58,15 @@ services:
     logging:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
+
+  # Long SSHFS indexing has its own queue; uploads retain a responsive worker.
+  vault-worker:
+    extends:
+      file: compose.yaml
+      service: source-worker
+    command: [python, -m, hub.jobs, --vault]
+    volumes:
+      - type: bind
+        source: ${HUB_VAULT_MOUNT:?Set reviewed live mount}
+        target: /vault
+        bind: {propagation: rslave}

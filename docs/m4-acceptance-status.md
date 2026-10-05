@@ -50,3 +50,10 @@ Snapshot. Diese Funktion verschiebt keine anderen Gespräche oder Quellen.
 Weiter offen: Bilder in DOCX, optionale DOCX→PDF-Ausgabe, PDF-Erstellung aus Text,
 Bildbeschriftung, direkte natürliche Chat-Dateiplanung und umfassende Layout-/
 semantische Qualitätsabnahme. Die App bietet keine überprüfte echte Schwärzung.
+
+Live-Zwischenstand: `00f72bf` / Schema 0020 auf eigener VM installiert; beide APIs
+und der netzlose Runner gesund, bestehende Netzregeln/Overlays unverändert. Alle zehn
+PG-Integrationsfälle bestanden. Uploads in der Live-Abnahme warten zunächst hinter
+dem langen gemeinsamen Vault-Abgleich. Ein separater Vault-Consumer und der
+nicht blockierende Scan beheben diese Konkurrenz; echte Dateiabnahme wird danach
+wiederholt. Die erste fehlgeschlagene Upload-Warteprüfung ist keine Dateiabnahme.
