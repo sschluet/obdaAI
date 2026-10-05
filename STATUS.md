@@ -10,21 +10,38 @@ Memory mit Herkunft, Revisionen und Konfliktvergleich; kanonisches Markdown,
 read-only Allgemeinvault, begrenzte Memorywrites, Tombstones und Crash-Reconciliation.
 Direktes `Merke dir:` ist source-/revisiongebunden und idempotent, ohne Modellwrite.
 
-Lokal 90 Tests bestanden; der PostgreSQL-Migrationstest läuft zusätzlich in CI.
-Die eigene VM hat die echte isolierte Dateipipeline bestanden: neun Formate inklusive
-OCR, Originaldownload mit SHA-Abgleich, Decimal-Summen, Projektisolation und echte
-Quellenantwort mit dem unveränderten lokalen Mac-mini-Modell. Parser ohne Netzwerk,
-Landlock-Zugriffsgrenzen und getrennte Quellenworker sind aktiv. Die finale Version
-mit globalem Wissenschat und revisionsgebundener öffentlicher Chat-Webfreigabe wird
-noch durch CI und die eigene Installation abgenommen.
+Finaler Codecheckpoint `da6b671`: CI 37269020685 vollständig grün, 91 Tests
+einschließlich PostgreSQL-Migration Upgrade/Downgrade/Upgrade und Queue-Recovery.
+Lokal 90 bestanden, ein PostgreSQL-Test separat in CI. Browserprüfungen mit
+synthetischen Daten: Projekte, Mehrfachupload, Fundstellen, Decimal, Quellenchat,
+Memoryrevisionen sowie öffentliche Chat-Webfreigabe; mobile UI ohne Überlauf.
+Typen/Lint, Secret-Scans und reproduzierbarer Containerbuild bestanden.
 
-Noch offen vor vollständiger M2-Abnahme: finale Sicherungsrestore-Abnahme sowie echte
-vorhandene Vault- und Suchanbindung mit eigenen begrenzten Zugängen. Vorhandener Vault
-und JSON-Suchdienst wurden ausschließlich lesend bestätigt. Die separaten Freigaben
-für allgemeinen Vault readonly plus AI/Memory write und einen begrenzten Suchzugang
-stehen noch aus. Der konkrete Plan liegt in deploy/vault-access-plan.md. Bestehender
-Sync und andere Plattformressourcen wurden nicht verändert. M2 bleibt bis zur echten
-Abnahme dieser Verbindungen unvollständig; synthetische Tests ersetzen sie nicht.
+Eigene VM installiert `da6b671`, Schema `0011`, beide APIs gesund. Echte isolierte
+Dateipipeline bestanden: neun Formate einschließlich Scan-PDF/Bild-OCR, Original-
+downloads mit SHA-Abgleich, CSV/XLSX-Decimal-Summen, PDF-Fundstelle und Projekt-
+isolation. Echtes unverändertes Mac-mini-Modell nennt 37 EUR mit source.pdf/Seite 1.
+Parser ohne Netzwerk, ohne Vault/Secrets, nonroot und read-only Root; Landlock
+verweigert andere Quelldateien und Systemdateien. Separate Quellenworker erhalten
+Chatpriorität. Keine realen OpenRouter-Aufrufe oder zusätzlichen Cloudkosten in M2.
+
+Verschlüsselte Sicherung vom 05.10.2026 außerhalb der VM kopiert und SHA-geprüft.
+Isolierter DB-Restore: Schema 0011, 31 Gespräche/58 Nachrichten, alle 40 gesicherten
+Originale gegen gespeicherte SHA-Werte geprüft; gesicherter Masterkey entschlüsselt
+das bestehende Providersecret. Keine Klartextdump-Datei, Wiederherstellungsschlüssel
+bleibt auf dem WorkMac. Temporäre Restore-DB entfernt. Vorhandene Proxmox-
+Konfiguration gegen Baseline unverändert; Rückfallimage/Konfigurationskopie erhalten.
+Private Belege bleiben im ignorierten `.local/deployment/`.
+
+Noch offen vor vollständiger M2-Abnahme: echte vorhandene Vault- und Suchanbindung
+mit eigenen begrenzten Zugängen. Vault und JSON-Suchdienst wurden ausschließlich
+lesend bestätigt; der vorhandene Suchdienst lieferte echte öffentliche Treffer.
+Separate Freigaben für allgemeinen Vault readonly plus AI/Memory write und einen
+begrenzten Suchzugang stehen noch aus. Reviewbarer Plan: deploy/vault-access-plan.md.
+Bestehender Sync wurde nicht geändert. Synthetische Memory-/Konflikt-/Rename-/Delete-/
+Restart-/Offline-Tests und expliziter globaler Wissenschat sind implementiert und
+bestanden, ersetzen aber keine echte A09-Abnahme am vorhandenen Vault.
+M2 bleibt deshalb unvollständig; PR #2 bleibt Draft.
 
 ---
 

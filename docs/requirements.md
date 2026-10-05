@@ -34,11 +34,11 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 | A02 | M1 | Freigegebene komplexe Frage: OpenRouter im selben Chat | Echter OpenRouter-Modelltest und AUTO-End-to-End auf eigener VM; gemeldete Kosten, gleicher privater Kontext bleibt lokal |
 | A03 | M0-M5 | LOCAL_ONLY aus Historie/Derivaten/Embedding/Web/n8n niemals extern | Privacy-Vertrags-/API-/HTTP-Gatewaytests bestanden; Web/Embedding/n8n noch offen |
 | A04 | M1 | Provider-/Mac-Ausfall: korrekter Status, kein verbotener Fallback | ConnectError-/Gatewaytests plus echte eigene Relay-Unterbrechung und Worker-Neustart mit automatischer Recovery; kein Cloudfallback |
-| A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | offen; Funktion noch nicht implementiert |
+| A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | bestanden auf eigener VM: neun Formate, lokale OCR, SHA-Originale, PDF-Fundstelle, Decimal-Summen, Scopeisolation und echter lokaler Quellenchat |
 | A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | offen; Funktion noch nicht implementiert |
 | A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | offen; Funktion noch nicht implementiert |
 | A08 | M3 | Skillrevision wirkt und erweitert keine Rechte | offen; Funktion noch nicht implementiert |
-| A09 | M2 | Obsidian/App bidirektional: Konflikt/Löschung/Umbenennung/Restart | offen; Funktion noch nicht implementiert |
+| A09 | M2 | Obsidian/App bidirektional: Konflikt/Löschung/Umbenennung/Restart | implementiert und mit synthetischem Vault getestet; echte vorhandene Vault-Abnahme wartet auf separate begrenzte Zugriffsfreigabe |
 | A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | offen; Funktion noch nicht implementiert |
 | A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | offen; Funktion noch nicht implementiert |
 | A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | offen; Funktion noch nicht implementiert |
