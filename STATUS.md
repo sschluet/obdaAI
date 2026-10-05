@@ -81,7 +81,7 @@ Designcommit `8e0eb11` gepusht, CI 37275715883 grün und auf der eigenen VM
 installiert; helle/dunkle/mobile Blautöne in synthetischer UI visuell geprüft,
 Styles über beide echten API-Endpunkte bestätigt. Keine Funktionsänderung.
 
-Aktuell installiert `9645f94` (CI 37276615918 grün): descriptorbasierter begrenzter
+Vorheriger Prüfstand `9645f94` (CI 37276615918 grün): descriptorbasierter begrenzter
 Vault-Lesepfad, ohne Symlinkfollowing. 30 echte Notizen: 8,267 s vorher, 2,381 s
 nachher. Lokal 94 Tests bestanden; echte Mountattestation und begrenzter Search-
 SSH-Zugang geprüft (anderer Port und Shell verweigert). Vorhandener Syncthing-
@@ -92,14 +92,49 @@ ohne Freigabe HTTP 403 und identische Anfrage-ID ohne erneute Recherche.
 Vault-Gesamtabnahme weiter offen: Inhaltsduplikate verursachen wiederholte
 Remote-Pfadprüfungen bei Renameerkennung (bis 95 gleiche Notizen). `552bfa8`
 begrenzt das gesamte Inventar und benutzt dessen Pfadmenge; lokal 95 Tests
-bestanden, PostgreSQL separat in grüner CI 37277172434. Image gebaut, noch nicht installiert.
-Abnahmeskript wartet noch auf den bisherigen Scan; kein Abschluss behauptet.
+bestanden, PostgreSQL separat in grüner CI 37277172434. Dieser Stand wurde anschließend installiert und durch weitere Optimierungen ersetzt.
+Vollständige Vault-Abnahme siehe aktuelle Nachweise unten.
 
 HTTPS-Meldung des Benutzers bestätigt: beide APIs healthy, VM-lokales HTTPS
 zertifikatsgeprüft HTTP 200. Mac routet über en7 / 192.168.18.248, VM empfängt
 TCP SYN von genau dieser Adresse und verweigert sie gemäß bisheriger Allowlist
 (192.168.117.0/24, 172.17.50.0/24). Konkrete Ergänzung nur dieses Clients /32
-für HTTPS vorbereitet; separate Firewallfreigabe angefragt, noch nicht angewendet.
+für HTTPS vorbereitet. Benutzer hat ausdrücklich stattdessen das gesamte Netz
+192.168.18.0/24 freigegeben. Auf eigener VM ergänzt, bisherige Konfiguration unter
+/etc/obdaai/rollback-https-network-19216818024 gesichert. Vom WorkMac aus
+zertifikatsgeprüfte Startseite und Healthcheck erneut HTTP 200; keine andere
+Netzfreigabe geändert. Browser-Tool verweigert die direkte Seitenprüfung gemäß
+URL-Richtlinie; kein Umweg verwendet.
+
+Weitere echte M2-Abnahme: eigene synthetische Note unter bestehender Sync-UID
+angelegt, lokaler Syncthing-Index und Verfügbarkeit auf verbundenem Peer bestätigt.
+Globaler Wissenschat mit echtem lokalem Modell bestanden, ausschließlich diese
+synthetische Note im Kontext. Explizites `Merke dir:` kanonisch und idempotent.
+Belege: ignorierte m2-syncthing-live.json / m2-memory-chat-live.json.
+
+Die automatische Freigabeprüfung verweigerte vorübergehendes Stoppen des
+Quellenworkers für den Test; nicht ausgeführt und nicht umgangen. Tests liefen
+stattdessen mit normaler Serialisierung. Vollständige Scan-/Writeabnahme bleibt
+offen, weil lang laufende Hintergrundscans die Schreibfreigabe verzögern.
+`c252b05` verwendet pro Ordner verankerte Deskriptoren für Geschwisterdateien:
+30 echte Notizen 2,928 → 0,744 s. Lokal 96 Tests bestanden, CI 37278911672 grün.
+Dieser Stand wurde installiert; keine andere Dienstunterbrechung für Abnahmen
+genehmigt/ausgeführt. Erweitertes Backup-/Restore-
+Skript für neue Schlüssel/Units/Memory vorbereitet; noch keine neue Restore-Abnahme.
+
+Aktuell installiert `502e1c2`, CI 37280251178 grün. Begrenzte, verankerte
+Verzeichniskette statt wiederholter Ancestor-Öffnungen: 1.556 echte Notizen,
+Inventar und vollständige Lektüre in 68,559 Sekunden, keine Lesefehler. Das ist
+ein Dateilesetest; die vollständige API-/DB-Abnahme läuft gesondert.
+
+Neue Editor-Korrektur: HTTP-409 lädt die aktuelle Fassung zum ausdrücklichen
+Vergleich und behält den Entwurf. Normales Speichern bleibt während des Vergleichs
+gesperrt. Eine Übernahme prüft den verglichenen Hash auch nach bereits erfolgtem
+Hintergrundabgleich. Synthetischer mobiler Browsercheck: externe Änderung ->
+Sync -> veralteter Editor abgelehnt -> Entwurf erhalten -> Vergleich -> ausdrücklich
+bestätigte Übernahme, Revision 4. Screenshot nur lokale Fixture. Backend lokal
+98 Tests bestanden, ein PostgreSQL-Test für CI; Ruff/mypy und Frontendbuild grün.
+Diese Editor-Korrektur ist noch nicht auf der VM installiert.
 
 ## M3-Folgeauftrag 05.10.2026
 

@@ -1,6 +1,8 @@
 # M2 access configuration review
 
-Prepared templates, not an installer and not applied to production. Authorization
+Reviewed configuration templates, not a general installer. The limited configuration
+was explicitly authorized and applied on 05.10.2026; complete API/fault/restore
+acceptance remains tracked in STATUS.md. Authorization
 must cover the two service accounts, two new SSH identities, SSHFS, bounded exports
 and relays, dedicated VM runtime/egress changes and validated SSH reload. A blocked
 approval must never be bypassed by a different execution mechanism.

@@ -25,7 +25,7 @@ const [config,setConfig]=useState<Config|null>(null),[cloud,setCloud]=useState(f
 const [editing,setEditing]=useState<Msg|null>(null),[editedText,setEditedText]=useState(''),[editCloud,setEditCloud]=useState(false);
 const bottom=useRef<HTMLDivElement>(null),controller=useRef<AbortController|null>(null);
 useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';localStorage.setItem('hub-theme',dark?'dark':'light')},[dark]);
-async function api(path:string,method='GET',body?:unknown){const r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json',...(csrf?{'X-CSRF-Token':csrf}:{})},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok){const d=await r.json();throw Error(String(d.detail||'Anfrage fehlgeschlagen'))}return r.json()}
+async function api(path:string,method='GET',body?:unknown){const r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json',...(csrf?{'X-CSRF-Token':csrf}:{})},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok){const d=await r.json();throw Object.assign(Error(String(d.detail||'Anfrage fehlgeschlagen')),{status:r.status})}return r.json()}
 useEffect(()=>{fetch('/api/me').then(async r=>{if(r.ok)setCsrf((await r.json()).csrf)}).finally(()=>setReady(true))},[]);
 async function refresh(){setChats(await api('/conversations?q='+encodeURIComponent(query)+'&archived='+archived))}
 useEffect(()=>{if(csrf){refresh().catch(e=>setError(e.message));api('/settings').then(setConfig).catch(e=>setError(e.message))}},[csrf,query,archived]);

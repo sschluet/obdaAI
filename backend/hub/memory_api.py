@@ -11,7 +11,16 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.config import Settings
 from hub.db import Memory, MemoryRevision, Project
 from hub.knowledge_api import Auth
-from hub.memory import digest, reconcile, revision, serialize, validate_mount, vault_path, write
+from hub.memory import (
+    digest,
+    read_note,
+    reconcile,
+    revision,
+    serialize,
+    validate_mount,
+    vault_path,
+    write,
+)
 
 
 class MemoryInput(BaseModel):
@@ -132,13 +141,13 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
                 raise HTTPException(404, "Memory im Scope nicht gefunden")
             if row.conflict.startswith("pending:"):
                 raise HTTPException(409, "Memory-Schreibvorgang läuft; zuerst synchronisieren")
-            if row.conflict and body.resolve_vault_sha256:
+            if body.resolve_vault_sha256:
                 from hub.memory import decode
 
-                path = vault_path(root(), row.path)
-                if not path.exists():
-                    raise HTTPException(409, "Vault-Datei gelöscht; keine Konfliktüberschreibung")
-                _, actual = decode(path.read_text(encoding="utf-8"))
+                try:
+                    _, actual = decode(read_note(root(), row.path))
+                except (ValueError, OSError) as error:
+                    raise HTTPException(409, "Vault-Datei nicht sicher lesbar") from error
                 if digest(actual) != body.resolve_vault_sha256 or body.revision != row.revision:
                     raise HTTPException(409, "Verglichene Vault-Version inzwischen geändert")
                 # Explicit comparison approval is bound to the actual file digest.

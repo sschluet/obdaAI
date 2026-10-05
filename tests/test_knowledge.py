@@ -697,3 +697,25 @@ def test_vault_ancestor_chain_stays_anchored_and_bounds_depth(tmp_path):
         with pytest.raises(OSError):
             tree.directory("parent")
     assert tree.descriptors == []
+
+
+def test_memory_synced_external_revision_requires_fresh_compared_digest(knowledge):
+    app, c, h, cfg, vault = knowledge
+    identifier = str(uuid.uuid4())
+    body = {"id": identifier, "title": "Synthetic", "content": "initial"}
+    row = c.post("/api/memories", json=body, headers=h).json()
+    path = vault / row["path"]
+    path.write_text(path.read_text().replace("initial", "external"))
+    assert c.post("/api/memories/sync", headers=h).status_code == 200
+    body.update(content="my preserved draft", revision=row["revision"])
+    assert c.patch("/api/memories/" + identifier, json=body, headers=h).status_code == 409
+    current = next(r for r in c.get("/api/memories").json() if r["id"] == identifier)
+    assert current["revision"] > row["revision"] and not current["conflict"]
+    body.update(revision=current["revision"], resolve_vault_sha256=digest(current["content"]))
+    path.write_text(path.read_text().replace("external", "external changed again"))
+    assert c.patch("/api/memories/" + identifier, json=body, headers=h).status_code == 409
+    assert "external changed again" in path.read_text()
+    body["resolve_vault_sha256"] = digest("# Synthetic\n\nexternal changed again")
+    result = c.patch("/api/memories/" + identifier, json=body, headers=h)
+    assert result.status_code == 200
+    assert "my preserved draft" in path.read_text()
