@@ -81,6 +81,7 @@ def _presentation(plan: PresentationPlan, path: Path) -> None:
         title.text_frame.word_wrap = True
         paragraph = title.text_frame.paragraphs[0]
         paragraph.text = item.title
+        paragraph.font.name = "Liberation Sans"
         paragraph.font.size = Pt(30)
         paragraph.font.bold = True
         paragraph.font.color.rgb = RGBColor(0x15, 0x39, 0x76)  # type: ignore[no-untyped-call]
@@ -91,12 +92,14 @@ def _presentation(plan: PresentationPlan, path: Path) -> None:
                 box.text_frame.paragraphs[0] if index == 0 else box.text_frame.add_paragraph()
             )
             paragraph.text = "• " + text
+            paragraph.font.name = "Liberation Sans"
             paragraph.font.size = Pt(22)
             paragraph.font.color.rgb = RGBColor(0x18, 0x28, 0x42)  # type: ignore[no-untyped-call]
             paragraph.space_after = Pt(18)
         footer = slide.shapes.add_textbox(Inches(0.8), Inches(7), Inches(11.8), Inches(0.3))
         paragraph = footer.text_frame.paragraphs[0]
         paragraph.text = f"{plan.title[:100]} · {number}/{len(plan.slides)}"
+        paragraph.font.name = "Liberation Sans"
         paragraph.font.size = Pt(10)
         paragraph.font.color.rgb = RGBColor(0x52, 0x64, 0x83)  # type: ignore[no-untyped-call]
         slide.notes_slide.notes_text_frame.text = item.notes

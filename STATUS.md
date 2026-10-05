@@ -1110,3 +1110,17 @@ Stream und Kostenaudit. Kein echter nativer Zugang und keine neue Egress-Freigab
 mypy (52 Module), TS/Build, Source-Scan und drei Browserchecks bestanden. Schema 0021
 und Native-Oberfläche noch nicht produktiv ausgerollt. Native-Live-Abnahme bleibt
 zugangsabhängig; M3/M4/M5 nicht vollständig. Details: docs/native-provider-status.md.
+
+### Verschlüsselter Artefakt-Restore und reale Downloads
+
+Eigene Live-Dateipipeline `9b6f30b` erzeugt vier Formate / sechs Vorschauseiten.
+Word/PDF/Bild visuell geprüft und authentifizierte HTTPS-Downloads mit Ausgabehash
+verifiziert. PPTX wartet auf Font-Folgeprüfung. Lokaler Modell-Entwurf antwortet
+noch mit 422; nur synthetische Diagnose, keine ungeprüfte Dateierstellung.
+
+Snapshot `snapshot-20261005T215303.639568315Z`: verschlüsselt auf bestehendem privaten
+Mac-Backup-Pfad, isolierter Restore Schema 0020 bestanden. Acht Artefaktrevisionen mit
+Spec-, Ausgabe- und Vorschauhashes sowie 42 Originalhashes, sechs Memory-Dateien,
+Masterkey/Providersecret, SSH-Schlüssel/Units, bestehende Task-/Workflowbelege geprüft.
+Temporäre Restore-DB entfernt; produktive DB und HA unverändert. Kein HA-Restore
+und kein voller Server-RTO-Nachweis. HTTPS antwortet wieder zertifikatsgeprüft vom Mac.

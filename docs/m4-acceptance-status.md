@@ -57,3 +57,10 @@ PG-Integrationsfälle bestanden. Uploads in der Live-Abnahme warten zunächst hi
 dem langen gemeinsamen Vault-Abgleich. Ein separater Vault-Consumer und der
 nicht blockierende Scan beheben diese Konkurrenz; echte Dateiabnahme wird danach
 wiederholt. Die erste fehlgeschlagene Upload-Warteprüfung ist keine Dateiabnahme.
+
+Echte Live-Abnahme `9b6f30b`: vier Formate und sechs native Vorschauseiten erzeugt.
+Word, die zwei passend geordneten synthetischen PDF-Seiten und der Bildzuschnitt
+visuell geprüft; authentifizierte HTTPS-Downloads nach Freigabe per SHA-256 geprüft.
+PowerPoint bleibt vor finaler Freigabe: sichtbare Schrift-Fallback-Abstände werden
+mit expliziter Liberation Sans korrigiert und als Folgeversion erneut geprüft.
+Ein gültiges PPTX allein wird nicht als einwandfreies Layout gewertet.

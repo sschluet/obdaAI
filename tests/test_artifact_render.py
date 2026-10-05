@@ -51,6 +51,10 @@ def test_powerpoint_has_requested_count_and_editable_notes(tmp_path: Path) -> No
     render(spec, [], tmp_path / "slides")
     deck = Presentation(str(tmp_path / "slides/artifact.pptx"))
     assert len(deck.slides) == 2
+    for slide in deck.slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                assert all(p.font.name == "Liberation Sans" for p in shape.text_frame.paragraphs)
     assert "Eine echte Folie" in deck.slides[0].shapes[1].text
     assert deck.slides[0].notes_slide.notes_text_frame.text == "Sprechernotiz"
     deck.slides[0].shapes[0].text = "Geändert"
