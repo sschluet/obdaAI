@@ -949,3 +949,23 @@ englische Zuordnung aller sieben Tage sowie vollständiges verschachteltes JSON-
 Beispiel. Isolierter Testprozess mit dem echten lokalen Modell liefert nun Samstag=5
 und gültigen HA-Wartungsbericht-Entwurf. Regression für falsches Samstag=6 abgewiesen.
 19 Entwurfstests grün; CI und erneute Abnahme des installierten Endpoints folgen.
+
+### 2026-10-05: finaler M3-Lesestand und Entwurf live geprüft
+
+9dbee1f installiert; CI 37344908607 mit allen fünf Jobs vollständig grün.
+Beide APIs gesund, Schema 0017, Overlays/Firewall/Browsercode unverändert.
+Echte installierte Entwurfs-API nach Korrektur bestanden: ha.maintenance.plan,
+weekly, Europe/Berlin, 02:00, Samstag=5. Manuelle TaskSpec; keine Speicherung,
+Aktivierung, Ausführung oder Cloud. Privater Beleg plan-draft-live.json.
+
+Reale mobile UI zeigt gespeicherten erfolgreichen HA-Bericht und offene Restore-
+Voraussetzungen innerhalb des Dialogs; n8n-Details separat aufgeklappt. Nachweis
+privat live-ha-task-dialog.png. Eigene lokale Testserver/Abnahmetabs beendet.
+Produktiver Hub bleibt unter https://192.168.117.103/ erreichbar.
+
+Für HA-Wartung fehlt der Wiederherstellungsschlüssel-/Integritäts-/Restore-Nachweis;
+Ablageort des Schlüssels wurde abgefragt, kein Schlüssel im Chat angefordert.
+Weitere noch nicht implementierte Funktionen stehen unverändert im M3-Abnahmestand:
+interaktive Browseranmeldung/2FA, allgemeine freigegebene Workflowgraphen und weitere
+externe Operationen, Task-Writes/Autonomieprofile. M3 ist nicht vollständig fertig.
+Diese Dokumentationsänderung ändert den installierten Code 9dbee1f nicht.

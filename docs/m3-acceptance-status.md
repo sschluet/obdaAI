@@ -12,7 +12,7 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 | MCP-Katalog und parameterfreie explizite Text-Lesewerkzeuge | HTTP-/UI-Tests, Schema/Revision/Allowlist; keine echten MCP-Ziele angefordert |
 | Passive Browserprüfung mit Bild und Text | echter Chromium-Container, Sandbox und Netzwerksperre geprüft; nur fest freigegebene Ziele |
 | HA-Status, Backupmetadaten und Wartungsplan als Hintergrundaufgabe | realer PostgreSQL-Worker mit HA 2026.9.3 / 61 Backupmetadaten, null Writes |
-| Systemberichte im Chat / natürliche Aufgabenentwürfe | lokale Grenzen, gespeicherte Belege und echte lokale Router-/HA-Abnahme bestanden |
+| Systemberichte im Chat / natürliche Aufgabenentwürfe | lokale Grenzen, gespeicherte Belege, echte lokale Router-/HA-Abnahme und installierter Samstag-02:00-Entwurf bestanden |
 | obdaAI-Backup / temporärer Restore | Schema 0017, Originalhashes, Schlüssel und Workflowbelege geprüft |
 
 ## Noch fehlend
