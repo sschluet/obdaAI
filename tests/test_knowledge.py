@@ -673,3 +673,27 @@ def test_vault_scan_opens_shared_parent_once_and_rejects_fifo(knowledge, monkeyp
     os.mkfifo(vault / "pipe.md")
     with pytest.raises(ValueError, match="reguläre Datei"):
         read_note(vault, "pipe.md")
+
+
+def test_vault_ancestor_chain_stays_anchored_and_bounds_depth(tmp_path):
+    from hub.memory import note_tree, read_descriptor
+
+    root = tmp_path / "vault"
+    (root / "parent" / "child").mkdir(parents=True)
+    (root / "parent" / "child" / "safe.md").write_text("Approved synthetic note")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "safe.md").write_text("Outside must not be read")
+    with note_tree(root) as tree:
+        fd = tree.directory("parent/child")
+        (root / "parent").rename(root / "renamed")
+        (root / "parent").symlink_to(outside)
+        assert read_descriptor(fd, "safe.md") == "Approved synthetic note"
+        assert tree.directory("parent/child") == fd
+        for path in ["../outside", ".obsidian", "/etc", "/".join(["deep"] * 21)]:
+            with pytest.raises(ValueError):
+                tree.directory(path)
+        tree.directory(".")
+        with pytest.raises(OSError):
+            tree.directory("parent")
+    assert tree.descriptors == []

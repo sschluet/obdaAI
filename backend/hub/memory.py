@@ -44,21 +44,53 @@ def vault_path(root: Path, relative: str) -> Path:
     return current
 
 
+class NoteTree:
+    """Keep only the checked ancestor chain; at most 21 open directory descriptors."""
+
+    def __init__(self, root: Path):
+        self.parts: tuple[str, ...] = ()
+        self.descriptors = [os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)]
+
+    def directory(self, relative: str) -> int:
+        parts = Path(relative).parts
+        if Path(relative).is_absolute() or any(p in {"..", ".obsidian"} for p in parts):
+            raise ValueError("Ungültiger Vault-Pfad")
+        if len(parts) > 20:
+            raise ValueError("Vault-Verzeichnistiefe überschritten")
+        common = 0
+        for old, new in zip(self.parts, parts, strict=False):
+            if old != new:
+                break
+            common += 1
+        while len(self.parts) > common:
+            os.close(self.descriptors.pop())
+            self.parts = self.parts[:-1]
+        for part in parts[common:]:
+            child = os.open(
+                part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=self.descriptors[-1]
+            )
+            self.descriptors.append(child)
+            self.parts += (part,)
+        return self.descriptors[-1]
+
+    def close(self) -> None:
+        while self.descriptors:
+            os.close(self.descriptors.pop())
+
+
+@contextmanager
+def note_tree(root: Path) -> Iterator[NoteTree]:
+    tree = NoteTree(root)
+    try:
+        yield tree
+    finally:
+        tree.close()
+
+
 @contextmanager
 def note_directory(root: Path, relative: str) -> Iterator[int]:
-    """Anchor one directory for a scan group without following replacement symlinks."""
-    parts = Path(relative).parts
-    if Path(relative).is_absolute() or any(p in {"..", ".obsidian"} for p in parts):
-        raise ValueError("Ungültiger Vault-Pfad")
-    directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        for part in parts:
-            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
-            os.close(directory)
-            directory = child
-        yield directory
-    finally:
-        os.close(directory)
+    with note_tree(root) as tree:
+        yield tree.directory(relative)
 
 
 def read_descriptor(directory: int, filename: str) -> str:
@@ -187,8 +219,9 @@ def _reconcile(
                     raise ValueError("Vault-Dateilimit überschritten; Index unverändert")
     available_paths = set(paths)
     count = len(paths)
-    for parent, grouped in groupby(paths, key=lambda path: str(Path(path).parent)):
-        with note_directory(root, parent) as directory:
+    with note_tree(root) as tree:
+        for parent, grouped in groupby(paths, key=lambda path: str(Path(path).parent)):
+            directory = tree.directory(parent)
             for relative in grouped:
                 try:
                     text = read_descriptor(directory, Path(relative).name)
