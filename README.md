@@ -27,6 +27,7 @@ separately from local SQLite contract checks.
 - [Implementation plan](docs/implementation-plan.md), [operations](docs/operations.md)
 - [Provider configuration, encrypted secrets and budgets](docs/providers.md)
 - [Versions and sources](docs/dependencies.md)
+- [Operator n8n connection check](docs/n8n-connection-check.md)
 
 ## Current development limits
 M1 implements login, durable AUTO chat with local/OpenRouter providers, streaming,

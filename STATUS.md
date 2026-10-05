@@ -72,6 +72,13 @@ installierte Nodeversionen lesend geprüft; separate Freigabe zum Anlegen auf de
 Bestands-n8n angefragt. Kein Workflow dort angelegt oder aktiviert. Dieser Entwurf
 führt noch keine Aufgabe aus; A10 bleibt offen. Vertrag: `docs/tasks.md`.
 
+Begrenzter Operator-n8n-Adapter ergänzt: gepinntes HTTPS-Ziel, keine Redirects,
+Graph-/Statusvergleich, geschütztes Intentjournal vor POST, Sperre gegen parallele
+Operatoren und Reconciliation ohne blindes Wiederholen bei unklarem Ausgang.
+17 neue Tests bestanden. Echte lesende Namenssuche erfolgreich; Erstellung ohne
+konkrete Freigabe verweigert, kein Workflow verändert. Live-Erstellung weiterhin
+angefragt; keine Aktivierungs-/Ausführungsfunktion. `docs/n8n-connection-check.md`.
+
 Nächste Vertikalen: Toolverbindungen, echte n8n-Ausführung/Zeitpläne und aufgabenbezogene Modell-Skills. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
 Modellaktionen sind noch nicht implementiert. Beide Benutzerzugänge am 05.10.2026 über verifiziertes HTTPS lesend bestätigt:
 n8n Workflows-API 200, Home Assistant Config-API 200 / Version 2026.9.3. Secrets nur
