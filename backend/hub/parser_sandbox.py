@@ -40,6 +40,7 @@ def restrict(source: Path, workdir: Path) -> None:
             (Path("/etc/ld.so.cache"), 1 << 2),
             (Path("/etc/fonts"), READ),
             (Path(sys.prefix), READ | EXEC),
+            (Path(sys.base_prefix), READ | EXEC),
             (source, 1 << 2),
             (workdir, ALL_FS),
         ]
