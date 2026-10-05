@@ -3,7 +3,8 @@
 Am 05.10.2026 beauftragt: nach Etablierung aller M2-Funktionen alle M3-Funktionen
 umsetzen. Dieser Plan ist Vorbereitung, keine implementierte M3-Lieferung. Der
 Start der M3-Implementierung erfolgt nach echter M2-Abnahme am vorhandenen Vault
-und Suchdienst; deren konkret angefragte Zugriffsfreigaben stehen noch aus.
+und Suchdienst. Die begrenzten M2-Zugriffe sind ausdrücklich freigegeben und
+eingerichtet; die abschließenden API-/Ausfall-/Restore-Nachweise stehen noch aus.
 
 ## Vertikale Reihenfolge und Abnahme
 

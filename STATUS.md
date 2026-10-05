@@ -33,15 +33,25 @@ bleibt auf dem WorkMac. Temporäre Restore-DB entfernt. Vorhandene Proxmox-
 Konfiguration gegen Baseline unverändert; Rückfallimage/Konfigurationskopie erhalten.
 Private Belege bleiben im ignorierten `.local/deployment/`.
 
-Noch offen vor vollständiger M2-Abnahme: echte vorhandene Vault- und Suchanbindung
-mit eigenen begrenzten Zugängen. Vault und JSON-Suchdienst wurden ausschließlich
-lesend bestätigt; der vorhandene Suchdienst lieferte echte öffentliche Treffer.
-Separate Freigaben für allgemeinen Vault readonly plus AI/Memory write und einen
-begrenzten Suchzugang stehen noch aus. Reviewbarer Plan: deploy/vault-access-plan.md.
-Bestehender Sync wurde nicht geändert. Synthetische Memory-/Konflikt-/Rename-/Delete-/
-Restart-/Offline-Tests und expliziter globaler Wissenschat sind implementiert und
-bestanden, ersetzen aber keine echte A09-Abnahme am vorhandenen Vault.
-M2 bleibt deshalb unvollständig; PR #2 bleibt Draft.
+Noch offen vor vollständiger M2-Abnahme: die echte API-Abnahme am vorhandenen
+Vault und Suchdienst, insbesondere Konfliktauflösung, stabile IDs bei Umbenennung,
+Ausfallprüfung, Syncthing-Indexierung und Restore der erweiterten Sicherung. Die
+begrenzten Zugänge sind ausdrücklich freigegeben und eingerichtet. Bestehender
+Sync wurde nicht verändert. Synthetische Tests ersetzen keine echte A09-Abnahme;
+M2 bleibt unvollständig und PR #2 bleibt Draft.
+
+Aktueller Codecheckpoint `c9ce59a`: CI 37275069080 grün, lokal 93 Tests bestanden
+und PostgreSQL separat in CI. Der Index verwirft verlorene/ersetzte Mounts und
+Transportfehler; passende globale Notizen werden vor dem 500-Einträge-Limit gefiltert.
+SSHFS-Cache deaktiviert, fsync für Datei/Verzeichnis am echten Mount akzeptiert.
+Eigene VM auf `c9ce59a` aktualisiert; beide API-Endpunkte gesund. Laufzeitkonfiguration
+bindet den begrenzten Vault und Suchrelay ein, Parser weiterhin ohne Vaultvolume.
+Vorherige Konfigurationen unter `/etc/obdaai/rollback-m2-c9ce59a` gesichert.
+Die abschließende Diagnose benutzte versehentlich `Settings()` statt `from_env()`;
+ihre fehlgeschlagene Assertion ist daher kein Nachweis eines Mountfehlers.
+Eine korrigierte Laufzeit- und API-Prüfung steht noch aus. Weitere Remote-Aufrufe
+wurden von der automatischen Freigabeprüfung wegen Modellkapazität nicht ausgeführt,
+ohne Sicherheitsentscheidung. Keine erneute Zugriffsfreigabe benötigt.
 
 ## Zugriffsfreigabeprüfung 05.10.2026
 
@@ -65,16 +75,41 @@ Memory. Die App-Anbindung und vollständige Live-Abnahme laufen noch. Vor Indexi
 wird PostgreSQL-/Dateisperrung für parallele API-/Worker-Abgleiche getestet; Backups
 erhalten neue Zugangsunits/Identitäten und den kanonischen Memory-Bereich.
 
+## Live-Abnahme und Erreichbarkeit 05.10.2026
+
+Designcommit `8e0eb11` gepusht, CI 37275715883 grün und auf der eigenen VM
+installiert; helle/dunkle/mobile Blautöne in synthetischer UI visuell geprüft,
+Styles über beide echten API-Endpunkte bestätigt. Keine Funktionsänderung.
+
+Aktuell installiert `9645f94` (CI 37276615918 grün): descriptorbasierter begrenzter
+Vault-Lesepfad, ohne Symlinkfollowing. 30 echte Notizen: 8,267 s vorher, 2,381 s
+nachher. Lokal 94 Tests bestanden; echte Mountattestation und begrenzter Search-
+SSH-Zugang geprüft (anderer Port und Shell verweigert). Vorhandener Syncthing-
+Dienst aktiv, kanonischer Vault konfiguriert und lokale Sync-API erreichbar.
+Echte App-Webrecherche bestanden: zehn Treffer, exakter öffentlicher Suchtext,
+ohne Freigabe HTTP 403 und identische Anfrage-ID ohne erneute Recherche.
+
+Vault-Gesamtabnahme weiter offen: Inhaltsduplikate verursachen wiederholte
+Remote-Pfadprüfungen bei Renameerkennung (bis 95 gleiche Notizen). `552bfa8`
+begrenzt das gesamte Inventar und benutzt dessen Pfadmenge; lokal 95 Tests
+bestanden, PostgreSQL separat in grüner CI 37277172434. Image gebaut, noch nicht installiert.
+Abnahmeskript wartet noch auf den bisherigen Scan; kein Abschluss behauptet.
+
+HTTPS-Meldung des Benutzers bestätigt: beide APIs healthy, VM-lokales HTTPS
+zertifikatsgeprüft HTTP 200. Mac routet über en7 / 192.168.18.248, VM empfängt
+TCP SYN von genau dieser Adresse und verweigert sie gemäß bisheriger Allowlist
+(192.168.117.0/24, 172.17.50.0/24). Konkrete Ergänzung nur dieses Clients /32
+für HTTPS vorbereitet; separate Firewallfreigabe angefragt, noch nicht angewendet.
+
 ## M3-Folgeauftrag 05.10.2026
 
 Der Benutzer beauftragt alle M3-Funktionen nach Etablierung sämtlicher M2-Funktionen.
 Konkrete Reihenfolge, A08/A10-A12-Abnahme, Integrationsvorbedingungen und aktuelle
 Primärquellen sind in docs/m3-plan.md vorbereitet. M3-Code ist noch nicht implementiert.
-Die Reihenfolge bleibt M2-Abschluss → M3; die neue Nachricht erteilt keine explizite
-Freigabe der noch angefragten bestehenden Vault-/Suchzugänge. Eine gebündelte konkrete
-Freigabe ist erneut als Frage gestellt. Keine automatischen Produktivworkflows oder
-Home-Assistant-Änderungen aktiviert. Nächster Schritt: bestätigte M2-Zugänge innerhalb
-des vorbereiteten Plans einrichten und echt abnehmen, anschließend M3 umsetzen.
+Die Reihenfolge bleibt M2-Abschluss → M3. Die begrenzte Vault-/Suchzugangsfreigabe
+liegt inzwischen ausdrücklich vor und ist eingerichtet. Keine automatischen
+Produktivworkflows oder Home-Assistant-Änderungen aktiviert. Nächster Schritt:
+echte M2-Abnahme und erweiterten Restore abschließen, anschließend M3 umsetzen.
 
 ---
 
