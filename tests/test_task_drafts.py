@@ -77,3 +77,22 @@ def test_preview_context_limit_rejects_before_inference(setup):
     with pytest.raises(ValueError, match="context limit"):
         asyncio.run(preview(app.state.sessions, cfg, "x" * 1000, provider))
     assert provider.calls == 0
+
+
+@pytest.mark.parametrize(
+    "kind,tool",
+    [("ha_status", "ha.inspect"), ("ha_backups", "ha.backups.inspect"),
+     ("ha_maintenance", "ha.maintenance.plan"), ("hub_status", "hub.inspect")],
+)
+def test_natural_read_draft_is_manual_review_only(setup, kind, tool):
+    import json
+
+    app, c, h, _ = setup
+    app.state.providers = DraftProvider(json.dumps({"title": "Systembericht", "kind": kind}))
+    r = c.post("/api/task-drafts", headers=h, json={"goal": "Prüfe meinen HA Status"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["spec"]["steps"][0]["tool_id"] == tool
+    assert body["spec"]["trigger"] == "manual" and body["spec"]["autonomy"] == "analyze_only"
+    assert body["requires_review"] and not body["saved"] and not body["started"]
+    assert c.get("/api/tasks").json() == []

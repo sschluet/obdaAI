@@ -9,6 +9,7 @@ from pathlib import Path
 
 import hub.action_api as fixture_action_api
 import hub.browser_read as fixture_browser
+import hub.chat_tools as fixture_chat_tools
 import hub.ha_maintenance as fixture_maintenance
 from alembic import command
 from alembic.config import Config
@@ -80,6 +81,11 @@ class SyntheticProvider:
         return "Synthetic automatic title"
 
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if any("SYNTHETIC_HA_QUERY" in p.content for p in parts):
+            return Route(
+                capabilities=["tool"], model_class="cloud", reason="synthetic HA read",
+                read_tool="ha.maintenance.plan",
+            )
         if any("SYNTHETIC_WEB_QUERY" in p.content for p in parts):
             return Route(
                 capabilities=["web"],
@@ -110,6 +116,10 @@ class SyntheticProvider:
         if parts and parts[0].source_id == "task-draft-policy":
             assert not external and not grants
             yield '{"title":"Synthetischer lokaler Analyseentwurf"}'
+            return
+        if any(p.source_id.startswith("tool:") for p in parts):
+            assert not external
+            yield "SYNTHETIC_HA_CHAT_REPLY: Wartungsbericht gespeichert, keine Änderungen."
             return
         if parts and parts[0].source_id == "task-policy":
             assert not external and not grants
@@ -275,3 +285,5 @@ def synthetic_browser_snapshot(cfg: Settings, action_id: str, params: dict) -> d
 fixture_browser.snapshot = synthetic_browser_snapshot
 fixture_maintenance.state_inspect = synthetic_ha_inspect
 fixture_maintenance.backup_inspect = synthetic_ha_backups
+
+fixture_chat_tools.maintenance = fixture_maintenance.inspect

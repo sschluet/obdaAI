@@ -22,6 +22,9 @@ class Route(BaseModel):
     source_scopes: list[str] = Field(default_factory=list, max_length=10)
     reason: str = Field(max_length=240)
     answer: str | None = Field(default=None, max_length=16000)
+    read_tool: (
+        Literal["hub.inspect", "ha.inspect", "ha.backups.inspect", "ha.maintenance.plan"] | None
+    ) = None
 
     @field_validator("answer", mode="before")
     @classmethod
@@ -38,6 +41,8 @@ class Route(BaseModel):
     def valid(self) -> "Route":
         if len(set(self.capabilities)) != len(self.capabilities):
             raise ValueError("Duplicate capabilities")
+        if self.read_tool is not None and Capability.TOOL not in self.capabilities:
+            raise ValueError("Read selector requires tool capability")
         if self.answer and (self.model_class != "local" or self.capabilities != [Capability.CHAT]):
             raise ValueError("Inline answers are restricted to simple local chat")
         return self

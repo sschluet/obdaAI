@@ -227,6 +227,13 @@ await page.getByText('Gelesenen Seitentext ansehen',{exact:true}).click();
 await page.getByText('SYNTHETIC_BROWSER_PAGE_RESULT',{exact:true}).waitFor();
 
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Chat',exact:true}).click();
+await page.locator('button.new').and(page.getByRole('button',{name:'Neues Gespräch',exact:true})).click();
+await page.getByLabel('Nachricht',{exact:true}).fill('SYNTHETIC_HA_QUERY Wartungsbericht');
+await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+await page.getByText('SYNTHETIC_HA_CHAT_REPLY: Wartungsbericht gespeichert, keine Änderungen.',{exact:true}).waitFor();
+await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();
 if(errors.length)throw Error(errors.join('\n'));

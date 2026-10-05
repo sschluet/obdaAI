@@ -888,3 +888,12 @@ Ruff, mypy, TypeScript, UI-Build und Quell-Secret-Scan grün. Neue CI ergänzt
 synthetische Browseroberfläche und echten netzwerkfreien Chromium-Container.
 M3 weiterhin Teilstand; nächster Schritt CI, reviewed own-VM rollout, echte
 HA-Berichtsaufgabe und Chat-Tool-/Task-Integration, danach restliche M3-Abnahmen.
+
+### 2026-10-05: Chat-Systemberichte und natürliche Aufgabenentwürfe
+
+Feste lesende System-/HA-Berichte über lokalen Router im Chat integriert, mit
+ActionReceipt und LOCAL_ONLY-Antwortkontext. Keine Modellargumente, keine Writes,
+kein impliziter Cloudtransfer. Aufgabenentwürfe wählen jetzt auch feste HA-
+Berichtstypen; Speicherung, Termin und Aktivierung bleiben im normalen Dialog.
+321 lokale Tests bestanden, acht PG-Tests lokal übersprungen; Ruff/mypy und
+Secret-Scan grün. UI synthetisch geprüft. Quelle vor Rollout; M3 noch offen.
