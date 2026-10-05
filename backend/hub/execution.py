@@ -228,14 +228,27 @@ async def execute_run(
                             raise asyncio.CancelledError from None
                         raise ExecutionLimitError(str(exc)) from None
                     label = Privacy.LOCAL_ONLY
+                    base = (artifact.get("draft") or {}).get("base")
                     output = (
-                        "Die " + artifact["kind"].upper() + "-Datei wird lokal erstellt. "
-                        "Öffne den Dateibereich dieses Projekts, prüfe alle Vorschauseiten "
+                        (
+                            "Die neue "
+                            + artifact["kind"].upper()
+                            + "-Version "
+                            + str(artifact["revision"])
+                            + " wird lokal erstellt. "
+                            "Die bisherige Version bleibt erhalten. "
+                            if base
+                            else "Die " + artifact["kind"].upper() + "-Datei wird lokal erstellt. "
+                        )
+                        + "Öffne den Dateibereich dieses Projekts, prüfe alle Vorschauseiten "
                         "und gib die Version anschließend zum Download frei. "
                         + (
-                            "Verwendet wurden dein Dateiwunsch und die ausdrücklich angeforderten "
+                            "Verwendet wurden dein Dateiwunsch und die ausdrücklich gebundenen "
                             "Projektquellen; die genauen Belege stehen bei der Dateiversion."
                             if artifact["spec"]["sources"]
+                            else "Verwendet wurden dein Änderungswunsch und die konkret gebundene "
+                            "Ausgangsversion."
+                            if base
                             else "Verwendet wurde nur dein konkreter Dateiwunsch; Projektquellen "
                             "kannst du im Dateidialog ausdrücklich ergänzen."
                         )

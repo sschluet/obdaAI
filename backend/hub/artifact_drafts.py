@@ -177,11 +177,34 @@ async def preview(
                 "revision": row.revision,
                 "spec_sha256": row.spec_sha256,
             }
+            existing_plan = original.plan.model_dump(mode="json")
+            # Exclude only the exact reference block previously appended by us.
+            # The new revision receives its own current server-owned references;
+            # editable user notes/content with the same heading stay intact.
+            prior_citations = json.loads(row.draft_metadata or "{}").get("citations", [])
+            prior_references = [
+                c["reference"] + " · Revision " + str(c["revision"]) for c in prior_citations
+            ]
+            if prior_references and original.plan.kind in {"docx", "pdf"}:
+                last = existing_plan["sections"][-1]
+                if (
+                    last["heading"] == "Verwendete Quellen"
+                    and last["paragraphs"] == prior_references
+                    and not last.get("table")
+                    and not last.get("images")
+                    and len(existing_plan["sections"]) > 1
+                ):
+                    existing_plan["sections"].pop()
+            if prior_references and original.plan.kind == "pptx":
+                suffix = "\nVerwendete Auszüge:\n" + "\n".join(prior_references)
+                for slide in existing_plan["slides"]:
+                    if slide["notes"].endswith(suffix):
+                        slide["notes"] = slide["notes"][: -len(suffix)]
             source_parts.append(
                 ContextPart(
                     source_id="artifact:" + artifact.id,
                     revision=row.revision,
-                    content="EXISTING PLAN:\n" + original.plan.model_dump_json(),
+                    content="EXISTING PLAN:\n" + json.dumps(existing_plan, ensure_ascii=False),
                 )
             )
         for binding in body.sources:
@@ -240,6 +263,8 @@ async def preview(
         "Match the requested length: one sentence means one paragraph with one sentence. "
         "Do not repeat statements, add filler, claim verification or describe how you generated "
         "the file unless requested. Finish the JSON immediately after the requested content. "
+        "For an EXISTING PLAN, retain every part not explicitly requested to change; "
+        "a request about one numbered slide changes only that slide, preserving all others. "
         "The following limits are maximums, never quotas to fill. "
         "Exact shape: " + shape + ". Title/heading max160 characters. "
         "DOCX paragraphs max4000 characters, max30 per section, max29 sections; "

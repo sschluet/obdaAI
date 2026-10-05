@@ -206,3 +206,142 @@ def test_private_chat_and_ambiguous_format_do_not_create_files(setup):
 )
 def test_format_and_slide_count_are_bound_to_explicit_user_text(goal, result):
     assert request_format(goal) == result
+
+
+def file_chat(c, h, chat, goal):
+    response = c.post("/api/conversations/" + chat + "/messages", headers=h, json={"content": goal})
+    return response, c.get("/api/conversations/" + chat).json()["runs"][-1]
+
+
+def test_chat_revision_binds_same_file_preserves_old_version_and_review_gate(setup):
+    app, c, h, cfg, pid, _ = setup
+    provider = FileProvider(DOCUMENT)
+    app.state.providers = provider
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    _, first = file_chat(c, h, chat, "Erstelle eine Word-Datei mit einem Abschnitt.")
+    artifact = first["artifact"]
+    old = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+    provider.output = DOCUMENT.replace("Synthetische Daten.", "Kurz.")
+    response, second = file_chat(c, h, chat, "Kürze die letzte Word-Datei auf einen Abschnitt.")
+    assert "succeeded" in response.text, response.text
+    link = second["artifact"]
+    assert link["artifact_id"] == artifact["artifact_id"] and link["revision"] == 2
+    assert link["base_revision"] == 1 and link["sources"] == []
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    new = next(row for row in rows if row["revision"] == 2)
+    unchanged = next(row for row in rows if row["revision"] == 1)
+    assert unchanged["spec"] == old["spec"] and unchanged["spec_sha256"] == old["spec_sha256"]
+    assert new["draft"]["base"]["revision"] == 1
+    assert new["draft"]["base"]["spec_sha256"] == old["spec_sha256"]
+    assert c.get(test_artifact_api.base(pid, new) + "/download").status_code == 409
+    assert "EXISTING PLAN:" in "\n".join(p.content for p in provider.parts)
+    assert second["provider"] == "local" and second["cost"] is None
+
+
+SLIDES = {
+    "title": "Synthetische Folien",
+    "slides": [
+        {"title": "Bleibt", "bullets": ["Unverändert."], "notes": "Unveränderte Notiz"},
+        {"title": "Kürzen", "bullets": ["Ein längerer synthetischer Satz."], "notes": ""},
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    "invalid", ["none", "other_slide", "title", "missing_slide", "two_targets"]
+)
+def test_numbered_slide_revision_preserves_untargeted_content_and_count(setup, invalid):
+    app, c, h, cfg, pid, _ = setup
+    app.state.providers = FileProvider(json.dumps(SLIDES))
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    _, first = file_chat(c, h, chat, "Erstelle eine PowerPoint mit zwei Folien.")
+    revised = json.loads(json.dumps(SLIDES))
+    revised["slides"][1]["bullets"] = ["Kurz."]
+    if invalid == "other_slide":
+        revised["slides"][0]["notes"] = "Changed"
+    if invalid == "title":
+        revised["title"] = "Changed"
+    provider = FileProvider(json.dumps(revised))
+    app.state.providers = provider
+    goal = {"missing_slide": "Kürze Folie 5.", "two_targets": "Kürze Folie 1 und Folie 2."}.get(
+        invalid, "Kürze Folie 2."
+    )
+    response, run = file_chat(c, h, chat, goal)
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    if invalid == "none":
+        assert "succeeded" in response.text, response.text
+        assert run["artifact"]["artifact_id"] == first["artifact"]["artifact_id"]
+        new = next(r for r in rows if r["revision"] == 2)
+        assert len(new["spec"]["plan"]["slides"]) == 2
+        assert (
+            new["spec"]["plan"]["slides"][0]
+            == next(r for r in rows if r["revision"] == 1)["spec"]["plan"]["slides"][0]
+        )
+    else:
+        assert "succeeded" not in response.text and len(rows) == 1
+        assert run["status"] == "failed"
+        if invalid in {"missing_slide", "two_targets"}:
+            assert provider.calls == 0
+
+
+@pytest.mark.parametrize("drift", ["before", "during", "foreign_link", "other_conversation"])
+def test_chat_revision_does_not_select_unrelated_or_stale_files(setup, drift):
+    from hub.db import Artifact
+
+    app, c, h, cfg, pid, _ = setup
+    app.state.providers = FileProvider(DOCUMENT)
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    _, first = file_chat(c, h, chat, "Erstelle une Word-Datei.")
+    aid = first["artifact"]["artifact_id"]
+
+    def change():
+        with app.state.sessions() as db:
+            db.get(Artifact, aid).revision += 1
+            db.commit()
+
+    if drift == "before":
+        change()
+    if drift == "foreign_link":
+        with app.state.sessions() as db:
+            run = db.get(Run, first["id"])
+            value = json.loads(run.context_snapshot)
+            value["artifact"]["project_id"] = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+            run.context_snapshot = json.dumps(value)
+            db.commit()
+    if drift == "other_conversation":
+        chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    provider = FileProvider(DOCUMENT, change if drift == "during" else None)
+    app.state.providers = provider
+    response, run = file_chat(c, h, chat, "Überarbeite die letzte Word-Datei.")
+    assert "succeeded" not in response.text and run["status"] == "failed"
+    assert len(c.get("/api/projects/" + pid + "/artifacts").json()) == 1
+    assert provider.calls == (1 if drift == "during" else 0)
+
+
+def test_revision_reuses_exact_sources_without_duplicate_reference_section(setup):
+    app, c, h, cfg, pid, spec = setup
+    source_id = spec["sources"][0]["id"]
+    with app.state.sessions() as db:
+        db.add(SourceChunk(source_id=source_id, locator="Page 1", content="Blue evidence."))
+        db.commit()
+    provider = FileProvider(DOCUMENT)
+    app.state.providers = provider
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    response, first = file_chat(
+        c, h, chat, "Erstelle aus den Projektunterlagen eine Word-Datei mit einem Abschnitt."
+    )
+    assert "succeeded" in response.text, response.text
+    provider.output = DOCUMENT.replace("Synthetische Daten.", "Kurz.")
+    response, second = file_chat(
+        c, h, chat, "Überarbeite die letzte Word-Datei mit einem Abschnitt."
+    )
+    assert "succeeded" in response.text, response.text
+    assert second["artifact"]["sources"] == first["artifact"]["sources"]
+    existing = next(part for part in provider.parts if part.content.startswith("EXISTING PLAN:"))
+    original = json.loads(existing.content.split("\n", 1)[1])
+    assert len(original["sections"]) == 1
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    new = next(r for r in rows if r["revision"] == 2)
+    assert len(new["spec"]["plan"]["sections"]) == 2
+    assert new["spec"]["plan"]["sections"][-1]["heading"] == "Verwendete Quellen"
+    assert new["draft"]["citations"][0]["source_id"] == source_id

@@ -61,6 +61,9 @@ JSON: {"capabilities":["web"],"model_class":"local",
 User: Create an n8n workflow every evening.
 JSON: {"capabilities":["task","workflow"],"model_class":"local",
 "source_scopes":[],"reason":"scheduled workflow","answer":null}
+User: Kürze Folie 2 der zuletzt in diesem Gespräch erzeugten PowerPoint.
+JSON: {"capabilities":["artifact"],"model_class":"local",
+"source_scopes":[],"reason":"Dateiversion überarbeiten","answer":null}
 User: Check a multistep proof of a distributed algorithm, reply briefly.
 JSON: {"capabilities":["chat"],"model_class":"cloud",
 "source_scopes":[],"reason":"complex proof checking","answer":null}

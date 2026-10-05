@@ -11,8 +11,48 @@ from sqlalchemy.orm import Session
 from hub.artifact_api import CreateArtifact, artifact_service
 from hub.artifact_drafts import DraftInput, preview
 from hub.artifact_specs import ArtifactSpec, SourceBinding
-from hub.artifacts import digest
-from hub.db import ArtifactRevision, Conversation, Message, Run, Source
+from hub.artifacts import digest, spec_for
+from hub.db import Artifact, ArtifactRevision, Conversation, Message, Run, Source
+
+
+def requests_revision(goal: str) -> bool:
+    return bool(re.search(r"\b(überarbeite|ändere|kürze|revise|shorten|update)\b", goal, re.I))
+
+
+def chat_base(db: Session, chat_id: str, project_id: str, run: Run) -> ArtifactRevision:
+    # Only a file linked by a successful run in this exact conversation. Neither
+    # arbitrary project files nor model-selected IDs establish an editing target.
+    previous = db.scalars(
+        select(Run)
+        .where(
+            Run.conversation_id == chat_id,
+            Run.status == "succeeded",
+            Run.id != run.id,
+            Run.started <= run.started,
+        )
+        .order_by(Run.started.desc(), Run.id.desc())
+        .limit(50)
+    )
+    for earlier in previous:
+        link = json.loads(earlier.context_snapshot or "{}").get("artifact")
+        if not link:
+            continue
+        artifact = db.get(Artifact, link["artifact_id"])
+        row = db.get(ArtifactRevision, (link["artifact_id"], link["revision"]))
+        if (
+            link["project_id"] != project_id
+            or not artifact
+            or artifact.project_id != project_id
+            or not row
+            or row.revision != artifact.revision
+            or row.status in {"failed", "cancelled"}
+            or spec_for(row).plan.kind != link["kind"]
+        ):
+            raise ValueError(
+                "Letzte Chat-Datei ist nicht mehr aktuell; Version im Dateidialog wählen"
+            )
+        return row
+    raise ValueError("In diesem Gespräch fehlt eine konkrete Datei für die Änderung")
 
 
 def requests_project_sources(goal: str) -> bool:
@@ -27,8 +67,10 @@ def requests_project_sources(goal: str) -> bool:
     return bool(positive)
 
 
-def request_format(goal: str) -> tuple[str, int]:
-    if not re.search(r"\b(erstelle|erzeuge|generiere|schreibe|create|generate|make)\b", goal, re.I):
+def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
+    if not requests_revision(goal) and not re.search(
+        r"\b(erstelle|erzeuge|generiere|schreibe|create|generate|make)\b", goal, re.I
+    ):
         raise ValueError("Eine konkrete Bitte zur Dateierstellung fehlt")
     formats = []
     for kind, pattern in [
@@ -91,7 +133,7 @@ def request_format(goal: str) -> tuple[str, int]:
             raise ValueError("Folienanzahl bitte eindeutig als Zahl von 1 bis 30 angeben")
     if len(set(counts)) > 1 or (counts and not 1 <= int(counts[0]) <= 30):
         raise ValueError("Eine eindeutige Anzahl von 1 bis 30 Folien angeben")
-    return formats[0], int(counts[0]) if counts else 3
+    return formats[0], int(counts[0]) if counts else default_slide_count
 
 
 async def create_from_chat(
@@ -117,7 +159,9 @@ async def create_from_chat(
         revision, goal, sha = message.revision, message.content, digest(message.content)
         if len(goal) > 4000:
             raise ValueError("Dateiwunsch darf höchstens 4000 Zeichen enthalten")
-        sources = []
+        base = chat_base(db, chat_id, project_id, run) if requests_revision(goal) else None
+        original = spec_for(base) if base else None
+        sources = list(original.sources) if original else []
         if requests_project_sources(goal):
             originals = list(db.scalars(select(Source).where(Source.project_id == project_id)))
             if not originals or len(originals) > 4 or any(s.status != "ready" for s in originals):
@@ -125,20 +169,61 @@ async def create_from_chat(
                     "Projektquellen benötigen 1 bis 4 fertig eingelesene Originale; "
                     "eine Teilmenge im Dateidialog auswählen"
                 )
-            sources = [
+            selected = [
                 SourceBinding(id=s.id, revision=s.revision, sha256=s.sha256)
                 for s in sorted(originals, key=lambda source: source.id)
             ]
-    kind, count = request_format(goal)
+            if original and selected != list(original.sources):
+                raise ValueError("Quellen einer Folgeversion im Dateidialog ausdrücklich ändern")
+            sources = selected
+        default_count = (
+            len(original.plan.slides) if original and original.plan.kind == "pptx" else 3
+        )
+        format_goal = goal
+        if original and not re.search(
+            r"\b(word|docx|powerpoint|pptx|präsentation|presentation|pdf)\b", goal, re.I
+        ):
+            format_goal += " " + original.plan.kind
+        kind, count = request_format(format_goal, default_count)
+        if original and original.plan.kind != kind:
+            raise ValueError("Folgeversion behält ihr Format; Umwandlung im Dateidialog wählen")
+        targets = set(re.findall(r"\b(?:folie|slide)\s+(\d{1,3})\b", goal, re.I)) if base else set()
+        if targets and (
+            not original
+            or original.plan.kind != "pptx"
+            or len(targets) != 1
+            or not 1 <= int(next(iter(targets))) <= len(original.plan.slides)
+            or count != len(original.plan.slides)
+        ):
+            raise ValueError(
+                "Eine vorhandene Folie eindeutig auswählen; sonst Dateidialog verwenden"
+            )
+        if targets and sources:
+            raise ValueError("Einzelne quellengebundene Folien im Dateidialog überarbeiten")
     # The latest user's goal and explicitly requested current project originals
     # are bound. History/memory/retrieval never supply implicit write instructions.
     section_count = (
         1 if re.search(r"\b(?:ein(?:en|em)?|1|one)\s+(?:abschnitt|section)\b", goal, re.I) else None
     )
     body = DraftInput(
-        goal=goal, kind=kind, slide_count=count, section_count=section_count, sources=sources  # type: ignore[arg-type]
+        goal=goal,
+        kind=kind,  # type: ignore[arg-type]
+        slide_count=count,
+        section_count=section_count,
+        sources=sources,
+        base_artifact_id=base.artifact_id if base else None,
+        base_revision=base.revision if base else None,
     )
     proposal = await preview(factory, cfg, project_id, body, provider)
+    proposed = ArtifactSpec.model_validate(proposal["spec"])
+    if targets and original and original.plan.kind == "pptx" and proposed.plan.kind == "pptx":
+        target = int(next(iter(targets))) - 1
+        if proposed.plan.title != original.plan.title or any(
+            slide != original.plan.slides[index]
+            for index, slide in enumerate(proposed.plan.slides)
+            if index != target
+        ):
+            raise ValueError("Entwurf verändert weitere Folien; keine neue Version gespeichert")
 
     def guard(db: Session) -> None:
         current = db.scalar(select(Run).where(Run.id == run_id).with_for_update())
@@ -187,6 +272,7 @@ async def create_from_chat(
             "message_sha256": sha,
             "sources": [source.model_dump(mode="json") for source in sources],
             "requires_review": True,
+            "base_revision": base.revision if base else None,
         }
         current.context_snapshot = json.dumps(snapshot, ensure_ascii=False)
         current.provider = "local"
@@ -196,10 +282,11 @@ async def create_from_chat(
     save = artifact_service(cfg, factory, guard=guard, on_created=linked)
     return await save(
         project_id,
-        None,
+        base.artifact_id if base else None,
         CreateArtifact(
             request_id=uuid.UUID(run_id),
-            spec=ArtifactSpec.model_validate(proposal["spec"]),
+            spec=proposed,
+            expected_revision=base.revision if base else None,
             draft_token=proposal["draft_token"],
         ),
     )
