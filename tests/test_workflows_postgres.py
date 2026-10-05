@@ -102,6 +102,8 @@ def test_duplicate_callbacks_commit_one_run_and_queue_job(tmp_path, monkeypatch)
             )
     finally:
         with app.state.sessions() as db:
+            # Queue delete triggers resolve their schema-local helper relations.
+            db.execute(text("SET LOCAL search_path TO hub_queue, public"))
             db.execute(
                 text(
                     "DELETE FROM hub_queue.procrastinate_jobs WHERE args->>'run_id' "
