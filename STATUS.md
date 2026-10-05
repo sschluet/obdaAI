@@ -43,6 +43,28 @@ Restart-/Offline-Tests und expliziter globaler Wissenschat sind implementiert un
 bestanden, ersetzen aber keine echte A09-Abnahme am vorhandenen Vault.
 M2 bleibt deshalb unvollständig; PR #2 bleibt Draft.
 
+## Zugriffsfreigabeprüfung 05.10.2026
+
+Auf „weitermachen“ wurde die Einrichtung der zuvor konkret beschriebenen Zugänge
+vorbereitet. Die automatische Freigabeprüfung lehnte den ersten Mutationsaufruf ab:
+die Antwort sei für SSHFS-Installation, Dienstkonten und neue Zugriffsschlüssel nicht
+ausdrücklich genug. Der Aufruf wurde nicht ausgeführt; keine neuen Zugänge aktiviert.
+Eine konkrete gebündelte Zustimmung wurde abgefragt. Unabhängig davon sind die
+reviewbaren SSH-/Compose-Vorlagen und Live-Abnahme-/Rückfallkriterien unter
+deploy/access/ vorbereitet. Noch keine bestehende Vault-/Such- oder Sync-Konfiguration
+geändert. Nach expliziter Freigabe aktuelle Rechte/Mounts nochmals prüfen und die
+geprüfte Einrichtung vornehmen; erst nach echter M2-Abnahme M3 implementieren.
+
+Der Benutzer hat die konkret gebündelte Einrichtung anschließend ausdrücklich mit
+„Ja, genau diese begrenzte Einrichtung ist erlaubt“ freigegeben. Eigene VM: SSHFS
+und zwei neue Identitäten eingerichtet. Server: begrenzte SFTP-/Forwarding-Konten,
+readonly Vault-Bindmount, ausschließlich Memory writable und .obsidian maskiert;
+SSH-Konfiguration geprüft/neugeladen, bestehender Sync aktiv. Neue Units verbinden
+sich; ein synthetischer Filetest bestätigt read/write/rename und Sperre außerhalb
+Memory. Die App-Anbindung und vollständige Live-Abnahme laufen noch. Vor Indexierung
+wird PostgreSQL-/Dateisperrung für parallele API-/Worker-Abgleiche getestet; Backups
+erhalten neue Zugangsunits/Identitäten und den kanonischen Memory-Bereich.
+
 ## M3-Folgeauftrag 05.10.2026
 
 Der Benutzer beauftragt alle M3-Funktionen nach Etablierung sämtlicher M2-Funktionen.

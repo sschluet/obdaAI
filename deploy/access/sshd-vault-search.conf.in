@@ -1,0 +1,30 @@
+# REVIEW TEMPLATE ONLY. Render, inspect sshd -T for both accounts, validate sshd -t,
+# then reload only after explicit operator authorization. No old accounts matched.
+Match User obdaai-vault
+    AuthenticationMethods publickey
+    PasswordAuthentication no
+    KbdInteractiveAuthentication no
+    AuthorizedKeysFile /etc/ssh/authorized_keys/obdaai-vault
+    ChrootDirectory /srv/obdaai-vault
+    ForceCommand internal-sftp -d /vault -u 0007
+    AllowTcpForwarding no
+    AllowStreamLocalForwarding no
+    AllowAgentForwarding no
+    X11Forwarding no
+    PermitTTY no
+    PermitUserRC no
+Match User obdaai-search
+    AuthenticationMethods publickey
+    PasswordAuthentication no
+    KbdInteractiveAuthentication no
+    AuthorizedKeysFile /etc/ssh/authorized_keys/obdaai-search
+    AllowTcpForwarding local
+    AllowStreamLocalForwarding no
+    PermitOpen 127.0.0.1:8888
+    PermitListen none
+    AllowAgentForwarding no
+    X11Forwarding no
+    PermitTTY no
+    PermitUserRC no
+    MaxSessions 0
+Match all

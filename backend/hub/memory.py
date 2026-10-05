@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from hub.db import Memory, MemoryRevision
@@ -64,7 +64,25 @@ def encoded(row: Memory) -> str:
     return "<!-- obdaai-memory: " + json.dumps({"id": row.id}) + " -->\n" + row.content
 
 
+def serialize(db: Session) -> None:
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(791103043)"))
+
+
 def reconcile(
+    db: Session, root: Path, *, allow_memory_writes: bool | None = None
+) -> dict[str, Any]:
+    serialize(db)
+    if allow_memory_writes:
+        lock = vault_path(root, "AI/Memory/.obdaai-write.lock")
+        lock.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
+        with lock.open("a+") as guard:
+            fcntl.flock(guard, fcntl.LOCK_EX)
+            return _reconcile(db, root, allow_memory_writes=allow_memory_writes)
+    return _reconcile(db, root, allow_memory_writes=allow_memory_writes)
+
+
+def _reconcile(
     db: Session, root: Path, *, allow_memory_writes: bool | None = None
 ) -> dict[str, Any]:
     vault_path(root, "AI/Memory")
@@ -191,15 +209,23 @@ def reconcile(
 
 
 def write(db: Session, root: Path, row: Memory, content: str, expected_revision: int) -> None:
+    serialize(db)
     if not row.writable or not row.path.startswith("AI/Memory/"):
         raise PermissionError("Schreiben ausschließlich in freigegebenem AI/Memory")
     if row.revision != expected_revision or row.deleted:
         raise ValueError("Memory geändert oder gelöscht; zuerst synchronisieren")
-    path = vault_path(root, row.path)
-    path.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
     lock = vault_path(root, "AI/Memory/.obdaai-write.lock")
+    lock.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
     with lock.open("a+") as guard:
         fcntl.flock(guard, fcntl.LOCK_EX)
+        if not db.is_modified(row):
+            db.refresh(row)
+        if row.revision != expected_revision or row.deleted:
+            raise ValueError("Memory geändert oder gelöscht; zuerst synchronisieren")
+        if not row.writable or not row.path.startswith("AI/Memory/"):
+            raise PermissionError("Schreiben ausschließlich in freigegebenem AI/Memory")
+        path = vault_path(root, row.path)
+        path.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
         if path.exists():
             _, current = decode(path.read_text(encoding="utf-8"))
             if digest(current) != row.sha256:

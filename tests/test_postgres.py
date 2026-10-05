@@ -171,6 +171,53 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         assert r.status_code == 200
         assert client.get("/api/conversations?q=Haus").json()[0]["id"] == chat_id
         assert client.get("/api/conversations?q=Geheimbegriff").json() == []
+    # Real PostgreSQL serialization prevents overlapping API/worker Vault scans
+    # from importing the same canonical note twice before either commits.
+    import concurrent.futures
+    import tempfile
+    import time
+    from pathlib import Path
+
+    from hub.db import Memory
+    from hub.memory import reconcile
+
+    with tempfile.TemporaryDirectory() as directory:
+        vault = Path(directory)
+        (vault / "AI/Memory").mkdir(parents=True)
+        (vault / "synthetic.md").write_text("SYNTHETIC SERIALIZED VAULT")
+
+        def second_scan():
+            with factory() as db:
+                result = reconcile(db, vault, allow_memory_writes=True)
+                db.commit()
+                return result
+
+        with factory() as first, concurrent.futures.ThreadPoolExecutor() as pool:
+            assert reconcile(first, vault, allow_memory_writes=True)["files"] == 1
+            future = pool.submit(second_scan)
+            try:
+                waiting = False
+                for _ in range(100):
+                    with engine.connect() as probe:
+                        waiting = bool(
+                            probe.scalar(
+                                text(
+                                    "SELECT count(*) FROM pg_locks WHERE locktype='advisory' "
+                                    "AND objid=791103043 AND NOT granted"
+                                )
+                            )
+                        )
+                    if waiting:
+                        break
+                    time.sleep(0.01)
+                assert waiting and not future.done()
+                first.commit()
+                assert future.result(timeout=5)["files"] == 1
+            finally:
+                first.rollback()  # Also releases the lock on a failed assertion.
+            with factory() as db:
+                imported = list(db.scalars(select(Memory).where(Memory.path == "synthetic.md")))
+                assert len(imported) == 1 and not imported[0].deleted
     engine.dispose()
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")

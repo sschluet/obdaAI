@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.config import Settings
 from hub.db import Memory, MemoryRevision, Project
 from hub.knowledge_api import Auth
-from hub.memory import digest, reconcile, revision, vault_path, write
+from hub.memory import digest, reconcile, revision, serialize, vault_path, write
 
 
 class MemoryInput(BaseModel):
@@ -87,9 +87,12 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
             raise HTTPException(409, "Memory-Schreibbereich noch nicht freigegeben")
         target = root()
         with factory() as db:
+            serialize(db)
             previous = db.get(Memory, body.id)
             text = "# " + body.title + "\n\n" + body.content
             if previous:
+                if previous.conflict.startswith("pending:"):
+                    raise HTTPException(409, "Memory-Schreibvorgang läuft; zuerst synchronisieren")
                 if previous.content != text or previous.project_id != body.project_id:
                     raise HTTPException(409, "Memory-ID bereits anders verwendet")
                 return info(previous)
@@ -118,9 +121,12 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
         if not cfg.vault_writable or body.id != memory_id:
             raise HTTPException(409, "Schreibfreigabe oder Memory-ID ungültig")
         with factory() as db:
-            row = db.scalar(select(Memory).where(Memory.id == memory_id).with_for_update())
+            serialize(db)
+            row = db.scalar(select(Memory).where(Memory.id == memory_id))
             if not row or row.project_id != body.project_id:
                 raise HTTPException(404, "Memory im Scope nicht gefunden")
+            if row.conflict.startswith("pending:"):
+                raise HTTPException(409, "Memory-Schreibvorgang läuft; zuerst synchronisieren")
             if row.conflict and body.resolve_vault_sha256:
                 from hub.memory import decode
 
@@ -163,7 +169,8 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
         if not cfg.vault_writable:
             raise HTTPException(409, "Memory-Schreibbereich nicht freigegeben")
         with factory() as db:
-            row = db.scalar(select(Memory).where(Memory.id == memory_id).with_for_update())
+            serialize(db)
+            row = db.scalar(select(Memory).where(Memory.id == memory_id))
             if not row or not row.writable or not row.path.startswith("AI/Memory/"):
                 raise HTTPException(404, "Schreibbares Memory nicht gefunden")
             if row.revision != expected_revision or row.conflict:

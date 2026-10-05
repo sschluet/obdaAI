@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.budgets import ExecutionLimitError, reserve, settle
 from hub.config import Settings
 from hub.db import Conversation, Memory, Message, ProviderConfig, Research, Run, RunEvent
-from hub.memory import digest
+from hub.memory import digest, serialize
 from hub.memory import write as write_memory
 from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 from hub.provider_settings import fresh_cloud_prices, runtime_provider
@@ -134,6 +134,7 @@ async def execute_run(
                 )
                 remembered = remember[1].strip()
                 with factory() as db:
+                    serialize(db)
                     memory = db.get(Memory, identifier)
                     if memory is None:
                         memory = Memory(
