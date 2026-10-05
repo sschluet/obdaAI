@@ -1,3 +1,191 @@
+# obdaAI — Status 05.10.2026
+
+## M2 vollständig abgenommen · 05.10.2026
+
+Funktionaler Stand `92babc4` auf der eigenen VM installiert, CI 37281892751 grün,
+Schema 0011, beide APIs gesund. Lokal 98 Tests bestanden; zusätzlicher PostgreSQL-
+Test in CI. Browser: mobile blaue Oberfläche, erhaltener Entwurf bei HTTP 409,
+aktuelle Einzelnotiz zum Vergleich, ausdrückliche Hash-/Revisionsbindung, Revision 6.
+
+Echte M2-Abnahme am vorhandenen Vault und Suchdienst bestanden: neun Dateiformate,
+Original-SHA/Fundstellen/Decimal/Scopeisolation und unverändertes lokales Modell;
+kanonisches Schreiben, idempotentes Anlegen, externe Änderung geschützt, explizite
+Auflösung, stabile ID nach Rename, Versionen, wiederherstellbare Archivierung,
+kein Wiederbeleben nach Abgleich und tatsächlichem Software-Neustart. Ungültiger
+Vergleichshash in der installierten API abgewiesen, Inhalt/Revision unverändert.
+Bestehender Syncthing indexiert sowohl die eingehende synthetische Note als auch
+von der App erzeugtes Memory; Verfügbarkeit jeweils auf verbundenem Peer bestätigt.
+Globaler Vault-Chat und explizites `Merke dir:` mit echtem lokalen Modell bestanden.
+Echte Webrecherche und Chat-Websuche liefern Quellen; ohne öffentliche Freigabe 403,
+exakter Suchtext und Idempotenz bestätigt, kein Cloud-Modellaufruf in M2.
+
+Erweiterte verschlüsselte Off-VM-Sicherung und isolierter Restore bestanden:
+Schema 0011, 40 Originaldateihashes, sechs Memory-Dateien inklusive Archiv,
+Provider-Masterkey und neue SSH-Identitäten/Units; private Schlüssel passen zu
+öffentlichen Identitäten. Fehlender Mount erhält den restaurierten PG-Index;
+simulierter Transportfehler nach echten Reads rollt Änderungen zurück. Diese
+Ausfalltests liefen auf der isolierten Kopie; der produktive Mount wurde nicht
+unterbrochen. Vorhandene Proxmox-Konfiguration unverändert. Private Belege liegen
+unter `.local/deployment/`, keine Runtime-Daten oder Secrets in Git.
+
+HTTPS für ausdrücklich freigegebenes 192.168.18.0/24 auf Port 443 ergänzt, bisherige
+Netze erhalten, Rollbackkopie gesichert. Vom WorkMac erneut zertifikatsgeprüft HTTP
+200 für Startseite und Health. Direkte TLS-Browserprüfung durch URL-Richtlinie
+verweigert; kein Umweg. Lange Vollabgleiche serialisieren Memorywrites; 1.556
+Notizen wurden in einem separaten vollständigen Dateilesetest in 68,559 s gelesen.
+Das ist kein End-to-End-API-Latenzversprechen oder eine Produktionsreifeerklärung.
+
+M3 vollständig beauftragt und vorbereitet, noch nicht implementiert. Lesend
+bestätigt: vorhandenes n8n 2.7.5 läuft, Health 200, API ohne eigenen Schlüssel 401.
+Keine alten Credentials übernommen; neue konkrete Integrationszugriffe separat
+freigeben. M3/M4/M5 und deren Akzeptanzfälle bleiben offen.
+
+## Historische M2-Checkpoints
+
+Implementiert: Projekträume, scoped Quellenchat, unveränderte gehashte Originale,
+asynchrone Extraktion, Office-/PDF-/Text-/Tabellen-/Bildformate, Fundstellen, lokale OCR,
+strukturierte Decimal-Tabellenprüfung, öffentliche SearXNG-Recherche und gezielter
+allowlistgeschützter HTML-Abruf. Oberfläche für Projekte/Uploads/Suche/Quellen und
+Memory mit Herkunft, Revisionen und Konfliktvergleich; kanonisches Markdown,
+read-only Allgemeinvault, begrenzte Memorywrites, Tombstones und Crash-Reconciliation.
+Direktes `Merke dir:` ist source-/revisiongebunden und idempotent, ohne Modellwrite.
+
+Finaler Codecheckpoint `da6b671`: CI 37269020685 vollständig grün, 91 Tests
+einschließlich PostgreSQL-Migration Upgrade/Downgrade/Upgrade und Queue-Recovery.
+Lokal 90 bestanden, ein PostgreSQL-Test separat in CI. Browserprüfungen mit
+synthetischen Daten: Projekte, Mehrfachupload, Fundstellen, Decimal, Quellenchat,
+Memoryrevisionen sowie öffentliche Chat-Webfreigabe; mobile UI ohne Überlauf.
+Typen/Lint, Secret-Scans und reproduzierbarer Containerbuild bestanden.
+
+Eigene VM installiert `da6b671`, Schema `0011`, beide APIs gesund. Echte isolierte
+Dateipipeline bestanden: neun Formate einschließlich Scan-PDF/Bild-OCR, Original-
+downloads mit SHA-Abgleich, CSV/XLSX-Decimal-Summen, PDF-Fundstelle und Projekt-
+isolation. Echtes unverändertes Mac-mini-Modell nennt 37 EUR mit source.pdf/Seite 1.
+Parser ohne Netzwerk, ohne Vault/Secrets, nonroot und read-only Root; Landlock
+verweigert andere Quelldateien und Systemdateien. Separate Quellenworker erhalten
+Chatpriorität. Keine realen OpenRouter-Aufrufe oder zusätzlichen Cloudkosten in M2.
+
+Verschlüsselte Sicherung vom 05.10.2026 außerhalb der VM kopiert und SHA-geprüft.
+Isolierter DB-Restore: Schema 0011, 31 Gespräche/58 Nachrichten, alle 40 gesicherten
+Originale gegen gespeicherte SHA-Werte geprüft; gesicherter Masterkey entschlüsselt
+das bestehende Providersecret. Keine Klartextdump-Datei, Wiederherstellungsschlüssel
+bleibt auf dem WorkMac. Temporäre Restore-DB entfernt. Vorhandene Proxmox-
+Konfiguration gegen Baseline unverändert; Rückfallimage/Konfigurationskopie erhalten.
+Private Belege bleiben im ignorierten `.local/deployment/`.
+
+Der hier zunächst offene vorhandene Vault-/Search-Zugang und die A09-/Restore-
+Abnahme wurden am 05.10.2026 abgeschlossen; aktuelle Nachweise stehen oben.
+Die folgenden Checkpoints dokumentieren den jeweiligen früheren Prüfstand.
+
+Aktueller Codecheckpoint `c9ce59a`: CI 37275069080 grün, lokal 93 Tests bestanden
+und PostgreSQL separat in CI. Der Index verwirft verlorene/ersetzte Mounts und
+Transportfehler; passende globale Notizen werden vor dem 500-Einträge-Limit gefiltert.
+SSHFS-Cache deaktiviert, fsync für Datei/Verzeichnis am echten Mount akzeptiert.
+Eigene VM auf `c9ce59a` aktualisiert; beide API-Endpunkte gesund. Laufzeitkonfiguration
+bindet den begrenzten Vault und Suchrelay ein, Parser weiterhin ohne Vaultvolume.
+Vorherige Konfigurationen unter `/etc/obdaai/rollback-m2-c9ce59a` gesichert.
+Die abschließende Diagnose benutzte versehentlich `Settings()` statt `from_env()`;
+ihre fehlgeschlagene Assertion ist daher kein Nachweis eines Mountfehlers.
+Eine korrigierte Laufzeit- und API-Prüfung steht noch aus. Weitere Remote-Aufrufe
+wurden von der automatischen Freigabeprüfung wegen Modellkapazität nicht ausgeführt,
+ohne Sicherheitsentscheidung. Keine erneute Zugriffsfreigabe benötigt.
+
+## Zugriffsfreigabeprüfung 05.10.2026
+
+Auf „weitermachen“ wurde die Einrichtung der zuvor konkret beschriebenen Zugänge
+vorbereitet. Die automatische Freigabeprüfung lehnte den ersten Mutationsaufruf ab:
+die Antwort sei für SSHFS-Installation, Dienstkonten und neue Zugriffsschlüssel nicht
+ausdrücklich genug. Der Aufruf wurde nicht ausgeführt; keine neuen Zugänge aktiviert.
+Eine konkrete gebündelte Zustimmung wurde abgefragt. Unabhängig davon sind die
+reviewbaren SSH-/Compose-Vorlagen und Live-Abnahme-/Rückfallkriterien unter
+deploy/access/ vorbereitet. Noch keine bestehende Vault-/Such- oder Sync-Konfiguration
+geändert. Nach expliziter Freigabe aktuelle Rechte/Mounts nochmals prüfen und die
+geprüfte Einrichtung vornehmen; erst nach echter M2-Abnahme M3 implementieren.
+
+Der Benutzer hat die konkret gebündelte Einrichtung anschließend ausdrücklich mit
+„Ja, genau diese begrenzte Einrichtung ist erlaubt“ freigegeben. Eigene VM: SSHFS
+und zwei neue Identitäten eingerichtet. Server: begrenzte SFTP-/Forwarding-Konten,
+readonly Vault-Bindmount, ausschließlich Memory writable und .obsidian maskiert;
+SSH-Konfiguration geprüft/neugeladen, bestehender Sync aktiv. Neue Units verbinden
+sich; ein synthetischer Filetest bestätigt read/write/rename und Sperre außerhalb
+Memory. Die App-Anbindung und vollständige Live-Abnahme laufen noch. Vor Indexierung
+wird PostgreSQL-/Dateisperrung für parallele API-/Worker-Abgleiche getestet; Backups
+erhalten neue Zugangsunits/Identitäten und den kanonischen Memory-Bereich.
+
+## Live-Abnahme und Erreichbarkeit 05.10.2026
+
+Designcommit `8e0eb11` gepusht, CI 37275715883 grün und auf der eigenen VM
+installiert; helle/dunkle/mobile Blautöne in synthetischer UI visuell geprüft,
+Styles über beide echten API-Endpunkte bestätigt. Keine Funktionsänderung.
+
+Vorheriger Prüfstand `9645f94` (CI 37276615918 grün): descriptorbasierter begrenzter
+Vault-Lesepfad, ohne Symlinkfollowing. 30 echte Notizen: 8,267 s vorher, 2,381 s
+nachher. Lokal 94 Tests bestanden; echte Mountattestation und begrenzter Search-
+SSH-Zugang geprüft (anderer Port und Shell verweigert). Vorhandener Syncthing-
+Dienst aktiv, kanonischer Vault konfiguriert und lokale Sync-API erreichbar.
+Echte App-Webrecherche bestanden: zehn Treffer, exakter öffentlicher Suchtext,
+ohne Freigabe HTTP 403 und identische Anfrage-ID ohne erneute Recherche.
+
+Vault-Gesamtabnahme weiter offen: Inhaltsduplikate verursachen wiederholte
+Remote-Pfadprüfungen bei Renameerkennung (bis 95 gleiche Notizen). `552bfa8`
+begrenzt das gesamte Inventar und benutzt dessen Pfadmenge; lokal 95 Tests
+bestanden, PostgreSQL separat in grüner CI 37277172434. Dieser Stand wurde anschließend installiert und durch weitere Optimierungen ersetzt.
+Vollständige Vault-Abnahme siehe aktuelle Nachweise unten.
+
+HTTPS-Meldung des Benutzers bestätigt: beide APIs healthy, VM-lokales HTTPS
+zertifikatsgeprüft HTTP 200. Mac routet über en7 / 192.168.18.248, VM empfängt
+TCP SYN von genau dieser Adresse und verweigert sie gemäß bisheriger Allowlist
+(192.168.117.0/24, 172.17.50.0/24). Konkrete Ergänzung nur dieses Clients /32
+für HTTPS vorbereitet. Benutzer hat ausdrücklich stattdessen das gesamte Netz
+192.168.18.0/24 freigegeben. Auf eigener VM ergänzt, bisherige Konfiguration unter
+/etc/obdaai/rollback-https-network-19216818024 gesichert. Vom WorkMac aus
+zertifikatsgeprüfte Startseite und Healthcheck erneut HTTP 200; keine andere
+Netzfreigabe geändert. Browser-Tool verweigert die direkte Seitenprüfung gemäß
+URL-Richtlinie; kein Umweg verwendet.
+
+Weitere echte M2-Abnahme: eigene synthetische Note unter bestehender Sync-UID
+angelegt, lokaler Syncthing-Index und Verfügbarkeit auf verbundenem Peer bestätigt.
+Globaler Wissenschat mit echtem lokalem Modell bestanden, ausschließlich diese
+synthetische Note im Kontext. Explizites `Merke dir:` kanonisch und idempotent.
+Belege: ignorierte m2-syncthing-live.json / m2-memory-chat-live.json.
+
+Die automatische Freigabeprüfung verweigerte vorübergehendes Stoppen des
+Quellenworkers für den Test; nicht ausgeführt und nicht umgangen. Tests liefen
+stattdessen mit normaler Serialisierung. Vollständige Scan-/Writeabnahme bleibt
+offen, weil lang laufende Hintergrundscans die Schreibfreigabe verzögern.
+`c252b05` verwendet pro Ordner verankerte Deskriptoren für Geschwisterdateien:
+30 echte Notizen 2,928 → 0,744 s. Lokal 96 Tests bestanden, CI 37278911672 grün.
+Dieser Stand wurde installiert; keine andere Dienstunterbrechung für Abnahmen
+genehmigt/ausgeführt. Erweitertes Backup-/Restore-
+Skript für neue Schlüssel/Units/Memory vorbereitet; noch keine neue Restore-Abnahme.
+
+Aktuell installiert `502e1c2`, CI 37280251178 grün. Begrenzte, verankerte
+Verzeichniskette statt wiederholter Ancestor-Öffnungen: 1.556 echte Notizen,
+Inventar und vollständige Lektüre in 68,559 Sekunden, keine Lesefehler. Das ist
+ein Dateilesetest; die vollständige API-/DB-Abnahme läuft gesondert.
+
+Neue Editor-Korrektur: HTTP-409 lädt die aktuelle Fassung zum ausdrücklichen
+Vergleich und behält den Entwurf. Normales Speichern bleibt während des Vergleichs
+gesperrt. Eine Übernahme prüft den verglichenen Hash auch nach bereits erfolgtem
+Hintergrundabgleich. Synthetischer mobiler Browsercheck: externe Änderung ->
+Sync -> veralteter Editor abgelehnt -> Entwurf erhalten -> Vergleich -> ausdrücklich
+bestätigte Übernahme, Revision 6. Gezielter Einzelnotizabruf nach HTTP 409
+verifiziert; der Vergleich ist unabhängig von der 100-Treffer-Listenbegrenzung. Screenshot nur lokale Fixture. Backend lokal
+98 Tests bestanden, ein PostgreSQL-Test für CI; Ruff/mypy und Frontendbuild grün.
+Diese Editor-Korrektur ist noch nicht auf der VM installiert.
+
+## M3-Folgeauftrag 05.10.2026
+
+Der Benutzer beauftragt alle M3-Funktionen nach Etablierung sämtlicher M2-Funktionen.
+Konkrete Reihenfolge, A08/A10-A12-Abnahme, Integrationsvorbedingungen und aktuelle
+Primärquellen sind in docs/m3-plan.md vorbereitet. M3-Code ist noch nicht implementiert.
+Die Reihenfolge bleibt M2-Abschluss → M3. Die begrenzte Vault-/Suchzugangsfreigabe
+liegt inzwischen ausdrücklich vor und ist eingerichtet. Keine automatischen
+Produktivworkflows oder Home-Assistant-Änderungen aktiviert. Nächster Schritt:
+echte M2-Abnahme und erweiterten Restore abschließen, anschließend M3 umsetzen.
+
+---
+
 # obdaAI — Status 04.10.2026
 
 M1 ist implementiert und auf der eigenen Proxmox-VM mit echten lokalen und OpenRouter-

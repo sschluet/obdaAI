@@ -185,3 +185,19 @@ IPv4-Ziele für den offiziellen Host und DNS zum vorhandenen Stubresolver; IPv6 
 Provider-Schlüssel über die authentifizierte API/UI verschlüsselt speichern; Modell aus
 dem echten Katalog wählen, Verbindung testen und ein kleines positives Budget festlegen.
 Private Gespräche bleiben unabhängig davon lokal. Details: [Providerbetrieb](../docs/providers.md).
+
+## M2-Datenverarbeitung
+
+Vor Start die eigenen Verzeichnisse `/var/lib/obdaai/sources` und
+`/var/lib/obdaai/parser-results` mit Eigentümer 10001:10001, Modus 0700 erzeugen.
+Runtime: `HUB_SOURCE_DIR=/sources`, `HUB_PARSER_RESULT_DIR=/parser-results`.
+Compose startet zusätzlich `source-worker` und den strikt netzwerklosen `parser`.
+Der Parser benötigt Linux Landlock ABI >=3; fehlende Unterstützung ist ein Fehler,
+kein Anlass, Dateisystem- oder Netzwerkisolation zu deaktivieren.
+Backup umfasst die eigenen Originale und Ergebnisse zusammen mit DB/Config.
+
+Vorhandenen Vault und Webdienst erst lesend inventarisieren. Für dauerhafte Verbindungen
+eigene, begrenzte Zugänge verwenden; keine älteren Admin-/Hermes-Credentials übernehmen.
+`HUB_VAULT_DIR` / `HUB_VAULT_WRITABLE`, `HUB_SEARCH_URL` / `HUB_SEARCH_ALLOWED_IP`
+und `HUB_WEB_DOMAINS_JSON` erst nach konkreter Zugangsfreigabe konfigurieren.
+Bestehenden Vault-Sync nicht ersetzen oder einen konkurrierenden Sync installieren.

@@ -1,0 +1,18 @@
+# REVIEW TEMPLATE ONLY. Host mount must be live before creating containers.
+# ${HUB_VAULT_MOUNT} is the reviewed dedicated SSHFS mount, not an arbitrary path.
+x-vault: &vault
+  type: bind
+  source: ${HUB_VAULT_MOUNT:?Set reviewed live mount}
+  target: /vault
+  bind:
+    propagation: rslave
+services:
+  api:
+    volumes: [*vault]
+  api_https:
+    volumes: [*vault]
+  worker:
+    volumes: [*vault]
+  source-worker:
+    volumes: [*vault]
+# Parser/migrate/database deliberately receive no Vault volume.

@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -23,16 +23,24 @@ from hub.db import (
     Conversation,
     LoginSession,
     LoginThrottle,
+    Memory,
     Message,
+    Project,
     Run,
     RunEvent,
+    Source,
     session_factory,
 )
 from hub.execution import execute_run
 from hub.jobs import enqueue
+from hub.knowledge import context as project_context
+from hub.knowledge_api import install_knowledge_api
+from hub.memory import validate_mount
+from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
+from hub.websearch import install_web_api
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
 
@@ -48,11 +56,14 @@ class LoginInput(Input):
 
 
 class ChatInput(Input):
+    web_search_allowed: bool = False
     content: str = Field(min_length=1, max_length=16000)
     request_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
 
 
 class ConversationInput(Input):
+    memory_scope: Literal["global"] | None = None
+    project_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     cloud_allowed: bool = False
 
 
@@ -93,6 +104,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     install_provider_api(app, cfg, factory)
+    install_knowledge_api(app, cfg, factory)
+    install_memory_api(app, cfg, factory)
+    install_web_api(app, cfg, factory)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:
@@ -121,7 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "milestone": "M1", "privacy_default": "LOCAL_ONLY"}
+        return {"status": "ok", "milestone": "M2", "privacy_default": "LOCAL_ONLY"}
 
     @app.get("/api/metrics")
     def metrics(session: SessionDependency) -> dict[str, object]:
@@ -210,6 +224,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "cloud_enabled": cfg.cloud_enabled,
             "privacy_default": "LOCAL_ONLY",
             "providers": ["local", "openrouter"],
+            "web_search_configured": bool(cfg.search_url),
             "version": "0.1.0-dev",
             "autonomous_changes": "paused",
         }
@@ -249,6 +264,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return [
                 {
                     "id": c.id,
+                    "project_id": c.project_id,
+                    "memory_scope": c.memory_scope,
                     "title": c.title,
                     "title_status": c.title_status,
                     "cloud_allowed": c.cloud_allowed,
@@ -262,11 +279,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if body.cloud_allowed and not cfg.cloud_enabled:
             raise HTTPException(409, "Cloud ist serverseitig noch nicht freigegeben")
         with factory() as db:
-            c = Conversation(cloud_allowed=body.cloud_allowed)
+            if body.project_id:
+                project = db.get(Project, body.project_id)
+                if not project or project.archived:
+                    raise HTTPException(404, "Aktives Projekt nicht gefunden")
+                if body.cloud_allowed:
+                    raise HTTPException(409, "Projektquellen bleiben LOCAL_ONLY")
+            if body.memory_scope and (body.cloud_allowed or body.project_id):
+                raise HTTPException(409, "Vault-Wissenschat nur lokal und ohne Projektmischung")
+            c = Conversation(
+                cloud_allowed=body.cloud_allowed,
+                project_id=body.project_id,
+                memory_scope=body.memory_scope,
+            )
             db.add(c)
             db.commit()
             return {
                 "id": c.id,
+                "project_id": c.project_id,
+                "memory_scope": c.memory_scope,
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
@@ -288,9 +319,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ).all()
             return {
                 "id": c.id,
+                "project_id": c.project_id,
+                "memory_scope": c.memory_scope,
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
+                "context_sources": [
+                    {
+                        "source_id": part["source_id"],
+                        "revision": part["revision"],
+                        "label": part["label"],
+                        "reference": part["content"].split("\n")[0],
+                        "download_url": (
+                            f"/api/projects/{c.project_id}/sources/{part['source_id']}/original"
+                            if c.project_id and db.get(Source, part["source_id"])
+                            else None
+                        ),
+                    }
+                    for part in (
+                        json.loads(runs[-1].context_snapshot).get("sources", [])
+                        if runs and runs[-1].context_snapshot
+                        else []
+                    )
+                    if part["content"].startswith(("QUELLE [", "VAULT ", "WEBQUELLE "))
+                ],
                 "messages": [
                     {
                         "id": m.id,
@@ -375,7 +427,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> StreamingResponse:
         if not body.content.strip():
             raise HTTPException(422, "Nachricht ist leer")
-        run_id = create_run(chat_id, body.request_id, content=body.content)
+        run_id = create_run(
+            chat_id,
+            body.request_id,
+            content=body.content,
+            web_search_allowed=body.web_search_allowed,
+        )
         start_development_run(run_id)
         return response_for(run_id, request)
 
@@ -384,11 +441,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request_id: str | None,
         *,
         content: str | None = None,
+        web_search_allowed: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
         action = {
             "chat_id": chat_id,
             "content": content,
+            "web_search_allowed": web_search_allowed,
             "edit": [edit[0], edit[1].model_dump()] if edit else None,
         }
         digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
@@ -452,7 +511,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 messages = messages[: cut + 1]
             if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
-            snapshot = {
+            snapshot: dict[str, Any] = {
+                "web_search_allowed": web_search_allowed,
                 "parts": [
                     ContextPart(
                         content=m.content,
@@ -464,6 +524,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 ],
                 "roles": [m.role for m in messages],
             }
+            try:
+                needs_vault = c.memory_scope or (
+                    c.project_id
+                    and db.scalar(
+                        select(Memory.id)
+                        .where(Memory.project_id == c.project_id, Memory.deleted.is_(False))
+                        .limit(1)
+                    )
+                )
+                if needs_vault and cfg.vault_fs_type:
+                    validate_mount(Path(cfg.vault_dir), cfg.vault_fs_type)
+                sources = project_context(
+                    db, c.project_id, messages[-1].content, global_memory=c.memory_scope == "global"
+                )
+            except ValueError as error:
+                raise HTTPException(409, str(error)) from None
+            snapshot["sources"] = [p.model_dump(mode="json") for p in sources]
+            snapshot["parts"].extend(p.model_dump(mode="json") for p in sources)
+            snapshot["roles"].extend("user" for _ in sources)
+            if sum(len(p["content"]) for p in snapshot["parts"]) > cfg.context_limit:
+                raise HTTPException(413, "Projektkontext zu groß; Quellen gezielter durchsuchen")
             run = Run(
                 conversation_id=chat_id,
                 status="queued",
@@ -521,7 +602,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> StreamingResponse:
         if not body.content.strip():
             raise HTTPException(422, "Nachricht ist leer")
-        run_id = create_run(chat_id, body.request_id, edit=(message_id, body))
+        run_id = create_run(
+            chat_id,
+            body.request_id,
+            edit=(message_id, body),
+            web_search_allowed=body.web_search_allowed,
+        )
         start_development_run(run_id)
         return response_for(run_id, request)
 

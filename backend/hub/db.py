@@ -29,7 +29,9 @@ class LoginThrottle(Base):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    memory_scope: Mapped[str | None] = mapped_column(String(20), nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(160), default="Neues Gespräch")
     title_status: Mapped[str] = mapped_column(String(20), default="idle", server_default="idle")
     manual_title: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -143,3 +145,74 @@ def session_factory(url: str) -> sessionmaker[Session]:
     args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     engine = create_engine(url, connect_args=args, pool_pre_ping=True)
     return sessionmaker(engine, expire_on_commit=False)
+
+
+class Project(Base):
+    __tablename__ = "projects"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str] = mapped_column(Text, default="")
+    instructions: Mapped[str] = mapped_column(Text, default="")
+    label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Source(Base):
+    __tablename__ = "sources"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    name: Mapped[str] = mapped_column(String(240))
+    sha256: Mapped[str] = mapped_column(String(64))
+    size: Mapped[int] = mapped_column(Integer)
+    label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(20), default="queued")
+    error: Mapped[str] = mapped_column(String(240), default="")
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class SourceChunk(Base):
+    __tablename__ = "source_chunks"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    source_id: Mapped[str] = mapped_column(ForeignKey("sources.id"), index=True)
+    locator: Mapped[str] = mapped_column(String(240))
+    content: Mapped[str] = mapped_column(Text)
+    structured: Mapped[str] = mapped_column(Text, default="")
+
+
+class Memory(Base):
+    __tablename__ = "memories"
+    origin: Mapped[str] = mapped_column(String(100), default="vault")
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    path: Mapped[str] = mapped_column(String(600), unique=True)
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    sha256: Mapped[str] = mapped_column(String(64))
+    content: Mapped[str] = mapped_column(Text)
+    base_content: Mapped[str] = mapped_column(Text, default="")
+    conflict: Mapped[str] = mapped_column(Text, default="")
+    deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    writable: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class MemoryRevision(Base):
+    __tablename__ = "memory_revisions"
+    memory_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    content: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class Research(Base):
+    __tablename__ = "research"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("projects.id"), nullable=True, index=True
+    )
+    query: Mapped[str] = mapped_column(String(500))
+    results: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
