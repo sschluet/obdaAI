@@ -268,7 +268,7 @@ def test_caption_reserves_space_and_rejects_overflow(tmp_path):
             "title": "Beschriftung",
             "tile_width": 256,
             "tile_height": 128,
-            "tiles": [{"source": 0, "caption": "Blau und Gelb"}],
+            "tiles": [{"source": 0, "caption": "Blaue Bildhälfte"}],
         },
     }
     render(ArtifactSpec.model_validate(data), [source], tmp_path / "caption")

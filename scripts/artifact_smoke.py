@@ -44,8 +44,8 @@ plans = [
         "tile_width": 256,
         "tile_height": 256,
         "tiles": [
-            {"source": 0, "crop": [0, 0, 0.5, 1], "caption": "Dunkelblau"},
-            {"source": 0, "crop": [0.5, 0, 1, 1], "caption": "Hellblau"},
+            {"source": 0, "crop": [0, 0, 0.5, 1], "caption": "Dunkle Bildhälfte"},
+            {"source": 0, "crop": [0.5, 0, 1, 1], "caption": "Helle Bildhälfte"},
         ],
     },
     {

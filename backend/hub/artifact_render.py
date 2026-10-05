@@ -7,6 +7,7 @@ HTTP client or model-code execution. Office preview rendering is a separate stag
 import hashlib
 import io
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -188,7 +189,26 @@ def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
         )
         if crop[2] <= crop[0] or crop[3] <= crop[1]:
             raise ValueError("Zuschnitt enthält keine Pixel")
-        font = ImageFont.load_default(size=16)
+        font: Any = None
+        if tile.caption:
+            fonts = (
+                ["/System/Library/Fonts/Supplemental/Arial.ttf"]
+                if sys.platform == "darwin"
+                else [
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                ]
+            )
+            for candidate in fonts:
+                if Path(candidate).is_file():
+                    font = ImageFont.truetype(candidate, size=16)
+                    break
+            if font is None:
+                raise ValueError("Beschriftung benötigt die installierte lokale Unicode-Schrift")
+            missing = bytes(font.getmask("\U0010ffff"))
+            if any(bytes(font.getmask(char)) == missing for char in set(tile.caption)):
+                raise ValueError("Die lokale Schrift unterstützt nicht alle Beschriftungszeichen")
         lines: list[str] = []
         draw = ImageDraw.Draw(canvas)
         for word in tile.caption.split():
