@@ -31,7 +31,7 @@ def child(request: Path, output: Path) -> None:
     output.mkdir(mode=0o700)
     for name in ("HOME", "TMPDIR", "XDG_CACHE_HOME", "XDG_CONFIG_HOME"):
         os.environ[name] = str(output.resolve())
-    restrict(request, output)
+    restrict(request, output, office=True)
     spec = ArtifactSpec.model_validate_json((request / "spec.json").read_bytes())
     inputs = [request / ("source-" + str(i)) for i in range(len(spec.sources))]
     manifest = render(spec, inputs, output / "version")
