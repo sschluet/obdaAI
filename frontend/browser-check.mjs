@@ -117,6 +117,8 @@ await page.getByLabel('synthetic.md',{exact:true}).check();
 await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
 await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).click();
 await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).click();
+await page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true}).getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
+await page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true}).getByText('Gespeichertes Laufmanifest',{exact:true}).click();
 await page.getByRole('button',{name:'Schließen',exact:true}).click();
 await page.getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
 await page.reload();

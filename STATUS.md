@@ -897,3 +897,28 @@ kein impliziter Cloudtransfer. Aufgabenentwürfe wählen jetzt auch feste HA-
 Berichtstypen; Speicherung, Termin und Aktivierung bleiben im normalen Dialog.
 321 lokale Tests bestanden, acht PG-Tests lokal übersprungen; Ruff/mypy und
 Secret-Scan grün. UI synthetisch geprüft. Quelle vor Rollout; M3 noch offen.
+
+### 2026-10-05: M3-Leseergänzungen live abgenommen
+
+b50cbd1/Schema 0017 installiert; CI 37341712365 in allen fünf Bereichen grün.
+Eigener Browserdienst non-root, readonly, cap-drop ALL, kein Netzwerk/Port/Secret;
+synthetischer Job im installierten Dienst erfolgreich (PNG 12.825 Bytes, Script
+nicht ausgeführt). API/API-HTTPS gesund; HA-Key am eigenen Worker nur readonly,
+bestehende übrige Overlays und Firewall unverändert; MCP-/Browserziele leer.
+
+Reale HA-Wartungsbericht-Aufgabe über PostgreSQL-Worker erfolgreich:
+Task dea28a3d-c41a-4b29-89bc-28e79cca4852, Run a3de0b23-d1f4-4824-8539-693889b446ec.
+HA 2026.9.3, 61 gemeldete Backups, keine Änderungen, keine Cloud, Kosten null.
+Testaufgabe pausiert/archiviert. Realer lokaler Router wählte ha.inspect; Chat-Run
+755e85f3-2097-4ff9-9587-5fe1fa450aa1 mit dauerhaftem ActionReceipt und LOCAL_ONLY
+Antwort erfolgreich; eigenes Gespräch archiviert. Globale Schreibpause erhalten.
+
+Erneuter verschlüsselter Off-VM-Backup und isolierter Restore nach Rollout bestanden:
+Schema 0017, Workflowbelege/Schlüssel, neue Browser-/HA-Konfiguration, 40 Original-
+hashes, sechs Memory-Dateien. Keine produktive DB-/HA-Wiederherstellung.
+
+Echte UI-Abnahme zeigte, dass Ergebnisse/Workflowdetails hinter dem offenen
+Aufgabendialog lagen. Korrigiert: bei geöffnetem Dialog stehen beide darin, nach
+Schließen weiterhin in der Übersicht. Regression prüft Bericht und bedienbaren
+Laufmanifest-Klappbereich innerhalb des Dialogs. UI-/CI-/Rollout der Korrektur folgt.
+M3-Lücken explizit in docs/m3-acceptance-status.md; keine vollständige Abnahme behauptet.
