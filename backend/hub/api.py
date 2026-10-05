@@ -20,6 +20,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from hub.action_api import install_action_api
 from hub.auth import check_origin, require_session, token_hash, verify_password
 from hub.config import Settings
+from hub.connection_api import install_connection_api
 from hub.db import (
     Conversation,
     LoginSession,
@@ -115,6 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
     install_action_api(app, factory, cfg)
+    install_connection_api(app, cfg, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
     install_schedule_api(app, cfg, factory)

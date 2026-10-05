@@ -37,10 +37,10 @@ Betriebsidentifikatoren werden nicht in dieses Repository exportiert.
 | A05 | M2 | Dateien mit echten Fundstellen, projektisoliert, strukturierte Zahlenprüfung | bestanden auf eigener VM: neun Formate, lokale OCR, SHA-Originale, PDF-Fundstelle, Decimal-Summen, Scopeisolation und echter lokaler Quellenchat |
 | A06 | M4 | DOCX/PPTX editierbar öffnen; rendern und Layout prüfen | offen; Funktion noch nicht implementiert |
 | A07 | M4 | PDF merge/split korrekt, Collage verwendet Originalbilder | offen; Funktion noch nicht implementiert |
-| A08 | M3 | Skillrevision wirkt und erweitert keine Rechte | offen; Funktion noch nicht implementiert |
+| A08 | M3 | Skillrevision wirkt und erweitert keine Rechte | implementiert und live geprüft: versionierte Regeln, Vertrauensprüfung, Auswahl und Audit; keine Rechteausweitung |
 | A09 | M2 | Obsidian/App bidirektional: Konflikt/Löschung/Umbenennung/Restart | bestanden am vorhandenen Vault: kanonische Writes, externer Sync, Peer-Verfügbarkeit, Hash-Konfliktvergleich, Rename/Versionen/Archiv, Neustart-Reconcile; isolierte PG-Ausfalltests ohne produktive Mountunterbrechung |
-| A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | in Entwicklung: manuelles lokales Task-Center und streng validierter NoOp-Checkexport live installiert; echte n8n-Ausführung und Chatgenerierung offen |
-| A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | offen; Funktion noch nicht implementiert |
-| A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | offen; Funktion noch nicht implementiert |
+| A10 | M3 | Chat erzeugt echten validierten n8n-Workflow; genehmigter Run im Task-Center | teilweise: normales Task-Center, lokale Entwürfe und genehmigter echter n8n-Minutenworkflow live; Chat erzeugt noch keinen frei konfigurierbaren n8n-Workflow |
+| A11 | M3 | Doppeltrigger/Retry: kein unkontrollierter doppelter Write | teilweise: lokale Archive und Terminbelege idempotent geprüft; externe Writes und Reconciliation offen |
+| A12 | M3 | HA-Wartung hält Freigabe/Backup/Fehlerstopp ein | teilweise: feste lesende HA-Prüfung live, Write-Sperre geprüft; Supervisor-/Backup-Zugang HTTP 401, HA-Restore/Wartung offen |
 | A13 | M1/M3/M5 | Persistente Titel/Historie, mobile Browser, Jobs ohne Client über Restart | Browser-/DB-Tests inklusive Edit/Retry und mobilen Layouts; PostgreSQL-Queue in CI; echte lokale Titel und Client-Disconnect/Cancel auf eigener VM geprüft |
 | A14 | M0/M5 | Backup/Restore, private GitHub-Versionierung ohne Secrets/Runtime-Daten | Privates Repo/Source-/CI-gitleaks; verschlüsselte eigene VM-Sicherung, Off-VM-Kopie, Prüfsummen und isolierter Restore Schema 0011 mit Provider-Masterkey, 40 Originalhashes, Memory und neuen SSH-Identitäten/Units bestanden; vollständige n8n-/HA-Sicherung und RTO/RPO bleiben offen |

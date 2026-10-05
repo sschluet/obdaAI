@@ -377,3 +377,31 @@ class ScheduleRevision(Base):
     revision: Mapped[int] = mapped_column(Integer, primary_key=True)
     snapshot: Mapped[str] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ToolConnection(Base):
+    __tablename__ = "tool_connections"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    name: Mapped[str] = mapped_column(String(80))
+    config: Mapped[str] = mapped_column(Text)
+    encrypted_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ToolConnectionRevision(Base):
+    __tablename__ = "tool_connection_revisions"
+    connection_id: Mapped[str] = mapped_column(ForeignKey("tool_connections.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    config: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ToolConnectionCheck(Base):
+    __tablename__ = "tool_connection_checks"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    connection_id: Mapped[str] = mapped_column(ForeignKey("tool_connections.id"), index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    result: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)

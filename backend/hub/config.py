@@ -36,6 +36,7 @@ class Settings:
     web_domains_json: str = "[]"
     search_url: str = ""
     search_allowed_ip: str = ""
+    mcp_endpoints_json: str = "{}"
     ha_token_file: str = ""
     ha_allowed_ip: str = ""
     scheduler_enabled: bool = False

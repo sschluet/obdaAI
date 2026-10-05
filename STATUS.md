@@ -721,3 +721,21 @@ anschließend entfernt; bestehende Proxmox-Konfiguration unverändert. Dies ist 
 obdaAI-Restore und keine HA-Restore-Abnahme. Produktive HA-Wartungsaktionen bleiben
 offen und gesperrt; M3 bleibt Teilstand. CI der installierten Quelle: 37306828415
 vollständig grün, 220 Tests inklusive sechs echten PostgreSQL-Checks.
+
+### MCP-Verwaltung für künftige Verbindungen
+
+Normale Einstellungsdialoge für Name, Adresse, Protokoll und optionale verschlüsselte
+Bearer-Tokens. Entwürfe ohne Netzwerkaufruf, Änderungen revisionsgebunden,
+Archivieren/Wiederherstellen. Begrenzte Katalogprüfung für exakt serverseitig
+freigegebene Ziele; Remote-Metadaten erteilen keine Werkzeugrechte. Aktuelles
+stateless MCP sowie zwei Legacy-Versionen, JSON/Request-SSE, feste IP/TLS-SNI,
+keine Redirects/Proxies, Größen-/Zeit-/Paginationgrenzen. Schema 0016.
+
+Lokal 241 Tests bestanden, sieben PostgreSQL-Fälle für CI. Ruff/mypy und
+Frontendprüfung bestanden; echte synthetische HTTP-Verbindung im Browser mit
+Reload und Wiederherstellung geprüft. Realer MCP-Server aktuell nicht gewünscht;
+Produktionsallowlist bleibt leer. OAuth, stdio und entfernte Ausführung offen.
+
+Weitere reine HA-Backup-/Supervisor-GETs antworten mit HTTP 401. Dies belegt eine
+Zugangsgrenze, keine Aussage über vorhandene Backups. Keine HA-Schreibaktionen
+oder Änderung fremder Dienste durchgeführt; HA-Restore-Abnahme weiterhin offen.

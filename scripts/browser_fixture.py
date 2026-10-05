@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import json
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -28,6 +29,9 @@ command.upgrade(Config("alembic.ini"), "head")
 app = create_app(
     Settings(
         database_url=os.environ["HUB_DATABASE_URL"],
+        mcp_endpoints_json=json.dumps(
+            {os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/mcp": "127.0.0.1"}
+        ),
         origin=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765"),
         secure_cookie=False,
         password_hash=password_hash("synthetic-ui-password"),
@@ -161,3 +165,22 @@ def synthetic_ha_inspect(cfg: Settings) -> dict:
 
 
 fixture_action_api.inspect_ha = synthetic_ha_inspect
+
+
+@app.post("/mcp")
+def fixture_mcp(body: dict) -> dict:
+    assert body["method"] == "tools/list", "No execution in synthetic MCP fixture"
+    return {
+        "jsonrpc": "2.0",
+        "id": body["id"],
+        "result": {
+            "resultType": "complete",
+            "tools": [
+                {
+                    "name": "synthetic.read",
+                    "description": "Synthetischer Werkzeugkatalog ohne Ausführungsrechte",
+                    "inputSchema": {"type": "object", "properties": {}},
+                }
+            ],
+        },
+    }
