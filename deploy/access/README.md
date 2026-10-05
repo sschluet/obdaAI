@@ -1,8 +1,8 @@
 # M2 access configuration review
 
 Reviewed configuration templates, not a general installer. The limited configuration
-was explicitly authorized and applied on 05.10.2026; complete API/fault/restore
-acceptance remains tracked in STATUS.md. Authorization
+was explicitly authorized and applied on 05.10.2026; API/fault/restore
+acceptance passed with evidence tracked in STATUS.md. Authorization
 must cover the two service accounts, two new SSH identities, SSHFS, bounded exports
 and relays, dedicated VM runtime/egress changes and validated SSH reload. A blocked
 approval must never be bypassed by a different execution mechanism.
@@ -59,7 +59,10 @@ and updated runtime. No private key or Vault content enters Git or model prompts
 
 Use uniquely marked synthetic content in AI/Memory only. Prove app→canonical Vault,
 Vault→app, stable ID across rename, deletion/tombstone, revision conflict resolution,
-restart/reconcile and an actual mount outage without index deletion. Verify outside
+restart/reconcile and failure handling without index deletion. Mount absence and
+transport failure are verified against an isolated restored PostgreSQL index, with
+real Vault reads before fault injection. A production mount interruption was not
+performed; this limitation is explicit in STATUS.md. Verify outside
 Memory and .obsidian writes/reads are denied at server boundary, not merely in UI.
 Keep only recoverable test deletions and preserve user notes. Verify Sync remains
 healthy and its actual peer behavior where accessible. Test the public synthetic

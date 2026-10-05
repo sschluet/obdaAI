@@ -1,11 +1,14 @@
 # Betrieb und Zielbereitstellung
 
 ## Aktueller Stand
-Kein Hub auf einem produktiven Server installiert. Bestehende Dienste bleiben als
-Rückfalloption. Interne Bestandsdaten stehen nur in `.local/inventory.md` (ignoriert).
-Die Zielwahl (vorhandenes ai-core oder neue dedizierte VM) ist noch nicht
-festgelegt; konkrete Installation/Provisionierung ist noch nicht freigegeben. Kein Proxmox-Token wird aus alten
-Konfigurationen automatisch zum Provisionieren verwendet.
+Die eigene dedizierte obdaAI-VM ist mit PostgreSQL, API/Workern, Offline-Parser,
+HTTPS-Proxy und restriktiven Netzwerkregeln installiert. M1 wurde mit echten lokalen
+und OpenRouter-Smokes geprüft. M2 nutzt ausdrücklich freigegebene begrenzte Vault-
+und Suchzugänge; allgemeiner Vault readonly, ausschließlich AI/Memory writable.
+Bestehender Sync und Inference bleiben erhalten. Aktuelle Releases, CI und echte
+Abnahmen stehen in STATUS.md; interne Inventardaten und Belege bleiben unter
+`.local/`. Neue Zugänge/Änderungen an bestehenden n8n-/HA-Systemen erfordern eine
+konkrete Freigabe; die App erbt keine Rechte älterer Assistenzsysteme.
 
 ## Deployment-Gates
 1. Zielwahl bestätigen; bei neuer VM deren ID/Adresse und Host-Kapazität prüfen; konkrete Provisionierung
@@ -26,7 +29,13 @@ und Konfiguration gemeinsam sichern. Backups verschlüsseln; Schlüssel separat.
 Restore ohne produktives Netz: DB migrieren, Files/Hashes prüfen, Memory reconcile,
 Jobs mit unklarem Ausgang markieren, Writes/global autonomy pausieren. n8n-Zeitpläne
 nicht automatisch nachholen. VM-Snapshot/GitHub ersetzen diese Sicherung nicht.
-M5 liefert ausführbare Skripte und gemessene RTO/RPO; derzeit nicht nachgewiesen.
+`deploy/backup.sh` erstellt verschlüsselte eigene VM-Sicherungen; die separate
+Wiederherstellungsidentität bleibt auf dem WorkMac. M2-Restore auf Schema 0011 prüft
+Originalhashes, Provider-Masterkey, begrenzte SSH-Identitäten/Units und Memory-Dateien.
+Fehlender Mount und Transportfehler wurden an einer isolierten restaurierten
+PostgreSQL-Kopie geprüft, ohne den produktiven Mount zu unterbrechen. n8n-/HA-Daten
+sind noch keine Bestandteile dieser eigenen VM-Sicherung. Gemessene RTO/RPO und
+vollständige systemübergreifende Wiederherstellung bleiben M5-Abnahme.
 
 ## Messung
 Request-ID ohne Inhalt; Routerlatenz, TTFC, Dauer, Fehlerstatus, bekannte usage,
@@ -41,7 +50,8 @@ Migration beim Start aus. Provider-Keyfiles müssen für diese UID ausschließli
 lesbar sein (0600/0400); vorhandene gruppengeschützte Altplattform-Keys werden nicht
 automatisch umberechtigt. Der aktuelle Adapter unterstützt nur explizit erlaubte
 lokale IPs und den festen offiziellen OpenRouter-Origin; weitere Provider-UI folgt.
-Compose und produktive Infrastruktur sind noch nicht installiert oder abgenommen.
+Die eigene Compose-Bereitstellung ist installiert; Abnahmen und verbliebene Grenzen
+stehen in STATUS.md. Vorhandene fremde Dienste sind keine impliziten Deploymentziele.
 
 Lokale Backends können nach Liveprüfung `HUB_LOCAL_DISABLE_THINKING=true` verwenden.
 Dies ergänzt ausschließlich beim lokalen Adapter das nachgewiesen unterstützte

@@ -4,7 +4,7 @@ Am 05.10.2026 beauftragt: nach Etablierung aller M2-Funktionen alle M3-Funktione
 umsetzen. Dieser Plan ist Vorbereitung, keine implementierte M3-Lieferung. Der
 Start der M3-Implementierung erfolgt nach echter M2-Abnahme am vorhandenen Vault
 und Suchdienst. Die begrenzten M2-Zugriffe sind ausdrücklich freigegeben und
-eingerichtet; die abschließenden API-/Ausfall-/Restore-Nachweise stehen noch aus.
+eingerichtet; die API-/Restart-/isolierten Ausfall-/Restore-Nachweise sind abgeschlossen.
 
 ## Vertikale Reihenfolge und Abnahme
 
@@ -63,3 +63,10 @@ Vor SDK-/Adapterwahl tatsächliche Protokollrevisionen/Transport/Auth und gepinn
 Bibliotheken mit Lizenz prüfen. Abnahme bleibt Unit/API/Browser plus gekennzeichnete
 Livechecks. Jede Lieferung erhält STATUS, Tests, Commit/Push und Milestone-PR;
 M3 wird erst nach A08/A10/A11/A12 und den Integrations-/Restartnachweisen fertig.
+
+## Aktuelle lesende Bestandsprüfung 05.10.2026
+
+Vorhandenes n8n auf dem Mac mini: laufende Version 2.7.5, Container mit
+`n8nio/n8n:latest`, Health HTTP 200. Public-API ohne eigenen Schlüssel HTTP 401.
+Keine Workflows/Credentials ausgelesen oder übernommen und keine Einstellung
+geändert. Adapter und neues begrenztes Zugriffsmodell sind noch zu implementieren.

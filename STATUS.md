@@ -1,6 +1,46 @@
 # obdaAI — Status 05.10.2026
 
-## M2 in Umsetzung
+## M2 vollständig abgenommen · 05.10.2026
+
+Funktionaler Stand `92babc4` auf der eigenen VM installiert, CI 37281892751 grün,
+Schema 0011, beide APIs gesund. Lokal 98 Tests bestanden; zusätzlicher PostgreSQL-
+Test in CI. Browser: mobile blaue Oberfläche, erhaltener Entwurf bei HTTP 409,
+aktuelle Einzelnotiz zum Vergleich, ausdrückliche Hash-/Revisionsbindung, Revision 6.
+
+Echte M2-Abnahme am vorhandenen Vault und Suchdienst bestanden: neun Dateiformate,
+Original-SHA/Fundstellen/Decimal/Scopeisolation und unverändertes lokales Modell;
+kanonisches Schreiben, idempotentes Anlegen, externe Änderung geschützt, explizite
+Auflösung, stabile ID nach Rename, Versionen, wiederherstellbare Archivierung,
+kein Wiederbeleben nach Abgleich und tatsächlichem Software-Neustart. Ungültiger
+Vergleichshash in der installierten API abgewiesen, Inhalt/Revision unverändert.
+Bestehender Syncthing indexiert sowohl die eingehende synthetische Note als auch
+von der App erzeugtes Memory; Verfügbarkeit jeweils auf verbundenem Peer bestätigt.
+Globaler Vault-Chat und explizites `Merke dir:` mit echtem lokalen Modell bestanden.
+Echte Webrecherche und Chat-Websuche liefern Quellen; ohne öffentliche Freigabe 403,
+exakter Suchtext und Idempotenz bestätigt, kein Cloud-Modellaufruf in M2.
+
+Erweiterte verschlüsselte Off-VM-Sicherung und isolierter Restore bestanden:
+Schema 0011, 40 Originaldateihashes, sechs Memory-Dateien inklusive Archiv,
+Provider-Masterkey und neue SSH-Identitäten/Units; private Schlüssel passen zu
+öffentlichen Identitäten. Fehlender Mount erhält den restaurierten PG-Index;
+simulierter Transportfehler nach echten Reads rollt Änderungen zurück. Diese
+Ausfalltests liefen auf der isolierten Kopie; der produktive Mount wurde nicht
+unterbrochen. Vorhandene Proxmox-Konfiguration unverändert. Private Belege liegen
+unter `.local/deployment/`, keine Runtime-Daten oder Secrets in Git.
+
+HTTPS für ausdrücklich freigegebenes 192.168.18.0/24 auf Port 443 ergänzt, bisherige
+Netze erhalten, Rollbackkopie gesichert. Vom WorkMac erneut zertifikatsgeprüft HTTP
+200 für Startseite und Health. Direkte TLS-Browserprüfung durch URL-Richtlinie
+verweigert; kein Umweg. Lange Vollabgleiche serialisieren Memorywrites; 1.556
+Notizen wurden in einem separaten vollständigen Dateilesetest in 68,559 s gelesen.
+Das ist kein End-to-End-API-Latenzversprechen oder eine Produktionsreifeerklärung.
+
+M3 vollständig beauftragt und vorbereitet, noch nicht implementiert. Lesend
+bestätigt: vorhandenes n8n 2.7.5 läuft, Health 200, API ohne eigenen Schlüssel 401.
+Keine alten Credentials übernommen; neue konkrete Integrationszugriffe separat
+freigeben. M3/M4/M5 und deren Akzeptanzfälle bleiben offen.
+
+## Historische M2-Checkpoints
 
 Implementiert: Projekträume, scoped Quellenchat, unveränderte gehashte Originale,
 asynchrone Extraktion, Office-/PDF-/Text-/Tabellen-/Bildformate, Fundstellen, lokale OCR,
@@ -33,12 +73,9 @@ bleibt auf dem WorkMac. Temporäre Restore-DB entfernt. Vorhandene Proxmox-
 Konfiguration gegen Baseline unverändert; Rückfallimage/Konfigurationskopie erhalten.
 Private Belege bleiben im ignorierten `.local/deployment/`.
 
-Noch offen vor vollständiger M2-Abnahme: die echte API-Abnahme am vorhandenen
-Vault und Suchdienst, insbesondere Konfliktauflösung, stabile IDs bei Umbenennung,
-Ausfallprüfung, Syncthing-Indexierung und Restore der erweiterten Sicherung. Die
-begrenzten Zugänge sind ausdrücklich freigegeben und eingerichtet. Bestehender
-Sync wurde nicht verändert. Synthetische Tests ersetzen keine echte A09-Abnahme;
-M2 bleibt unvollständig und PR #2 bleibt Draft.
+Der hier zunächst offene vorhandene Vault-/Search-Zugang und die A09-/Restore-
+Abnahme wurden am 05.10.2026 abgeschlossen; aktuelle Nachweise stehen oben.
+Die folgenden Checkpoints dokumentieren den jeweiligen früheren Prüfstand.
 
 Aktueller Codecheckpoint `c9ce59a`: CI 37275069080 grün, lokal 93 Tests bestanden
 und PostgreSQL separat in CI. Der Index verwirft verlorene/ersetzte Mounts und

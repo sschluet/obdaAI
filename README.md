@@ -36,7 +36,10 @@ PostgreSQL dispatch uses Procrastinate; start the separate process with
 `uv run python -m hub.jobs`. Reopening a conversation follows stored events, and stalled
 worker jobs reconcile partial output without repeating inference. See [STATUS](STATUS.md)
 for exact CI and real-integration evidence and remaining acceptance limits.
-M2–M5 are not available yet. Cloud remains disabled in generic defaults and needs an
+M2 adds project sources/uploads, extraction/OCR, scoped knowledge chat, explicitly
+approved public web research and canonical Vault Memory with revision comparison.
+The authorized limited Vault/search integration is installed and live-tested on the
+dedicated VM. M3–M5 are not implemented yet. Cloud remains disabled in generic defaults and needs an
 explicit operator authorization plus conversation opt-in. Migrations must run before
 startup. SQLite is for local contract tests/development; durable jobs use PostgreSQL.
 
