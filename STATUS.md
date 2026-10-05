@@ -1,44 +1,64 @@
 # obdaAI — Status 06.10.2026
 
-## Aktueller Stand: Schema 0021, Dateien und geordnete Aufgaben live
+## Aktueller Stand: Dateien, Aufgaben und Schema 0021 live geprüft
 
-Produktiv ist `7243118` / Schema 0021 installiert. Beide APIs gesund; bestehende
-IPv4-/IPv6-Regeln unverändert. Zehn echte PostgreSQL-Integrationsfälle bestanden.
-432 lokale Tests bestanden, zehn PG-Fälle lokal bewusst ausgelassen und separat
-auf der eigenen VM geprüft. Ruff/mypy, TS/Build, Source-Scan und drei Browserchecks
-bestanden. Der initiale Frontend-Build sank auf 446 kB; Einstellungen und Aufgaben
-werden bei Bedarf geladen.
+Produktiv ist `6fbfb0e` / Schema 0021 installiert. Beide APIs sind gesund; die
+bestehenden IPv4-/IPv6-Regeln blieben unverändert. Lokal: 453 Tests bestanden,
+zehn PostgreSQL-Fälle bewusst ausgelassen und separat mit echter temporärer
+Datenbank auf der eigenen VM bestanden. Ruff/mypy und Source-Scan bestanden.
+Alle sechs GitHub-Jobs für die Anwendung `6fbfb0e` bestanden: Python/PG, Secrets,
+Frontend mit drei Browserchecks, Appcontainer, Browserrunner und Dateirunner.
+Spätere Dokumentationscommits werden im PR gesondert geprüft.
 
-Normale Projektdialoge bieten editierbares Word/PowerPoint, PDF-Seitenoperationen,
-PDF-Erstellung aus Text/Tabellen/Bildern und Bildzuschnitt/Collage. Word kann gebundene
-Bilder und einen zusätzlichen PDF-Export erhalten. Vier Formate wurden mit echten
-Linux-Vorschauen visuell geprüft und per authentifiziertem HTTPS-Download bestätigt;
-Word-Folgeversion und alter Download blieben erhalten. Beschriftungen verwenden jetzt
-Unicode-Schriften. Metadatenbereinigung eingebetteter Bilder wird weiter gehärtet.
+Dateidialoge liefern editierbares Word/PowerPoint, PDF-Seitenoperationen,
+PDF-Erstellung aus Text/Tabellen/Bildern und Bildzuschnitt/Collage. Word kann Bilder
+und einen zusätzlichen PDF-Export enthalten. Natürliche Chat-Dateierstellung ohne
+Quellen sowie aus ausdrücklich verlangten Projektunterlagen wurde mit dem echten
+lokalen Modell, Linux-Vorschauen, visueller Prüfung, authentifiziertem HTTPS-Download
+und erneut geöffneten nativen Dateien abgenommen. Der synthetische Quellenbericht
+enthält die belegte Farbe und Anzahl korrekt; dies ersetzt keine allgemeine Fakten-QA.
+Natürliche Word-Folgeversion und gezielte Änderung der zweiten PowerPoint-Folie
+mit unveränderter erster Folie sind zusätzlich real gerendert, visuell geprüft,
+heruntergeladen und erneut nativ geöffnet. Die Ausgangsversion bleibt erhalten.
+Dichte deutsche PowerPoint-Folien passen in die vorgesehenen Textbereiche.
+Die Unicode-Collage v2 ist visuell und per Hash geprüft. Transparente PNGs behalten
+Alpha in Word; Collagen mischen Alpha auf den festen Hintergrund. EXIF/Profile
+werden nach Ausrichtung entfernt, Originale und ältere Versionen bleiben unverändert.
+Lange abgewiesene Modellpläne erzeugen einen dauerhaft gespeicherten Fehler statt
+beim Speichern des Fehlerzustands erneut zu scheitern.
 
-Eine echte zweistufige Aufgabe wurde aus natürlicher Sprache entworfen, las den
-Arbeitsraum und wertete genau den gelesenen Beleg lokal aus; keine Cloudkosten.
-Eigene lokale Schreibaufgaben bestanden in confirm_each und bounded_autonomous,
-Replay erzeugte keinen zweiten Effekt; globale Schreibpause anschließend wiederhergestellt.
-Natürliche Chat-Dateiwünsche sind installiert, ihre reale Abnahme fand einen
-wiederholenden lokalen Modelloutput mit Timeout. Diese Abnahme ist noch nicht grün;
-Promptkorrektur und gezielte Wiederholung laufen. Keine gültige Datei aus Teilantworten.
+Geordnete Aufgaben aus natürlicher Sprache können einen festen lokalen Leseplan
+mit anschließender Analyse entwerfen. Die reale zweistufige Abnahme wertete genau
+den gespeicherten LOCAL_ONLY-Lesebeleg aus, ohne Cloudkosten. Lokale Archive
+bestanden in `confirm_each` und `bounded_autonomous`; Replay erzeugte keinen
+zweiten Effekt. Die globale Schreibpause ist anschließend wieder aktiv.
+Die Aufgabenliste nutzt fünf gebündelte DB-Abfragen. Bei derselben HTTPS-Leseprobe
+mit 120 Abfragen und vier gleichzeitigen Clients sank ihre p95 von etwa 1642 auf
+540 ms; gesamte p95 etwa 470 ms. Das ist eine begrenzte Leseprobe, keine Vollastabnahme.
+Der initiale Frontend-Build sank zuvor auf 446 kB durch nachgeladenes Task-/Settings-UI.
 
 Verschlüsselter Off-VM-Backup und isolierter Restore von Schema 0021 bestanden:
-15 Dateiversionen samt Ausgabe-/Vorschauhashes und zusätzlichem PDF, 42 Originale,
-sechs Memory-Dateien, Provider-/Workflow-Schlüssel sowie begrenzte SSH-Identitäten.
-Dies prüft obdaAI, nicht die Wiederherstellung von Home Assistant oder n8n.
-HTTPS-Sitzungen/Auth/CSRF/Origin/Logout live bestanden. 40 parallele Health-Abfragen
-(vier gleichzeitig): p95 rund 56 ms. Ressourcenproben sind Leerlaufwerte, keine Vollastabnahme.
+23 Dateiversionen samt Ausgaben/Vorschauen/PDF-Export, 43 Originalhashes,
+6 Memory-Dateien, Provider-/Workflow-Schlüssel und begrenzte SSH-Identitäten.
+Temporäre Restore-DB entfernt. HTTPS-Sitzungen/Auth/CSRF/Origin/Logout live geprüft.
+Drei eigene QA-Projekte und acht eigene synthetische Chats wiederherstellbar
+archiviert; Dokumente erhalten, keine anderen Projekte dabei geändert.
 
-Direkte OpenAI-/Anthropic-Anbieter sind inklusive verschlüsselter Konfiguration und
-Budget-/Zustimmungsgrenze installiert; eigene Schlüssel und konkreter Livezugang fehlen.
-OpenRouter bleibt der vorhandene zugelassene externe Anbieter. M3/M4/M5 bleiben
-Teilstände: generische Workflowgraphen, interaktiver Browser, weitere externe Aktionen,
-breite Layout-/Faktenprüfung, Vollast und geprüfter HA-Wiederherstellungsweg offen.
-
-GitHub-Allokation war wiederholt verzögert. Fehlende CI-Jobs sind kein bestandener
-Test. Kein Merge ohne vollständig grüne Checks. Details: docs/*-acceptance-status.md.
+M0–M2 haben die dokumentierten Abnahmen. M3/M4/M5 sind weiterhin Teilstände.
+Noch zu entwickeln bzw. abzunehmen: ereignisbasierte Aufgaben, allgemeinere validierte
+Workflowgraphen und zusätzliche feste Aktionsadapter, interaktiver Browser mit
+menschlicher Login-/2FA-Übergabe, natürliche PDF-/Bildoperationen, weitergehende
+Dateiänderungen und breite Layout-/Fakten-QA, Vollast und reale Geräteabnahme. MCP-Ziele sind derzeit nicht
+gewünscht; die Produktionsallowlist bleibt leer. Direkte OpenAI-/Anthropic-Adapter
+samt verschlüsselter Konfiguration, Consent und Budgetgrenzen sind installiert;
+reale eigene Schlüssel und konkrete Ausgangsfreigaben fehlen. OpenRouter bleibt
+der vorhandene zugelassene externe Anbieter. Produktive HA-Schreibwartung benötigt
+weiterhin einen verifizierten Backup-/Wiederherstellungsweg mit Schlüssel; HA- und
+n8n-Gesamtrestores sowie RTO/RPO sind nicht abgenommen. Kein Merge als fertige V1.
+Nächste unabhängige Entwicklungsarbeit: ereignisbasierte Aufgaben und daraus
+validierte feste Workflowgraphen; anschließend interaktiver Browser und weitere
+natürliche Dateioperationen. Details: docs/requirements.md und
+docs/*-acceptance-status.md.
 
 ## Historischer Stand · M3 erweitert und live installiert
 

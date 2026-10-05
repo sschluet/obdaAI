@@ -111,5 +111,6 @@ hash/revision validation and schedule/grant serializers remain in the detail pat
 A 26-task regression checks constant query count, identical summaries, archived
 entries, latest-run ties, paused/drifted plans, consumed grants and corrupted hashes.
 The change responds to a measured 120-request HTTPS sample (concurrency four), where
-the previous per-task queries caused task-list p95 around 1.64 seconds. Its actual
-post-deployment latency is recorded separately; this is not a full-load certification.
+the previous per-task queries caused task-list p95 around 1.64 seconds. After deployment, the same bounded 120-request sample measured task-list p95
+540.29 ms (previously 1642.24 ms), and overall p95 469.97 ms. This sample does not
+include inference, task writes or full-load certification.

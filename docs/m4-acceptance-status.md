@@ -1,128 +1,51 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026. M4 bleibt teilweise umgesetzt. Installiert ist `7243118` / Schema 0021; die folgenden Angaben unterscheiden
-aktuelle Nachweise von noch offenen Abnahmen.
+Stand 06.10.2026, produktiv `6fbfb0e` / Schema 0021. Die Dateipipeline ist live;
+M4 bleibt wegen weiterer natürlicher Änderungen und breiter Qualitätsabnahme teilweise.
 
-| Funktion | Implementiert | Nachweis / verbleibende Grenze |
+| Funktion | Implementiert und tatsächlich geprüft | Verbleibende Grenze |
 |---|---|---|
-| Word | Editierbarer DOCX-Text, Abschnitte, Tabellen, blaue Gestaltung | Native Datei erneut geöffnet; synthetisches Layout gerendert/visuell geprüft |
-| PowerPoint | Editierbare Folien, feste gewünschte Anzahl, Stichpunkte, Notizen | Native Datei erneut geöffnet; zwei synthetische Folien visuell geprüft |
-| PDF | Seiten mehrerer gebundener Originale auswählen, umordnen, drehen, weglassen | Auswahl/Rotation getestet; Signatur/Passwort abgewiesen; Kommentare, Formulare, Links entfernt |
-| Bilder | Echter Zuschnitt, Größenanpassung, Collage, PNG/JPEG; EXIF entfernt | Pixel-/Formatprüfung und Erhaltung des Originals; keine KI-Bildgenerierung |
-| Offline-Runner | Nonroot, netzwerkfrei, readonly Runtime, ohne DB/Secrets/Vault; Landlock pro Auftrag | Eigene Linux-VM: vier Dateien, sechs Vorschaubilder, Replay ohne Überschreiben bestanden |
-| Projektoberfläche | Normale Dialoge für alle vier Formate, Vorschau aller Seiten, explizite Freigabe, Download | Synthetischer mobiler Browsercheck bestanden; Vorschauen der UI-Fixture sind ausdrücklich keine Layoutabnahme |
-| Versionen | Schema 0020, immutable Vorgaben/Quellhashes, revisionsgebundene Folgeversion, kein Überschreiben | Auth/CSRF/Scope/Quell- und Ausgabedrift/Replay/Review-Gate per API geprüft |
-| Dispatch | Queue und Artefaktversion in derselben PG-Transaktion; eigener Worker, Wiederanlauf gleicht Ergebnis ab | Echte PG-Abnahme der Dateiqueue bestanden; alle zehn echten PG-Fälle und eigener Live-Rollout bestanden |
-| Modell / Chat | Lokale DOCX-/PPTX-Entwürfe aus Ziel und expliziten Quellenauszügen; Folgeänderung bindet konkrete Ausgangsversion; Chatantwort als Word übernehmen | API-/UI-Abnahme synthetisch bestanden; echte lokale Modellabnahme bestanden; natürliche Chat-Dateiabnahme noch fehlerhaft. Fakten und Layout benötigen menschliche Prüfung |
-| Betrieb | Eigener Compose-Overlay, Speicher-/CPU-/Zeitlimits, Sicherung eigener Dateien und DB vorbereitet | Produktive Installation und verschlüsselter Schema-0021-Restore mit 15 Dateiversionen bestanden |
+| Word | Native editierbare Abschnitte/Tabellen/Bilder, blaue Gestaltung, optionaler PDF-Export; Linux-Vorschau, visuelle QA, authentifizierter Download, erneut geöffnet | Allgemeine semantische und Layoutprüfung jeder Nutzerdatei |
+| PowerPoint | Native Texte, feste Folienanzahl, Notizen, feste Fonts mit Mindestgrößen und Platzreserve; zwei dichte deutsche Folien visuell geprüft und erneut geöffnet | Breiter Inhalt-/Layoutkorpus; quellengebundene Einzelfolien im Dateidialog |
+| PDF | Gebundene Seiten auswählen, umordnen, drehen, weglassen; neue PDFs aus Text/Tabellen/Bildern, Word-PDF-Export; Live-Vorschau/Hashdownload | Keine überprüfte echte Schwärzung; verschlüsselte/signierte Eingaben abgewiesen |
+| Bilder | Zuschnitt, Größenanpassung, Collage, PNG/JPEG, Unicode-Beschriftung; echte Pixel-/Live-QA; Alpha-Erhaltung in Word und Komposition auf Collagehintergrund | Keine KI-Bildgenerierung; weitere natürliche Bildänderungen |
+| Quellen | Nur gebundene Originalrevisionen/Hashes; explizite Projektsammlung mit 1–4 fertig eingelesenen Originalen; Fundstellen im lokalen Modellplan | Keine automatische Mischung mit fremden Projekten, Memory oder Webrecherche |
+| Modell / Chat | Echte lokale Ein-Abschnitt-Datei ohne Quellen und Quellenbericht aus Projektunterlagen bestanden; belegte Farbe und Anzahl korrekt; native Vorschau/Download/Editierbarkeit sowie Word-/gezielte PPTX-Folgeversion live geprüft | Ein erfolgreicher synthetischer Bericht beweist keine allgemeine Faktentreue |
+| Versionen | Immutable Vorgaben/Ausgaben/Quellhashes, revisionsgebundene Folgeversionen, alte Word-Datei unverändert | Jede neue Ausgabe benötigt ihre eigene Vorschauprüfung |
+| Offline-Runner | Linux nonroot/netzlos/readonly, kein DB-/Secret-/Vaultzugang, Landlock und Ressourcenlimits; fünf Pläne/sieben Vorschauen, PDF-Export und Alpha/Metadatenprüfung bestanden | Kein fremder Code, Macro, Pfad oder URL ausführbar |
+| Dispatch / Betrieb | Gemeinsame PG-Transaktion für Version/Queue; dauerhafter Worker, Chat hat begrenzte readonly Spoolmounts; zehn echte PG-Fälle; verschlüsselter isolierter Restore mit 23 Versionen | Keine vollständige V1-/Fremdsystem-Restorebehauptung |
 
-Eine gültige Datei oder erfolgreiches Rendering ist keine visuelle Freigabe.
-Der Status bleibt `needs_review`, bis der angemeldete Nutzer alle Vorschauseiten
-der genauen Dateiversion bestätigt. Download ist vorher gesperrt. Neue Versionen
-verändern keine Originale und ersetzen keine früheren Ausgaben.
+Download bleibt gesperrt, bis alle Vorschauseiten der exakten Version bestätigt
+wurden. Gültiges Rendering ist keine visuelle Freigabe. Originale, frühere Versionen
+und ihre geprüften Hashes werden nicht überschrieben. Die eigenen synthetischen
+Abnahmeprojekte sind wiederherstellbar archiviert; die Originale bleiben erhalten.
 
-Die isolierte Laufzeit erhält nur feste serverseitige Dateinamen und Kopien der
-gebundenen Quellen. Keine Modellskripte, Makros, frei gewählten Pfade oder URLs.
-LibreOffice verwendet einen eigenen Unix-Socket-tmpfs; allgemeines `/tmp` bleibt
-readonly. Ein normaler Erststart-Reboot von LibreOffice (Status 81) wird genau
-einmal mit derselben festen Argumentliste wiederholt. Crash/Fremdfehler werden
-nicht wiederholt. Das Verhalten entspricht dem offiziellen
-[LibreOffice-Launcher](https://github.com/LibreOffice/core/blob/libreoffice-7.4.7.2/desktop/unx/source/start.c).
+Lokale Entwürfe erhalten maximal vier explizite Quellen mit je zwei Textauszügen.
+Quellrevisionen, SHA, Fundstellen, Providerrevision, Ziel-/Prompt-/Rohantwortsha und
+Ausgangsversion werden an ein authentifiziertes 30-Minuten-Receipt gebunden.
+Bestätigte Versionen speichern den Beleg und manuelle Änderungen. Nur ein voller
+JSON-Codeblock und genau eine zusätzliche Endklammer sind als protokollierte
+Formatnormalisierung zulässig; doppelte Felder, freie Prosa, Zusatzobjekte und Rechte
+werden abgewiesen. Ein Schemafehler führt zu einem terminalen gespeicherten Run,
+auch wenn seine Meldung länger als die 240-Zeichen-DB-Spalte ist. Kein Modellretry.
 
-Je Auftrag maximal 20 Quellen / 100 MiB, einzelne Quelle 20 MiB, Ausgabe 40 MiB,
-Vorschauen insgesamt 100 MiB, gesamte temporäre Ausgabe 220 MiB / 5000 Einträge.
-Vier aktive Aufträge, maximal 1000 Versionen und 2 GiB eigener Spool inklusive
-320-MiB-Reserve pro Auftrag. Der getrennte Worker blockiert den Chat nicht.
+Natürliche Dateiwünsche binden neueste Nutzerfrage, Nachrichtrevision/SHA, Gespräch,
+Projekt, Quellen und Provider am letzten Schreibpunkt. Abbruch, neue Frage, Archiv
+oder Drift erzeugen keine Datei. „Aus den Projektunterlagen“ ist eine ausdrückliche
+Quellenauswahl; größere/unvollständige Sammlungen brauchen eine Auswahl im normalen
+Dialog. Projekt-/Vault-Historie und Webrecherche werden nicht implizit übernommen.
+Chatübernahme und manuelle Folgeversionen behalten ihren unveränderten Herkunftsbeleg.
 
-Lokale Entwürfe erhalten maximal vier ausgewählte Quellen mit jeweils zwei
-passenden Textauszügen. Verwendete Quellrevisionen, Hashes, Fundstellen, lokale
-Providerrevision, Prompt-/Zielhash und Ausgangsversion werden an ein 30 Minuten
-gültiges authentifiziertes Entwurfsreceipt gebunden. Die bestätigte Dateiversion
-speichert den Beleg samt Kennzeichnung manueller Änderungen. Keine Dateierstellung
-beim Entwurf und keine Cloudfreigabe. Falsche Anzahl Folien, unbekannte Schemafelder,
-Quelle/Projekt/Provider/Ausgangsversion-/Textdrift werden abgewiesen.
+Je Auftrag: 20 Quellen / 100 MiB, einzelne Quelle 20 MiB, Ausgabe 40 MiB,
+Vorschauen 100 MiB, temporäre Ausgabe 220 MiB / 5000 Einträge. Vier aktive Aufträge,
+1000 Versionen und 2 GiB Spool mit 320-MiB-Reserve. LibreOffice verwendet privaten
+Unix-Socket-tmpfs, allgemeines /tmp readonly. Status 81 beim Erststart wird genau
+einmal mit denselben festen Argumenten wiederholt; sonst keine Crashwiederholung.
+Siehe [offiziellen LibreOffice-Launcher](https://github.com/LibreOffice/core/blob/libreoffice-7.4.7.2/desktop/unx/source/start.c).
 
-Chatübernahme bindet eine vorhandene aktive Antwort an Gespräch/Revision/Hash und
-speichert ihren unveränderten lokalen Herkunftssnapshot. Fremde Projektgespräche
-und Vault-Chats sind nicht exportierbar. Manuelle Folgeversionen behalten diesen
-Snapshot. Diese Funktion verschiebt keine anderen Gespräche oder Quellen.
-
-Im Quellstand ergänzt: Bilder in DOCX aus explizit gebundenen Originalen, optionale
-DOCX→PDF-Ausgabe, PDF-Erstellung aus Text/Tabellen/Bildern und Bildbeschriftung. Diese
-Erweiterungen haben Linux-Nachweis; Word/Bilder/PDF-Export und neue Text-PDF sind
-live visuell und per Download geprüft. Die Unicode-Collagekorrektur ist noch separat in Prüfung. Der optionale
-PDF-Download teilt die Reviewfreigabe der genauen Word-Version; beide Hashes werden
-geprüft. Direkte natürliche Chat-Dateiplanung und umfassende Layout-/semantische
-Qualitätsabnahme bleiben offen. Die App bietet keine überprüfte echte Schwärzung.
-
-Live-Zwischenstand: `00f72bf` / Schema 0020 auf eigener VM installiert; beide APIs
-und der netzlose Runner gesund, bestehende Netzregeln/Overlays unverändert. Alle zehn
-PG-Integrationsfälle bestanden. Uploads in der Live-Abnahme warten zunächst hinter
-dem langen gemeinsamen Vault-Abgleich. Ein separater Vault-Consumer und der
-nicht blockierende Scan beheben diese Konkurrenz; echte Dateiabnahme wird danach
-wiederholt. Die erste fehlgeschlagene Upload-Warteprüfung ist keine Dateiabnahme.
-
-Echte Live-Abnahme `9b6f30b`: vier Formate und sechs native Vorschauseiten erzeugt.
-Word, die zwei passend geordneten synthetischen PDF-Seiten und der Bildzuschnitt
-visuell geprüft; authentifizierte HTTPS-Downloads nach Freigabe per SHA-256 geprüft.
-PowerPoint bleibt vor finaler Freigabe: sichtbare Schrift-Fallback-Abstände werden
-mit expliziter Liberation Sans korrigiert und als Folgeversion erneut geprüft.
-Ein gültiges PPTX allein wird nicht als einwandfreies Layout gewertet.
-
-Installierter Zwischenstand `8ac09e6` / Schema 0021: zehn echte PostgreSQL-Fälle
-bestanden, beide APIs gesund, Netzregeln unverändert. Lokale Modellantworten werden
-strikt als Daten validiert. Nur ein umschließender JSON-Codeblock und genau eine
-zusätzliche schließende Klammer sind als eng begrenzte Formatnormalisierung zulässig;
-Rohantwort-Hash und Normalisierung werden im bestätigten Dateibeleg gespeichert.
-Doppelte Felder, weitere JSON-Objekte, Prosa und zusätzliche Berechtigungsfelder
-bleiben abgewiesen. Keine automatische weitere Modellanfrage.
-
-06.10.: Der reale lokale Modellentwurf lief auf `8ac09e6` erfolgreich, erhielt
-einen Modell-/Herkunftsbeleg und eine native Word-Vorschau. Die Word-Folgeversion
-und beide korrigierten PowerPoint-Folien wurden visuell geprüft; alle vier Formate
-und Folgeversionen bestehen authentifizierte HTTPS-Downloads mit Hashabgleich.
-Die ältere Word-Version ist unverändert abrufbar. Die Renderingprüfung bestätigt
-keine sachliche Richtigkeit modellgenerierter Aussagen.
-
-Neuer Quellstand: konkrete Word-/PowerPoint-/PDF-Erstellungswünsche im aktiven
-Projektchat führen über denselben Dienst, dieselben Quoten, Quell-/Entwurfsprüfungen
-und dieselbe PG-Dispatchtransaktion wie die normalen Dateidialoge. Der Chat erhält
-eine Dateikarte zur Projektnavigation; Download erst nach Review. Projekt-/Vault-
-Historie und automatische Recherche werden nicht implizit als Quellen verwendet.
-Nachricht, Revision und Hash werden am finalen Schreibpunkt geprüft und zusammen
-mit der Dateibindung atomar gespeichert. Abbruch/Archivierung/Textdrift während der
-Modellantwort erzeugen keine Datei. Eine mehrdeutige Format-/Folienangabe wird
-abgewiesen. Kombinierte Webrecherche-Dateierstellung und KI-Änderungen anhand
-impliziter Chatquellen sind noch nicht umgesetzt.
-
-Echte Erweiterungsabnahme auf `bee17a4`: Word mit gebundenem Bild und Tabelle,
-zusätzlicher PDF-Export und neue PDF aus Text/Bild wurden gerendert, visuell geprüft
-und per authentifiziertem HTTPS-Download samt SHA-256 abgenommen. Die Beschriftung
-der Collage zeigte einen Umlautfehler; `5b76a5f` verwendet feste installierte lokale
-Unicode-Schriften und weist nicht unterstützte Zeichen ab. Die korrigierte Collage
-benötigt noch ihre neue visuelle Live-Version. Keine falsche Vollabnahme der ersten
-Collage aufgrund eines formal gültigen PNG.
-
-
-## Quellfortsetzung: Typografie und explizite Chat-Projektquellen
-
-PowerPoint passt native Textgrößen anhand fester Schriftdateien an. Absatzabstände
-werden reserviert; Titel unter 18 pt, Text unter 16 pt und Footer unter 8 pt werden
-abgewiesen statt unlesbar veröffentlicht. Dichte deutsche Inhalte und unteilbare
-zu lange Wörter sind getestet; dieser Folgestand braucht seine Linux-Vorschauprüfung.
-Die Inhalte bleiben native editierbare Texte.
-
-„Erstelle aus den Projektunterlagen …“ bindet ausdrücklich die vollständige aktuelle
-Sammlung dieses Projekts (1 bis 4 fertig eingelesene Originale). Bei größeren oder
-unvollständigen Sammlungen muss eine konkrete Teilmenge im Dateidialog gewählt werden.
-Andere Projekte, globales Memory und Chatgeschichte werden nicht ergänzt. Quellrevisionen,
-Hash und Fundstellen werden am letzten Speicherboundary erneut geprüft und im Receipt
-festgehalten. Ein Quellenabschnitt ist zusätzlich zu explizit verlangten Inhaltsabschnitten.
-Die synthetischen API-Prüfungen ersetzen die noch offene echte Quellen-Chat-Abnahme nicht.
-
-Release 8473a4e ist mit allen sechs GitHub-Jobs grün und auf eigener VM installiert.
-Eingebettete Word-Bilder verlieren EXIF/Profile nach angewandter Ausrichtung; Originale
-bleiben unverändert. Linux-Dateismoke prüft die tatsächlichen eingebetteten Mediendaten.
-Die Unicode-Collage v2 ist visuell und per authentifiziertem Download abgenommen.
-Der normale lokale Ein-Abschnitt-Dateientwurf wurde real gespeichert. Der vollständige
-Chatpfad scheitert noch; gespeicherte Vorgaben sind keine behauptete Chatabnahme.
+Noch offen: natürliche PDF-Seiten-/Collageoperationen im Chat, komplexere bzw.
+dateiübergreifende Änderungen, quellengebundene Einzelfolien, kombinierte
+Recherche-Dateierstellung und breitere semantische/Layout-QA. Die normalen Dialoge unterstützen die genannten manuellen Operationen
+bereits. Konkrete Folgeänderungen der letzten Chat-Datei sind umgesetzt; siehe
+docs/chat-file-revisions.md. Keine vollständige M4-Abnahme aus Unit- oder
+Fixturetests ableiten.
