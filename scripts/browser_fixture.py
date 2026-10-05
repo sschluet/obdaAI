@@ -16,6 +16,8 @@ from hub.routing import Route
 
 folder = Path(".local/browser")
 folder.mkdir(parents=True, exist_ok=True)
+vault = folder / "vault"
+vault.mkdir(exist_ok=True)
 key_file = folder / "fixture-encryption.key"
 if not key_file.exists():
     key_file.write_text(base64.b64encode(os.urandom(32)).decode())
@@ -29,6 +31,9 @@ app = create_app(
         secure_cookie=False,
         password_hash=password_hash("synthetic-ui-password"),
         secrets_key_file=str(key_file),
+        source_dir=str(folder / "sources"),
+        vault_dir=str(vault),
+        vault_writable=True,
         local_base_url=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765") + "/v1",
         local_allowed_ip="127.0.0.1",
         local_model="synthetic-fixture",
@@ -63,8 +68,13 @@ class SyntheticProvider:
         external: bool,
         grants: list[CloudGrant],
     ) -> AsyncIterator[str]:
-        raise RuntimeError("Simple synthetic fixture must not make a second model call")
-        yield ""
+        if not any(p.content.startswith("Projekt:") for p in parts):
+            raise RuntimeError("Simple synthetic fixture must not make a second model call")
+        yield "SYNTHETIC_SOURCE_REPLY: project-only evidence."
+        for part in parts:
+            if part.content.startswith("QUELLE"):
+                yield "\n" + part.content.split("\n")[0]
+
 
 
 app.state.providers = SyntheticProvider()

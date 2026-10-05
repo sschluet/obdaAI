@@ -2,8 +2,11 @@
 
 import asyncio
 import json
+import re
 import time
+import uuid
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Protocol
 
 from sqlalchemy import select
@@ -12,12 +15,18 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.budgets import ExecutionLimitError, reserve, settle
 from hub.config import Settings
-from hub.db import Conversation, Message, ProviderConfig, Run, RunEvent
+from hub.db import Conversation, Memory, Message, ProviderConfig, Run, RunEvent
+from hub.memory import digest
+from hub.memory import write as write_memory
 from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 from hub.provider_settings import fresh_cloud_prices, runtime_provider
 from hub.providers import Providers
 from hub.routing import Capability, Route
 from hub.titles import execute_title, reserve_title
+
+
+class MemoryCompleted(Exception):
+    pass
 
 
 class ChatProvider(Protocol):
@@ -95,7 +104,7 @@ async def execute_run(
             return bool(current and current.cancel_requested)
 
     async def generate() -> AsyncIterator[tuple[str, object]]:
-        nonlocal cfg, providers
+        nonlocal cfg, providers, label
         output = ""
         status = "failed"
         reserved = False
@@ -103,6 +112,56 @@ async def execute_run(
         yield ("run", {"id": run_id})
         yield ("status", {"message": "Anfrage wird lokal eingeordnet"})
         try:
+            # Only a direct authenticated user message can request this bounded write.
+            # Source/Memory/Web content and model output are never parsed as commands.
+            latest = next((m for m in reversed(messages) if m.role == "user"), None)
+            remember = (
+                re.fullmatch(r"(?is)merke dir\s*[:：]?\s+(.+)", latest.content) if latest else None
+            )
+            if remember and latest:
+                if cancelled():
+                    raise asyncio.CancelledError
+                if not cfg.vault_dir or not cfg.vault_writable:
+                    raise ExecutionLimitError(
+                        "Memory nicht gespeichert: Vault-Schreibbereich fehlt"
+                    )
+                identifier = str(
+                    uuid.uuid5(
+                        uuid.NAMESPACE_URL, "hub-memory:" + latest.id + ":" + str(latest.revision)
+                    )
+                )
+                remembered = remember[1].strip()
+                with factory() as db:
+                    memory = db.get(Memory, identifier)
+                    if memory is None:
+                        memory = Memory(
+                            id=identifier,
+                            path="AI/Memory/" + identifier + ".md",
+                            project_id=c.project_id,
+                            writable=True,
+                            origin="chat:" + latest.id + ":" + str(latest.revision),
+                            content="",
+                            base_content="",
+                            sha256=digest(""),
+                        )
+                        db.add(memory)
+                        db.flush()
+                        write_memory(
+                            db,
+                            Path(cfg.vault_dir),
+                            memory,
+                            "# Explizites Chat-Memory\n\n" + remembered,
+                            1,
+                        )
+                    if memory.deleted or memory.conflict:
+                        raise ExecutionLimitError(
+                            "Memory-Konflikt; zuerst im Wissensbereich prüfen"
+                        )
+                label = Privacy.LOCAL_ONLY
+                output = "Im lokalen Vault gespeichert: " + memory.path
+                status = "succeeded"
+                update(status="streaming", provider="local", reason="Explizites Memory ohne Modell")
+                raise MemoryCompleted
             selected: dict[str, ProviderConfig] = {}
             if isinstance(providers, Providers):
                 cfg, providers, selected = runtime_provider(factory, cfg)
@@ -133,7 +192,12 @@ async def execute_run(
                 )
                 if cancelled():
                     raise asyncio.CancelledError
-                unsupported = set(route.capabilities) - {Capability.CHAT}
+                supported = {Capability.CHAT}
+                if c.project_id:
+                    supported.add(Capability.RETRIEVAL)
+                unsupported = set(route.capabilities) - supported
+                if c.project_id:
+                    route.answer = None
                 if unsupported:
                     raise NotImplementedError
                 external = route.model_class == "cloud"
@@ -189,6 +253,9 @@ async def execute_run(
                 if not output:
                     raise ValueError("Empty provider response")
                 status = "succeeded"
+        except MemoryCompleted:
+            status = "succeeded"
+            yield ("delta", {"text": output})
         except asyncio.CancelledError:
             status = "cancelled" if cancelled() else "interrupted"
         except NotImplementedError:

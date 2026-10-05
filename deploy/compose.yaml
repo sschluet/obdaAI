@@ -15,6 +15,8 @@ x-app: &app
   volumes:
     - /etc/obdaai/secrets/local-inference.key:/run/secrets/local-inference.key:ro
     - /etc/obdaai/secrets/provider-encryption.key:/run/secrets/provider-encryption.key:ro
+    - /var/lib/obdaai/sources:/sources
+    - /var/lib/obdaai/parser-results:/parser-results:ro
   logging:
     driver: json-file
     options: {max-size: "10m", max-file: "3"}
@@ -70,5 +72,31 @@ services:
       db: {condition: service_healthy}
     mem_limit: 2g
     cpus: 2
+  source-worker:
+    <<: *app
+    command: [python, -m, hub.jobs, --sources]
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+    mem_limit: 512m
+    cpus: 1
+  parser:
+    image: obdaai:${HUB_RELEASE:?Set the reviewed Git commit}
+    command: [python, -m, hub.source_runner]
+    network_mode: none
+    user: "10001:10001"
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - /var/lib/obdaai/sources:/sources:ro
+      - /var/lib/obdaai/parser-results:/results
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
 volumes:
   hub-db:

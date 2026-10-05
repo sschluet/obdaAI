@@ -45,6 +45,7 @@ os.fchown(fd, 10001, 10001)
 with os.fdopen(fd, 'w') as stream:
     stream.write(base64.b64encode(os.urandom(32)).decode() + '\n')
 KEY
+install -d -m 0700 -o 10001 -g 10001 /var/lib/obdaai /var/lib/obdaai/sources /var/lib/obdaai/parser-results
 install -d -m 0755 /opt/obdaai/releases
 systemctl enable --now docker qemu-guest-agent
 dpkg-query -W -f='${Package} ${Version}\n' "${packages[@]}" > /etc/obdaai/packages.lock

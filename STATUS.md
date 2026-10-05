@@ -1,3 +1,32 @@
+# obdaAI — Status 05.10.2026
+
+## M2 in Umsetzung
+
+Implementiert: Projekträume, scoped Quellenchat, unveränderte gehashte Originale,
+asynchrone Extraktion, Office-/PDF-/Text-/Tabellen-/Bildformate, Fundstellen, lokale OCR,
+strukturierte Decimal-Tabellenprüfung, öffentliche SearXNG-Recherche und gezielter
+allowlistgeschützter HTML-Abruf. Oberfläche für Projekte/Uploads/Suche/Quellen und
+Memory mit Herkunft, Revisionen und Konfliktvergleich; kanonisches Markdown,
+read-only Allgemeinvault, begrenzte Memorywrites, Tombstones und Crash-Reconciliation.
+Direktes `Merke dir:` ist source-/revisiongebunden und idempotent, ohne Modellwrite.
+
+Bisher lokal 84 Tests bestanden, PostgreSQL separat in CI. Browser mit synthetischen
+Dateien: Projekt anlegen, Mehrfachupload, Fundstellensuche, exakte Summe 12.50,
+Quellenchat und explizites Memory bestanden. Keine echte Obsidian-Abnahme behauptet.
+
+Noch offen vor vollständiger M2-Abnahme: finale CI und eigener Serverrollout einschließlich
+Offline-Parser/Landlock/OCR, echte Quellenantwort und Sicherungsrestore; echte vorhandene
+Vault- und Suchanbindung mit eigenen begrenzten Zugängen. Vorhandener Vault und JSON-
+Suchdienst wurden ausschließlich lesend bestätigt. Separate Zugriffsfreigabe für allgemeinen
+Vault readonly und AI/Memory write wurde angefragt und steht noch aus. Bestehender Sync
+und andere Plattformressourcen wurden nicht verändert.
+
+M2 bleibt bis zu diesen Nachweisen unvollständig. Nächster Schritt: getesteten Checkpoint
+pushen, CI/Browser/Container prüfen, own-VM-Dateipipeline installieren und live abnehmen;
+dauerhafte vorhandene Verbindungen erst innerhalb bestätigter Zugriffsfreigabe einrichten.
+
+---
+
 # obdaAI — Status 04.10.2026
 
 M1 ist implementiert und auf der eigenen Proxmox-VM mit echten lokalen und OpenRouter-

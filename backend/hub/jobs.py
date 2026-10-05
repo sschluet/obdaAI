@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 import time
 
 import procrastinate
@@ -63,6 +64,17 @@ def enqueue_probe(db: Session, cfg: Settings, test_id: str) -> None:
     )
 
 
+def enqueue_source(db: Session, cfg: Settings, source_id: str) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable queue requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.extract", queue="sources", priority=-20, connection=raw).defer(
+        source_id=source_id
+    )
+
+
 def worker_app(cfg: Settings) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
@@ -113,9 +125,32 @@ def worker_app(cfg: Settings) -> procrastinate.App:
             _, title_providers, _ = runtime_provider(factory, cfg)
         await execute_title(factory, title_providers, chat_id)
 
+    @queue.task(name="hub.extract", queue="sources", retry=False)
+    async def extract(source_id: str) -> None:
+        from hub.knowledge import extract_source
+
+        await extract_source(factory, cfg, source_id)
+
     @queue.task(name="hub.probe", queue="tests", retry=False)
     async def probe(test_id: str) -> None:
         await execute_probe(factory, cfg, test_id)
+
+    @queue.periodic(cron="* * * * *")
+    @queue.task(
+        name="hub.vault-reconcile",
+        queue="vault-maintenance",
+        retry=False,
+        queueing_lock="hub.vault-reconcile",
+    )
+    async def vault_reconcile(timestamp: int) -> None:
+        if cfg.vault_dir:
+            from pathlib import Path
+
+            from hub.memory import reconcile as reconcile_vault
+
+            with factory() as db:
+                reconcile_vault(db, Path(cfg.vault_dir))
+                db.commit()
 
     @queue.periodic(cron="* * * * *")
     @queue.task(
@@ -133,7 +168,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
 async def requeue_stalled(queue: procrastinate.App) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
-    for task in ("hub.chat", "hub.title", "hub.probe"):
+    for task in ("hub.chat", "hub.title", "hub.probe", "hub.extract"):
         for job in await queue.job_manager.get_stalled_jobs(
             task_name=task, seconds_since_heartbeat=60
         ):
@@ -146,7 +181,9 @@ async def main() -> None:
         await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
-            queues=["chat", "tests", "titles", "maintenance"],
+            queues=["sources", "vault-maintenance"]
+            if "--sources" in sys.argv
+            else ["chat", "tests", "titles", "maintenance"],
             concurrency=1,
             shutdown_graceful_timeout=95,
         )

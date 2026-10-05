@@ -12,7 +12,8 @@ size=$(docker exec obdaai-db-1 psql -U hub -d hub -Atc 'select pg_database_size(
 [[ "$size" =~ ^[0-9]+$ ]]
 used=$(du -sb "$root" | cut -f1)
 free=$(df -B1 --output=avail "$root" | tail -1 | tr -d ' ')
-estimate=$((size * 3 + 52428800))
+source_size=$(du -sb /var/lib/obdaai 2>/dev/null | cut -f1 || echo 0)
+estimate=$((size * 3 + source_size * 2 + 52428800))
 ((used + estimate < 10737418240 && free - estimate > 1073741824)) || { echo 'Backup storage reserve reached'; exit 1; }
 id=$(date -u +%Y%m%dT%H%M%S.%NZ)
 staging="$root/.incomplete-$id"
@@ -21,7 +22,7 @@ cleanup() { [[ ! -d "$staging" ]] || rm -rf -- "$staging"; }
 trap cleanup EXIT
 docker exec obdaai-db-1 pg_dump -U hub -d hub -Fc | age --encrypt -R "$recipients" -o "$staging/database.pgdump.age"
 tar -C / -czf - \
-  etc/obdaai etc/ssh home/hub-deploy/.ssh var/lib/obdaai-relay/.ssh \
+  etc/obdaai etc/ssh home/hub-deploy/.ssh var/lib/obdaai-relay/.ssh var/lib/obdaai \
   opt/obdaai/compose.yaml opt/obdaai/https.compose.yaml \
   usr/local/sbin/obdaai-egress usr/local/sbin/obdaai-https-network \
   etc/systemd/system/obdaai-egress.service \

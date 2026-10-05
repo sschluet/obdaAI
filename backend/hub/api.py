@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -24,15 +24,21 @@ from hub.db import (
     LoginSession,
     LoginThrottle,
     Message,
+    Project,
     Run,
     RunEvent,
+    Source,
     session_factory,
 )
 from hub.execution import execute_run
 from hub.jobs import enqueue
+from hub.knowledge import context as project_context
+from hub.knowledge_api import install_knowledge_api
+from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
+from hub.websearch import install_web_api
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
 
@@ -53,6 +59,7 @@ class ChatInput(Input):
 
 
 class ConversationInput(Input):
+    project_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     cloud_allowed: bool = False
 
 
@@ -93,6 +100,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     install_provider_api(app, cfg, factory)
+    install_knowledge_api(app, cfg, factory)
+    install_memory_api(app, cfg, factory)
+    install_web_api(app, cfg, factory)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:
@@ -249,6 +259,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return [
                 {
                     "id": c.id,
+                    "project_id": c.project_id,
                     "title": c.title,
                     "title_status": c.title_status,
                     "cloud_allowed": c.cloud_allowed,
@@ -262,11 +273,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if body.cloud_allowed and not cfg.cloud_enabled:
             raise HTTPException(409, "Cloud ist serverseitig noch nicht freigegeben")
         with factory() as db:
-            c = Conversation(cloud_allowed=body.cloud_allowed)
+            if body.project_id:
+                project = db.get(Project, body.project_id)
+                if not project or project.archived:
+                    raise HTTPException(404, "Aktives Projekt nicht gefunden")
+                if body.cloud_allowed:
+                    raise HTTPException(409, "Projektquellen bleiben LOCAL_ONLY")
+            c = Conversation(cloud_allowed=body.cloud_allowed, project_id=body.project_id)
             db.add(c)
             db.commit()
             return {
                 "id": c.id,
+                "project_id": c.project_id,
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
@@ -288,9 +306,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ).all()
             return {
                 "id": c.id,
+                "project_id": c.project_id,
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
+                "context_sources": [
+                    {
+                        "source_id": part["source_id"],
+                        "revision": part["revision"],
+                        "label": part["label"],
+                        "reference": part["content"].split("\n")[0],
+                        "download_url": (
+                            f"/api/projects/{c.project_id}/sources/{part['source_id']}/original"
+                            if c.project_id and db.get(Source, part["source_id"])
+                            else None
+                        ),
+                    }
+                    for part in (
+                        json.loads(runs[-1].context_snapshot).get("sources", [])
+                        if runs and runs[-1].context_snapshot
+                        else []
+                    )
+                    if part["content"].startswith(("QUELLE [", "VAULT ", "WEBQUELLE "))
+                ],
                 "messages": [
                     {
                         "id": m.id,
@@ -452,7 +490,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 messages = messages[: cut + 1]
             if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
-            snapshot = {
+            snapshot: dict[str, Any] = {
                 "parts": [
                     ContextPart(
                         content=m.content,
@@ -464,6 +502,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 ],
                 "roles": [m.role for m in messages],
             }
+            try:
+                sources = project_context(db, c.project_id, messages[-1].content)
+            except ValueError as error:
+                raise HTTPException(409, str(error)) from None
+            snapshot["sources"] = [p.model_dump(mode="json") for p in sources]
+            snapshot["parts"].extend(p.model_dump(mode="json") for p in sources)
+            snapshot["roles"].extend("user" for _ in sources)
+            if sum(len(p["content"]) for p in snapshot["parts"]) > cfg.context_limit:
+                raise HTTPException(413, "Projektkontext zu groß; Quellen gezielter durchsuchen")
             run = Run(
                 conversation_id=chat_id,
                 status="queued",
