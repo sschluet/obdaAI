@@ -766,3 +766,8 @@ Sicherungsexistenz gilt weiterhin nicht als Restore-Abnahme; Wartung bleibt gesp
 Chatübernahme wird über den bestehenden Editor übernommen und beim Verlassen
 der Aufgabenansicht verworfen; die vorherige CI-Lifecycle-Abnahme war fehlgeschlagen.
 Die reparierte gemeinsame Quelle muss vor Installation wieder vollständig grün sein.
+
+Die instrumentierte Browserdiagnose zeigte den Dialog samt übernommenem Ziel
+bereits korrekt an. Ursache der bisherigen CI-Fehler war der zusammengesetzte
+Labeltext eines initial befüllten Textarea. Ein expliziter zugänglicher Feldname
+wurde ergänzt; der Test behält exakte Zielgleichheit und deaktivierten Start bei.
