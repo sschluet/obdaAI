@@ -148,9 +148,9 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
     @queue.task(name="hub.task-read", queue="tasks", retry=False)
     async def task_read(run_id: str) -> None:
-        from hub.task_api import execute_task_read
+        from hub.task_model import execute_task
 
-        await asyncio.to_thread(execute_task_read, factory, run_id)
+        await execute_task(factory, cfg, run_id)
 
     @queue.periodic(cron="* * * * *")
     @queue.task(

@@ -39,9 +39,20 @@ def remote_check(workflow: dict[str, Any], payload: dict[str, Any]) -> str:
         raise CheckError("Workflow must remain inactive and unarchived")
     if workflow.get("activeVersionId") is not None:
         raise CheckError("Unexpected published workflow version")
-    for field in ("name", "nodes", "connections", "settings"):
+    for field in ("name", "nodes", "connections"):
         if workflow.get(field) != payload[field]:
             raise CheckError("Workflow drift; operator review required")
+    settings = workflow.get("settings")
+    if not isinstance(settings, dict):
+        raise CheckError("Invalid workflow settings")
+    normalized = dict(settings)
+    # Observed n8n 2.7.5 server additions; accept only these exact restricted values.
+    for key, value in {"callerPolicy": "workflowsFromSameOwner", "availableInMCP": False}.items():
+        if key in normalized:
+            if type(normalized[key]) is not type(value) or normalized.pop(key) != value:
+                raise CheckError("Workflow settings expand access")
+    if normalized != payload["settings"]:
+        raise CheckError("Workflow settings drift; operator review required")
     if workflow.get("pinData") or workflow.get("staticData"):
         raise CheckError("Unexpected workflow data")
     return wid

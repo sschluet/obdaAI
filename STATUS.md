@@ -75,9 +75,11 @@ führt noch keine Aufgabe aus; A10 bleibt offen. Vertrag: `docs/tasks.md`.
 Begrenzter Operator-n8n-Adapter ergänzt: gepinntes HTTPS-Ziel, keine Redirects,
 Graph-/Statusvergleich, geschütztes Intentjournal vor POST, Sperre gegen parallele
 Operatoren und Reconciliation ohne blindes Wiederholen bei unklarem Ausgang.
-19 neue Tests bestanden, inklusive unverändertem Graph mit geänderter n8n-Version. Echte lesende Namenssuche erfolgreich; Erstellung ohne
-konkrete Freigabe verweigert, kein Workflow verändert. Live-Erstellung weiterhin
-angefragt; keine Aktivierungs-/Ausführungsfunktion. `docs/n8n-connection-check.md`.
+24 neue Tests bestanden, inklusive Versionsdrift und restriktiver Serverdefaults. Echte lesende Namenssuche erfolgreich; Erstellung ohne
+konkrete Freigabe verweigert, kein Workflow verändert. Live-Erstellung am 05.10.2026 nach „alles durchführen“ erfolgt: genau ein
+inaktiver Prüfworkflow, ID/Version/Hash lesend verifiziert. Serverergänzungen nur
+callerPolicy=workflowsFromSameOwner und availableInMCP=false akzeptiert;
+Reconciliation ohne zweiten POST. Keine Aktivierungs-/Ausführungsfunktion. `docs/n8n-connection-check.md`.
 
 Nächste Vertikalen: Toolverbindungen, echte n8n-Ausführung/Zeitpläne und aufgabenbezogene Modell-Skills. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
 Modellaktionen sind noch nicht implementiert. Beide Benutzerzugänge am 05.10.2026 über verifiziertes HTTPS lesend bestätigt:
@@ -544,3 +546,18 @@ Kein produktives Deployment und keine neue Live-Cloudanfrage.
   fachlich korrekt, aber zu strikt als Nicht-Text verworfen. Endliche Zahlen werden
   jetzt zu Text normalisiert; Booleans/NaN/Infinity und unzulässige Cloud-/Tool-Inlineantworten
   bleiben ungültig. Acht Regressionen prüfen diese Grenze.
+
+
+## Neue M3-Vertikale: lokale Aufgabenanalyse
+
+Fester letzter ai.analyze-Schritt implementiert: ausdrückliche Quellen- und
+vertraute Skillbindungen, ausschließlich lokaler Provider ohne Laden von
+Cloud-Secrets, gespeicherter vollständiger Prompt und Modell-/Providerrevision.
+Teilantworten bleiben bei Fehler/Abbruch erhalten; durabler Claim und getrennte
+PG-Session-Sperre verhindern doppelte Inferenz. Recovery eines laufenden Claims
+stoppt ohne zweiten Modellaufruf. Zwölf neue API-/Modelltests und ein separater
+PG-Sperrentest. Lokal insgesamt 179 bestanden, fünf PG-Tests für CI. Browser-Fixture
+bestätigt erfolgreichen Modellschritt und 390px ohne horizontalen Überlauf.
+Der alte synthetische Chatprovider sperrte zuerst den neuen Schritt; nach gezielter
+Fixture-Ergänzung erfolgreicher neuer expliziter Lauf. CI/Server-/echte lokale
+Modellabnahme dieser Vertikale noch ausstehend. Weitere M3-Funktionen bleiben offen.

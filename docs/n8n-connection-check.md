@@ -27,11 +27,16 @@ workflows, data injection or drift require operator review; existing workflows
 are not overwritten. Both the creation response and a subsequent GET must match
 the inactive reviewed template. A successful check does not execute the task.
 
-Validation on 05.10.2026: 19 tests cover creation/GET verification, duplicate and
+Validation on 05.10.2026: 24 tests cover creation/GET verification, duplicate and
 concurrent operators, unapproved operation, unknown outcome and recovery, graph/
 state/version drift, response limits, auth failures and redirects without secret output.
 Real read-only lookup via the installed public API succeeded; creation stopped at
-the approval gate, with no POST. Live creation is pending separate user approval.
+the approval gate, with no POST. Live creation was authorized by the user on 05.10.2026 and completed once.
+The first strict comparison detected server-added settings. Read-only reconciliation
+confirmed exactly callerPolicy=workflowsFromSameOwner and availableInMCP=false;
+only these exact restricted additions are normalized, all others stop. The same
+workflow was then verified without another POST, with matching ID/version/hash.
+It remains inactive, without credentials or task execution.
 No new VM egress rule or n8n setting is installed by this step.
 
 API contract verified against the installed n8n 2.7.5 primary source:

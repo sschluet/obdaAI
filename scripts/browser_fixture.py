@@ -77,6 +77,10 @@ class SyntheticProvider:
         external: bool,
         grants: list[CloudGrant],
     ) -> AsyncIterator[str]:
+        if parts and parts[0].source_id == "task-policy":
+            assert not external and not grants
+            yield "SYNTHETIC_TASK_REPLY: eine lokale Aufgabenanalyse."
+            return
         if not any(p.content.startswith(("Projekt:", "VAULT ", "WEBQUELLE ")) for p in parts):
             raise RuntimeError("Simple synthetic fixture must not make a second model call")
         yield "SYNTHETIC_SOURCE_REPLY: project-only evidence."

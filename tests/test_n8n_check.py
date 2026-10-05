@@ -201,3 +201,36 @@ def test_workflow_version_change_stops_even_when_graph_matches(tmp_path):
     with pytest.raises(CheckError, match="version drift"):
         adapter.ensure(REVIEW, journal, approved=True)
     assert posts == 1
+
+
+@pytest.mark.parametrize(
+    "settings,valid",
+    [
+        (
+            {
+                "executionOrder": "v1",
+                "callerPolicy": "workflowsFromSameOwner",
+                "availableInMCP": False,
+            },
+            True,
+        ),
+        ({"executionOrder": "v1", "callerPolicy": "any"}, False),
+        ({"executionOrder": "v1", "availableInMCP": True}, False),
+        ({"executionOrder": "v1", "availableInMCP": 0}, False),
+        ({"executionOrder": "v1", "executionTimeout": 3600}, False),
+    ],
+)
+def test_only_exact_restricted_server_added_settings_allowed(tmp_path, settings, valid):
+    def handler(request):
+        workflow = remote(settings=settings)
+        return httpx.Response(
+            200,
+            json=workflow if request.url.path.endswith("/synthetic123") else {"data": [workflow]},
+        )
+
+    adapter = fixture(handler)
+    if valid:
+        assert adapter.ensure(REVIEW, tmp_path / "receipt.json")["inactive"]
+    else:
+        with pytest.raises(CheckError):
+            adapter.ensure(REVIEW, tmp_path / "receipt.json", approved=True)

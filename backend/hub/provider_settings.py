@@ -151,16 +151,21 @@ def public(row: ProviderConfig, cfg: Settings) -> dict[str, object]:
 
 
 def runtime_provider(
-    factory: sessionmaker[Session], cfg: Settings
+    factory: sessionmaker[Session], cfg: Settings, *, local_only: bool = False
 ) -> tuple[Settings, Providers, dict[str, ProviderConfig]]:
     with factory() as db:
         seed(db, cfg)
-        rows = list(db.scalars(select(ProviderConfig).where(ProviderConfig.is_default.is_(True))))
+        query = select(ProviderConfig).where(ProviderConfig.is_default.is_(True))
+        if local_only:
+            query = query.where(ProviderConfig.kind == "local")
+        rows = list(db.scalars(query))
         db.commit()
     selected = {r.kind: r for r in rows}
     values: dict[str, object] = {}
     keys: dict[str, str] = {}
-    for kind in ("local", "openrouter"):
+    if local_only:
+        values.update(cloud_enabled=False, openrouter_model="", openrouter_key_file="")
+    for kind in ("local",) if local_only else ("local", "openrouter"):
         row = selected.get(kind)
         if not row or not row.enabled:
             values[kind + "_model"] = ""

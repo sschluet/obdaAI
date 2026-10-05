@@ -8,7 +8,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import FastAPI, HTTPException
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -32,6 +32,16 @@ class ReadStep(StrictInput):
     parameters: StrictInput = Field(default_factory=StrictInput)
 
 
+class AnalyzeStep(StrictInput):
+    tool_id: Literal["ai.analyze"]
+    tool_revision: Literal[1] = 1
+    parameters: StrictInput = Field(default_factory=StrictInput)
+
+
+def default_steps() -> list[ReadStep | AnalyzeStep]:
+    return [ReadStep()]
+
+
 class TaskSpec(StrictInput):
     title: str = Field(min_length=1, max_length=160)
     goal: str = Field(min_length=1, max_length=4000)
@@ -42,11 +52,20 @@ class TaskSpec(StrictInput):
     trigger: Literal["manual"] = "manual"
     autonomy: Literal["analyze_only"] = "analyze_only"
     label: Literal["LOCAL_ONLY"] = "LOCAL_ONLY"
-    steps: list[ReadStep] = Field(default_factory=lambda: [ReadStep()], min_length=1, max_length=5)
+    steps: list[ReadStep | AnalyzeStep] = Field(
+        default_factory=default_steps, min_length=1, max_length=5
+    )
     success_criterion: Literal["all_reads_completed"] = "all_reads_completed"
     output: Literal["task_center"] = "task_center"
     max_cost_usd: Literal[0] = 0
     timeout_seconds: int = Field(default=15, ge=1, le=30)
+
+    @model_validator(mode="after")
+    def model_step_last(self) -> "TaskSpec":
+        analyses = [i for i, step in enumerate(self.steps) if step.tool_id == "ai.analyze"]
+        if analyses and analyses != [len(self.steps) - 1]:
+            raise ValueError("At most one local analysis, as the final step")
+        return self
 
     @field_validator("timezone")
     @classmethod
@@ -138,6 +157,8 @@ def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
             )
         checked.append({**binding.model_dump(mode="json"), "document": revision.document})
     for step in spec.steps:
+        if step.tool_id == "ai.analyze":
+            continue  # Fixed local text analysis; never a model-selected external tool.
         tool = TOOLS.get(step.tool_id)
         if (
             tool is None
@@ -228,6 +249,8 @@ def execute_task_read(factory: sessionmaker[Session], run_id: str) -> None:
                 valid_snapshot = False
             if not valid_snapshot:
                 raise HTTPException(409, "Laufvorgabe verändert")
+            if any(step.tool_id == "ai.analyze" for step in spec.steps):
+                raise HTTPException(409, "Modellschritt benötigt den lokalen Analyseworker")
             started = time.monotonic()
             for sequence, step in enumerate(spec.steps, 1):
                 if time.monotonic() - started > spec.timeout_seconds:
@@ -364,7 +387,9 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
             db.commit()
             result = run_info(db, run)
         if cfg.database_url.startswith("sqlite"):
-            job = asyncio.create_task(asyncio.to_thread(execute_task_read, factory, run.id))
+            from hub.task_model import execute_task
+
+            job = asyncio.create_task(execute_task(factory, cfg, run.id, app.state.providers))
             app.state.tasks.add(job)
             job.add_done_callback(app.state.tasks.discard)
         return result
@@ -392,6 +417,9 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
                 raise HTTPException(404, "Aufgabenlauf fehlt")
             if run.status == "queued":
                 run.status, run.finished = "cancelled", time.time()
+                db.commit()
+            elif run.status == "running":
+                run.error = "Abbruch angefordert"
                 db.commit()
             elif run.status != "cancelled":
                 raise HTTPException(409, "Aufgabenlauf bereits abgeschlossen")
