@@ -17,6 +17,7 @@ from sqlalchemy import String, case, func, literal_column, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.elements import ColumnElement
 
+from hub.action_api import install_action_api
 from hub.auth import check_origin, require_session, token_hash, verify_password
 from hub.config import Settings
 from hub.db import (
@@ -107,6 +108,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_knowledge_api(app, cfg, factory)
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
+    install_action_api(app, factory)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:
@@ -135,7 +137,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "milestone": "M2", "privacy_default": "LOCAL_ONLY"}
+        return {"status": "ok", "milestone": "M3-partial", "privacy_default": "LOCAL_ONLY"}
 
     @app.get("/api/metrics")
     def metrics(session: SessionDependency) -> dict[str, object]:

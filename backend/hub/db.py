@@ -216,3 +216,42 @@ class Research(Base):
     query: Mapped[str] = mapped_column(String(500))
     results: Mapped[str] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ActionPolicy(Base):
+    __tablename__ = "action_policy"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    paused: Mapped[bool] = mapped_column(Boolean, default=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ActionIntent(Base):
+    __tablename__ = "action_intents"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    request_key: Mapped[str] = mapped_column(String(36), unique=True)
+    tool_id: Mapped[str] = mapped_column(String(80))
+    tool_revision: Mapped[int] = mapped_column(Integer)
+    parameters: Mapped[str] = mapped_column(Text)
+    parameters_sha256: Mapped[str] = mapped_column(String(64))
+    label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
+    policy_revision: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(30), default="proposed")
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ActionGrant(Base):
+    __tablename__ = "action_grants"
+    action_id: Mapped[str] = mapped_column(ForeignKey("action_intents.id"), primary_key=True)
+    parameters_sha256: Mapped[str] = mapped_column(String(64))
+    tool_revision: Mapped[int] = mapped_column(Integer)
+    policy_revision: Mapped[int] = mapped_column(Integer)
+    expires: Mapped[float] = mapped_column(Float)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ActionReceipt(Base):
+    __tablename__ = "action_receipts"
+    action_id: Mapped[str] = mapped_column(ForeignKey("action_intents.id"), primary_key=True)
+    result: Mapped[str] = mapped_column(Text)
+    finished: Mapped[float] = mapped_column(Float, default=time.time)

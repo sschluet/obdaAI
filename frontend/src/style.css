@@ -28,3 +28,5 @@ h1{font-weight:600;letter-spacing:-1.1px}
 [data-theme=dark]{--shadow:0 8px 28px rgb(0 0 0 / 15%)}
 [data-theme=dark] .primary:hover,[data-theme=dark] .send:hover{background:#a4c5ff}
 input[type=checkbox]{accent-color:var(--accent)}
+
+.action-card{padding:1rem 0;border-top:1px solid var(--border);overflow-wrap:anywhere}.action-card button{margin:.3rem .4rem .3rem 0}.action-card pre{white-space:pre-wrap;overflow-wrap:anywhere}

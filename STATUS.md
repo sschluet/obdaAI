@@ -1,5 +1,30 @@
 # obdaAI — Status 05.10.2026
 
+## M3 in Entwicklung · erstes lokales Aktionsgateway
+
+Branch `milestone/m3-actions`, auf M2 aufbauend. Implementiert: feste Werkzeuge
+Hub-Status lesen und Projekt wiederherstellbar archivieren; strikte Schemas,
+Vorschläge mit Request-ID/Parameterhash, befristete und widerrufbare Einzelfreigaben,
+Pausenrevision am letzten Write-Boundary, atomarer lokaler Effekt mit eindeutigen
+Belegen. Migration 0012 startet pausiert und schützt nichtleere Auditdaten beim
+Downgrade. Keine Modelle/Quellen können Werkzeuge oder Freigaben selbst registrieren.
+
+Werkzeuge-Oberfläche: Zielrevision vergleichen, fünf Minuten freigeben, getrennt
+ausführen oder widerrufen, Pausenstatus und persistente Belege. Synthetischer
+Browsercheck bestanden: Vorschlag ohne Änderung, Freigabe noch ohne Ausführung,
+Archivierung Revision 2, Beleg nach Reload, finale Pause; 390px ohne horizontalen
+Überlauf. Screenshot nur Fixture. Zwölf Gateway-API-/Kontrakttests bestanden;
+PostgreSQL-Duplikat-/Sperrentest separat für CI vorbereitet. Lokal 110 Tests bestanden, zwei PostgreSQL-Tests für CI; Ruff/mypy, Frontendbuild
+und Secret-Scan bestanden. CI/VM-Installation steht noch aus; M3 nicht als fertig abgenommen.
+
+Nächste unabhängige Vertikalen: portable revisionierte Skills, Toolverbindungen,
+TaskSpec/Task-Center. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
+Modellaktionen sind noch nicht implementiert. Eigener n8n-Zugang und HA-Adresse
+wurden beim Benutzer erfragt; vorhandene Dienste unverändert. Keine externen
+Retry-/Exactly-once- oder HA-Wartungsgarantie aus dem lokalen Gateway ableiten.
+Siehe `docs/actions.md` und `docs/m3-plan.md`.
+
+
 ## M2 vollständig abgenommen · 05.10.2026
 
 Funktionaler Stand `92babc4` auf der eigenen VM installiert, CI 37281892751 grün,
@@ -35,7 +60,7 @@ verweigert; kein Umweg. Lange Vollabgleiche serialisieren Memorywrites; 1.556
 Notizen wurden in einem separaten vollständigen Dateilesetest in 68,559 s gelesen.
 Das ist kein End-to-End-API-Latenzversprechen oder eine Produktionsreifeerklärung.
 
-M3 vollständig beauftragt und vorbereitet, noch nicht implementiert. Lesend
+M3 vollständig beauftragt; erstes lokales Gateway jetzt in Entwicklung, siehe oben. Lesend
 bestätigt: vorhandenes n8n 2.7.5 läuft, Health 200, API ohne eigenen Schlüssel 401.
 Keine alten Credentials übernommen; neue konkrete Integrationszugriffe separat
 freigeben. M3/M4/M5 und deren Akzeptanzfälle bleiben offen.

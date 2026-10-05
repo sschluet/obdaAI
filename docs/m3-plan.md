@@ -1,7 +1,8 @@
 # M3: vollständiger Folgeauftrag nach M2
 
 Am 05.10.2026 beauftragt: nach Etablierung aller M2-Funktionen alle M3-Funktionen
-umsetzen. Dieser Plan ist Vorbereitung, keine implementierte M3-Lieferung. Der
+umsetzen. Dieser Plan beschreibt den vollständigen M3-Umfang. Die erste lokale Gateway-Vertikale
+ist implementiert und wird separat geprüft; siehe docs/actions.md und STATUS.md. Der
 Start der M3-Implementierung erfolgt nach echter M2-Abnahme am vorhandenen Vault
 und Suchdienst. Die begrenzten M2-Zugriffe sind ausdrücklich freigegeben und
 eingerichtet; die API-/Restart-/isolierten Ausfall-/Restore-Nachweise sind abgeschlossen.

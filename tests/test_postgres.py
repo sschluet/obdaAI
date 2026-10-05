@@ -221,3 +221,98 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
     engine.dispose()
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")
+
+
+@pytest.mark.skipif(not os.getenv("HUB_CI_DATABASE_URL"), reason="Disposable PostgreSQL required")
+def test_postgres_action_concurrent_receipt_and_pause(monkeypatch):
+    import concurrent.futures
+    import uuid
+
+    from hub.db import ActionGrant, ActionIntent, ActionReceipt, Project
+    from sqlalchemy import delete, func
+
+    url = os.environ["HUB_CI_DATABASE_URL"]
+    if "127.0.0.1" not in url or not url.endswith("/hub_ci"):
+        pytest.fail("Refusing any database except loopback hub_ci")
+    monkeypatch.setenv("HUB_DATABASE_URL", url)
+    command.upgrade(Config("alembic.ini"), "head")
+    settings = Settings(
+        database_url=url,
+        origin="http://testserver",
+        secure_cookie=False,
+        password_hash=password_hash("synthetic-gateway-password"),
+    )
+    app = create_app(settings)
+    with TestClient(app) as client:
+        login = client.post(
+            "/api/login",
+            json={"password": "synthetic-gateway-password"},
+            headers={"Origin": settings.origin},
+        )
+        headers = {"Origin": settings.origin, "X-CSRF-Token": login.json()["csrf"]}
+        policy = client.get("/api/action-policy").json()
+        client.patch(
+            "/api/action-policy",
+            json={"paused": False, "expected_revision": policy["revision"]},
+            headers=headers,
+        )
+        project = client.post(
+            "/api/projects", json={"name": "Synthetic concurrent gateway"}, headers=headers
+        ).json()
+        action = client.post(
+            "/api/actions",
+            json={
+                "request_id": str(uuid.uuid4()),
+                "tool_id": "project.archive",
+                "parameters": {
+                    "project_id": project["id"],
+                    "expected_revision": project["revision"],
+                },
+            },
+            headers=headers,
+        ).json()
+        assert (
+            client.post(
+                "/api/actions/" + action["id"] + "/grant",
+                json={"parameters_sha256": action["parameters_sha256"], "tool_revision": 1},
+                headers=headers,
+            ).status_code
+            == 200
+        )
+
+        def execute(_):
+            return client.post(
+                "/api/actions/" + action["id"] + "/execute", json={}, headers=headers
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            responses = list(pool.map(execute, range(2)))
+        assert all(r.status_code == 200 for r in responses)
+        assert responses[0].json()["receipt"] == responses[1].json()["receipt"]
+        with app.state.sessions() as db:
+            saved = db.get(Project, project["id"])
+            assert saved.archived and saved.revision == project["revision"] + 1
+            assert (
+                db.scalar(
+                    select(func.count())
+                    .select_from(ActionReceipt)
+                    .where(ActionReceipt.action_id == action["id"])
+                )
+                == 1
+            )
+        policy = client.get("/api/action-policy").json()
+        assert (
+            client.patch(
+                "/api/action-policy",
+                json={"paused": True, "expected_revision": policy["revision"]},
+                headers=headers,
+            ).status_code
+            == 200
+        )
+        assert execute(None).status_code == 200
+        # Only this disposable test's audit is removed; production downgrade preserves audit.
+        with app.state.sessions() as db:
+            db.execute(delete(ActionReceipt).where(ActionReceipt.action_id == action["id"]))
+            db.execute(delete(ActionGrant).where(ActionGrant.action_id == action["id"]))
+            db.execute(delete(ActionIntent).where(ActionIntent.id == action["id"]))
+            db.commit()

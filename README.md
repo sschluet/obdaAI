@@ -39,7 +39,9 @@ for exact CI and real-integration evidence and remaining acceptance limits.
 M2 adds project sources/uploads, extraction/OCR, scoped knowledge chat, explicitly
 approved public web research and canonical Vault Memory with revision comparison.
 The authorized limited Vault/search integration is installed and live-tested on the
-dedicated VM. M3–M5 are not implemented yet. Cloud remains disabled in generic defaults and needs an
+dedicated VM. M3 starts with fixed local actions, persisted proposals, explicit grants and receipts
+([contract](docs/actions.md)); external adapters, Skills and Task-Center remain in development.
+M4–M5 are not implemented yet. Cloud remains disabled in generic defaults and needs an
 explicit operator authorization plus conversation opt-in. Migrations must run before
 startup. SQLite is for local contract tests/development; durable jobs use PostgreSQL.
 
