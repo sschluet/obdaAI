@@ -114,6 +114,8 @@ def test_clock_queue_transaction_and_duplicate_delivery(monkeypatch):
             )
     finally:
         with factory() as db:
+            # Queue triggers use unqualified names; bind their schema for this transaction.
+            db.execute(text("SET LOCAL search_path TO hub_queue, public"))
             # Remove only this fixture's completed queue audit before later PG tests.
             db.execute(
                 text(
