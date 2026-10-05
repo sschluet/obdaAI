@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import time
 import uuid
 from pathlib import Path
@@ -38,6 +39,31 @@ def vault_path(root: Path, relative: str) -> Path:
     if root.resolve() not in current.resolve().parents:
         raise ValueError("Vault-Pfad außerhalb des freigegebenen Bereichs")
     return current
+
+
+def read_note(root: Path, relative: str) -> str:
+    """Read through directory descriptors: no symlink following or path replacement race."""
+    parts = Path(relative).parts
+    if not parts or Path(relative).is_absolute() or any(p in {"..", ".obsidian"} for p in parts):
+        raise ValueError("Ungültiger Vault-Pfad")
+    directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        descriptor = os.open(
+            parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory
+        )
+        with os.fdopen(descriptor, "rb") as source:
+            if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                raise ValueError("Vault-Notiz ist keine reguläre Datei")
+            data = source.read(MAX_NOTE + 1)
+            if len(data) > MAX_NOTE:
+                raise ValueError("Vault-Notiz überschreitet Dateilimit")
+            return data.decode("utf-8")
+    finally:
+        os.close(directory)
 
 
 def revision(db: Session, row: Memory) -> None:
@@ -137,11 +163,7 @@ def _reconcile(
                 raise ValueError("Vault-Dateilimit überschritten; Index unverändert")
             relative = str((Path(folder) / filename).relative_to(root))
             try:
-                path = vault_path(root, relative)
-                if path.stat().st_size > MAX_NOTE:
-                    errors.append(relative)
-                    continue
-                text = path.read_text(encoding="utf-8")
+                text = read_note(root, relative)
             except OSError as error:
                 if error.errno in {
                     errno.EIO,
@@ -196,6 +218,7 @@ def _reconcile(
                 continue
             row.path = relative
             if row.conflict and row.conflict.startswith("pending:"):
+                path = vault_path(root, relative)
                 expected = row.conflict[len("pending:") :].removesuffix(":creating")
                 if digest(body) == row.sha256:
                     row.conflict, row.base_content = "", body

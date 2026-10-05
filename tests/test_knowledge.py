@@ -547,21 +547,22 @@ def test_chat_web_requires_exact_user_query_grant_and_never_sends_private_contex
 
 def test_vault_file_transport_failure_rolls_back_entire_scan(knowledge, monkeypatch):
     import errno
-    from pathlib import Path
 
     app, c, h, cfg, vault = knowledge
     note = vault / "stable.md"
     note.write_text("# Stable synthetic memory\noriginal")
     assert c.post("/api/memories/sync", json={}, headers=h).status_code == 200
     before = c.get("/api/memories").json()
-    original_read = Path.read_text
+    import os
 
-    def failed_read(path, *args, **kwargs):
-        if path == note:
+    original_open = os.open
+
+    def failed_open(path, *args, **kwargs):
+        if path == note.name:
             raise OSError(errno.EIO, "synthetic lost SFTP connection")
-        return original_read(path, *args, **kwargs)
+        return original_open(path, *args, **kwargs)
 
-    monkeypatch.setattr(Path, "read_text", failed_read)
+    monkeypatch.setattr(os, "open", failed_open)
     assert c.post("/api/memories/sync", json={}, headers=h).status_code == 409
     assert c.get("/api/memories").json() == before
 
@@ -599,3 +600,26 @@ def test_existing_empty_directory_does_not_satisfy_required_vault_mount(tmp_path
     (tmp_path / "AI/Memory").mkdir(parents=True)
     with pytest.raises(ValueError, match="Mount nicht verfügbar"):
         validate_mount(tmp_path, "fuse.sshfs")
+
+
+def test_vault_descriptor_read_denies_symlink_and_oversize(tmp_path):
+    from hub.memory import MAX_NOTE, read_note
+
+    root = tmp_path / "vault"
+    root.mkdir()
+    (root / "folder").mkdir()
+    (root / "folder" / "safe.md").write_text("# Synthetic safe note")
+    assert read_note(root, "folder/safe.md") == "# Synthetic safe note"
+    outside = tmp_path / "private.md"
+    outside.write_text("Outside must never be read")
+    (root / "link.md").symlink_to(outside)
+    (root / "linked-folder").symlink_to(tmp_path)
+    for path in ["link.md", "linked-folder/private.md"]:
+        with pytest.raises(OSError):
+            read_note(root, path)
+    for path in ["../private.md", str(outside), ".obsidian/config.md"]:
+        with pytest.raises(ValueError):
+            read_note(root, path)
+    (root / "large.md").write_bytes(b"x" * (MAX_NOTE + 1))
+    with pytest.raises(ValueError):
+        read_note(root, "large.md")
