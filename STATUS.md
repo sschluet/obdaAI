@@ -969,3 +969,13 @@ Weitere noch nicht implementierte Funktionen stehen unverändert im M3-Abnahmest
 interaktive Browseranmeldung/2FA, allgemeine freigegebene Workflowgraphen und weitere
 externe Operationen, Task-Writes/Autonomieprofile. M3 ist nicht vollständig fertig.
 Diese Dokumentationsänderung ändert den installierten Code 9dbee1f nicht.
+
+### 2026-10-05: Task-Center erholt sich nach vorübergehendem API-Ausfall
+
+Native Live-Prüfung nach Rollout zeigte einen dauerhaft stehenbleibenden JSON-
+Parsefehler einer HTML-Proxyantwort. Gemeinsamer JSON-Parser meldet jetzt lesbar
+vorübergehende Nichtverfügbarkeit oder unbestätigte Schreibaktion. Task-Center
+aktualisiert Listen, Zeitimpuls, Läufe und Termine gemeinsam; nur erfolgreiche
+Hintergrundabfrage löscht deren eigene Fehlermeldung. Formfehler bleiben separat.
+Keine automatische Wiederholung von Writes. Browserabnahme simuliert HTML-503,
+prüft Erholung und eine unbestätigte POST-Aktion mit erhaltenem Entwurf.
