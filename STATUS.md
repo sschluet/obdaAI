@@ -852,3 +852,39 @@ angefordert oder auf der VM freigegeben. Produktionsrollout dieser Ergänzung un
 CI noch ausstehend. M3 insgesamt weiterhin offen: Browservertikale, weitere
 API-/MCP-Operationen, HA-Wartung mit verifiziertem Wiederherstellungsweg und
 vollständige Abnahme/Restore.
+
+### 2026-10-05: weitere M3-Lesevertikalen und Restore 0017
+
+Erweiterter verschlüsselter Backup/Restore nach konkreter Freigabe bestanden:
+Schema 0017, ein Workflowbinding/Dispatch samt erfolgreichem TaskRun und
+entschlüsselbarem begrenztem Callbacktoken, 40 Originalhashes, sechs Memory-Dateien,
+Provider-/Zugangsschlüssel, Revisionen und Belege erhalten. Produktiv-HA und die
+produktive obdaAI-Datenbank wurden nicht restauriert. Bestehende Proxmox-Konfiguration
+unverändert. Nachweis privat workflow-backup-acceptance.json.
+
+MCP-Quelle 5bc9b7d gepusht, CI 37337995133 vollständig grün. Auf VM weiterhin
+940d601 (Schema 0017), neuer Rollout ausstehend.
+
+Passive Browserprüfung implementiert: feste HTTPS-Ziele/Digest/IPv4, begrenzter
+HTML-Abruf, Offline-Chromium, geschütztes PNG und dauerhafte Belege. Echter eigener
+VM-Container-Test nach engem Seccomp-chroot-Fix bestanden: Chromium-Sandbox an,
+non-root, readonly, keine Capabilities/Ports/Secrets/Netzwerk; Script, Metadata-Bild
+und Datei-Frame blockiert. Kein bestehender Dienst umgebaut. Testcontainer gestoppt.
+Vorheriger unveränderter Seccomp-Test scheiterte sichtbar an Chromiums Sandbox-
+chroot; Sandbox wurde nicht abgeschaltet. Produktionsziele weiterhin leer; neue
+Browser-Compose-Konfiguration noch nicht installiert. Keine interaktive Browser-
+oder Login-/2FA-Automation behauptet.
+
+Home Assistant: fester Wartungsplan zeigt konkrete Versionen, Backupmetadaten und
+fehlende Wiederherstellungsvoraussetzungen. Drei lesende HA-Aufgabentypen im
+normalen Dialog mit Terminen/Ergebnissen ergänzt. Keine Eingabe von Entitäten,
+URLs oder Service-Payloads. Kein impliziter LLM-Kontexttransfer. UI-Abnahme mit
+synthetischer HA-Aufgabe und gespeichertem Wartungsbericht bestanden; Worker-
+Anbindung auf VM und echte Task-Abnahme noch ausstehend. Produktive HA-Writes und
+autonome Wartung bleiben ohne verifizierten Restore gesperrt.
+
+310 lokale Tests bestanden, acht echte PostgreSQL-Tests lokal übersprungen.
+Ruff, mypy, TypeScript, UI-Build und Quell-Secret-Scan grün. Neue CI ergänzt
+synthetische Browseroberfläche und echten netzwerkfreien Chromium-Container.
+M3 weiterhin Teilstand; nächster Schritt CI, reviewed own-VM rollout, echte
+HA-Berichtsaufgabe und Chat-Tool-/Task-Integration, danach restliche M3-Abnahmen.

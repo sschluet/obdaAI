@@ -38,7 +38,9 @@ class Binding(StrictInput):
 
 
 class ReadStep(StrictInput):
-    tool_id: Literal["hub.inspect"] = "hub.inspect"
+    tool_id: Literal["hub.inspect", "ha.inspect", "ha.backups.inspect", "ha.maintenance.plan"] = (
+        "hub.inspect"
+    )
     tool_revision: Literal[1] = 1
     parameters: StrictInput = Field(default_factory=StrictInput)
 
@@ -76,6 +78,9 @@ class TaskSpec(StrictInput):
         analyses = [i for i, step in enumerate(self.steps) if step.tool_id == "ai.analyze"]
         if analyses and analyses != [len(self.steps) - 1]:
             raise ValueError("At most one local analysis, as the final step")
+        external = [s for s in self.steps if s.tool_id.startswith("ha.")]
+        if len(external) > 1 or (external and analyses):
+            raise ValueError("One fixed HA report per task; no implicit model context transfer")
         return self
 
     @field_validator("timezone")
@@ -175,7 +180,10 @@ def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
             tool is None
             or tool["revision"] != step.tool_revision
             or tool["effect"] != "read"
-            or tool["external"]
+            or (
+                tool["external"]
+                and step.tool_id not in ("ha.inspect", "ha.backups.inspect", "ha.maintenance.plan")
+            )
         ):
             raise HTTPException(409, "Lesewerkzeugrevision nicht mehr verfügbar")
     return {
@@ -249,7 +257,9 @@ def check_schedule(db: Session, run: TaskRun) -> None:
         raise HTTPException(409, "Zeitplan pausiert oder geändert")
 
 
-def execute_task_read(factory: sessionmaker[Session], run_id: str) -> None:
+def execute_task_read(
+    factory: sessionmaker[Session], run_id: str, cfg: Settings | None = None
+) -> None:
     with factory() as db:
         lock(db)
         run = db.get(TaskRun, run_id)
@@ -281,11 +291,25 @@ def execute_task_read(factory: sessionmaker[Session], run_id: str) -> None:
                 if time.monotonic() - started > spec.timeout_seconds:
                     raise HTTPException(409, "Aufgabenzeitgrenze erreicht")
                 # Fixed read adapter. Goal, documents and metadata never become code.
-                result = {
-                    "projects": db.scalar(select(func.count()).select_from(Project)),
-                    "sources": db.scalar(select(func.count()).select_from(Source)),
-                    "label": "LOCAL_ONLY",
-                }
+                if step.tool_id.startswith("ha."):
+                    from hub.ha_backups import inspect as backups
+                    from hub.ha_maintenance import inspect as maintenance
+                    from hub.home_assistant import inspect as health
+
+                    adapter = {
+                        "ha.inspect": health,
+                        "ha.backups.inspect": backups,
+                        "ha.maintenance.plan": maintenance,
+                    }[step.tool_id]
+                    result = adapter(cfg or Settings.from_env())
+                else:
+                    result = {
+                        "projects": db.scalar(select(func.count()).select_from(Project)),
+                        "sources": db.scalar(select(func.count()).select_from(Source)),
+                        "label": "LOCAL_ONLY",
+                    }
+                if time.monotonic() - started > spec.timeout_seconds:
+                    raise HTTPException(409, "Aufgabenzeitgrenze nach Leseprüfung erreicht")
                 db.add(
                     TaskStep(
                         run_id=run.id,

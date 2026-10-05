@@ -5,6 +5,7 @@ together; n8n uses durable intents and bounded reconciliation in workflow_operat
 No model-provided URLs or arbitrary executable payloads are accepted.
 """
 
+import base64
 import hashlib
 import json
 import time
@@ -12,6 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session, sessionmaker
@@ -19,6 +21,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.config import Settings
 from hub.db import ActionGrant, ActionIntent, ActionPolicy, ActionReceipt, Project, Source
 from hub.ha_backups import inspect as inspect_ha_backups
+from hub.ha_maintenance import inspect as inspect_ha_maintenance
 from hub.home_assistant import inspect as inspect_ha
 from hub.knowledge_api import Auth
 
@@ -47,6 +50,11 @@ class MCPReadParameters(StrictInput):
     schema_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class BrowserParameters(StrictInput):
+    target_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
+    target_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class ProposalInput(StrictInput):
     request_id: UUID
     tool_id: str = Field(max_length=80)
@@ -66,6 +74,24 @@ class PauseInput(StrictInput):
 
 # These schemas and adapters are code-reviewed, never supplied by a model/document.
 TOOLS: dict[str, dict[str, Any]] = {
+    "ha.maintenance.plan": {
+        "id": "ha.maintenance.plan",
+        "name": "Home-Assistant-Wartung planen",
+        "revision": 1,
+        "effect": "read",
+        "system": "Home Assistant",
+        "external": True,
+        "parameters_schema": StrictInput.model_json_schema(),
+    },
+    "browser.inspect": {
+        "id": "browser.inspect",
+        "name": "Freigegebene Webseite prüfen",
+        "revision": 1,
+        "effect": "read",
+        "system": "Browser",
+        "external": True,
+        "parameters_schema": BrowserParameters.model_json_schema(),
+    },
     "mcp.read": {
         "id": "mcp.read",
         "name": "Freigegebenes MCP-Lesewerkzeug ausführen",
@@ -138,7 +164,9 @@ def digest(value: str) -> str:
 def parameters(tool_id: str, value: dict[str, Any]) -> dict[str, Any]:
     try:
         model = (
-            MCPReadParameters
+            BrowserParameters
+            if tool_id == "browser.inspect"
+            else MCPReadParameters
             if tool_id == "mcp.read"
             else WorkflowParameters
             if tool_id.startswith("n8n.workflow.")
@@ -164,6 +192,10 @@ def lock(db: Session) -> ActionPolicy:
 def info(db: Session, action: ActionIntent) -> dict[str, Any]:
     grant = db.get(ActionGrant, action.id)
     receipt = db.get(ActionReceipt, action.id)
+    result = json.loads(receipt.result) if receipt else None
+    if result and action.tool_id == "browser.inspect":
+        result.pop("png", None)
+        result["preview_url"] = "/api/actions/" + action.id + "/browser-preview"
     return {
         "id": action.id,
         "tool_id": action.tool_id,
@@ -175,7 +207,7 @@ def info(db: Session, action: ActionIntent) -> dict[str, Any]:
         "status": action.status,
         "created": action.created,
         "grant": {"expires": grant.expires, "revoked": grant.revoked} if grant else None,
-        "receipt": json.loads(receipt.result) if receipt else None,
+        "receipt": result,
     }
 
 
@@ -193,18 +225,52 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             {
                 **t,
                 "configured": (
-                    bool(json.loads(cfg.mcp_read_tools_json))
+                    bool(
+                        json.loads(cfg.browser_targets_json)
+                        and cfg.browser_request_dir
+                        and cfg.browser_result_dir
+                    )
+                    if t["id"] == "browser.inspect"
+                    else bool(json.loads(cfg.mcp_read_tools_json))
                     if t["id"] == "mcp.read"
                     else bool(
                         cfg.n8n_api_key_file and cfg.n8n_allowed_ip and cfg.n8n_ca_credential_id
                     )
                     if t["id"].startswith("n8n.workflow.")
-                    else t["id"] not in ("ha.inspect", "ha.backups.inspect")
+                    else t["id"] not in ("ha.inspect", "ha.backups.inspect", "ha.maintenance.plan")
                     or bool(cfg.ha_token_file and cfg.ha_allowed_ip)
                 ),
             }
             for t in TOOLS.values()
         ]
+
+    @app.get("/api/browser-targets")
+    def browser_targets(auth: Auth) -> list[dict[str, Any]]:
+        from hub.browser_read import approved
+
+        result = []
+        rules = json.loads(cfg.browser_targets_json)
+        for name, row in rules.items():
+            sha = digest(json.dumps(row, sort_keys=True, separators=(",", ":")))
+            try:
+                approved(cfg, name, sha)
+            except (HTTPException, ValueError, TypeError):
+                continue
+            result.append({"id": name, "name": row["name"], "url": row["url"], "sha256": sha})
+        return result
+
+    @app.get("/api/actions/{action_id}/browser-preview")
+    def browser_preview(action_id: UUID, auth: Auth) -> Response:
+        with factory() as db:
+            row = get_action(db, str(action_id))
+            receipt = db.get(ActionReceipt, row.id)
+            if row.tool_id != "browser.inspect" or not receipt:
+                raise HTTPException(404, "Browservorschau nicht vorhanden")
+            return Response(
+                base64.b64decode(json.loads(receipt.result)["png"], validate=True),
+                media_type="image/png",
+                headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+            )
 
     @app.get("/api/home-assistant/status")
     def ha_status(auth: Auth) -> dict[str, Any]:
@@ -267,6 +333,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                 from hub.workflow_operator import validate_binding
 
                 validate_binding(db, json.loads(params), body.tool_id)
+            if body.tool_id == "browser.inspect":
+                from hub.browser_read import approved
+
+                approved(cfg, json.loads(params)["target_id"], json.loads(params)["target_sha256"])
             if body.tool_id == "mcp.read":
                 from hub.mcp_actions import validate_connection
 
@@ -346,7 +416,14 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                 or row.tool_revision != tool["revision"]
                 or (
                     tool["external"]
-                    and row.tool_id not in ("ha.inspect", "ha.backups.inspect", "mcp.read")
+                    and row.tool_id
+                    not in (
+                        "ha.inspect",
+                        "ha.backups.inspect",
+                        "mcp.read",
+                        "browser.inspect",
+                        "ha.maintenance.plan",
+                    )
                 )
             ):
                 raise HTTPException(409, "Werkzeugversion oder Systemgrenze geändert")
@@ -386,10 +463,16 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                     "archived": True,
                     "revision": params["expected_revision"] + 1,
                 }
+            elif row.tool_id == "browser.inspect":
+                from hub.browser_read import snapshot
+
+                result = snapshot(cfg, row.id, params)
             elif row.tool_id == "mcp.read":
                 from hub.mcp_actions import read_connection
 
                 result = read_connection(db, cfg, params)
+            elif row.tool_id == "ha.maintenance.plan":
+                result = inspect_ha_maintenance(cfg)
             elif row.tool_id == "ha.backups.inspect":
                 result = inspect_ha_backups(cfg)
             elif row.tool_id == "ha.inspect":

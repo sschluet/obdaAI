@@ -8,6 +8,8 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import hub.action_api as fixture_action_api
+import hub.browser_read as fixture_browser
+import hub.ha_maintenance as fixture_maintenance
 from alembic import command
 from alembic.config import Config
 from hub.api import create_app
@@ -42,6 +44,17 @@ app = create_app(
                 }
             }
         ),
+        browser_targets_json=json.dumps(
+            {
+                "synthetic": {
+                    "name": "Synthetic public page",
+                    "url": "https://example.org/help",
+                    "ip": "93.184.215.14",
+                }
+            }
+        ),
+        browser_request_dir="synthetic-only",
+        browser_result_dir="synthetic-only",
         origin=os.getenv("HUB_BROWSER_ORIGIN", "http://127.0.0.1:18765"),
         secure_cookie=False,
         password_hash=password_hash("synthetic-ui-password"),
@@ -239,3 +252,26 @@ def synthetic_ha_backups(cfg: Settings) -> dict:
 
 
 fixture_action_api.inspect_ha_backups = synthetic_ha_backups
+
+
+# Synthetic renderer response only; actual Chromium isolation is tested separately.
+def synthetic_browser_snapshot(cfg: Settings, action_id: str, params: dict) -> dict:
+    row = fixture_browser.approved(cfg, params["target_id"], params["target_sha256"])
+    return {
+        "name": row["name"],
+        "text": "SYNTHETIC_BROWSER_PAGE_RESULT",
+        "png": (
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lE"
+            "QVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII="
+        ),
+        "label": "LOCAL_ONLY",
+        "url": row["url"],
+        "automatic_model_context": False,
+        "untrusted": True,
+        "live_interaction": False,
+    }
+
+
+fixture_browser.snapshot = synthetic_browser_snapshot
+fixture_maintenance.state_inspect = synthetic_ha_inspect
+fixture_maintenance.backup_inspect = synthetic_ha_backups

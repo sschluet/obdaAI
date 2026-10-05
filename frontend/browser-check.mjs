@@ -220,6 +220,13 @@ await page.getByText('Archivierte Verbindungen',{exact:true}).click();
 await page.getByRole('button',{name:'Wiederherstellen',exact:true}).click();
 await page.getByRole('heading',{name:'Synthetic MCP connection',exact:true}).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+// Passive browser snapshot with protected preview and durable result.
+await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+await page.getByRole('button',{name:'Webseite jetzt prüfen',exact:true}).click();
+await page.getByText('Gelesenen Seitentext ansehen',{exact:true}).click();
+await page.getByText('SYNTHETIC_BROWSER_PAGE_RESULT',{exact:true}).waitFor();
+
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();
 if(errors.length)throw Error(errors.join('\n'));

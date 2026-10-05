@@ -111,7 +111,7 @@ async def execute_task(factory: Any, cfg: Any, run_id: str, provider: Any = None
         except HTTPException:
             pass
     if not has_model:
-        await asyncio.to_thread(execute_task_read, factory, run_id)
+        await asyncio.to_thread(execute_task_read, factory, run_id, cfg)
         return
     with execution_lock(factory, run_id) as acquired:
         if not acquired:

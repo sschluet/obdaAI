@@ -1,0 +1,38 @@
+# Own VM only, no live remote-control endpoint. Exact targets configured separately.
+services:
+  api:
+    environment:
+      HUB_BROWSER_REQUEST_DIR: /browser-requests
+      HUB_BROWSER_RESULT_DIR: /browser-results
+    volumes:
+      - /var/lib/obdaai/browser-requests:/browser-requests
+      - /var/lib/obdaai/browser-results:/browser-results:ro
+  api_https:
+    environment:
+      HUB_BROWSER_REQUEST_DIR: /browser-requests
+      HUB_BROWSER_RESULT_DIR: /browser-results
+    volumes:
+      - /var/lib/obdaai/browser-requests:/browser-requests
+      - /var/lib/obdaai/browser-results:/browser-results:ro
+  browser:
+    image: obdaai-browser:${HUB_RELEASE:?Set the reviewed Git commit}
+    network_mode: none
+    user: '10001:10001'
+    read_only: true
+    init: true
+    tmpfs: ['/tmp:size=256m,mode=1777']
+    shm_size: 128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=/opt/obdaai/browser-seccomp.json
+    volumes:
+      - /var/lib/obdaai/browser-requests:/browser-requests:ro
+      - /var/lib/obdaai/browser-results:/browser-results
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options: {max-size: '10m', max-file: '3'}
