@@ -274,3 +274,55 @@ class SkillRevision(Base):
     document: Mapped[str] = mapped_column(Text)
     sha256: Mapped[str] = mapped_column(String(64))
     created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    control_revision: Mapped[int] = mapped_column(Integer, default=1)
+    paused: Mapped[bool] = mapped_column(Boolean, default=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class TaskRevision(Base):
+    __tablename__ = "task_revisions"
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    spec: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class TaskRun(Base):
+    __tablename__ = "task_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    task_revision: Mapped[int] = mapped_column(Integer)
+    control_revision: Mapped[int] = mapped_column(Integer)
+    request_key: Mapped[str] = mapped_column(String(36), unique=True)
+    request_digest: Mapped[str] = mapped_column(String(64))
+    snapshot: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="queued")
+    error: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+    finished: Mapped[float | None] = mapped_column(Float, nullable=True)
+    __table_args__ = (
+        Index(
+            "one_active_task_run",
+            "task_id",
+            unique=True,
+            sqlite_where=text("status IN ('queued', 'running')"),
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
+    )
+
+
+class TaskStep(Base):
+    __tablename__ = "task_steps"
+    run_id: Mapped[str] = mapped_column(ForeignKey("task_runs.id"), primary_key=True)
+    sequence: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tool_id: Mapped[str] = mapped_column(String(80))
+    result: Mapped[str] = mapped_column(Text)
+    finished: Mapped[float] = mapped_column(Float, default=time.time)

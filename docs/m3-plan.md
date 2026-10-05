@@ -77,3 +77,7 @@ lesend getestet: n8n GET workflows 200; HA GET config 200, Version 2026.9.3.
 Keine Workflows aktiviert, Credentials übernommen oder HA-Zustände verändert.
 Secrets liegen nur im geschützten ignorierten Bereich. Neue App-Adapter und deren
 konkrete Netzwerkfreigaben stehen aus. Skills-Chat-Vertrag: `docs/skills.md`.
+
+Manuelle Task-Center-Lesevertikale (0014) und nebenwirkungsfreier n8n-Checkexport
+sind implementiert: `docs/tasks.md`. A10/A11/A13 bleiben bis echter n8n-Ausführung,
+Zeitplanung, Drift-/Restart- und externen Reconcillenachweisen offen.

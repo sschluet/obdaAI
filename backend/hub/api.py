@@ -42,6 +42,7 @@ from hub.policy import ContextPart, Privacy
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
 from hub.skill_api import install_skill_api, select_skills
+from hub.task_api import install_task_api
 from hub.websearch import install_web_api
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
@@ -111,6 +112,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_web_api(app, cfg, factory)
     install_action_api(app, factory)
     install_skill_api(app, factory)
+    install_task_api(app, cfg, factory)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:

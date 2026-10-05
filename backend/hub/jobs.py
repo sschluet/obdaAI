@@ -75,6 +75,17 @@ def enqueue_source(db: Session, cfg: Settings, source_id: str) -> None:
     )
 
 
+def enqueue_task_read(db: Session, cfg: Settings, run_id: str) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable task requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.task-read", queue="tasks", priority=0, connection=raw).defer(
+        run_id=run_id
+    )
+
+
 def worker_app(cfg: Settings) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
@@ -135,6 +146,12 @@ def worker_app(cfg: Settings) -> procrastinate.App:
     async def probe(test_id: str) -> None:
         await execute_probe(factory, cfg, test_id)
 
+    @queue.task(name="hub.task-read", queue="tasks", retry=False)
+    async def task_read(run_id: str) -> None:
+        from hub.task_api import execute_task_read
+
+        await asyncio.to_thread(execute_task_read, factory, run_id)
+
     @queue.periodic(cron="* * * * *")
     @queue.task(
         name="hub.vault-reconcile",
@@ -173,7 +190,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
 async def requeue_stalled(queue: procrastinate.App) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
-    for task in ("hub.chat", "hub.title", "hub.probe", "hub.extract"):
+    for task in ("hub.chat", "hub.title", "hub.probe", "hub.extract", "hub.task-read"):
         for job in await queue.job_manager.get_stalled_jobs(
             task_name=task, seconds_since_heartbeat=60
         ):
@@ -188,7 +205,7 @@ async def main() -> None:
         await queue.run_worker_async(
             queues=["sources", "vault-maintenance"]
             if "--sources" in sys.argv
-            else ["chat", "tests", "titles", "maintenance"],
+            else ["chat", "tests", "tasks", "titles", "maintenance"],
             concurrency=1,
             shutdown_graceful_timeout=95,
         )

@@ -1,6 +1,6 @@
 # obdaAI — Status 05.10.2026
 
-## M3 in Entwicklung · Aktionsgateway und Chat-Skills
+## M3 in Entwicklung · Aktionsgateway, Chat-Skills und manuelle Aufgaben
 
 Branch `milestone/m3-actions`, auf M2 aufbauend. Implementiert: feste Werkzeuge
 Hub-Status lesen und Projekt wiederherstellbar archivieren; strikte Schemas,
@@ -49,7 +49,21 @@ bestanden: drei Skillrevisionen mit gültigen Dokumenthashes, drei Aktionsbelege
 40 Originalhashes, sechs Memory-Dateien und Zugangsschlüssel erhalten. Bestehende
 Proxmox-Konfiguration unverändert.
 
-Nächste Vertikalen: Toolverbindungen, TaskSpec/Task-Center und aufgabenbezogene Skills. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
+Manuelle Task-Center-Vertikale implementiert, Migration 0014: unveränderliche
+TaskSpec-Revisionen, getrennte Pausenrevision, Hash-/Quellen-/Skillbindung,
+transaktionale PostgreSQL-Queue und atomare lokale Lesebelege. Anlegen/Bearbeiten,
+Pause/Fortsetzen, Start, wartenden Lauf abbrechen und wiederherstellbares Archiv.
+Nur feste lokale Leseprüfungen, kein Modellaufruf, Kosten 0 USD, kein Zeitplan.
+Lokal 140 Tests bestanden, vier echte PostgreSQL-Checks für CI; Ruff/mypy,
+Frontendbuild und Secret-Scan bestanden. Browser-Fixture: Lifecycle, persistenter
+Lauf nach Reload, alte Revision nach Bearbeitung, Archiv/Restore pausiert und
+390px ohne horizontalen Überlauf bestätigt. Serverrollout und CI dieser Lieferung
+noch ausstehend. n8n-Export: streng validierter Manual Trigger → No operation,
+installierte Nodeversionen lesend geprüft; separate Freigabe zum Anlegen auf dem
+Bestands-n8n angefragt. Kein Workflow dort angelegt oder aktiviert. Dieser Entwurf
+führt noch keine Aufgabe aus; A10 bleibt offen. Vertrag: `docs/tasks.md`.
+
+Nächste Vertikalen: Toolverbindungen, echte n8n-Ausführung/Zeitpläne und aufgabenbezogene Modell-Skills. Externe MCP/REST-/Browser-/n8n-/HA-Dispatcher und autonome
 Modellaktionen sind noch nicht implementiert. Beide Benutzerzugänge am 05.10.2026 über verifiziertes HTTPS lesend bestätigt:
 n8n Workflows-API 200, Home Assistant Config-API 200 / Version 2026.9.3. Secrets nur
 im geschützten ignorierten Bereich, keine bestehenden Workflows oder HA-Einstellungen

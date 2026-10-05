@@ -40,7 +40,7 @@ M2 adds project sources/uploads, extraction/OCR, scoped knowledge chat, explicit
 approved public web research and canonical Vault Memory with revision comparison.
 The authorized limited Vault/search integration is installed and live-tested on the
 dedicated VM. M3 starts with fixed local actions, persisted proposals, explicit grants and receipts
-([contract](docs/actions.md)); [trusted revisioned chat skills](docs/skills.md) are implemented; external adapters, task-scoped skills and Task-Center remain in development.
+([contract](docs/actions.md)); [trusted revisioned chat skills](docs/skills.md) are implemented; [manual local Task-Center](docs/tasks.md) is implemented. External adapters, model task steps and scheduled n8n execution remain in development.
 M4–M5 are not implemented yet. Cloud remains disabled in generic defaults and needs an
 explicit operator authorization plus conversation opt-in. Migrations must run before
 startup. SQLite is for local contract tests/development; durable jobs use PostgreSQL.

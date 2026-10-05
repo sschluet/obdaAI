@@ -1,0 +1,43 @@
+{
+  "name": "obdaAI connection check c6768b85-9c01-4962-be7d-ce075c382131 r1 f410f9afb49b",
+  "nodes": [
+    {
+      "id": "7ed504e2-3a6e-4ce7-9dc8-951bb3e27389",
+      "name": "Manual Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "21a24a31-7e8c-4c2b-b8bc-7bd84efc07bc",
+      "name": "No operation",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [
+        240,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Start": {
+      "main": [
+        [
+          {
+            "node": "No operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
