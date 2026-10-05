@@ -85,7 +85,7 @@ async def execute_run(
         )
         grants = (
             [
-                CloudGrant(source_id=p.source_id, revision=p.revision, provider_id="openrouter")
+                CloudGrant(source_id=p.source_id, revision=p.revision, provider_id=c.cloud_provider)
                 for p in parts
             ]
             if c.cloud_allowed
@@ -170,7 +170,9 @@ async def execute_run(
                 raise ExecutionLimitError("Keine Vault-Recherche: Zugang noch nicht angebunden")
             selected: dict[str, ProviderConfig] = {}
             if isinstance(providers, Providers):
-                cfg, providers, selected = runtime_provider(factory, cfg)
+                cfg, providers, selected = runtime_provider(
+                    factory, cfg, external_kind=c.cloud_provider
+                )
                 local = selected.get("local")
                 if not local or not local.enabled:
                     raise ExecutionLimitError("Lokaler Router ist deaktiviert")
@@ -347,15 +349,15 @@ async def execute_run(
                     # policy choice, not an external provider outage fallback.
                     external = False
                     yield ("status", {"message": "Datenschutzregel hält diese Antwort lokal"})
-                provider = "openrouter" if external else "local"
+                provider = c.cloud_provider if external else "local"
                 if external and selected:
-                    cloud = selected.get("openrouter")
+                    cloud = selected.get(c.cloud_provider)
                     if cloud is None:
                         raise ValueError("Cloud provider not configured")
-                    check_egress(parts, external=True, provider_id="openrouter", grants=grants)
+                    check_egress(parts, external=True, provider_id=c.cloud_provider, grants=grants)
                     assert isinstance(providers, Providers)
                     cloud = await fresh_cloud_prices(factory, cloud, providers)
-                    selected["openrouter"] = cloud
+                    selected[c.cloud_provider] = cloud
                     with factory() as db:
                         estimate = reserve(db, cloud, run_id, parts)
                         current = db.get(Run, run_id)
@@ -443,6 +445,7 @@ async def execute_run(
                     settle(db, run_id, providers.measured_cost)
                     if current:
                         current.cost = providers.measured_cost
+                        current.cost_basis = providers.cost_basis
                 if status == "succeeded":
                     reserve_title(db, cfg, chat_id)
                 db.commit()

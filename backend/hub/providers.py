@@ -116,8 +116,18 @@ def pinned_url(
 
 
 class Providers:
-    def __init__(self, settings: Settings, *, keys: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        keys: dict[str, str] | None = None,
+        external_kind: str = "openrouter",
+    ) -> None:
         self.settings = settings
+        if external_kind not in ("openrouter", "openai", "anthropic"):
+            raise ValueError("Unknown external provider")
+        self.external_kind = external_kind
+        self.cost_basis = "unknown"
         self.local_slot = asyncio.Semaphore(1)
         self.keys = keys or {}
         self.measured_cost: float | None = None
@@ -126,6 +136,8 @@ class Providers:
     def _target(self, external: bool) -> tuple[str, dict[str, str], dict[str, str], str]:
         s = self.settings
         if external:
+            if self.external_kind not in s.external_provider_kinds:
+                raise PermissionError("External provider is not in server allowlist")
             if not s.cloud_enabled or not (s.openrouter_key_file or self.keys.get("openrouter")):
                 raise ValueError("OpenRouter is not enabled/configured")
             # Validate /v1 canonical path and DNS through the shared guard, then
@@ -155,10 +167,29 @@ class Providers:
         return target, headers, extensions, key
 
     async def models(self, *, external: bool) -> list[dict[str, object]]:
-        target, headers, extensions, key = self._target(external)
-        if key:
-            headers["Authorization"] = "Bearer " + key
-        target = target.removesuffix("/chat/completions") + "/models"
+        if external and self.external_kind != "openrouter":
+            from hub.native_providers import ENDPOINTS
+
+            if (
+                not self.settings.cloud_enabled
+                or self.external_kind not in self.settings.external_provider_kinds
+            ):
+                raise PermissionError("Native provider disabled by server")
+            key = self.keys.get(self.external_kind, "")
+            if not key:
+                raise ValueError("Native key missing")
+            target, headers, extensions = pinned_url(
+                ENDPOINTS[self.external_kind], "/models", external=True
+            )
+            if self.external_kind == "openai":
+                headers["Authorization"] = "Bearer " + key
+            else:
+                headers.update({"x-api-key": key, "anthropic-version": "2023-06-01"})
+        else:
+            target, headers, extensions, key = self._target(external)
+            if key:
+                headers["Authorization"] = "Bearer " + key
+            target = target.removesuffix("/chat/completions") + "/models"
         async with httpx.AsyncClient(timeout=15, trust_env=False, follow_redirects=False) as client:
             response = await client.get(target, headers=headers, extensions=extensions)
             response.raise_for_status()
@@ -294,9 +325,33 @@ class Providers:
         check_egress(
             parts,
             external=external,
-            provider_id="openrouter" if external else "local",
+            provider_id=self.external_kind if external else "local",
             grants=grants,
         )
+        self.measured_cost, self.cost_basis = None, "unknown"
+        if external and self.external_kind != "openrouter":
+            from hub.native_providers import NativeConfig, NativeProvider
+
+            native = NativeProvider(
+                NativeConfig(
+                    kind=self.external_kind,  # type: ignore[arg-type]
+                    model=self.settings.openrouter_model,
+                    enabled=(
+                        self.settings.cloud_enabled
+                        and self.external_kind in self.settings.external_provider_kinds
+                    ),
+                    output_tokens=self.settings.openrouter_max_tokens,
+                    timeout=self.settings.openrouter_timeout,
+                ),
+                self.keys.get(self.external_kind, ""),
+            )
+            async for value in native.stream(parts, roles, grants=grants):
+                yield value
+            self.measured_cost = (
+                float(native.estimated_cost) if native.estimated_cost is not None else None
+            )
+            self.cost_basis = native.cost_basis
+            return
         if not (self.settings.openrouter_model if external else self.settings.local_model):
             raise ValueError("Answer model is not configured")
         if not external and any(p.label not in self.settings.local_allowed_labels for p in parts):
@@ -351,6 +406,7 @@ class Providers:
                         and 0 <= cost < 1000000
                     ):
                         self.measured_cost = float(cost)
+                        self.cost_basis = "provider_reported"
                     choices = data.get("choices") or []
                     if choices:
                         if choices[0].get("finish_reason") in ("length", "content_filter"):

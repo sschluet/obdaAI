@@ -1,8 +1,9 @@
 # Direkte Textanbieter: Protokollgrenze für M5
 
 Die native Transportgrenze für OpenAI Responses und Anthropic Messages ist vorhanden
-und mit synthetischen HTTP-Antworten geprüft. Sie ist noch nicht vom produktiven
-Chatrouter oder Einstellungsdialog auswählbar. Kein echter Zugang eingerichtet,
+und mit synthetischen HTTP-Antworten geprüft. Im Entwicklungsstand ist sie mit
+verschlüsselter Konfiguration, Budgetreservierung und normalen Einstellungsdialogen
+integriert; produktiver Rollout von Schema 0021 noch offen. Kein echter Zugang eingerichtet,
 kein bezahlter nativer API-Test, keine neue produktive Ausgangsfreigabe.
 
 Die Grenze prüft LOCAL_ONLY und genaue Quelle/Revision/Anbieter-Freigabe **vor DNS**.
@@ -24,7 +25,23 @@ Quellen: [OpenAI Streaming](https://developers.openai.com/api/docs/guides/stream
 [Anthropic Streaming](https://platform.claude.com/docs/en/build-with-claude/streaming),
 [Anthropic Modellpreise](https://platform.claude.com/docs/en/models/haiku-4-5/overview).
 
-Nächster Integrationsschritt: unveränderlich an den gewählten Anbieter gebundene
-Gesprächsfreigaben, eigene Serverallowlist, verschlüsselte Konfiguration, Budget-
-reservierung und deutlich als Schätzung ausgewiesene Laufkosten. Erst danach
-Auswahl im Dialog und Abnahme des vollständigen Ablaufs. M5 bleibt offen.
+Schema 0021 bindet ein Gespräch unveränderlich an den beim Anlegen gewählten Anbieter.
+Bestehende Gespräche bleiben auf OpenRouter gebunden. Nachrichtenedits benötigen
+weiterhin eine eigene Inhaltsrevision-Freigabe. Lokale Projekt-/Vault-Kontexte bleiben
+lokal; eine bloße Auswahl gewährt keine Übertragung. Synthetischer API-Gesamtablauf
+prüft private lokale Antwort, freigegebenen direkten Stream, konkrete Reservierung,
+verschlüsselten Schlüssel und als Schätzung gekennzeichnete Kosten.
+
+`HUB_EXTERNAL_PROVIDER_KINDS` ist eine serverseitige JSON-Liste; Standard bleibt nur
+OpenRouter. Nur ausdrücklich eingerichtete eigene Anbieter ergänzen. Es werden keine
+Firewalls, Keys oder Freigaben automatisch aktiviert. Normale Modell-Dialoge erlauben
+Vorbereitung, zeigen feste Adressen, Modellvorschläge und gesperrte Tests für einen
+nicht freigegebenen Anbieter. Neues Gespräch: separater Anbieter und explizite
+Gesprächsfreigabe. Wechsel benötigt ein neues Gespräch. Native Adapter derzeit nur
+Text; Tool-/Bild-/Embedding-Ausführung ist nicht Teil dieser Anbindung.
+
+`Run.cost_basis` unterscheidet `usage_estimate`, `provider_reported` und `unknown`.
+Die Laufhistorie und Metriken unterscheiden Schätzung und Provider-Meldung; fehlende
+Usage behält die volle Reservierung. Ein Kontext- oder Streamfehler wird nicht erneut
+kostenpflichtig ausgeführt. Die produktive Native-Live-Abnahme benötigt dedizierte
+Zugänge und Zielfreigaben und bleibt offen. M5 bleibt teilweise umgesetzt.

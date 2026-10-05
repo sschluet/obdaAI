@@ -22,7 +22,7 @@ from hub.providers import Providers, pinned_url
 class ProviderInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=80)
-    kind: Literal["local", "openrouter"]
+    kind: Literal["local", "openrouter", "openai", "anthropic"]
     base_url: str = Field(max_length=400)
     model: str = Field(max_length=240)
     enabled: bool = True
@@ -48,8 +48,10 @@ class ProviderInput(BaseModel):
     def validate_classes(self) -> "ProviderInput":
         if len(set(self.capabilities)) != len(self.capabilities) or not self.allowed_labels:
             raise ValueError("Duplicate capabilities or empty privacy classes")
-        if self.kind == "openrouter" and "LOCAL_ONLY" in self.allowed_labels:
+        if self.kind != "local" and "LOCAL_ONLY" in self.allowed_labels:
             raise ValueError("External provider cannot accept LOCAL_ONLY")
+        if self.kind in ("openai", "anthropic") and self.capabilities != ["text"]:
+            raise ValueError("Native adapters currently support only text")
         if self.api_key and self.clear_secret:
             raise ValueError("Cannot replace and clear a secret together")
         return self
@@ -67,9 +69,14 @@ def local_endpoints(cfg: Settings) -> dict[str, str]:
 
 
 def validate_endpoint(body: ProviderInput, cfg: Settings) -> None:
-    if body.kind == "openrouter":
-        if body.base_url != "https://openrouter.ai/v1":
-            raise ValueError("OpenRouter requires the official endpoint")
+    if body.kind != "local":
+        official = {
+            "openrouter": "https://openrouter.ai/v1",
+            "openai": "https://api.openai.com/v1",
+            "anthropic": "https://api.anthropic.com/v1",
+        }
+        if body.base_url != official[body.kind]:
+            raise ValueError("External provider requires its official endpoint")
     else:
         approved = local_endpoints(cfg)
         if body.base_url not in approved:
@@ -151,7 +158,11 @@ def public(row: ProviderConfig, cfg: Settings) -> dict[str, object]:
 
 
 def runtime_provider(
-    factory: sessionmaker[Session], cfg: Settings, *, local_only: bool = False
+    factory: sessionmaker[Session],
+    cfg: Settings,
+    *,
+    local_only: bool = False,
+    external_kind: str = "openrouter",
 ) -> tuple[Settings, Providers, dict[str, ProviderConfig]]:
     with factory() as db:
         seed(db, cfg)
@@ -165,15 +176,16 @@ def runtime_provider(
     keys: dict[str, str] = {}
     if local_only:
         values.update(cloud_enabled=False, openrouter_model="", openrouter_key_file="")
-    for kind in ("local",) if local_only else ("local", "openrouter"):
+    for kind in ("local",) if local_only else ("local", external_kind):
         row = selected.get(kind)
         if not row or not row.enabled:
-            values[kind + "_model"] = ""
+            values[("local" if kind == "local" else "openrouter") + "_model"] = ""
             continue
         data = json.loads(row.config)
-        values[kind + "_model"] = data["model"]
-        values[kind + "_timeout"] = data["timeout"]
-        values[kind + "_max_tokens"] = data["output_tokens"]
+        prefix = "local" if kind == "local" else "openrouter"
+        values[prefix + "_model"] = data["model"]
+        values[prefix + "_timeout"] = data["timeout"]
+        values[prefix + "_max_tokens"] = data["output_tokens"]
         if kind == "local":
             if data["base_url"] not in local_endpoints(cfg):
                 raise ValueError("Local endpoint is not allowed")
@@ -185,9 +197,9 @@ def runtime_provider(
         if row.encrypted_secret:
             keys[kind] = decrypt(cfg, row.id, row.encrypted_secret)
         elif row.id != kind + "-default" or not data.get("use_server_secret", True):
-            values[kind + "_key_file"] = ""
+            values[prefix + "_key_file"] = ""
     settings = replace(cfg, **values)  # type: ignore[arg-type]
-    return settings, Providers(settings, keys=keys), selected
+    return settings, Providers(settings, keys=keys, external_kind=external_kind), selected
 
 
 async def fresh_cloud_prices(
@@ -195,6 +207,36 @@ async def fresh_cloud_prices(
 ) -> ProviderConfig:
     """Refresh public metadata on demand; never send conversation content."""
     data = json.loads(row.config)
+    if row.kind in ("openai", "anthropic"):
+        from hub.native_providers import PRICE_SOURCES, REVIEWED_AT, prices
+
+        native_rates = prices(row.kind, data["model"])  # type: ignore[arg-type]
+        desired = {
+            "input": str(native_rates[0] / Decimal(1000000)),
+            "output": str(native_rates[1] / Decimal(1000000)),
+            "verified_at": REVIEWED_AT,
+            "expires_at": REVIEWED_AT + 7 * 86400,
+            "source": PRICE_SOURCES[row.kind],
+            "basis": "usage_estimate",
+        }
+        if data.get("pricing") == desired:
+            return row
+        with factory() as db:
+            current = db.scalar(
+                select(ProviderConfig).where(ProviderConfig.id == row.id).with_for_update()
+            )
+            if not current or not current.enabled or current.revision != row.revision:
+                raise ExecutionLimitError("Provider changed during price review")
+            data["pricing"] = desired
+            current.config = json.dumps(data)
+            current.revision += 1
+            db.add(
+                ProviderRevision(
+                    provider_id=current.id, revision=current.revision, config=current.config
+                )
+            )
+            db.commit()
+            return current
     pricing = data.get("pricing")
     if pricing and time.time() - pricing["verified_at"] <= 3600:
         return row

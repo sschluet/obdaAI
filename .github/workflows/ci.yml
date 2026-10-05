@@ -74,6 +74,7 @@ jobs:
           cd frontend
           node browser-check.mjs
           node artifact-check.mjs
+          node native-provider-check.mjs
   container:
     runs-on: ubuntu-24.04
     steps:

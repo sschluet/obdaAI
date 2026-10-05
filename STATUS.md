@@ -2,7 +2,7 @@
 
 ## Aktueller Stand: M3-Schreibprofile und M4-Dateidialoge installiert
 
-Produktiv ist `00f72bf` / Schema 0020 installiert. Die begrenzten Aufgaben-
+Produktiv ist `9b6f30b` / Schema 0020 installiert. Die begrenzten Aufgaben-
 Schreibprofile und vier lokale Dateidialoge mit dauerhaften Versionen, Vorschau-
 Freigabe und Offline-Runner sind ausgerollt. Beide APIs gesund; vorhandene
 IPv4-/IPv6-Regeln, übrige Overlays und Browsercode unverändert. Vorherige
@@ -1095,3 +1095,18 @@ Artefakte erhalten die eigene registrierte Lock-ID 791103047. Die Dateitransakti
 läuft in einem Thread mit eigener Session; der API-Ereignisloop bleibt responsiv.
 Regressionen prüfen Health während wartender Dateitransaktion und zwei unabhängig
 gehaltene echte PG-Locks. Live-Timeouts sind erfasst; Dateiabnahme wird wiederholt.
+
+## M5: direkte Anbieter in normaler Oberfläche vorbereitet
+
+Schema 0021 bindet neue Cloudgespräche an OpenRouter, OpenAI oder Anthropic; alte
+Freigaben bleiben OpenRouter. Native textbasierte Adapter, verschlüsselte Schlüssel,
+separate Serverallowlist, geprüfte befristete Preise, Reservierung und unterscheidbare
+Usage-Schätzung implementiert. Native Einrichtung mobil, feste Endpunkte und
+serverseitig gesperrte Tests im synthetischen Browser geprüft. Synthetischer API-
+Gesamtablauf belegt private lokale Antwort, native Freigabe, konkrete Reservierung,
+Stream und Kostenaudit. Kein echter nativer Zugang und keine neue Egress-Freigabe.
+
+400 lokale Tests bestanden; zehn PG-Fälle separat auf eigener VM bestanden. Ruff/
+mypy (52 Module), TS/Build, Source-Scan und drei Browserchecks bestanden. Schema 0021
+und Native-Oberfläche noch nicht produktiv ausgerollt. Native-Live-Abnahme bleibt
+zugangsabhängig; M3/M4/M5 nicht vollständig. Details: docs/native-provider-status.md.

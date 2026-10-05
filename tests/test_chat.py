@@ -343,3 +343,24 @@ def test_local_retry_keeps_original_cloud_label_but_uses_local_snapshot(setup):
         run = db.scalar(select(Run).order_by(Run.started.desc()))
         assert original.label == "CLOUD_ALLOWED"
         assert all(p["label"] == "LOCAL_ONLY" for p in json.loads(run.context_snapshot)["parts"])
+
+
+def test_existing_openrouter_consent_remains_bound_and_cannot_switch(setup):
+    _, client, headers, _ = setup
+    chat_id = new_chat(client, headers, cloud=True)
+    chat = client.get("/api/conversations/" + chat_id).json()
+    assert chat["cloud_provider"] == "openrouter"
+    assert (
+        client.patch(
+            "/api/conversations/" + chat_id, headers=headers, json={"cloud_provider": "openai"}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/api/conversations",
+            headers=headers,
+            json={"cloud_allowed": True, "cloud_provider": "openai"},
+        ).status_code
+        == 409
+    )

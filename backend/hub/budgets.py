@@ -35,7 +35,11 @@ def reserve(
     if "text" not in data["capabilities"] or "CLOUD_ALLOWED" not in data["allowed_labels"]:
         raise ExecutionLimitError("Modellfähigkeit oder Datenschutzklasse nicht freigegeben")
     pricing = data.get("pricing")
-    if not pricing or time.time() - pricing["verified_at"] > 3600:
+    if not pricing or (
+        pricing.get("expires_at", 0) < time.time()
+        if current.kind in ("openai", "anthropic")
+        else time.time() - pricing["verified_at"] > 3600
+    ):
         raise ExecutionLimitError("Frische Modellpreise fehlen; Verbindungstest ausführen")
     # Conservative estimate, not an exact tokenizer or a provider billing guarantee.
     input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 256

@@ -1,5 +1,7 @@
+import json
 import os
 from pathlib import Path
+from typing import Literal
 
 from pydantic import TypeAdapter
 from pydantic.dataclasses import dataclass
@@ -20,6 +22,9 @@ class Settings:
     openrouter_model: str = ""
     openrouter_key_file: str = ""
     cloud_enabled: bool = False
+    external_provider_kinds: tuple[Literal["openrouter", "openai", "anthropic"], ...] = (
+        "openrouter",
+    )
     secrets_key_file: str = ""
     local_endpoints_json: str = "{}"
     local_timeout: int = 30
@@ -58,7 +63,11 @@ class Settings:
         for name in cls.__dataclass_fields__:
             raw = os.getenv("HUB_" + name.upper())
             if raw is not None:
-                values[name] = raw
+                values[name] = (
+                    json.loads(raw)
+                    if name in ("external_provider_kinds", "local_allowed_labels")
+                    else raw
+                )
         return TypeAdapter(cls).validate_python(values)
 
 

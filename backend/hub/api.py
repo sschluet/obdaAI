@@ -75,6 +75,7 @@ class ConversationInput(Input):
     memory_scope: Literal["global"] | None = None
     project_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     cloud_allowed: bool = False
+    cloud_provider: Literal["openrouter", "openai", "anthropic"] = "openrouter"
 
 
 class ConversationEdit(Input):
@@ -175,8 +176,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     func.avg(Run.router_seconds),
                     func.avg(Run.first_content_seconds),
                     func.avg(Run.finished - Run.started),
-                    func.count(Run.cost),
-                    func.sum(Run.cost),
+                    func.count(Run.cost).filter(Run.cost_basis == "provider_reported"),
+                    func.sum(Run.cost).filter(Run.cost_basis == "provider_reported"),
+                    func.count(Run.cost).filter(Run.cost_basis == "usage_estimate"),
+                    func.sum(Run.cost).filter(Run.cost_basis == "usage_estimate"),
                 ).where(window)
             ).one()
             return {
@@ -187,7 +190,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "duration_seconds_avg": timings[2],
                 "measured_cost_runs": timings[3],
                 "measured_cost_usd": timings[4],
-                "cost_unknown_runs": sum(statuses.values()) - timings[3],
+                "estimated_cost_runs": timings[5],
+                "estimated_cost_usd": timings[6],
+                "cost_unknown_runs": sum(statuses.values()) - timings[3] - timings[5],
                 "privacy_default": "LOCAL_ONLY",
             }
 
@@ -246,7 +251,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "local_configured": bool(cfg.local_base_url and cfg.local_model),
             "cloud_enabled": cfg.cloud_enabled,
             "privacy_default": "LOCAL_ONLY",
-            "providers": ["local", "openrouter"],
+            "providers": ["local", "openrouter", "openai", "anthropic"],
+            "external_provider_kinds": list(cfg.external_provider_kinds),
             "web_search_configured": bool(cfg.search_url),
             "version": "0.1.0-dev",
             "autonomous_changes": "paused",
@@ -292,6 +298,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "title": c.title,
                     "title_status": c.title_status,
                     "cloud_allowed": c.cloud_allowed,
+                    "cloud_provider": c.cloud_provider,
                     "archived": c.archived,
                 }
                 for c in chats
@@ -299,7 +306,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/conversations")
     def new_chat(body: ConversationInput, session: SessionDependency) -> dict[str, object]:
-        if body.cloud_allowed and not cfg.cloud_enabled:
+        if body.cloud_allowed and (
+            not cfg.cloud_enabled or body.cloud_provider not in cfg.external_provider_kinds
+        ):
             raise HTTPException(409, "Cloud ist serverseitig noch nicht freigegeben")
         with factory() as db:
             if body.project_id:
@@ -312,6 +321,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise HTTPException(409, "Vault-Wissenschat nur lokal und ohne Projektmischung")
             c = Conversation(
                 cloud_allowed=body.cloud_allowed,
+                cloud_provider=body.cloud_provider,
                 project_id=body.project_id,
                 memory_scope=body.memory_scope,
             )
@@ -324,6 +334,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
+                "cloud_provider": c.cloud_provider,
             }
 
     @app.get("/api/conversations/{chat_id}")
@@ -347,6 +358,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "title": c.title,
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
+                "cloud_provider": c.cloud_provider,
                 "context_sources": [
                     {
                         "source_id": part["source_id"],
@@ -385,6 +397,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         "reason": x.reason,
                         "error": x.error,
                         "cost": x.cost,
+                        "cost_basis": x.cost_basis,
                         "cost_estimate": x.cost_estimate,
                         "model": x.model,
                         "provider_revision": x.provider_revision,
@@ -673,6 +686,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "started": run.started,
                 "finished": run.finished,
                 "cost": run.cost,
+                "cost_basis": run.cost_basis,
                 "cost_estimate": run.cost_estimate,
                 "model": run.model,
                 "provider_revision": run.provider_revision,

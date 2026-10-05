@@ -49,6 +49,9 @@ class Conversation(Base):
     manual_title: Mapped[bool] = mapped_column(Boolean, default=False)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     cloud_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    cloud_provider: Mapped[str] = mapped_column(
+        String(20), default="openrouter", server_default="openrouter"
+    )
     created: Mapped[float] = mapped_column(Float, default=time.time)
 
 
@@ -85,6 +88,7 @@ class Run(Base):
     capabilities: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
     cost_estimate: Mapped[float | None] = mapped_column(Float, nullable=True)
     cost: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cost_basis: Mapped[str] = mapped_column(String(30), default="unknown", server_default="unknown")
     __table_args__ = (
         Index(
             "one_active_run_per_chat",
