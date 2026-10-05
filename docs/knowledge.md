@@ -53,6 +53,7 @@ Webinhalte sind untrusted Daten und erlauben keine Memory-/Skill-/Systemänderun
 keinen zweiten Sync-Dienst. Allgemeine Dateien sind nur lesend. Schreiboperationen
 benötigen `HUB_VAULT_WRITABLE=true` und bleiben auf `AI/Memory/` begrenzt. Symlinks,
 Traversal, `.obsidian`, Plugins und beliebige Systempfade sind ausgeschlossen.
+Der konkrete vorbereitete Zugang steht in `deploy/vault-access-plan.md`.
 Ein fehlender Zugang wird sichtbar gemeldet; ein Test-Vault ist keine echte Abnahme.
 
 App-Memory trägt stabile IDs im Markdown-Kommentar sowie DB-Scope/LOCAL_ONLY-Label,

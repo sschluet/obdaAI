@@ -38,6 +38,7 @@ def restrict(source: Path, workdir: Path) -> None:
             (Path("/lib"), READ | EXEC),
             (Path("/lib64"), READ | EXEC),
             (Path("/etc/ld.so.cache"), 1 << 2),
+            (Path("/etc/mime.types"), 1 << 2),
             (Path("/etc/fonts"), READ),
             (Path(sys.prefix), READ | EXEC),
             (Path(sys.base_prefix), READ | EXEC),
