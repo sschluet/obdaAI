@@ -1,7 +1,18 @@
 import time
 import uuid
 
-from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text, create_engine, text
+from sqlalchemy import (
+    Boolean,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    create_engine,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -326,3 +337,43 @@ class TaskStep(Base):
     tool_id: Mapped[str] = mapped_column(String(80))
     result: Mapped[str] = mapped_column(Text)
     finished: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class TaskSchedule(Base):
+    __tablename__ = "task_schedules"
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    task_revision: Mapped[int] = mapped_column(Integer)
+    control_revision: Mapped[int] = mapped_column(Integer)
+    spec_sha256: Mapped[str] = mapped_column(String(64))
+    definition: Mapped[str] = mapped_column(Text)
+    paused: Mapped[bool] = mapped_column(Boolean, default=True)
+    next_due: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(240), nullable=True)
+
+
+class ScheduleOccurrence(Base):
+    __tablename__ = "schedule_occurrences"
+    __table_args__ = (UniqueConstraint("task_id", "schedule_revision", "due"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    schedule_revision: Mapped[int] = mapped_column(Integer)
+    due: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(20))
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("task_runs.id"), unique=True)
+    reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class SchedulerPulse(Base):
+    __tablename__ = "scheduler_pulse"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_tick: Mapped[float] = mapped_column(Float)
+
+
+class ScheduleRevision(Base):
+    __tablename__ = "schedule_revisions"
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    snapshot: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)

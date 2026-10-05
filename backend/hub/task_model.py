@@ -17,7 +17,7 @@ from hub.policy import ContextPart
 from hub.provider_settings import runtime_provider
 from hub.providers import Providers
 from hub.skill_api import parse
-from hub.task_api import check_bindings, current, execute_task_read, lock
+from hub.task_api import check_bindings, check_schedule, current, execute_task_read, lock
 
 _fixture_locks: dict[str, threading.Lock] = {}
 
@@ -146,6 +146,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                 )
                 db.commit()
                 return
+            check_schedule(db, run)
             task, revision, spec = current(db, run.task_id)
             manifest = check_bindings(db, spec)
             if (
@@ -230,6 +231,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                             or task.control_revision != run.control_revision
                         ):
                             raise ValueError("Cancelled or task drift")
+                        check_schedule(db, run)
                         check_bindings(db, current_spec)
                         if row:
                             actual = db.get(ProviderConfig, row.id)
@@ -243,6 +245,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
             lock(db)
             run = db.get(TaskRun, run_id)
             task, _, current_spec = current(db, run.task_id)
+            check_schedule(db, run)
             check_bindings(db, current_spec)
             if (
                 run.status != "running"

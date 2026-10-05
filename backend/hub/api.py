@@ -41,6 +41,7 @@ from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
+from hub.schedule_api import install_schedule_api
 from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
 from hub.task_drafts import install_task_drafts
@@ -116,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_action_api(app, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
+    install_schedule_api(app, cfg, factory)
     install_task_drafts(app, cfg, factory)
 
     @app.exception_handler(RequestValidationError)

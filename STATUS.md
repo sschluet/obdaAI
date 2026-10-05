@@ -623,3 +623,23 @@ unverändert. Arbeitsverzeichnis sauber nach Dokumentationscommit.
 Benutzer möchte aktuell keinen MCP-Server anbinden, sondern die Möglichkeit für
 später. Ausführbare n8n-Zeitplanung mit einmaligen/wiederkehrenden Terminen und
 Termin-/Ergebnisübersicht bleibt nächster M3-Funktionsschritt; M3 bleibt Teilstand.
+
+### Zeitplanung: Implementierung, Live-Brücke noch ausstehend
+
+Migration 0015 und normale Terminwahl für manuell/einmalig/täglich/wöchentlich
+implementiert. Zeitpläne bleiben getrennt von unveränderten TaskSpec-Manifesten;
+Aufgaben-, Quellen- und Skillrevisionen werden vor Einreihung und beim Worker erneut
+geprüft. Planänderungen besitzen unveränderliche Revisionen, Ausführungen eigene
+Terminbelege mit Link zu Ergebnissen. Pause stoppt auch bereits eingereihte
+Zeitplanläufe am Worker-Boundary, ohne manuelle Läufe derselben Aufgabe zu sperren.
+DST, Duplikate, Parallelität, verpasste Termine, Review bei Drift und ein enger
+Maschinenzugang nur für leere Zeitimpulse sind getestet. Die GUI bietet Filter für
+geplante, wiederkehrende, pausierte und bisher ausgeführte Aufgaben; Uhrzeitänderung
+und persistente Wochentage sind im synthetischen Browser tatsächlich geprüft.
+
+Der feste n8n-Workflowentwurf enthält nur Minutentakt → eigene HTTPS-Pulse-API,
+keine Aufgabeninhalte oder Dokumente. TLS bleibt verifiziert, Redirects deaktiviert.
+Standardmäßig bleibt die Brücke aus. Neue n8n-Credentials und Aktivierung des eigenen
+Clock-Workflows benötigen die konkrete Freigabe für bestehende Dienste/Zugänge;
+bestehende n8n-Workflows und Containerkonfiguration bleiben außerhalb dieses Updates.
+Die produktive automatische Ausführung ist noch nicht abgenommen; M3 bleibt teilweise.

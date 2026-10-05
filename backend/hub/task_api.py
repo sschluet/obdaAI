@@ -14,7 +14,18 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.action_api import TOOLS, StrictInput, digest, encode
 from hub.config import Settings
-from hub.db import Project, Skill, SkillRevision, Source, Task, TaskRevision, TaskRun, TaskStep
+from hub.db import (
+    Project,
+    ScheduleOccurrence,
+    Skill,
+    SkillRevision,
+    Source,
+    Task,
+    TaskRevision,
+    TaskRun,
+    TaskSchedule,
+    TaskStep,
+)
 from hub.knowledge_api import Auth
 from hub.n8n_drafts import connection_draft
 from hub.skill_api import eligible, sha
@@ -184,6 +195,9 @@ def task_info(db: Session, task_id: str) -> dict[str, Any]:
         .order_by(TaskRun.created.desc(), TaskRun.id.desc())
         .limit(1)
     )
+    from hub.schedule_api import schedule_info
+
+    plan = db.get(TaskSchedule, task.id)
     return {
         "id": task.id,
         "revision": task.revision,
@@ -193,7 +207,8 @@ def task_info(db: Session, task_id: str) -> dict[str, Any]:
         "spec": spec.model_dump(mode="json"),
         "spec_sha256": revision.sha256,
         "created": task.created,
-        "next_run": None,
+        "schedule": schedule_info(db, task),
+        "next_run": plan.next_due if plan else None,
         "last_run": {"id": last.id, "status": last.status, "created": last.created}
         if last
         else None,
@@ -225,6 +240,15 @@ def run_info(db: Session, run: TaskRun) -> dict[str, Any]:
     }
 
 
+def check_schedule(db: Session, run: TaskRun) -> None:
+    occurrence = db.scalar(select(ScheduleOccurrence).where(ScheduleOccurrence.run_id == run.id))
+    if occurrence is None:
+        return  # Manual task runs retain their existing authorization path.
+    plan = db.get(TaskSchedule, run.task_id)
+    if plan is None or plan.paused or plan.revision != occurrence.schedule_revision:
+        raise HTTPException(409, "Zeitplan pausiert oder geändert")
+
+
 def execute_task_read(factory: sessionmaker[Session], run_id: str) -> None:
     with factory() as db:
         lock(db)
@@ -232,6 +256,7 @@ def execute_task_read(factory: sessionmaker[Session], run_id: str) -> None:
         if run is None or run.status != "queued":
             return  # Persisted receipt or cancellation wins, including duplicate delivery.
         try:
+            check_schedule(db, run)
             task, revision, spec = current(db, run.task_id)
             if (
                 task.paused

@@ -6,8 +6,8 @@ and recoverable archive/restore. Every new or edited specification starts paused
 The UI exposes specification hashes, old revisions, last run, steps and manifests.
 
 The strict TaskSpec allows only manual `analyze_only`, `LOCAL_ONLY`, zero USD,
-fixed `hub.inspect` reads and at most one final `ai.analyze` local text step. It validates the IANA timezone; scheduling
-and UTC/DST execution are not implemented. Goal text never becomes executable
+fixed `hub.inspect` reads and at most one final `ai.analyze` local text step. It validates the IANA timezone; scheduling is stored separately in migration 0015; see [schedules](schedules.md)
+for clock integration and UTC/DST behavior. Goal text never becomes executable
 code. Unknown fields, tools, credentials, network targets and autonomy upgrades
 are rejected. Bound project sources and trusted skills require current revision,
 hash and scope. Their bindings are checked again at the worker boundary. For ai.analyze, the

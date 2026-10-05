@@ -1,0 +1,15 @@
+# Operator-reviewed optional clock access, disabled until explicitly installed.
+# Token accepts only /api/scheduler/tick; grants no session or gateway permission.
+services:
+  api:
+    environment:
+      HUB_SCHEDULER_ENABLED: "true"
+      HUB_SCHEDULER_TOKEN_FILE: /run/secrets/scheduler.key
+    volumes:
+      - /etc/obdaai/secrets/scheduler.key:/run/secrets/scheduler.key:ro
+  api_https:
+    environment:
+      HUB_SCHEDULER_ENABLED: "true"
+      HUB_SCHEDULER_TOKEN_FILE: /run/secrets/scheduler.key
+    volumes:
+      - /etc/obdaai/secrets/scheduler.key:/run/secrets/scheduler.key:ro
