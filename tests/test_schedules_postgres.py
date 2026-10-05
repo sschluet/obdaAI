@@ -114,6 +114,14 @@ def test_clock_queue_transaction_and_duplicate_delivery(monkeypatch):
             )
     finally:
         with factory() as db:
+            # Remove only this fixture's completed queue audit before later PG tests.
+            db.execute(
+                text(
+                    "DELETE FROM hub_queue.procrastinate_jobs WHERE task_name='hub.task-read' "
+                    "AND args->>'run_id' IN (SELECT id FROM task_runs WHERE task_id=:tid)"
+                ),
+                {"tid": tid},
+            )
             runs = select(TaskRun.id).where(TaskRun.task_id == tid)
             db.execute(delete(TaskStep).where(TaskStep.run_id.in_(runs)))
             db.execute(delete(ScheduleOccurrence).where(ScheduleOccurrence.task_id == tid))
