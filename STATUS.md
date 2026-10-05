@@ -1,33 +1,44 @@
 # obdaAI — Status 06.10.2026
 
-## Aktueller Stand: Schema 0021 installiert, Dokumentfunktionen erweitert
+## Aktueller Stand: Schema 0021, Dateien und geordnete Aufgaben live
 
-Produktiv ist `bee17a4` / Schema 0021 installiert. Beide APIs gesund; bestehende
-IPv4-/IPv6-Regeln unverändert. Die Installation wurde vorher verschlüsselt gesichert.
-Zehn echte PostgreSQL-Integrationsfälle für diesen Release bestanden. Direkte OpenAI-
-und Anthropic-Anbieter sind in normalen Einstellungsdialogen vorbereitet; sie benötigen
-noch eigene Schlüssel und eine konkrete Serverfreigabe. OpenRouter bleibt der bisher
-zugelassene externe Anbieter. Neue Gespräche binden Cloudzustimmung an einen Anbieter.
+Produktiv ist `7243118` / Schema 0021 installiert. Beide APIs gesund; bestehende
+IPv4-/IPv6-Regeln unverändert. Zehn echte PostgreSQL-Integrationsfälle bestanden.
+432 lokale Tests bestanden, zehn PG-Fälle lokal bewusst ausgelassen und separat
+auf der eigenen VM geprüft. Ruff/mypy, TS/Build, Source-Scan und drei Browserchecks
+bestanden. Der initiale Frontend-Build sank auf 446 kB; Einstellungen und Aufgaben
+werden bei Bedarf geladen.
 
-423 lokale Tests bestanden, zehn PostgreSQL-Fälle separat geprüft; Ruff/mypy,
-TS/Build und Source-Scan bestanden. Im neuen Quellstand ergänzt: gebundene Bilder und
-Bildunterschriften in Word, optionaler PDF-Download derselben geprüften Version,
-PDF-Erstellung aus Text/Tabellen/Bildern und Beschriftungen für zugeschnittene Collagen.
-Diese Erweiterung ist ausgerollt; echte Linux-Abnahme: fünf Pläne, sieben
-Vorschaubilder und zusätzlicher Word-PDF-Export. Die neuen nativen Dateien werden
-noch live visuell geprüft und per authentifiziertem Download abgenommen.
-Alte Dateivorgaben behalten bei nicht verwendeten Erweiterungen ihre kanonische Form.
+Normale Projektdialoge bieten editierbares Word/PowerPoint, PDF-Seitenoperationen,
+PDF-Erstellung aus Text/Tabellen/Bildern und Bildzuschnitt/Collage. Word kann gebundene
+Bilder und einen zusätzlichen PDF-Export erhalten. Vier Formate wurden mit echten
+Linux-Vorschauen visuell geprüft und per authentifiziertem HTTPS-Download bestätigt;
+Word-Folgeversion und alter Download blieben erhalten. Beschriftungen verwenden jetzt
+Unicode-Schriften. Metadatenbereinigung eingebetteter Bilder wird weiter gehärtet.
 
-Die echte Dateiabnahme hat Word, PDF und Bild per geprüftem HTTPS-Download bestätigt.
-Der verschlüsselte temporäre Restore von Schema 0020 prüfte acht Dateiversionen,
-42 Originale, Memory-Dateien und notwendige Schlüssel. PPTX-Fontkorrektur, lokale
-Modellabnahme, Word-Folgeversion und Erhaltung des alten Downloads sind inzwischen
-real geprüft. Neue natürliche Dateiwünsche im Projektchat sind im Quellstand mit
-derselben begrenzten Dateipipeline umgesetzt; ihr eigener Rollout steht noch aus. Details und offene
-Fälle: [Dateiabnahme](docs/m4-acceptance-status.md). M3/M4/M5 sind nicht vollständig.
+Eine echte zweistufige Aufgabe wurde aus natürlicher Sprache entworfen, las den
+Arbeitsraum und wertete genau den gelesenen Beleg lokal aus; keine Cloudkosten.
+Eigene lokale Schreibaufgaben bestanden in confirm_each und bounded_autonomous,
+Replay erzeugte keinen zweiten Effekt; globale Schreibpause anschließend wiederhergestellt.
+Natürliche Chat-Dateiwünsche sind installiert, ihre reale Abnahme fand einen
+wiederholenden lokalen Modelloutput mit Timeout. Diese Abnahme ist noch nicht grün;
+Promptkorrektur und gezielte Wiederholung laufen. Keine gültige Datei aus Teilantworten.
 
-GitHub konnte mehrere Jobs wegen nicht verfügbarer Hosted Runner nicht starten;
-fehlgeschlagene Allokation ist kein bestandener Test. Kein Merge ohne grüne Checks.
+Verschlüsselter Off-VM-Backup und isolierter Restore von Schema 0021 bestanden:
+15 Dateiversionen samt Ausgabe-/Vorschauhashes und zusätzlichem PDF, 42 Originale,
+sechs Memory-Dateien, Provider-/Workflow-Schlüssel sowie begrenzte SSH-Identitäten.
+Dies prüft obdaAI, nicht die Wiederherstellung von Home Assistant oder n8n.
+HTTPS-Sitzungen/Auth/CSRF/Origin/Logout live bestanden. 40 parallele Health-Abfragen
+(vier gleichzeitig): p95 rund 56 ms. Ressourcenproben sind Leerlaufwerte, keine Vollastabnahme.
+
+Direkte OpenAI-/Anthropic-Anbieter sind inklusive verschlüsselter Konfiguration und
+Budget-/Zustimmungsgrenze installiert; eigene Schlüssel und konkreter Livezugang fehlen.
+OpenRouter bleibt der vorhandene zugelassene externe Anbieter. M3/M4/M5 bleiben
+Teilstände: generische Workflowgraphen, interaktiver Browser, weitere externe Aktionen,
+breite Layout-/Faktenprüfung, Vollast und geprüfter HA-Wiederherstellungsweg offen.
+
+GitHub-Allokation war wiederholt verzögert. Fehlende CI-Jobs sind kein bestandener
+Test. Kein Merge ohne vollständig grüne Checks. Details: docs/*-acceptance-status.md.
 
 ## Historischer Stand · M3 erweitert und live installiert
 

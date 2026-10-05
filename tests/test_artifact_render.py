@@ -1,4 +1,6 @@
 import hashlib
+import io
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,32 @@ from PIL import Image
 from pptx import Presentation
 from pydantic import ValidationError
 from pypdf import PdfReader, PdfWriter
+
+
+def test_word_embedded_image_drops_metadata_and_preserves_orientation(tmp_path: Path) -> None:
+    source = tmp_path / "private.jpg"
+    original = Image.new("RGB", (80, 40), "blue")
+    exif = Image.Exif()
+    exif[274] = 6
+    exif[315] = "Private author"
+    exif[270] = "Private location"
+    original.save(source, exif=exif, icc_profile=b"private-profile")
+    before = source.read_bytes()
+    spec = ArtifactSpec.model_validate({
+        "sources": [binding(source)],
+        "plan": {"kind": "docx", "title": "Bildprüfung", "sections": [
+            {"heading": "Bild", "images": [{"source": 0, "caption": "Orientiert"}]}
+        ]},
+    })
+    render(spec, [source], tmp_path / "word")
+    with zipfile.ZipFile(tmp_path / "word/artifact.docx") as archive:
+        media = [name for name in archive.namelist() if name.startswith("word/media/")]
+        assert len(media) == 1
+        with Image.open(io.BytesIO(archive.read(media[0]))) as embedded:
+            assert embedded.size == (40, 80)
+            assert not embedded.getexif()
+            assert not embedded.info
+    assert source.read_bytes() == before
 
 
 def binding(path: Path) -> dict[str, object]:

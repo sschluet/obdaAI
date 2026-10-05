@@ -108,7 +108,12 @@ async def create_from_chat(
     kind, count = request_format(goal)
     # Only the explicit user's goal is supplied. History, memory and automatic
     # retrieval cannot become an implicit source selection or write instruction.
-    body = DraftInput(goal=goal, kind=kind, slide_count=count, sources=[])  # type: ignore[arg-type]
+    section_count = (
+        1 if re.search(r"\b(?:ein(?:en|em)?|1|one)\s+(?:abschnitt|section)\b", goal, re.I) else None
+    )
+    body = DraftInput(
+        goal=goal, kind=kind, slide_count=count, section_count=section_count, sources=[]  # type: ignore[arg-type]
+    )
     proposal = await preview(factory, cfg, project_id, body, provider)
 
     def guard(db: Session) -> None:

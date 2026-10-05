@@ -1,7 +1,7 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026. M4 bleibt teilweise umgesetzt. Dieser Quellstand ist bis zum
-verifizierten Rollout nicht mit dem installierten Stand gleichzusetzen.
+Stand 06.10.2026. M4 bleibt teilweise umgesetzt. Installiert ist `7243118` / Schema 0021; die folgenden Angaben unterscheiden
+aktuelle Nachweise von noch offenen Abnahmen.
 
 | Funktion | Implementiert | Nachweis / verbleibende Grenze |
 |---|---|---|
@@ -12,9 +12,9 @@ verifizierten Rollout nicht mit dem installierten Stand gleichzusetzen.
 | Offline-Runner | Nonroot, netzwerkfrei, readonly Runtime, ohne DB/Secrets/Vault; Landlock pro Auftrag | Eigene Linux-VM: vier Dateien, sechs Vorschaubilder, Replay ohne Überschreiben bestanden |
 | Projektoberfläche | Normale Dialoge für alle vier Formate, Vorschau aller Seiten, explizite Freigabe, Download | Synthetischer mobiler Browsercheck bestanden; Vorschauen der UI-Fixture sind ausdrücklich keine Layoutabnahme |
 | Versionen | Schema 0020, immutable Vorgaben/Quellhashes, revisionsgebundene Folgeversion, kein Überschreiben | Auth/CSRF/Scope/Quell- und Ausgabedrift/Replay/Review-Gate per API geprüft |
-| Dispatch | Queue und Artefaktversion in derselben PG-Transaktion; eigener Worker, Wiederanlauf gleicht Ergebnis ab | Echte PG-Abnahme der Dateiqueue bestanden; vollständiger PG-Gesamtcheck und Live-Rollout noch ausstehend |
-| Modell / Chat | Lokale DOCX-/PPTX-Entwürfe aus Ziel und expliziten Quellenauszügen; Folgeänderung bindet konkrete Ausgangsversion; Chatantwort als Word übernehmen | API-/UI-Abnahme synthetisch bestanden; echte lokale Modellabnahme offen. Fakten und Layout benötigen menschliche Prüfung |
-| Betrieb | Eigener Compose-Overlay, Speicher-/CPU-/Zeitlimits, Sicherung eigener Dateien und DB vorbereitet | Produktive Installation und verschlüsselter Schema-0020-Restore noch ausstehend |
+| Dispatch | Queue und Artefaktversion in derselben PG-Transaktion; eigener Worker, Wiederanlauf gleicht Ergebnis ab | Echte PG-Abnahme der Dateiqueue bestanden; alle zehn echten PG-Fälle und eigener Live-Rollout bestanden |
+| Modell / Chat | Lokale DOCX-/PPTX-Entwürfe aus Ziel und expliziten Quellenauszügen; Folgeänderung bindet konkrete Ausgangsversion; Chatantwort als Word übernehmen | API-/UI-Abnahme synthetisch bestanden; echte lokale Modellabnahme bestanden; natürliche Chat-Dateiabnahme noch fehlerhaft. Fakten und Layout benötigen menschliche Prüfung |
+| Betrieb | Eigener Compose-Overlay, Speicher-/CPU-/Zeitlimits, Sicherung eigener Dateien und DB vorbereitet | Produktive Installation und verschlüsselter Schema-0021-Restore mit 15 Dateiversionen bestanden |
 
 Eine gültige Datei oder erfolgreiches Rendering ist keine visuelle Freigabe.
 Der Status bleibt `needs_review`, bis der angemeldete Nutzer alle Vorschauseiten
@@ -49,7 +49,8 @@ Snapshot. Diese Funktion verschiebt keine anderen Gespräche oder Quellen.
 
 Im Quellstand ergänzt: Bilder in DOCX aus explizit gebundenen Originalen, optionale
 DOCX→PDF-Ausgabe, PDF-Erstellung aus Text/Tabellen/Bildern und Bildbeschriftung. Diese
-Erweiterungen benötigen noch eigenen Linux-/Live- und visuellen Nachweis. Der optionale
+Erweiterungen haben Linux-Nachweis; Word/Bilder/PDF-Export und neue Text-PDF sind
+live visuell und per Download geprüft. Die Unicode-Collagekorrektur ist noch separat in Prüfung. Der optionale
 PDF-Download teilt die Reviewfreigabe der genauen Word-Version; beide Hashes werden
 geprüft. Direkte natürliche Chat-Dateiplanung und umfassende Layout-/semantische
 Qualitätsabnahme bleiben offen. Die App bietet keine überprüfte echte Schwärzung.

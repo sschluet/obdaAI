@@ -94,6 +94,22 @@ def test_draft_is_local_editable_audited_and_grants_no_file_execution(setup):
     assert row["accepted"] is None and row["status"] in {"queued", "rendering"}
 
 
+def test_requested_section_count_is_checked_before_save_and_at_receipt(setup):
+    app, c, h, cfg, pid, spec = setup
+    provider = DraftProvider(DOCUMENT)
+    app.state.providers = provider
+    path = "/api/projects/" + pid + "/artifact-drafts"
+    body = {"goal": "Exactly one section", "kind": "docx", "section_count": 1, "sources": []}
+    result = c.post(path, headers=h, json=body)
+    assert result.status_code == 200
+    proposal = result.json()
+    proposal["spec"]["plan"]["sections"].append({"heading": "Unexpected"})
+    assert save(c, h, pid, proposal).status_code == 409
+    body["section_count"] = 2
+    assert c.post(path, headers=h, json=body).status_code == 422
+    assert c.get("/api/projects/" + pid + "/artifacts").json() == []
+
+
 @pytest.mark.parametrize(
     "output",
     [

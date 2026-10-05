@@ -3,7 +3,7 @@
 Die native Transportgrenze für OpenAI Responses und Anthropic Messages ist vorhanden
 und mit synthetischen HTTP-Antworten geprüft. Im Entwicklungsstand ist sie mit
 verschlüsselter Konfiguration, Budgetreservierung und normalen Einstellungsdialogen
-integriert; produktiver Rollout von Schema 0021 noch offen. Kein echter Zugang eingerichtet,
+integriert und auf der eigenen VM mit Schema 0021 installiert. Kein echter nativer Zugang eingerichtet,
 kein bezahlter nativer API-Test, keine neue produktive Ausgangsfreigabe.
 
 Die Grenze prüft LOCAL_ONLY und genaue Quelle/Revision/Anbieter-Freigabe **vor DNS**.

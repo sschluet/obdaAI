@@ -170,7 +170,12 @@ def _read_image(path: Path) -> Any:
             raise ValueError("Quelldatei überschreitet das Pixellimit")
         if original.format not in {"PNG", "JPEG", "WEBP"}:
             raise ValueError("Bildformat nicht freigegeben")
-        return ImageOps.exif_transpose(original).convert("RGB")
+        # Apply orientation before removing metadata. A new pixel-only image also
+        # drops EXIF/GPS, comments and profiles when embedded in Word or text PDFs.
+        oriented = ImageOps.exif_transpose(original).convert("RGB")
+        clean = Image.new("RGB", oriented.size)
+        clean.paste(oriented)
+        return clean
 
 
 def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:

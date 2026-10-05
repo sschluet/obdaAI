@@ -1,9 +1,11 @@
 """Synthetic offline runner acceptance, not private artifacts or provider calls."""
 
 import hashlib
+import io
 import json
 import sys
 import uuid
+import zipfile
 from pathlib import Path
 
 from hub.artifact_runner import process
@@ -73,7 +75,11 @@ def prepare() -> None:
             else:
                 image = Image.new("RGB", (512, 256), "#163976")
                 image.paste("#598ce8", (256, 0, 512, 256))
-                image.save(source, format="PNG")
+                exif = Image.Exif()
+                exif[315] = "Synthetic private author"
+                image.save(
+                    source, format="PNG", exif=exif, icc_profile=b"synthetic-private-profile"
+                )
             sources = [
                 {
                     "id": str(uuid.uuid4()),
@@ -96,6 +102,14 @@ def check() -> None:
     assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 2, 2]
     exports = [m["pdf_export"] for m in manifests if m.get("pdf_export")]
     assert len(exports) == 1 and exports[0]["bytes"] > 0
+    for folder in results.iterdir():
+        document = folder / "version/artifact.docx"
+        if document.exists():
+            with zipfile.ZipFile(document) as archive:
+                media = [n for n in archive.namelist() if n.startswith("word/media/")]
+                assert len(media) == 1
+                with Image.open(io.BytesIO(archive.read(media[0]))) as image:
+                    assert not image.getexif() and not image.info
     for folder in requests.iterdir():
         assert not process(folder, results), "Duplicate overwrote an immutable output"
     print(
