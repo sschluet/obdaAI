@@ -145,7 +145,18 @@ def test_upload_paths_types_and_csrf(knowledge, filename):
     )
 
 
-def test_office_pdf_locators_and_formula_preservation(tmp_path):
+def test_office_pdf_locators_and_formula_preservation(tmp_path, monkeypatch):
+    import subprocess
+
+    original_run = subprocess.run
+
+    def diagnosed_run(*args, **kwargs):
+        result = original_run(*args, **kwargs)
+        if result.returncode and "hub.extract" in args[0]:
+            pytest.fail("Synthetic parser diagnostic: " + result.stderr.decode()[:5000])
+        return result
+
+    monkeypatch.setattr(subprocess, "run", diagnosed_run)
     from docx import Document
     from openpyxl import Workbook
     from pptx import Presentation
