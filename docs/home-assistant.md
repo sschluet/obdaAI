@@ -41,3 +41,29 @@ Sources checked 05.10.2026:
 - [Home Assistant REST API](https://developers.home-assistant.io/docs/api/rest/)
 - [Update entity semantics](https://www.home-assistant.io/integrations/update/)
 - [Backup and restore prerequisites](https://www.home-assistant.io/integrations/backup/)
+
+## Own-VM activation verified 05.10.2026
+
+After explicit token-mount/outbound-IP approval, source `75c7f04` was installed with
+the HA and existing scheduler overlays, schema 0015. The supplied HA credential is
+mounted read-only only in API/API-HTTPS; workers/parsers have no HA credential mount.
+Exactly one approved HA TCP/443 rule was inserted before the own chain's existing
+REJECT. All prior rules were compared and preserved. The persistent own egress script
+contains the corresponding marker-controlled rule, with the previous release/script
+and database saved for rollback. No HA or n8n configuration was changed.
+
+The own egress unit uses RemainAfterExit: starting an already active unit does not
+reapply its script. Activation therefore verified and inserted only the new rule
+without flushing the existing chain. Subsequent authorized egress reloads must account
+for that unit behavior and compare retained rules.
+
+Authenticated, certificate-verified live app acceptance: fixed HA GET assessment
+succeeded (2026.9.3, 55 update entries, two available), durable receipt replay matched,
+other actions/tasks remained unchanged. The clock stayed healthy and all four prior
+scheduled results/history were retained. Write actions remain paused; HA maintenance
+backup/restore readiness remains unverified.
+
+Encrypted off-VM backup and isolated schema-0015 restore passed: the HA read receipt
+matched exactly, credential/overlay/approved egress marker were present, and prior
+schedules, 40 original source hashes and six Memory files survived. The disposable
+restore database was removed. This proves hub recovery only, not HA backup or restore.

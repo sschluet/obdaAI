@@ -695,3 +695,29 @@ Browser samt mobilem Bericht/Reload, Container und Secrets). Das eigene VM-Image
 ist gebaut; laufende Installation bleibt 95329de, bis die angefragte eigene
 Tokenmount-/HA-Egress-Freigabe vorliegt. Kein HA-Write, kein neuer n8n-Workflow
 und keine Firewalländerung in diesem Schritt durchgeführt.
+
+### HA-Leseanbindung installiert und live abgenommen
+
+Nach ausdrücklicher Freigabe: `75c7f04` auf eigener VM installiert, Schema 0015,
+beide APIs gesund. HA-Token ausschließlich in API/API-HTTPS schreibgeschützt gemountet;
+keine Worker-/Parser-Mounts. Exakt eine genehmigte ausgehende HA-TCP-443-Regel ergänzt;
+alle bisherigen Regeln bytegleich erhalten, persistente eigene Konfiguration geprüft,
+Rollback mit vorheriger Release-/Egress-/Backup-Konfiguration und DB gesichert.
+Die eigene RemainAfterExit-Egress-Unit hat beim Start keine Regeln neu angewendet;
+der gestoppte Rollout wurde nach Statusprüfung durch gezieltes Einfügen der einzigen
+neuen Regel fortgesetzt. Keine Bestandsdienst- oder HA-Konfigurationsänderung.
+
+Echte angemeldete HTTPS-Abnahme auf eigener VM bestanden: feste HA-Abfrage erfolgreich,
+Version 2026.9.3 / 55 Update-Einträge / zwei verfügbar. Dauerhafter Beleg, identischer
+Belegreplay ohne erneuten HA-Aufruf, sonstige Aktionen/Aufgaben unverändert. Neuer
+Oberflächenbundle verifiziert, n8n-Clock gesund, alle vier bisherigen automatisch
+ausgeführten Ergebnisse und Terminbelege erhalten. Schreibgateway weiterhin pausiert.
+
+Neue verschlüsselte Off-VM-Sicherung und isolierter Schema-0015-Restore bestanden:
+HA-Lesebeleg unverändert wiederhergestellt, HA-Token/Overlay/genaue Netzwerkfreigabe
+vorhanden; fünf Zeitpläne, 17 Planrevisionen, vier Terminbelege, drei lokale Modellbelege,
+40 Originalhashes und sechs Memory-Dateien erhalten. Temporäre Restore-Datenbank
+anschließend entfernt; bestehende Proxmox-Konfiguration unverändert. Dies ist ein
+obdaAI-Restore und keine HA-Restore-Abnahme. Produktive HA-Wartungsaktionen bleiben
+offen und gesperrt; M3 bleibt Teilstand. CI der installierten Quelle: 37306828415
+vollständig grün, 220 Tests inklusive sechs echten PostgreSQL-Checks.
