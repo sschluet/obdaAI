@@ -40,6 +40,7 @@ def restrict(source: Path, workdir: Path) -> None:
             (Path("/etc/ld.so.cache"), 1 << 2),
             (Path("/etc/mime.types"), 1 << 2),
             (Path("/etc/fonts"), READ),
+            (Path("/etc/libreoffice"), READ),
             (Path("/etc/passwd"), 1 << 2),
             (Path("/dev/null"), (1 << 2) | WRITE),
             (Path("/dev/urandom"), 1 << 2),
