@@ -21,7 +21,7 @@ if [[ -f /etc/obdaai/runtime.env ]] && grep -q '^HUB_VAULT_DIR=/vault$' /etc/obd
   vault_archive=(-C /mnt/obdaai-vault AI/Memory)
 fi
 access_archive=()
-for p in var/lib/obdaai-access/.ssh etc/systemd/system/obdaai-vault-mount.service etc/systemd/system/obdaai-search-relay.service opt/obdaai/vault.compose.yaml; do
+for p in var/lib/obdaai-access/.ssh etc/systemd/system/obdaai-vault-mount.service etc/systemd/system/obdaai-search-relay.service opt/obdaai/vault.compose.yaml opt/obdaai/scheduler.compose.yaml; do
   [[ ! -e /$p ]] || access_archive+=("$p")
 done
 estimate=$((size * 3 + source_size * 2 + vault_size * 2 + 52428800))

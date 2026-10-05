@@ -37,7 +37,7 @@ once at the first occurrence. Once-only ambiguous/nonexistent times are rejected
 Historical occurrences retain their planned UTC instant and link to durable runs,
 results and errors. Schedule changes have separate immutable revision snapshots.
 
-## Deployment and remaining live acceptance
+## Deployment and live acceptance
 
 Default runtime is disabled. `HUB_SCHEDULER_ENABLED=false` requires no new secret.
 The optional reviewed `deploy/scheduler.compose.yaml.in` mounts only a dedicated
@@ -51,15 +51,30 @@ installed node inventory and official versioned source:
 [HTTP Request](https://github.com/n8n-io/n8n/blob/n8n%402.7.5/packages/nodes-base/nodes/HttpRequest/V3/HttpRequestV3.node.ts),
 [SSL credential](https://github.com/n8n-io/n8n/blob/n8n%402.7.5/packages/nodes-base/credentials/HttpSslAuth.credentials.ts).
 
-A new n8n workflow and new dedicated credential access require specific approval
-under AGENTS.md's existing-service/access boundary. Prepare an inactive workflow,
+The user explicitly approved exactly two new n8n credentials and one own clock
+workflow, including synthetic local read acceptance. Future credential or existing
+service changes still follow AGENTS.md's access boundary. Prepare an inactive workflow,
 compare exact nodes/settings/credentials before activation, record identity/version
 and reconcile any unknown API outcome before retrying a write. Credentials APIs
 have no verified public list/read endpoint in this installed version: an uncertain
 credential-creation result must be reconciled by an operator, not blindly repeated.
 Never change existing workflows, n8n container settings or TLS policy.
 
-Live acceptance still requires the approved bridge, a real one-time read task,
-actual n8n wake-up, retained result after restart, recurrent execution/pause and
-an encrypted backup with isolated schema-0015 restore. Synthetic unit/browser
-checks alone do not establish a working production n8n integration.
+The installed bridge uses a dedicated workflow and retains its credential IDs,
+workflow ID/version and write-ahead reconciliation journal only in the protected
+operator directory. It does not modify existing n8n workflows. The clock's only
+runtime static data is Schedule Trigger recurrence timestamps; node definitions,
+credential references, destination and access settings stay exactly bound.
+
+All own future Compose updates must include `-f scheduler.compose.yaml` alongside
+`compose.yaml`, `https.compose.yaml` and `vault.compose.yaml`; otherwise Compose
+would remove the clock token mount. Ordinary container restarts retain it. The
+own encrypted backup includes both the private token and the optional overlay.
+Recovery restores the same token; an existing n8n credential must not be silently
+replaced or duplicated. Protect the workstation journal for external identity
+reconciliation. An uncertain credential POST never gets an automatic second POST.
+
+Live evidence belongs in STATUS.md and protected operator receipts. Tests must
+separately establish real n8n wake-up, once/daily/weekly local read results, next
+calendar dates, pause at a due minute, results after restart and isolated encrypted
+restore. Synthetic unit/browser checks alone do not establish the live bridge.
