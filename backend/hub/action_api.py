@@ -1,7 +1,8 @@
-"""Fixed local adapters. Human approval is separate from proposals and execution.
+"""Fixed local actions and one bounded external read adapter.
 
-Local database effects and receipts commit together. External dispatch/reconciliation
-is not implemented here and cannot be selected by a model or request payload.
+Human approval is separate from proposals and execution. Local database effects
+and receipts commit together. External writes/reconciliation are not implemented.
+The optional fixed HA read accepts no model or request-provided target or payload.
 """
 
 import hashlib
@@ -15,7 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session, sessionmaker
 
+from hub.config import Settings
 from hub.db import ActionGrant, ActionIntent, ActionPolicy, ActionReceipt, Project, Source
+from hub.home_assistant import inspect as inspect_ha
 from hub.knowledge_api import Auth
 
 
@@ -54,6 +57,15 @@ TOOLS: dict[str, dict[str, Any]] = {
         "effect": "read",
         "system": "obdaAI",
         "external": False,
+        "parameters_schema": StrictInput.model_json_schema(),
+    },
+    "ha.inspect": {
+        "id": "ha.inspect",
+        "name": "Home Assistant prüfen",
+        "revision": 1,
+        "effect": "read",
+        "system": "Home Assistant",
+        "external": True,
         "parameters_schema": StrictInput.model_json_schema(),
     },
     "project.archive": {
@@ -119,10 +131,24 @@ def get_action(db: Session, action_id: str) -> ActionIntent:
     return action
 
 
-def install_action_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
+def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settings) -> None:
     @app.get("/api/tools")
     def catalog(auth: Auth) -> list[dict[str, Any]]:
-        return list(TOOLS.values())
+        return [
+            {
+                **t,
+                "configured": t["id"] != "ha.inspect"
+                or bool(cfg.ha_token_file and cfg.ha_allowed_ip),
+            }
+            for t in TOOLS.values()
+        ]
+
+    @app.get("/api/home-assistant/status")
+    def ha_status(auth: Auth) -> dict[str, Any]:
+        return {
+            "configured": bool(cfg.ha_token_file and cfg.ha_allowed_ip),
+            "writes_enabled": False,
+        }
 
     @app.get("/api/action-policy")
     def policy(auth: Auth) -> dict[str, Any]:
@@ -237,7 +263,11 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
             if db.get(ActionReceipt, row.id):
                 return info(db, row)  # Read-only receipt replay, even while paused.
             tool = TOOLS.get(row.tool_id)
-            if not tool or row.tool_revision != tool["revision"] or tool["external"]:
+            if (
+                not tool
+                or row.tool_revision != tool["revision"]
+                or (tool["external"] and row.tool_id != "ha.inspect")
+            ):
                 raise HTTPException(409, "Werkzeugversion oder Systemgrenze geändert")
             params = parameters(row.tool_id, json.loads(row.parameters))
             if digest(encode(params)) != row.parameters_sha256 or row.label != "LOCAL_ONLY":
@@ -275,6 +305,8 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
                     "archived": True,
                     "revision": params["expected_revision"] + 1,
                 }
+            elif row.tool_id == "ha.inspect":
+                result = inspect_ha(cfg)
             else:
                 result = {
                     "projects": db.scalar(select(func.count()).select_from(Project)),

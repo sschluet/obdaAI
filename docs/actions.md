@@ -1,10 +1,10 @@
 # M3 first vertical: fixed local actions
 
 The authenticated Werkzeug page provides a fixed catalog, separate persisted proposals,
-explicit time-limited grants, revocation, pause state and execution receipts. Initial
+explicit time-limited grants, revocation, pause state and execution receipts. Local
 adapters are `hub.inspect` (counts only) and `project.archive` (recoverable local
-project archive at a specific revision). There is no model tool loop or external
-MCP/REST/browser/n8n/Home-Assistant dispatcher yet. Private runtime audit stays in
+project archive at a specific revision). The optional `ha.inspect` adapter performs a fixed read-only Home Assistant assessment;
+see `home-assistant.md`. There is no model tool loop or arbitrary external dispatcher. Private runtime audit stays in
 the app database, never Git.
 
 All proposals have strict tool schemas, a stable request key, canonical parameters

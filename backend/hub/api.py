@@ -114,7 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_knowledge_api(app, cfg, factory)
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
-    install_action_api(app, factory)
+    install_action_api(app, factory, cfg)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
     install_schedule_api(app, cfg, factory)

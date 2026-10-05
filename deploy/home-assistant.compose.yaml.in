@@ -1,0 +1,15 @@
+# Optional own-VM read assessment only. Installation requires operator approval.
+# Fixed HTTPS origin, reviewed IPv4; no arbitrary tools or HA writes.
+services:
+  api:
+    environment:
+      HUB_HA_TOKEN_FILE: /run/secrets/home-assistant.key
+      HUB_HA_ALLOWED_IP: __HA_REVIEWED_IPV4__
+    volumes:
+      - /etc/obdaai/secrets/home-assistant.key:/run/secrets/home-assistant.key:ro
+  api_https:
+    environment:
+      HUB_HA_TOKEN_FILE: /run/secrets/home-assistant.key
+      HUB_HA_ALLOWED_IP: __HA_REVIEWED_IPV4__
+    volumes:
+      - /etc/obdaai/secrets/home-assistant.key:/run/secrets/home-assistant.key:ro

@@ -664,3 +664,28 @@ M3 bleibt teilweise: externe MCP-/REST-/Browser-Ausführung, Reconciliation und
 produktive Home-Assistant-Wartungsaktionen sind weiterhin offen. Der Aktionsgateway
 bleibt pausiert. Bei folgenden eigenen Compose-Rollouts muss die zusätzliche
 `scheduler.compose.yaml` eingebunden bleiben; siehe `docs/schedules.md`.
+
+### Home Assistant: feste lesende Wartungsübersicht
+
+Optionaler `ha.inspect`-Adapter implementiert: ausschließlich GET config/states an
+den festen HA-Host, direkte Verbindung zur vom Operator freigegebenen IPv4 mit
+festem Host/TLS-SNI, Zertifikatsprüfung, keine Redirects/Proxies/Parameter. Nur
+Version, gemeldeter Installationstyp, Supervisor-/Backup-Präsenz und Update-Einträge
+bleiben im LOCAL_ONLY-Beleg. Keine anderen Gerätezustände, Ortsdaten, Release-URLs
+oder fremden Anweisungen im Bericht/Modellkontext. Keine HA-Schreiboperation vorhanden.
+Der bereitgestellte Token kann breitere Rechte haben; der Adapter bietet sie nicht an.
+
+Echter Adapter-Lesecheck vom autorisierten Operator-Rechner bestanden: TLS geprüft,
+Version 2026.9.3, 55 Update-Einträge, zwei als verfügbar gemeldet, null Schreibaufrufe.
+Supervisor-/Backup-Präsenz gelten ausdrücklich nicht als geprüfte Installation oder
+erfolgreicher Restore. UI zeigt verständlichen Bericht mit dauerhaftem Beleg und
+gesperrter Wartung. Synthetischer unabhängiger Browsertest: Bericht erzeugt, nach
+Reload erhalten, keine HA-Verbindung aus Fixture. Die neue lesende VM-Anbindung
+ist bis zur ausdrücklichen eigenen Egress-/Tokenmount-Freigabe nicht aktiviert.
+
+Tests behandeln Auth/CSRF, unbekannte Parameter, erlaubte Zielgrenzen, Host/TLS-SNI,
+Redirects, Fehler/Größenlimits, minimierte Ausgabe und Belegreplay ohne zweiten
+Aufruf. Ergänzte CI prüft die mobile Berichtsansicht und Persistenz. M3 bleibt
+Teilstand; produktive Wartungsänderungen und Restore-Abnahme sind weiterhin offen.
+Lokal 214 Tests bestanden, sechs PostgreSQL-Checks separat für CI; Ruff/mypy,
+Frontendbuild und Secret-Scan bestanden. Siehe `docs/home-assistant.md`.

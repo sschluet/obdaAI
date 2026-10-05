@@ -166,6 +166,18 @@ await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 
 await page.getByText(/Verwendete Quellen/).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+await page.getByRole('button',{name:'Home Assistant jetzt prüfen',exact:true}).click();
+await page.getByRole('heading',{name:'Home Assistant · Version 2026.9.3',exact:true}).waitFor();
+await page.getByText('Synthetisches Core-Update',{exact:true}).waitFor();
+await page.getByText('Backup-Integration erkannt · Wiederherstellung noch nicht geprüft',{exact:true}).waitFor();
+if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('HA report mobile overflow');
+await page.screenshot({path:output+'/ha-report-mobile.png',fullPage:true,animations:'disabled'});
+await page.reload();
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+await page.getByRole('heading',{name:'Home Assistant · Version 2026.9.3',exact:true}).waitFor();
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();
 if(errors.length)throw Error(errors.join('\n'));

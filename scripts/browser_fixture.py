@@ -6,6 +6,7 @@ import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import hub.action_api as fixture_action_api
 from alembic import command
 from alembic.config import Config
 from hub.api import create_app
@@ -31,6 +32,8 @@ app = create_app(
         secure_cookie=False,
         password_hash=password_hash("synthetic-ui-password"),
         secrets_key_file=str(key_file),
+        ha_token_file="synthetic-fixture-only",
+        ha_allowed_ip="192.0.2.1",
         source_dir=str(folder / "sources"),
         vault_dir=str(vault),
         vault_writable=True,
@@ -128,3 +131,33 @@ def fixture_search(q: str, format: str = "json") -> dict[str, object]:
             }
         ]
     }
+
+
+# Isolated browser fixture: no real Home-Assistant transport or credentials.
+
+
+def synthetic_ha_inspect(cfg: Settings) -> dict:
+    return {
+        "label": "LOCAL_ONLY",
+        "checked_at": 1791201000,
+        "version": "2026.9.3",
+        "installation_type": None,
+        "supervisor_present": True,
+        "backup_integration_present": True,
+        "restore_verified": False,
+        "writes_enabled": False,
+        "available_updates": 1,
+        "unavailable_updates": 0,
+        "updates": [
+            {
+                "entity_id": "update.synthetic_core",
+                "name": "Synthetisches Core-Update",
+                "state": "on",
+                "installed_version": "2026.9.3",
+                "latest_version": "2026.10.1",
+            }
+        ],
+    }
+
+
+fixture_action_api.inspect_ha = synthetic_ha_inspect
