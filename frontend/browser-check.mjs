@@ -63,10 +63,12 @@ await page.getByRole('button',{name:'Löschen',exact:true}).click();
 await page.getByRole('heading',{name:'Womit möchtest du beginnen?'}).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Projekte',exact:true}).click();
+await page.getByRole('button',{name:'Neues Projekt',exact:true}).click();
+if(await page.getByRole('dialog').locator('.project-list').count())throw Error('Project list leaked into create dialog');
 await page.getByLabel('Projektname',{exact:true}).fill('Synthetic browser project');
 await page.getByLabel('Beschreibung',{exact:true}).fill('Synthetic source isolation');
-await page.getByRole('button',{name:'Projekt speichern',exact:true}).click();
-await page.getByRole('heading',{name:'Dateien & Fundstellen',exact:true}).waitFor();
+await page.getByRole('button',{name:'Projektraum erstellen',exact:true}).click();
+await page.getByRole('heading',{name:'Dokumente',exact:true}).waitFor();
 await page.locator('input[type=file]').setInputFiles([
  {name:'synthetic.csv',mimeType:'text/csv',buffer:Buffer.from('Item;EUR\nA;10,20\nB;2,30')},
  {name:'synthetic.md',mimeType:'text/markdown',buffer:Buffer.from('# Synthetic evidence\nBrowser citation fact')}
@@ -80,11 +82,32 @@ await page.getByRole('button',{name:'Spalte 2 prüfen und summieren',exact:true}
 await page.getByText('Strukturierte Summe: 12.50',{exact:true}).waitFor();
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile project overflow');
 await page.screenshot({path:output+'/m2-projects.png',fullPage:true,animations:'disabled'});
-await page.getByRole('button',{name:'Neuer Quellenchat',exact:true}).click();
+await page.getByRole('button',{name:'Mit diesen Dokumenten chatten',exact:true}).click();
 await page.getByLabel('Nachricht',{exact:true}).fill('Browser citation fact');
 await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 await page.getByText('SYNTHETIC_SOURCE_REPLY:',{exact:false}).waitFor();
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
+await page.getByRole('button',{name:'Neue Aufgabe',exact:true}).click();
+await page.getByLabel('Name der Aufgabe',{exact:true}).fill('Synthetic form task');
+await page.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Summarize the bound synthetic document.');
+await page.getByLabel('Projektraum (optional)',{exact:true}).selectOption({label:'Synthetic browser project'});
+await page.getByLabel('synthetic.md',{exact:true}).check();
+await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
+await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).click();
+await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).click();
+await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
+await page.reload();
+await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
+await page.getByRole('button',{name:'Aufgabe öffnen',exact:true}).first().click();
+await page.getByRole('button',{name:'Aufgabe pausieren',exact:true}).click();
+await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
+if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile tasks overflow');
+await page.screenshot({path:output+'/usability-tasks.png',fullPage:true,animations:'disabled'});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Wissen',exact:true}).click();
 await page.getByLabel('Titel',{exact:true}).fill('Synthetic browser memory');

@@ -276,3 +276,70 @@ def test_public_endpoint_cannot_be_mislabelled_local(monkeypatch: pytest.MonkeyP
         pinned_url(
             "https://example.com/v1", "/chat/completions", external=False, allowed_ip="8.8.8.8"
         )
+
+
+def test_local_mode_binds_request_and_disables_web_and_cloud(setup):
+    from uuid import uuid4
+
+    from sqlalchemy import select
+
+    app, client, headers, provider = setup
+    chat_id = new_chat(client, headers, cloud=True)
+    request_id = str(uuid4())
+    body = {"content": "Synthetic local mode", "local_only": True, "request_id": request_id}
+    assert (
+        client.post(
+            f"/api/conversations/{chat_id}/messages", json=body, headers=headers
+        ).status_code
+        == 200
+    )
+    with app.state.sessions() as db:
+        msg = db.scalar(select(Message).where(Message.role == "user"))
+        run = db.scalar(select(Run).where(Run.conversation_id == chat_id))
+        assert msg.label == "LOCAL_ONLY"
+        import json
+
+        assert all(p["label"] == "LOCAL_ONLY" for p in json.loads(run.context_snapshot)["parts"])
+    assert (
+        client.post(
+            f"/api/conversations/{chat_id}/messages",
+            json={**body, "local_only": False},
+            headers=headers,
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            f"/api/conversations/{chat_id}/messages",
+            json={"content": "Synthetic", "local_only": True, "web_search_allowed": True},
+            headers=headers,
+        ).status_code
+        == 422
+    )
+    assert not any(provider.stream_calls)
+
+
+def test_local_retry_keeps_original_cloud_label_but_uses_local_snapshot(setup):
+    import json
+    from uuid import uuid4
+
+    from sqlalchemy import select
+
+    app, client, headers, _ = setup
+    chat_id = new_chat(client, headers, cloud=True)
+    client.post(
+        f"/api/conversations/{chat_id}/messages",
+        json={"content": "Synthetic public text"},
+        headers=headers,
+    )
+    result = client.post(
+        f"/api/conversations/{chat_id}/retry",
+        json={"request_id": str(uuid4()), "local_only": True},
+        headers=headers,
+    )
+    assert result.status_code == 200
+    with app.state.sessions() as db:
+        original = db.scalar(select(Message).where(Message.role == "user"))
+        run = db.scalar(select(Run).order_by(Run.started.desc()))
+        assert original.label == "CLOUD_ALLOWED"
+        assert all(p["label"] == "LOCAL_ONLY" for p in json.loads(run.context_snapshot)["parts"])

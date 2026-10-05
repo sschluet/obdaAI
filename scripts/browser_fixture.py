@@ -77,6 +77,10 @@ class SyntheticProvider:
         external: bool,
         grants: list[CloudGrant],
     ) -> AsyncIterator[str]:
+        if parts and parts[0].source_id == "task-draft-policy":
+            assert not external and not grants
+            yield '{"title":"Synthetischer lokaler Analyseentwurf"}'
+            return
         if parts and parts[0].source_id == "task-policy":
             assert not external and not grants
             yield "SYNTHETIC_TASK_REPLY: eine lokale Aufgabenanalyse."

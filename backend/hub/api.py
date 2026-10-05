@@ -43,6 +43,7 @@ from hub.provider_api import install_provider_api
 from hub.providers import Providers
 from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
+from hub.task_drafts import install_task_drafts
 from hub.websearch import install_web_api
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
@@ -59,6 +60,7 @@ class LoginInput(Input):
 
 
 class ChatInput(Input):
+    local_only: bool = False
     web_search_allowed: bool = False
     content: str = Field(min_length=1, max_length=16000)
     request_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
@@ -76,6 +78,7 @@ class ConversationEdit(Input):
 
 
 class RetryInput(Input):
+    local_only: bool = False
     request_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
 
 
@@ -113,6 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_action_api(app, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
+    install_task_drafts(app, cfg, factory)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request: Request, error: RequestValidationError) -> JSONResponse:
@@ -438,6 +442,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             body.request_id,
             content=body.content,
             web_search_allowed=body.web_search_allowed,
+            local_only=body.local_only,
         )
         start_development_run(run_id)
         return response_for(run_id, request)
@@ -448,12 +453,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         *,
         content: str | None = None,
         web_search_allowed: bool = False,
+        local_only: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
+        if local_only and web_search_allowed:
+            raise HTTPException(422, "Nur lokal erlaubt keine externe Websuche")
         action = {
             "chat_id": chat_id,
             "content": content,
             "web_search_allowed": web_search_allowed,
+            "local_only": local_only,
             "edit": [edit[0], edit[1].model_dump()] if edit else None,
         }
         digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
@@ -496,13 +505,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     old.active = False
                 messages = messages[: cut + 1]
                 target.content, target.revision = change.content, target.revision + 1
-                target.label = Privacy.CLOUD_ALLOWED if change.cloud_allowed else Privacy.LOCAL_ONLY
+                target.label = (
+                    Privacy.CLOUD_ALLOWED
+                    if change.cloud_allowed and not local_only
+                    else Privacy.LOCAL_ONLY
+                )
             elif content is not None:
                 new = Message(
                     conversation_id=chat_id,
                     role="user",
                     content=content,
-                    label=Privacy.CLOUD_ALLOWED if c.cloud_allowed else Privacy.LOCAL_ONLY,
+                    label=Privacy.CLOUD_ALLOWED
+                    if c.cloud_allowed and not local_only
+                    else Privacy.LOCAL_ONLY,
                 )
                 db.add(new)
                 db.flush()
@@ -522,7 +537,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "parts": [
                     ContextPart(
                         content=m.content,
-                        label=Privacy(m.label),
+                        label=Privacy.LOCAL_ONLY if local_only else Privacy(m.label),
                         source_id=m.id,
                         revision=m.revision,
                     ).model_dump(mode="json")
@@ -598,7 +613,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def retry(
         chat_id: str, body: RetryInput, request: Request, session: SessionDependency
     ) -> StreamingResponse:
-        run_id = create_run(chat_id, body.request_id)
+        run_id = create_run(chat_id, body.request_id, local_only=body.local_only)
         start_development_run(run_id)
         return response_for(run_id, request)
 
@@ -617,6 +632,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             body.request_id,
             edit=(message_id, body),
             web_search_allowed=body.web_search_allowed,
+            local_only=body.local_only,
         )
         start_development_run(run_id)
         return response_for(run_id, request)

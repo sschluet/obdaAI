@@ -559,5 +559,37 @@ stoppt ohne zweiten Modellaufruf. Zwölf neue API-/Modelltests und ein separater
 PG-Sperrentest. Lokal insgesamt 179 bestanden, fünf PG-Tests für CI. Browser-Fixture
 bestätigt erfolgreichen Modellschritt und 390px ohne horizontalen Überlauf.
 Der alte synthetische Chatprovider sperrte zuerst den neuen Schritt; nach gezielter
-Fixture-Ergänzung erfolgreicher neuer expliziter Lauf. CI/Server-/echte lokale
-Modellabnahme dieser Vertikale noch ausstehend. Weitere M3-Funktionen bleiben offen.
+Fixture-Ergänzung erfolgreicher neuer expliziter Lauf. Commit d1413d3: CI
+37295615837 grün, 184 Tests einschließlich fünf echter PostgreSQL-Prüfungen.
+Auf eigener VM installiert; beide APIs und zertifikatsgeprüftes HTTPS gesund.
+Echte lokale Modellabnahme mit zwei Skillrevisionen bestanden: deutsche und
+englische Antworten, Provider-/Skillrevisionen und Idempotenz geprüft; Testaufgabe
+pausiert, Skill deaktiviert, keine Cloudaufrufe. Verschlüsselter Off-VM-Backup
+und isolierter Restore auf Schema 0014 bestanden: zwei Modellbelege, vier
+Taskrevisionen, fünf Skillrevisionen, drei Aktionsbelege, 40 Originalhashes,
+sechs Memory-Dateien und begrenzte Zugangsschlüssel erhalten. Weitere M3-Funktionen offen.
+
+
+## Usability-Überarbeitung auf Benutzerfeedback
+
+Neue Projekte werden über einen getrennten leeren Dialog angelegt; danach öffnet
+sich der Projektraum mit Dokumentenablage für PDF, DOCX, XLSX und PPTX.
+Archivierte Projekte sind standardmäßig verborgen. Bestehende Projekte können
+weiter bearbeitet werden. Aufgaben werden über einen Dialog mit Name, Ziel, Art,
+Projekt, ausdrücklicher Dokument- und Skillauswahl angelegt; keine JSON-Eingabe.
+Ansichten für aktuelle, historische und archivierte Aufgaben, gespeicherte Ergebnisse.
+Natürlicher Zieltext kann lokal einen Titelentwurf erzeugen; kein Speichern/Start
+oder neue Rechte durch das Modell, strikte JSON-Validierung nur im Backend.
+Chat-Modus AUTO / Nur lokal sichtbar wählbar. Nur lokal erzwingt LOCAL_ONLY auch
+in einem cloudfreigegebenen Gespräch und dessen Retry; externe Websuche abgewiesen.
+AUTO bleibt innerhalb vorhandener Freigaben. Modellverbindungen mit Basisfeldern
+und getrennten erweiterten Grenzen; Einstellungen erklären Darstellung, Chat,
+Verhaltensregeln und tatsächlichen Integrationsstand. Werkzeuge erklären Zweck
+und verfügbare Aktionen. Zeitpläne, wiederkehrende Ausführung und MCP-Verwaltung
+sind noch nicht verfügbar und werden ausdrücklich als offen angezeigt.
+
+Synthetische Browserabnahme: neues leeres Projekt, Dokumentenablage, Aufgabenformular
+Speichern/Aktivieren/Ausführen, Ergebnis nach Reload erhalten, finale Pause;
+390px Formular und Chat ohne horizontalen Überlauf. 18 eindeutig zugeordnete
+M2/M3-Abnahmeprojekte auf eigener VM wiederherstellbar archiviert; andere Projekte,
+Quellen-IDs und Originalhashes unverändert.
