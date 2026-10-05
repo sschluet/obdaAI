@@ -979,3 +979,21 @@ aktualisiert Listen, Zeitimpuls, Läufe und Termine gemeinsam; nur erfolgreiche
 Hintergrundabfrage löscht deren eigene Fehlermeldung. Formfehler bleiben separat.
 Keine automatische Wiederholung von Writes. Browserabnahme simuliert HTML-503,
 prüft Erholung und eine unbestätigte POST-Aktion mit erhaltenem Entwurf.
+
+CI 37346718646 für 1aa2c6e vollständig grün: 338 Python-Tests inklusive PostgreSQL,
+Ruff/mypy (42 Module), TS/Build, mobiler Browsercheck mit HTML-503/Erholung und
+unbestätigtem POST, echter Chromium-Smoke, Container und Secrets.
+1aa2c6e auf eigener VM installiert: beide APIs gesund, Schema 0017, Overlays,
+Firewall und Browsercode unverändert. Native Live-UI zeigt n8n verbunden und
+gespeicherten erfolgreichen HA-Wartungsbericht ohne alten Parsefehler. Screenshot
+privat live-ha-task-dialog-1aa2c6e.png.
+
+Abschließender, ausdrücklich erlaubter verschlüsselter Off-VM-Backup/temporärer
+Restore für installierten Stand 1aa2c6e erneut bestanden: snapshot-20261005T171713.524650853Z,
+Schema 0017, Workflow-/Task-/Aktionsbelege und Schlüssel, 40 Originalhashes,
+sechs Memory-Dateien. Temporäre DB entfernt, produktive DB/HA unverändert.
+Privater Beleg m3-read-backup-acceptance.json. Gemessener kombinierter Backup-/
+isolierter Prüfablauf 73.6 Sekunden; dies ist keine vollständige Server- oder HA-RTO.
+
+Diese abschließende Dokumentation ändert den installierten Code 1aa2c6e nicht.
+M3 verbleibt teilweise umgesetzt; offene Funktionen in docs/m3-acceptance-status.md.
