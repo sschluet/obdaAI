@@ -34,3 +34,5 @@ input[type=checkbox]{accent-color:var(--accent)}
 .setting-card .hint,.run-history .hint{overflow-wrap:anywhere}
 
 .modal>div{max-height:90dvh;overflow:auto}.modal label{display:grid;gap:6px;margin:12px 0}.modal label:has(input[type=checkbox]){display:flex;align-items:center}.modal input:not([type=checkbox]),.modal select{width:100%;padding:10px;background:var(--panel);color:inherit;border:1px solid var(--border);border-radius:8px}.modal .task-dialog{width:min(680px,94vw)}.mode select{max-width:220px;border:0;background:transparent;color:inherit;font:inherit}.chat-top>div{flex-wrap:wrap}@media(max-width:720px){.mode select{max-width:180px}.modal{padding:12px}.modal>div{padding:20px}}
+
+.settings-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.settings-tabs button{padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--panel)}.setting-card dt{font-weight:600;margin-top:18px}.setting-card dd{margin:5px 0 18px;color:var(--muted);line-height:1.6}

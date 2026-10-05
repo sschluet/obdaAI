@@ -599,3 +599,10 @@ technisches portables Format nur unter Erweitert. Synthetischer Browsercheck
 bestätigt zwei Stichwörter, gespeicherten Text und deaktivierte erste Revision.
 CI de87b5f fand mehrdeutige Beschriftung am Aufgaben-Projektfeld; explizite
 Beschriftungen in 763cf82 korrigiert, dessen Browserprüfung bestanden.
+
+Einstellungen in fünf Bereiche gegliedert: Allgemein, Modelle, Antwortverhalten,
+Verbindungen, Datenschutz. Antwortverhalten enthält dieselben echten Skillformulare.
+Darstellung und Standardmodus für neue Gespräche werden im Browser gespeichert;
+situative Chatwahl bleibt getrennt. Standardmodus nach Reload und neuer
+Gesprächsanlage im Browser geprüft; Testpräferenz danach auf AUTO zurückgesetzt.
+Modellverbindungsdialog mit Basisfeldern und zugeklappten erweiterten Grenzen geprüft.

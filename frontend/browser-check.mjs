@@ -47,6 +47,7 @@ await page.setViewportSize({width:390,height:844});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
 await page.getByRole('heading',{name:'Einstellungen',exact:true}).waitFor();
+await page.getByRole('button',{name:'Modelle',exact:true}).click();
 await page.getByRole('heading',{name:'Modelle und Verbindungen',exact:true}).waitFor();
 await page.getByRole('button',{name:'Verbindung testen',exact:true}).first().click();
 await page.getByText('Verbindung und konfiguriertes Modell gefunden',{exact:true}).waitFor();
