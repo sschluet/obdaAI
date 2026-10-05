@@ -30,6 +30,13 @@ class PreviewFile(BaseModel):
     bytes: int = Field(gt=0, le=MAX_OUTPUT)
 
 
+class PdfExport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(pattern=r"^previews/artifact\.pdf$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    bytes: int = Field(gt=0, le=MAX_OUTPUT)
+
+
 class OutputManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     filename: str = Field(pattern=r"^artifact\.(docx|pptx|pdf|png|jpeg)$")
@@ -40,6 +47,7 @@ class OutputManifest(BaseModel):
     previews: list[PreviewFile] = Field(min_length=1, max_length=100)
     spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     status: str = Field(pattern=r"^needs_review$")
+    pdf_export: PdfExport | None = None
 
 
 def roots(cfg: Settings) -> tuple[Path, Path]:
@@ -137,7 +145,9 @@ def spool(db: Session, cfg: Settings, artifact: Artifact, row: ArtifactRevision)
 
 def output_file(cfg: Settings, row: ArtifactRevision, filename: str, sha256: str) -> Path:
     _, results = roots(cfg)
-    pattern = r"artifact\.(docx|pptx|pdf|png|jpeg)|previews/page-[0-9]{1,3}\.png"
+    pattern = (
+        r"artifact\.(docx|pptx|pdf|png|jpeg)|previews/page-[0-9]{1,3}\.png|previews/artifact\.pdf"
+    )
     if not re.fullmatch(pattern, filename):
         raise ValueError("Ungültige Ausgabedatei")
     path = results / job_name(row) / "version" / filename
@@ -162,7 +172,7 @@ def checked_manifest(cfg: Settings, row: ArtifactRevision, raw: str) -> OutputMa
         len(spec.plan.slides)
         if spec.plan.kind == "pptx"
         else len(spec.plan.pages)
-        if spec.plan.kind == "pdf"
+        if spec.plan.kind == "pdf" and spec.plan.pages
         else 1
         if spec.plan.kind == "image"
         else len(manifest.previews)
@@ -174,6 +184,16 @@ def checked_manifest(cfg: Settings, row: ArtifactRevision, raw: str) -> OutputMa
     output = output_file(cfg, row, manifest.filename, manifest.sha256)
     if output.stat().st_size != manifest.bytes:
         raise ValueError("Dateigröße passt nicht zum Beleg")
+    wants_pdf = spec.plan.kind == "docx" and spec.plan.pdf_export
+    if bool(manifest.pdf_export) != wants_pdf:
+        raise ValueError("PDF-Export passt nicht zur Vorgabe")
+    if manifest.pdf_export:
+        export = manifest.pdf_export
+        pdf = output_file(cfg, row, export.filename, export.sha256)
+        from pypdf import PdfReader
+
+        if pdf.stat().st_size != export.bytes or len(PdfReader(pdf, strict=True).pages) != expected:
+            raise ValueError("PDF-Export passt nicht zur Vorschau")
     from PIL import Image
 
     for number, preview in enumerate(manifest.previews, 1):

@@ -37,6 +37,14 @@ def child(request: Path, output: Path) -> None:
     manifest = render(spec, inputs, output / "version")
     path = output / "version" / manifest["filename"]
     manifest["previews"] = previews(path)
+    if spec.plan.kind == "docx" and spec.plan.pdf_export:
+        pdf = output / "version" / "previews" / "artifact.pdf"
+        pdf.chmod(0o400)
+        manifest["pdf_export"] = {
+            "filename": "previews/artifact.pdf",
+            "sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+            "bytes": pdf.stat().st_size,
+        }
     manifest["spec_sha256"] = hashlib.sha256(canonical(spec).encode()).hexdigest()
     # Rendering proves files are previewable, not that their contents were
     # visually accepted. The application must show them for explicit review.

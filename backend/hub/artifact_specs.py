@@ -1,8 +1,16 @@
 """Bounded data plans for offline artifacts; never executable model output."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    StringConstraints,
+    model_serializer,
+    model_validator,
+)
 
 Short = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
 Body = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)]
@@ -12,6 +20,18 @@ Digest = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
 class StrictPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    @model_serializer(mode="wrap")
+    def compatible_data(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        # Absent extensions retain the exact canonical shape of existing V1
+        # requests and receipts. Never invalidate an old immutable version.
+        for key in ("images", "pdf_export", "caption"):
+            if not data.get(key):
+                data.pop(key, None)
+        if data.get("kind") == "pdf" and not data.get("sections"):
+            data.pop("sections", None)
+        return data
+
 
 class SourceBinding(StrictPlan):
     id: str = Field(pattern=r"^[0-9a-f-]{36}$")
@@ -19,10 +39,17 @@ class SourceBinding(StrictPlan):
     sha256: Digest
 
 
+class DocumentImage(StrictPlan):
+    source: int = Field(ge=0, le=19)
+    caption: str = Field(default="", max_length=160)
+    width_inches: float = Field(default=5.5, ge=0.5, le=6.5)
+
+
 class Section(StrictPlan):
     heading: Short
     paragraphs: list[Body] = Field(default_factory=list, max_length=30)
     table: list[list[Short]] = Field(default_factory=list, max_length=30)
+    images: list[DocumentImage] = Field(default_factory=list, max_length=4)
 
     @model_validator(mode="after")
     def rectangular(self) -> "Section":
@@ -38,6 +65,13 @@ class DocumentPlan(StrictPlan):
     kind: Literal["docx"]
     title: Short
     sections: list[Section] = Field(min_length=1, max_length=30)
+    pdf_export: bool = False
+
+    @model_validator(mode="after")
+    def image_limit(self) -> "DocumentPlan":
+        if sum(len(section.images) for section in self.sections) > 12:
+            raise ValueError("Maximal zwölf Bilder je Dokument")
+        return self
 
 
 class Slide(StrictPlan):
@@ -63,12 +97,22 @@ class PageSelection(StrictPlan):
 class PdfPlan(StrictPlan):
     kind: Literal["pdf"]
     title: Short
-    pages: list[PageSelection] = Field(min_length=1, max_length=100)
+    pages: list[PageSelection] = Field(default_factory=list, max_length=100)
+    sections: list[Section] = Field(default_factory=list, max_length=30)
+
+    @model_validator(mode="after")
+    def one_mode(self) -> "PdfPlan":
+        if bool(self.pages) == bool(self.sections):
+            raise ValueError("PDF benötigt entweder Seiten oder Dokumentinhalt")
+        if sum(len(section.images) for section in self.sections) > 12:
+            raise ValueError("Maximal zwölf Bilder je Dokument")
+        return self
 
 
 class ImageTile(StrictPlan):
     source: int = Field(ge=0, le=19)
     crop: tuple[float, float, float, float] = (0, 0, 1, 1)
+    caption: str = Field(default="", max_length=140)
 
     @model_validator(mode="after")
     def bounds(self) -> "ImageTile":
@@ -95,9 +139,7 @@ class ImagePlan(StrictPlan):
         return self
 
 
-Plan = Annotated[
-    DocumentPlan | PresentationPlan | PdfPlan | ImagePlan, Field(discriminator="kind")
-]
+Plan = Annotated[DocumentPlan | PresentationPlan | PdfPlan | ImagePlan, Field(discriminator="kind")]
 
 
 class ArtifactSpec(StrictPlan):
@@ -110,10 +152,17 @@ class ArtifactSpec(StrictPlan):
     def source_indices(self) -> "ArtifactSpec":
         if len({s.id for s in self.sources}) != len(self.sources):
             raise ValueError("Quelle darf nur einmal gebunden sein")
-        selections = (
-            self.plan.pages if isinstance(self.plan, PdfPlan)
-            else self.plan.tiles if isinstance(self.plan, ImagePlan) else []
+        selections: list[Any] = (
+            self.plan.pages
+            if isinstance(self.plan, PdfPlan)
+            else self.plan.tiles
+            if isinstance(self.plan, ImagePlan)
+            else []
         )
+        if isinstance(self.plan, DocumentPlan) or (
+            isinstance(self.plan, PdfPlan) and self.plan.sections
+        ):
+            selections = [image for section in self.plan.sections for image in section.images]
         if any(item.source >= len(self.sources) for item in selections):
             raise ValueError("Quelldatei fehlt")
         return self

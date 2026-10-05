@@ -104,6 +104,18 @@ async def synthetic_artifact(factory, cfg, artifact_id, revision):
         request = artifact_requests / (artifact_id + "-" + str(revision))
         output = artifact_results / request.name
         output.mkdir()
+        if spec.plan.kind == "pdf" and spec.plan.sections:
+            import hub.artifact_preview as fixture_preview
+            from pypdf import PdfWriter
+
+            def synthetic_pdf(path, folder):
+                writer = PdfWriter()
+                writer.add_blank_page(width=300, height=400)
+                target = folder / "artifact.pdf"
+                writer.write(target)
+                return target
+
+            fixture_preview.office_pdf = synthetic_pdf
         manifest = render(
             spec,
             [request / ("source-" + str(i)) for i in range(len(spec.sources))],
@@ -116,7 +128,7 @@ async def synthetic_artifact(factory, cfg, artifact_id, revision):
         count = (
             len(spec.plan.slides)
             if spec.plan.kind == "pptx"
-            else (len(spec.plan.pages) if spec.plan.kind == "pdf" else 1)
+            else (len(spec.plan.pages) if spec.plan.kind == "pdf" and spec.plan.pages else 1)
         )
         manifest["previews"] = []
         for page in range(1, count + 1):
@@ -134,6 +146,18 @@ async def synthetic_artifact(factory, cfg, artifact_id, revision):
                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 }
             )
+        if spec.plan.kind == "docx" and spec.plan.pdf_export:
+            from pypdf import PdfWriter
+
+            target = previews / "artifact.pdf"
+            writer = PdfWriter()
+            writer.add_blank_page(width=300, height=400)
+            writer.write(target)
+            manifest["pdf_export"] = {
+                "filename": "previews/artifact.pdf",
+                "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                "bytes": target.stat().st_size,
+            }
         (output / "manifest.json").write_text(json.dumps(manifest))
         reconcile(db, cfg, row)
         db.commit()

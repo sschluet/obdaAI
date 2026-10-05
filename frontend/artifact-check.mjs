@@ -61,6 +61,7 @@ try{
    await dialog.getByLabel('Seite im Original',{exact:true}).fill('2');
   }else{
    await dialog.getByRole('button',{name:'Bild hinzufügen',exact:true}).click();
+   await dialog.getByLabel('Bildbeschriftung',{exact:true}).fill('Synthetic blue');
    await dialog.getByLabel('Breite je Bild (Pixel)',{exact:true}).fill('128');
    await dialog.getByLabel('Höhe je Bild (Pixel)',{exact:true}).fill('128');
   }
@@ -73,6 +74,29 @@ try{
   await view.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
   await view.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
   await card.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+ }
+ for(const kind of ['docx','pdf']){
+  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  if(kind==='pdf')await dialog.getByLabel('PDF erstellen aus',{exact:true}).selectOption('text');
+  const title='Synthetic extended '+kind;
+  await dialog.getByLabel('Dateititel',{exact:true}).fill(title);
+  await dialog.getByLabel('Dokumenttext',{exact:true}).fill('Local document with a bound image.');
+  await dialog.getByRole('button',{name:'Bild in Abschnitt einfügen',exact:true}).click();
+  await dialog.getByLabel('Bildunterschrift',{exact:true}).fill('Synthetic blue image');
+  if(kind==='docx')await dialog.getByLabel('Zusätzlich als PDF zum Download bereitstellen',{exact:true}).check();
+  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
+  const card=page.locator('article').filter({has:page.getByText(title+' · Version 1',{exact:true})});
+  await card.getByRole('button',{name:'Vorschau öffnen',exact:true}).click();
+  const view=page.getByRole('dialog',{name:'Dateivorschau',exact:true});
+  await view.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
+  await view.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
+  if(kind==='docx')await card.getByRole('link',{name:'Zusätzliches PDF herunterladen',exact:true}).waitFor();
+  await card.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
+  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+  if(await dialog.getByLabel('Bildunterschrift',{exact:true}).inputValue()!=='Synthetic blue image')throw Error('Bound image/caption lost in version editor');
+  await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
  }
  for(const kind of ['docx','pptx']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();

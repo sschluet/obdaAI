@@ -1,27 +1,29 @@
-# obdaAI — Status 05.10.2026
+# obdaAI — Status 06.10.2026
 
-## Aktueller Stand: M3-Schreibprofile und M4-Dateidialoge installiert
+## Aktueller Stand: Schema 0021 installiert, Dokumentfunktionen erweitert
 
-Produktiv ist `9b6f30b` / Schema 0020 installiert. Die begrenzten Aufgaben-
-Schreibprofile und vier lokale Dateidialoge mit dauerhaften Versionen, Vorschau-
-Freigabe und Offline-Runner sind ausgerollt. Beide APIs gesund; vorhandene
-IPv4-/IPv6-Regeln, übrige Overlays und Browsercode unverändert. Vorherige
-verschlüsselte Sicherung erfolgreich; neuer eigener Overlay enthält die Dateidienste.
+Produktiv ist `8ac09e6` / Schema 0021 installiert. Beide APIs gesund; bestehende
+IPv4-/IPv6-Regeln unverändert. Die Installation wurde vorher verschlüsselt gesichert.
+Zehn echte PostgreSQL-Integrationsfälle für diesen Release bestanden. Direkte OpenAI-
+und Anthropic-Anbieter sind in normalen Einstellungsdialogen vorbereitet; sie benötigen
+noch eigene Schlüssel und eine konkrete Serverfreigabe. OpenRouter bleibt der bisher
+zugelassene externe Anbieter. Neue Gespräche binden Cloudzustimmung an einen Anbieter.
 
-377 lokale Tests bestanden; alle zehn echten PostgreSQL-Integrationsfälle auf der
-eigenen VM bestanden. Ruff/mypy, TS/Build und Secret-Scan bestanden. Mobile
-synthetische Browserabnahme einschließlich Tabellen, Folgeversionen, lokaler Entwürfe
-und Chatübernahme bestanden. Echte Linux-Abnahme: vier Dateien, sechs Vorschauen.
-Die erste Live-Abnahme zeigt einen bestehenden Engpass: lange Vault-Abgleiche
-blockieren den gemeinsamen Upload-Worker. Queue-Trennung und nicht blockierender
-Abgleich werden gerade geprüft und ausgerollt. Produktive Dateiabnahme und
-verschlüsselter Schema-0020-Restore sind noch nicht abgeschlossen.
+414 lokale Tests bestanden, zehn PostgreSQL-Fälle separat geprüft; Ruff/mypy,
+TS/Build und Source-Scan bestanden. Im neuen Quellstand ergänzt: gebundene Bilder und
+Bildunterschriften in Word, optionaler PDF-Download derselben geprüften Version,
+PDF-Erstellung aus Text/Tabellen/Bildern und Beschriftungen für zugeschnittene Collagen.
+Diese Erweiterung ist bis zum eigenen Linux- und Live-Test noch nicht ausgerollt.
+Alte Dateivorgaben behalten bei nicht verwendeten Erweiterungen ihre kanonische Form.
+
+Die echte Dateiabnahme hat Word, PDF und Bild per geprüftem HTTPS-Download bestätigt.
+Der verschlüsselte temporäre Restore von Schema 0020 prüfte acht Dateiversionen,
+42 Originale, Memory-Dateien und notwendige Schlüssel. PPTX-Fontkorrektur und lokale
+Modellabnahme werden auf der installierten Version erneut geprüft. Details und offene
+Fälle: [Dateiabnahme](docs/m4-acceptance-status.md). M3/M4/M5 sind nicht vollständig.
 
 GitHub konnte mehrere Jobs wegen nicht verfügbarer Hosted Runner nicht starten;
-fehlgeschlagene Allokation ist kein bestandener Test. Der konkrete Officefehler
-wurde am eigenen Linux-Container diagnostiziert und behoben, ohne den
-Dateisystemschutz oder die Netzwerksperre abzuschalten. Aktuelle M4-Grenzen:
-[Dateiabnahme](docs/m4-acceptance-status.md). M3/M4/M5 sind noch nicht vollständig.
+fehlgeschlagene Allokation ist kein bestandener Test. Kein Merge ohne grüne Checks.
 
 ## Historischer Stand · M3 erweitert und live installiert
 

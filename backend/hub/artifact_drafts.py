@@ -54,7 +54,7 @@ def parse_plan(answer: str) -> tuple[Any, str]:
 class DraftInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=4000)
-    kind: Literal["docx", "pptx"]
+    kind: Literal["docx", "pptx", "pdf"]
     slide_count: int = Field(default=3, ge=1, le=30)
     sources: list[SourceBinding] = Field(default_factory=list, max_length=4)
     base_artifact_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
@@ -219,7 +219,7 @@ async def preview(
             '{"title":"Titel","sections":[{"heading":"Überschrift",'
             '"paragraphs":["Absatz"],"table":[]}]}'
         )
-        if body.kind == "docx"
+        if body.kind in {"docx", "pdf"}
         else (
             '{"title":"Titel","slides":[{"title":"Folientitel",'
             '"bullets":["Stichpunkt"],"notes":"Sprechernotiz"}]}'
@@ -269,7 +269,7 @@ async def preview(
     # Server-owned references identify exactly the excerpts actually used. They
     # do not claim each model statement is semantically verified.
     references = [c["reference"] + " · Revision " + str(c["revision"]) for c in citations]
-    if references and spec.plan.kind == "docx":
+    if references and spec.plan.kind in {"docx", "pdf"}:
         value["sections"].append({"heading": "Verwendete Quellen", "paragraphs": references})
     if references and spec.plan.kind == "pptx":
         for slide in value["slides"]:

@@ -11,6 +11,31 @@ from PIL import Image, ImageOps
 from pypdf import PdfReader
 
 
+def office_pdf(path: Path, folder: Path) -> Path:
+    """One fixed offline conversion, also used for PDF documents from text."""
+    with tempfile.TemporaryDirectory(prefix="profile-", dir=folder) as profile:
+        command = [
+            "/usr/lib/libreoffice/program/soffice.bin" if sys.platform == "linux" else "soffice",
+            "-env:UserInstallation=" + Path(profile).as_uri(),
+            "-env:OSL_SOCKET_PATH=/run/ipc",
+            "--headless",
+            "--norestore",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(folder),
+            str(path),
+        ]
+        process = subprocess.run(command, capture_output=True, timeout=60)
+        if sys.platform == "linux" and process.returncode == 81:
+            process = subprocess.run(command, capture_output=True, timeout=60)
+        process.check_returncode()
+    pdf = folder / "artifact.pdf"
+    if not pdf.is_file() or pdf.is_symlink() or not 0 < pdf.stat().st_size <= 40 * 1024 * 1024:
+        raise ValueError("PDF-Konvertierung fehlt oder ist zu groß")
+    return pdf
+
+
 def previews(path: Path) -> list[dict[str, Any]]:
     if path.is_symlink() or not path.is_file():
         raise ValueError("Artefaktdatei fehlt")
@@ -24,29 +49,7 @@ def previews(path: Path) -> list[dict[str, Any]]:
     else:
         pdf = path
         if path.suffix in {".docx", ".pptx"}:
-            with tempfile.TemporaryDirectory(prefix="profile-", dir=folder) as profile:
-                command = [
-                    "/usr/lib/libreoffice/program/soffice.bin"
-                    if sys.platform == "linux"
-                    else "soffice",
-                    "-env:UserInstallation=" + Path(profile).as_uri(),
-                    "-env:OSL_SOCKET_PATH=/run/ipc",
-                    "--headless",
-                    "--norestore",
-                    "--convert-to",
-                    "pdf",
-                    "--outdir",
-                    str(folder),
-                    str(path),
-                ]
-                process = subprocess.run(command, capture_output=True, timeout=60)
-                # LibreOffice's normal first-profile initialization requests a
-                # restart (EXITHELPER_NORMAL_RESTART=81). Retry that exact fixed
-                # command once, never a crash or an arbitrary renderer failure.
-                if sys.platform == "linux" and process.returncode == 81:
-                    process = subprocess.run(command, capture_output=True, timeout=60)
-                process.check_returncode()
-            pdf = folder / "artifact.pdf"
+            pdf = office_pdf(path, folder)
         elif path.suffix != ".pdf":
             raise ValueError("Vorschauformat nicht unterstützt")
         if not pdf.is_file() or pdf.is_symlink() or pdf.stat().st_size > 40 * 1024 * 1024:

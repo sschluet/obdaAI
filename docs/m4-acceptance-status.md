@@ -1,6 +1,6 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 05.10.2026. M4 bleibt teilweise umgesetzt. Dieser Quellstand ist bis zum
+Stand 06.10.2026. M4 bleibt teilweise umgesetzt. Dieser Quellstand ist bis zum
 verifizierten Rollout nicht mit dem installierten Stand gleichzusetzen.
 
 | Funktion | Implementiert | Nachweis / verbleibende Grenze |
@@ -47,9 +47,12 @@ speichert ihren unveränderten lokalen Herkunftssnapshot. Fremde Projektgespräc
 und Vault-Chats sind nicht exportierbar. Manuelle Folgeversionen behalten diesen
 Snapshot. Diese Funktion verschiebt keine anderen Gespräche oder Quellen.
 
-Weiter offen: Bilder in DOCX, optionale DOCX→PDF-Ausgabe, PDF-Erstellung aus Text,
-Bildbeschriftung, direkte natürliche Chat-Dateiplanung und umfassende Layout-/
-semantische Qualitätsabnahme. Die App bietet keine überprüfte echte Schwärzung.
+Im Quellstand ergänzt: Bilder in DOCX aus explizit gebundenen Originalen, optionale
+DOCX→PDF-Ausgabe, PDF-Erstellung aus Text/Tabellen/Bildern und Bildbeschriftung. Diese
+Erweiterungen benötigen noch eigenen Linux-/Live- und visuellen Nachweis. Der optionale
+PDF-Download teilt die Reviewfreigabe der genauen Word-Version; beide Hashes werden
+geprüft. Direkte natürliche Chat-Dateiplanung und umfassende Layout-/semantische
+Qualitätsabnahme bleiben offen. Die App bietet keine überprüfte echte Schwärzung.
 
 Live-Zwischenstand: `00f72bf` / Schema 0020 auf eigener VM installiert; beide APIs
 und der netzlose Runner gesund, bestehende Netzregeln/Overlays unverändert. Alle zehn
@@ -64,3 +67,11 @@ visuell geprüft; authentifizierte HTTPS-Downloads nach Freigabe per SHA-256 gep
 PowerPoint bleibt vor finaler Freigabe: sichtbare Schrift-Fallback-Abstände werden
 mit expliziter Liberation Sans korrigiert und als Folgeversion erneut geprüft.
 Ein gültiges PPTX allein wird nicht als einwandfreies Layout gewertet.
+
+Installierter Zwischenstand `8ac09e6` / Schema 0021: zehn echte PostgreSQL-Fälle
+bestanden, beide APIs gesund, Netzregeln unverändert. Lokale Modellantworten werden
+strikt als Daten validiert. Nur ein umschließender JSON-Codeblock und genau eine
+zusätzliche schließende Klammer sind als eng begrenzte Formatnormalisierung zulässig;
+Rohantwort-Hash und Normalisierung werden im bestätigten Dateibeleg gespeichert.
+Doppelte Felder, weitere JSON-Objekte, Prosa und zusätzliche Berechtigungsfelder
+bleiben abgewiesen. Keine automatische weitere Modellanfrage.

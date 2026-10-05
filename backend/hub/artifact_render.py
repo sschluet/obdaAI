@@ -5,6 +5,7 @@ HTTP client or model-code execution. Office preview rendering is a separate stag
 """
 
 import hashlib
+import io
 import math
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,7 @@ def verified_inputs(spec: ArtifactSpec, inputs: list[Path]) -> list[Path]:
     return inputs
 
 
-def _document(plan: DocumentPlan, path: Path) -> None:
+def _document(plan: DocumentPlan, path: Path, inputs: list[Path]) -> None:
     from docx import Document
     from docx.shared import Inches, Pt, RGBColor
 
@@ -58,6 +59,13 @@ def _document(plan: DocumentPlan, path: Path) -> None:
             for row in item.table:
                 for cell, text in zip(table.add_row().cells, row, strict=True):
                     cell.text = text
+        for picture in item.images:
+            clean = io.BytesIO()
+            _read_image(inputs[picture.source]).save(clean, format="PNG")
+            clean.seek(0)
+            document.add_picture(clean, width=Inches(picture.width_inches))
+            if picture.caption:
+                document.add_paragraph(picture.caption, style="Caption")
     document.core_properties.title = plan.title
     document.core_properties.author = "obdaAI"
     document.save(str(path))
@@ -112,6 +120,21 @@ def _presentation(plan: PresentationPlan, path: Path) -> None:
 def _pdf(plan: PdfPlan, inputs: list[Path], path: Path) -> None:
     from pypdf import PdfReader, PdfWriter
 
+    if plan.sections:
+        from hub.artifact_preview import office_pdf
+
+        temporary = path.with_suffix(".docx")
+        try:
+            _document(
+                DocumentPlan(kind="docx", title=plan.title, sections=plan.sections),
+                temporary,
+                inputs,
+            )
+            office_pdf(temporary, path.parent)
+        finally:
+            temporary.unlink(missing_ok=True)
+        return
+
     readers = [PdfReader(str(source), strict=True) for source in inputs]
     for reader in readers:
         if reader.is_encrypted:
@@ -138,18 +161,24 @@ def _pdf(plan: PdfPlan, inputs: list[Path], path: Path) -> None:
         raise ValueError("PDF-Seitenzahl stimmt nicht")
 
 
-def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
+def _read_image(path: Path) -> Any:
     from PIL import Image, ImageOps
+
+    with Image.open(path) as original:
+        if original.width * original.height > 24_000_000:
+            raise ValueError("Quelldatei überschreitet das Pixellimit")
+        if original.format not in {"PNG", "JPEG", "WEBP"}:
+            raise ValueError("Bildformat nicht freigegeben")
+        return ImageOps.exif_transpose(original).convert("RGB")
+
+
+def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
+    from PIL import Image, ImageDraw, ImageFont, ImageOps
 
     rows = math.ceil(len(plan.tiles) / plan.columns)
     canvas = Image.new("RGB", (plan.columns * plan.tile_width, rows * plan.tile_height), "#f4f7fd")
     for number, tile in enumerate(plan.tiles):
-        with Image.open(inputs[tile.source]) as original:
-            if original.width * original.height > 24_000_000:
-                raise ValueError("Quelldatei überschreitet das Pixellimit")
-            if original.format not in {"PNG", "JPEG", "WEBP"}:
-                raise ValueError("Bildformat nicht freigegeben")
-            image = ImageOps.exif_transpose(original).convert("RGB")
+        image = _read_image(inputs[tile.source])
         left, top, right, bottom = tile.crop
         crop = (
             int(left * image.width),
@@ -159,14 +188,36 @@ def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
         )
         if crop[2] <= crop[0] or crop[3] <= crop[1]:
             raise ValueError("Zuschnitt enthält keine Pixel")
-        fitted = ImageOps.fit(image.crop(crop), (plan.tile_width, plan.tile_height))
+        font = ImageFont.load_default(size=16)
+        lines: list[str] = []
+        draw = ImageDraw.Draw(canvas)
+        for word in tile.caption.split():
+            if (
+                not lines
+                or draw.textlength(lines[-1] + " " + word, font=font) > plan.tile_width - 16
+            ):
+                lines.append(word)
+            else:
+                lines[-1] += " " + word
+        if any(draw.textlength(line, font=font) > plan.tile_width - 16 for line in lines):
+            raise ValueError("Beschriftung enthält ein zu langes Wort")
+        band = 12 + len(lines) * 21 if lines else 0
+        if band > plan.tile_height // 2:
+            raise ValueError("Beschriftung benötigt mehr Platz; Bildhöhe erhöhen")
+        fitted = ImageOps.fit(image.crop(crop), (plan.tile_width, plan.tile_height - band))
+        x = (number % plan.columns) * plan.tile_width
+        y = (number // plan.columns) * plan.tile_height
         canvas.paste(
             fitted,
-            (
-                (number % plan.columns) * plan.tile_width,
-                (number // plan.columns) * plan.tile_height,
-            ),
+            (x, y),
         )
+        for line_number, line in enumerate(lines):
+            draw.text(
+                (x + 8, y + plan.tile_height - band + 6 + line_number * 21),
+                line,
+                font=font,
+                fill="#182842",
+            )
     canvas.save(path, format="PNG" if plan.format == "png" else "JPEG")
     with Image.open(path) as check:
         check.verify()
@@ -187,7 +238,7 @@ def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, An
     path = output / ("artifact." + suffix)
     try:
         if isinstance(plan, DocumentPlan):
-            _document(plan, path)
+            _document(plan, path, inputs)
         elif isinstance(plan, PresentationPlan):
             _presentation(plan, path)
         elif isinstance(plan, PdfPlan):

@@ -272,3 +272,66 @@ def test_waiting_artifact_transaction_does_not_freeze_health(setup, monkeypatch)
         finally:
             release.set()
         assert result.result(timeout=3).status_code == 200
+
+
+def test_optional_pdf_export_shares_review_gate_and_detects_drift(setup, monkeypatch):
+    from pypdf import PdfWriter
+
+    app, c, h, cfg, pid, _ = setup
+    spec = {
+        "plan": {
+            "kind": "docx",
+            "title": "PDF dazu",
+            "pdf_export": True,
+            "sections": [{"heading": "Text", "paragraphs": ["Synthetischer Inhalt"]}],
+        }
+    }
+    row = create(c, h, pid, spec).json()
+    target = Path(cfg.artifact_result_dir) / (row["artifact_id"] + "-1")
+    target.mkdir()
+    output = target / "version"
+    manifest = render(ArtifactSpec.model_validate(spec), [], output)
+    preview_dir = output / "previews"
+    preview_dir.mkdir()
+    png = preview_dir / "page-1.png"
+    Image.new("RGB", (100, 100), "white").save(png)
+    pdf = preview_dir / "artifact.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    writer.write(pdf)
+    manifest.update(
+        status="needs_review",
+        spec_sha256=row["spec_sha256"],
+        previews=[
+            {
+                "page": 1,
+                "filename": "previews/page-1.png",
+                "sha256": hashlib.sha256(png.read_bytes()).hexdigest(),
+                "bytes": png.stat().st_size,
+            }
+        ],
+        pdf_export={
+            "filename": "previews/artifact.pdf",
+            "sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+            "bytes": pdf.stat().st_size,
+        },
+    )
+    (target / "manifest.json").write_text(json.dumps(manifest))
+    ready = next(
+        r
+        for r in c.get("/api/projects/" + pid + "/artifacts").json()
+        if r["artifact_id"] == row["artifact_id"]
+    )
+    assert ready["status"] == "needs_review"
+    assert c.get(base(pid, row) + "/download?pdf=true").status_code == 409
+    assert c.post(base(pid, row) + "/accept", headers=h, json=acceptance(ready)).status_code == 200
+    response = c.get(base(pid, row) + "/download?pdf=true")
+    assert response.status_code == 200 and response.content == pdf.read_bytes()
+    assert "artifact.pdf" in response.headers["content-disposition"]
+    assert (
+        c.get(base("00000000-0000-4000-8000-000000000000", row) + "/download?pdf=true").status_code
+        == 404
+    )
+    pdf.write_bytes(b"drift")
+    assert c.get(base(pid, row) + "/download?pdf=true").status_code == 409
+    assert c.get(base(pid, row) + "/download").status_code == 409
