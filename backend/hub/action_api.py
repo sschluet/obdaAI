@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
 from hub.db import ActionGrant, ActionIntent, ActionPolicy, ActionReceipt, Project, Source
+from hub.ha_backups import inspect as inspect_ha_backups
 from hub.home_assistant import inspect as inspect_ha
 from hub.knowledge_api import Auth
 
@@ -62,6 +63,15 @@ TOOLS: dict[str, dict[str, Any]] = {
     "ha.inspect": {
         "id": "ha.inspect",
         "name": "Home Assistant prüfen",
+        "revision": 1,
+        "effect": "read",
+        "system": "Home Assistant",
+        "external": True,
+        "parameters_schema": StrictInput.model_json_schema(),
+    },
+    "ha.backups.inspect": {
+        "id": "ha.backups.inspect",
+        "name": "Home-Assistant-Sicherungen prüfen",
         "revision": 1,
         "effect": "read",
         "system": "Home Assistant",
@@ -137,7 +147,7 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
         return [
             {
                 **t,
-                "configured": t["id"] != "ha.inspect"
+                "configured": t["id"] not in ("ha.inspect", "ha.backups.inspect")
                 or bool(cfg.ha_token_file and cfg.ha_allowed_ip),
             }
             for t in TOOLS.values()
@@ -266,7 +276,7 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             if (
                 not tool
                 or row.tool_revision != tool["revision"]
-                or (tool["external"] and row.tool_id != "ha.inspect")
+                or (tool["external"] and row.tool_id not in ("ha.inspect", "ha.backups.inspect"))
             ):
                 raise HTTPException(409, "Werkzeugversion oder Systemgrenze geändert")
             params = parameters(row.tool_id, json.loads(row.parameters))
@@ -305,6 +315,8 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                     "archived": True,
                     "revision": params["expected_revision"] + 1,
                 }
+            elif row.tool_id == "ha.backups.inspect":
+                result = inspect_ha_backups(cfg)
             elif row.tool_id == "ha.inspect":
                 result = inspect_ha(cfg)
             else:

@@ -37,7 +37,7 @@ await page.getByRole('button',{name:'Ändern und neu antworten',exact:true}).cli
 await page.getByText('Edited synthetic browser question',{exact:true}).waitFor();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 await page.getByRole('button',{name:'Aus Nachricht eine Aufgabe planen',exact:true}).first().click();
-if(await page.getByLabel('Was soll erledigt werden?',{exact:true}).inputValue()!=='Edited synthetic browser question')throw Error('Chat task goal changed');
+try{if(await page.getByLabel('Was soll erledigt werden?',{exact:true}).inputValue()!=='Edited synthetic browser question')throw Error('Chat task goal changed')}catch(e){await page.screenshot({path:output+'/chat-task-failure.png',fullPage:true});throw Error(String(e)+'\nVisible state: '+await page.locator('body').innerText()+'\nErrors: '+errors.join('\n'))}
 await page.getByLabel('Name der Aufgabe',{exact:true}).fill('Synthetic task from chat');
 await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
 await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).waitFor();
@@ -185,6 +185,13 @@ await page.reload();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
 await page.getByRole('heading',{name:'Home Assistant · Version 2026.9.3',exact:true}).waitFor();
+await page.getByRole('button',{name:'Installation und Sicherungen prüfen',exact:true}).click();
+await page.getByRole('heading',{name:'Home Assistant · Installation und Sicherungen',exact:true}).waitFor();
+await page.getByText('1 gemeldet · 0 Speicherzugänge mit Fehler',{exact:true}).waitFor();
+await page.getByText('Gemeldete Sicherungen ansehen',{exact:true}).click();
+await page.getByText('Kennung synthetic-backup',{exact:true}).waitFor();
+if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('HA backup mobile overflow');
+await page.screenshot({path:output+'/ha-backups-mobile.png',fullPage:true,animations:'disabled'});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
 await page.getByRole('button',{name:'Verbindungen',exact:true}).click();

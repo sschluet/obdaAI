@@ -184,3 +184,38 @@ def fixture_mcp(body: dict) -> dict:
             ],
         },
     }
+
+
+def synthetic_ha_backups(cfg: Settings) -> dict:
+    return {
+        "label": "LOCAL_ONLY",
+        "checked_at": 1791201000,
+        "operating_system": "Synthetic HA OS",
+        "core_version": "2026.9.3",
+        "supervisor_version": "2026.09.3",
+        "supervisor_healthy": True,
+        "supervisor_supported": True,
+        "backup_state": "idle",
+        "last_completed_automatic_backup": 1791200000,
+        "backup_count": 1,
+        "agent_error_count": 0,
+        "backups": [
+            {
+                "id": "synthetic-backup",
+                "created": 1791200000,
+                "homeassistant_included": True,
+                "database_included": True,
+                "homeassistant_version": "2026.9.3",
+                "copies": [{"protected": True, "size": 123456}],
+                "failure_count": 0,
+            }
+        ],
+        "restore_verified": False,
+        "writes_enabled": False,
+        "archive_integrity_verified": False,
+        "recovery_key_verified": False,
+        "scope": "installation_and_backup_metadata_only",
+    }
+
+
+fixture_action_api.inspect_ha_backups = synthetic_ha_backups

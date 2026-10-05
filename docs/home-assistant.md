@@ -67,3 +67,39 @@ Encrypted off-VM backup and isolated schema-0015 restore passed: the HA read rec
 matched exactly, credential/overlay/approved egress marker were present, and prior
 schedules, 40 original source hashes and six Memory files survived. The disposable
 restore database was removed. This proves hub recovery only, not HA backup or restore.
+
+## Installation und vorhandene Sicherungen
+
+`ha.backups.inspect` nutzt ausschließlich die offizielle Core-WebSocket-API
+`/api/websocket`. Genau drei fest codierte Kommandos: supervisor/api GET /info,
+supervisor/api GET /supervisor/info und backup/info. Keine freien Methoden/Pfade,
+keine Backup-Erzeugung, Downloads, Konfigurationsabfragen mit Schlüsseln oder Restore.
+Das vorhandene HA-Tokenfile und die geprüfte IP werden verwendet: direkte TCP-
+Verbindung zu genau dieser IP, Host/TLS-SNI aus dem festen WSS-URI, Zertifikat
+geprüft, Proxy/Kompression ausgeschaltet, keine Redirect-/Reconnect-Schleife.
+Transportlogger deaktiviert, damit kein Auth-Frame geloggt wird.
+
+Reproduzierbar gepinntes websockets 17.1 (BSD) begrenzt Nachrichten auf 1 MB und
+zwei gepufferte Frames. Maximal acht Sekunden je Receive und 24 Sekunden für
+den Austausch; Verbindung/Close separat auf acht/zwei Sekunden begrenzt. Unerwartete
+Authentifizierung, ID, Event, Erfolgsflag oder Schema stoppt ohne Folgeaktion.
+
+Die Ausgabe enthält Installation/Core/Supervisor, Gesundheits-/Supportflags,
+Sicherungsdienstzustand, Zeit der zuletzt laut HA abgeschlossenen automatischen
+Sicherung und minimierte Backup-Metadaten. Keine Backup-Namen, Agentkennungen,
+Addon-/Ordnernamen, Error-Texte, private Extradaten oder Wiederherstellungsschlüssel.
+Metadaten und Fremdaussagen sind keine Integritäts-/Restore-Abnahme. Die drei Flags
+archive_integrity_verified, recovery_key_verified und restore_verified bleiben false,
+Schreibaktionen bleiben gesperrt. Belegreplay ruft die Quelle nicht erneut auf.
+
+Die zuvor untersuchten HTTP-Supervisor-Pfade liefern in Core 2026.9.3 401, weil
+sie im HTTP-Proxy nicht freigegeben sind; daraus darf kein fehlendes Adminrecht
+des Tokens abgeleitet werden. Die dokumentierten WebSocket-Lesewege wurden
+erfolgreich geprüft: HA OS 18.3, gesunder/unterstützter Supervisor 2026.09.3,
+61 gemeldete Sicherungen, kein gemeldeter Agentfehler. Produktives HA unverändert.
+
+Primärquellen:
+- https://raw.githubusercontent.com/home-assistant/core/2026.9.3/homeassistant/components/hassio/http.py
+- https://raw.githubusercontent.com/home-assistant/core/2026.9.3/homeassistant/components/hassio/websocket_api.py
+- https://raw.githubusercontent.com/home-assistant/core/2026.9.3/homeassistant/components/backup/websocket.py
+- https://websockets.readthedocs.io/en/stable/reference/sync/client.html

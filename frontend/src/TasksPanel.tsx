@@ -5,13 +5,13 @@ type Task={id:string;revision:number;control_revision:number;paused:boolean;arch
 type Run={id:string;task_revision:number;status:string;error:string|null;created:number;finished:number|null;snapshot:Record<string,any>;steps:{sequence:number;tool_id:string;result:Record<string,any>}[]};
 const initial={title:'',goal:'',project_id:null,sources:[],skills:[],timezone:'Europe/Berlin',trigger:'manual',autonomy:'analyze_only',label:'LOCAL_ONLY',steps:[{tool_id:'ai.analyze',tool_revision:1,parameters:{}}],success_criterion:'all_reads_completed',output:'task_center',max_cost_usd:0,timeout_seconds:30};
 export type TaskSeed={goal:string;project_id:string|null};
-export function TasksPanel({api,seed,onSeedConsumed}:{api:API;seed?:TaskSeed|null;onSeedConsumed?:()=>void}){
+export function TasksPanel({api,seed}:{api:API;seed?:TaskSeed|null}){
  const [fromChat,setFromChat]=useState(!!seed);
 
  const [schedule,setSchedule]=useState<ScheduleDraft>(emptySchedule),[clock,setClock]=useState({configured:false,healthy:false,last_tick:null as number|null}),[occurrences,setOccurrences]=useState<any[]>([]);
  const [projects,setProjects]=useState<any[]>([]),[sources,setSources]=useState<any[]>([]),[skills,setSkills]=useState<any[]>([]),[filter,setFilter]=useState('active'),[editor,setEditor]=useState(!!seed);
  const [tasks,setTasks]=useState<Task[]>([]),[selected,setSelected]=useState<Task|null>(null),[draft,setDraft]=useState<Record<string,any>>(seed?{...initial,title:'Aufgabe aus Gespräch',goal:seed.goal,project_id:seed.project_id}:initial),[runs,setRuns]=useState<Run[]>([]),[history,setHistory]=useState<any[]>([]),[goal,setGoal]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
- useEffect(()=>{if(!seed)return;setEditor(true);setSelected(null);setDraft({...initial,title:'Aufgabe aus Gespräch',goal:seed.goal,project_id:seed.project_id});setSchedule(emptySchedule);setFromChat(true);onSeedConsumed?.()},[seed]);
+ useEffect(()=>{if(!seed)return;setEditor(true);setSelected(null);setDraft({...initial,title:'Aufgabe aus Gespräch',goal:seed.goal,project_id:seed.project_id});setSchedule(emptySchedule);setFromChat(true)},[seed]);
  const scheduleValid=schedule.kind==='manual'||!!schedule.time&&(schedule.kind==='once'?!!schedule.date:schedule.kind==='weekly'?schedule.weekdays.length>0:true);
  const active=runs.some(r=>['queued','running'].includes(r.status)),hasModel=!!selected?.spec.steps?.some((s:any)=>s.tool_id==='ai.analyze'),dirty=!!selected&&(JSON.stringify(draft)!==JSON.stringify(selected.spec)||JSON.stringify(schedule)!==JSON.stringify(selected.schedule?.definition||emptySchedule));
  async function refresh(){setTasks(await api('/tasks'));setClock(await api('/scheduler/status'))}

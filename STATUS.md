@@ -748,3 +748,21 @@ keine automatische Planung oder Ausführung. Titel, Dokumente und Termine normal
 auswählen; Speichern bleibt pausiert. Lange Nachrichten werden nicht abgeschnitten.
 Browserabnahme prüft Zielgleichheit und gesperrten Start der gespeicherten Aufgabe.
 Dies ersetzt noch keine generische Chat-zu-n8n-Workflowgenerierung.
+
+### Home Assistant: Installation und Sicherungsmetadaten
+
+Die HTTP-401-Bestandsnotiz wurde geklärt: Core 2026.9.3 erlaubt diese Supervisor-
+HTTP-Pfade nicht. Der vorhandene Zugang funktioniert mit den vorgesehenen festen
+WebSocket-Lesewegen. Echte Operator-Abnahme: HA OS 18.3, Core 2026.9.3,
+Supervisor 2026.09.3 gesund/unterstützt, 61 Backups, Dienst idle, null Agentfehler,
+letzte laut HA abgeschlossene automatische Sicherung 03.10.2026. Kein HA-Write.
+
+Eigener read-only Werkzeugadapter und normale Berichtsansicht ergänzt. Feste
+TLS/IP/Kommandogrenzen, minimierte Ausgabe, keine Download-/Key-/Restorefunktion,
+keine Modellübergabe. Tests behandeln Handshake-/ID-/Schemafehler, Größenlimit,
+Zielgrenzen, Zertifikatsprüfung, Geheimnisreduktion und dauerhaftes Replay. Die
+Sicherungsexistenz gilt weiterhin nicht als Restore-Abnahme; Wartung bleibt gesperrt.
+
+Chatübernahme wird über den bestehenden Editor übernommen und beim Verlassen
+der Aufgabenansicht verworfen; die vorherige CI-Lifecycle-Abnahme war fehlgeschlagen.
+Die reparierte gemeinsame Quelle muss vor Installation wieder vollständig grün sein.
