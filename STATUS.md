@@ -43,6 +43,17 @@ Restart-/Offline-Tests und expliziter globaler Wissenschat sind implementiert un
 bestanden, ersetzen aber keine echte A09-Abnahme am vorhandenen Vault.
 M2 bleibt deshalb unvollständig; PR #2 bleibt Draft.
 
+## M3-Folgeauftrag 05.10.2026
+
+Der Benutzer beauftragt alle M3-Funktionen nach Etablierung sämtlicher M2-Funktionen.
+Konkrete Reihenfolge, A08/A10-A12-Abnahme, Integrationsvorbedingungen und aktuelle
+Primärquellen sind in docs/m3-plan.md vorbereitet. M3-Code ist noch nicht implementiert.
+Die Reihenfolge bleibt M2-Abschluss → M3; die neue Nachricht erteilt keine explizite
+Freigabe der noch angefragten bestehenden Vault-/Suchzugänge. Eine gebündelte konkrete
+Freigabe ist erneut als Frage gestellt. Keine automatischen Produktivworkflows oder
+Home-Assistant-Änderungen aktiviert. Nächster Schritt: bestätigte M2-Zugänge innerhalb
+des vorbereiteten Plans einrichten und echt abnehmen, anschließend M3 umsetzen.
+
 ---
 
 # obdaAI — Status 04.10.2026
