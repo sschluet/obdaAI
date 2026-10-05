@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Annotated, Any
 
 from cryptography.exceptions import InvalidTag
@@ -59,29 +60,20 @@ class AcceptArtifact(BaseModel):
     reviewed_all_pages: bool
 
 
-def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+def artifact_service(
+    cfg: Settings,
+    factory: sessionmaker[Session],
+    *,
+    guard: Callable[[Session], None] | None = None,
+    on_created: Callable[[Session, ArtifactRevision], None] | None = None,
+) -> Callable[[str, str | None, CreateArtifact], Awaitable[dict[str, Any]]]:
+    """The same transaction, limits and dispatch for authenticated UI and chat."""
+
     def enabled() -> None:
         try:
             roots(cfg)
         except ValueError as exc:
             raise HTTPException(503, str(exc)) from exc
-
-    def row_for(db: Session, project_id: str, artifact_id: str, revision: int) -> ArtifactRevision:
-        project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
-        if not project:
-            raise HTTPException(404, "Projekt nicht gefunden")
-        artifact = db.get(Artifact, artifact_id)
-        row = db.scalar(
-            select(ArtifactRevision)
-            .where(
-                ArtifactRevision.artifact_id == artifact_id,
-                ArtifactRevision.revision == revision,
-            )
-            .with_for_update()
-        )
-        if not artifact or artifact.project_id != project_id or not row:
-            raise HTTPException(404, "Artefaktversion nicht gefunden")
-        return row
 
     def dispatch(db: Session, row: ArtifactRevision) -> None:
         if not cfg.database_url.startswith("sqlite"):
@@ -92,6 +84,8 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
     def create_row(
         db: Session, project_id: str, artifact_id: str | None, body: CreateArtifact
     ) -> tuple[ArtifactRevision, bool]:
+        if guard:
+            guard(db)
         document = canonical(body.spec)
         if len(document.encode()) > 800_000:
             raise HTTPException(413, "Dateiplan ist zu groß")
@@ -225,6 +219,8 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             with factory() as db:
                 try:
                     row, created = create_row(db, project_id, artifact_id, body)
+                    if created and on_created:
+                        on_created(db, row)
                     db.commit()
                     result = info(row)
                 except IntegrityError as exc:
@@ -241,6 +237,35 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 execute_artifact(factory, cfg, result["artifact_id"], result["revision"])
             )
         return result
+
+    return save
+
+
+def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    def enabled() -> None:
+        try:
+            roots(cfg)
+        except ValueError as exc:
+            raise HTTPException(503, str(exc)) from exc
+
+    def row_for(db: Session, project_id: str, artifact_id: str, revision: int) -> ArtifactRevision:
+        project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
+        if not project:
+            raise HTTPException(404, "Projekt nicht gefunden")
+        artifact = db.get(Artifact, artifact_id)
+        row = db.scalar(
+            select(ArtifactRevision)
+            .where(
+                ArtifactRevision.artifact_id == artifact_id,
+                ArtifactRevision.revision == revision,
+            )
+            .with_for_update()
+        )
+        if not artifact or artifact.project_id != project_id or not row:
+            raise HTTPException(404, "Artefaktversion nicht gefunden")
+        return row
+
+    save = artifact_service(cfg, factory)
 
     @app.get("/api/artifact-status")
     def artifact_status(auth: Auth) -> dict[str, Any]:

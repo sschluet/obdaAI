@@ -75,3 +75,21 @@ zusätzliche schließende Klammer sind als eng begrenzte Formatnormalisierung zu
 Rohantwort-Hash und Normalisierung werden im bestätigten Dateibeleg gespeichert.
 Doppelte Felder, weitere JSON-Objekte, Prosa und zusätzliche Berechtigungsfelder
 bleiben abgewiesen. Keine automatische weitere Modellanfrage.
+
+06.10.: Der reale lokale Modellentwurf lief auf `8ac09e6` erfolgreich, erhielt
+einen Modell-/Herkunftsbeleg und eine native Word-Vorschau. Die Word-Folgeversion
+und beide korrigierten PowerPoint-Folien wurden visuell geprüft; alle vier Formate
+und Folgeversionen bestehen authentifizierte HTTPS-Downloads mit Hashabgleich.
+Die ältere Word-Version ist unverändert abrufbar. Die Renderingprüfung bestätigt
+keine sachliche Richtigkeit modellgenerierter Aussagen.
+
+Neuer Quellstand: konkrete Word-/PowerPoint-/PDF-Erstellungswünsche im aktiven
+Projektchat führen über denselben Dienst, dieselben Quoten, Quell-/Entwurfsprüfungen
+und dieselbe PG-Dispatchtransaktion wie die normalen Dateidialoge. Der Chat erhält
+eine Dateikarte zur Projektnavigation; Download erst nach Review. Projekt-/Vault-
+Historie und automatische Recherche werden nicht implizit als Quellen verwendet.
+Nachricht, Revision und Hash werden am finalen Schreibpunkt geprüft und zusammen
+mit der Dateibindung atomar gespeichert. Abbruch/Archivierung/Textdrift während der
+Modellantwort erzeugen keine Datei. Eine mehrdeutige Format-/Folienangabe wird
+abgewiesen. Kombinierte Webrecherche-Dateierstellung und KI-Änderungen anhand
+impliziter Chatquellen sind noch nicht umgesetzt.

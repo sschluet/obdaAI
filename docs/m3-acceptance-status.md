@@ -14,7 +14,7 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 | HA-Status, Backupmetadaten und Wartungsplan als Hintergrundaufgabe | realer PostgreSQL-Worker mit HA 2026.9.3 / 61 Backupmetadaten, null Writes |
 | Systemberichte im Chat / natürliche Aufgabenentwürfe | lokale Grenzen, gespeicherte Belege, echte lokale Router-/HA-Abnahme und installierter Samstag-02:00-Entwurf bestanden |
 | Aufgabenprofile und Schreibfreigaben | implementiert für genau eine wiederherstellbare lokale Projektarchivierung: Einzelfreigabe oder revisionsgebundene Autonomie mit Ablaufzeit, Widerruf, Verbrauch und unveränderlicher Historie; keine externen Writes |
-| obdaAI-Backup / temporärer Restore | Schema 0017, Originalhashes, Schlüssel und Workflowbelege geprüft |
+| obdaAI-Backup / temporärer Restore | Schema 0020, acht Dateiversionen, 42 Originalhashes, Memory-Dateien, Schlüssel und Workflowbelege geprüft |
 
 ## Noch fehlend
 

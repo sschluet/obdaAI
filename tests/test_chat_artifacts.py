@@ -1,0 +1,124 @@
+import json
+
+import pytest
+import test_artifact_api
+from hub.chat_artifacts import request_format
+from hub.db import ArtifactRevision, Message, Run
+from hub.routing import Route
+from sqlalchemy import func, select
+
+
+@pytest.fixture
+def setup(tmp_path, monkeypatch):
+    yield from test_artifact_api.setup.__wrapped__(tmp_path, monkeypatch)
+
+
+class FileProvider:
+    def __init__(self, output, effect=None):
+        self.output, self.effect, self.calls = output, effect, 0
+
+    async def route(self, parts, roles):
+        return Route(capabilities=["artifact"], model_class="cloud", reason="Explicit local file")
+
+    async def title(self, parts, roles):
+        return "Synthetic file chat"
+
+    async def stream(self, parts, roles, *, external, grants):
+        assert not external and not grants and len(parts) == 2
+        self.calls += 1
+        if self.effect:
+            self.effect()
+        yield self.output
+
+
+DOCUMENT = (
+    '{"title":"Lokaler Chatbericht","sections":[{'
+    '"heading":"Ergebnis","paragraphs":["Synthetische Daten."]}]}'
+)
+
+
+def test_chat_file_uses_same_review_gate_and_links_exact_request(setup):
+    app, c, h, cfg, pid, _ = setup
+    provider = FileProvider(DOCUMENT)
+    app.state.providers = provider
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle eine Word-Datei über synthetische Daten."},
+    )
+    assert response.status_code == 200 and "succeeded" in response.text, response.text
+    assert "artifact" in response.text and provider.calls == 1
+    detail = c.get("/api/conversations/" + chat).json()
+    receipt = detail["runs"][0]["artifact"]
+    assert receipt["project_id"] == pid and receipt["sources"] == []
+    assert receipt["label"] == "LOCAL_ONLY" and receipt["requires_review"]
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    row = rows[0]
+    assert row["artifact_id"] == receipt["artifact_id"] and row["revision"] == 1
+    assert row["draft"]["provider"]["kind"] == "local"
+    assert c.get(test_artifact_api.base(pid, row) + "/download").status_code == 409
+    with app.state.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 1
+        run = db.scalar(select(Run))
+        message = db.get(Message, receipt["message_id"])
+        assert message.active and message.revision == receipt["message_revision"]
+        assert run.cost is None and run.provider == "local"
+
+
+@pytest.mark.parametrize("effect", ["cancel", "message_drift", "archive"])
+def test_final_chat_binding_denies_mutation_before_dispatch(setup, effect):
+    from hub.db import Conversation
+
+    app, c, h, cfg, pid, _ = setup
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+
+    def change():
+        with app.state.sessions() as db:
+            if effect == "cancel":
+                db.scalar(select(Run)).cancel_requested = True
+            elif effect == "message_drift":
+                db.scalar(select(Message).where(Message.role == "user")).content = "Changed"
+            else:
+                db.get(Conversation, chat).archived = True
+            db.commit()
+
+    app.state.providers = FileProvider(DOCUMENT, change)
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle eine Word-Datei mit einem Abschnitt."},
+    )
+    assert "succeeded" not in response.text
+    with app.state.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 0
+        assert "artifact" not in json.loads(db.scalar(select(Run)).context_snapshot)
+
+
+def test_private_chat_and_ambiguous_format_do_not_create_files(setup):
+    app, c, h, cfg, pid, _ = setup
+    provider = FileProvider(DOCUMENT)
+    app.state.providers = provider
+    for project, goal in [
+        (None, "Erstelle eine Word-Datei."),
+        (pid, "Erstelle Word und PDF."),
+        (pid, "Erkläre eine Word-Datei."),
+    ]:
+        chat = c.post("/api/conversations", headers=h, json={"project_id": project}).json()["id"]
+        r = c.post("/api/conversations/" + chat + "/messages", headers=h, json={"content": goal})
+        assert "succeeded" not in r.text
+    assert provider.calls == 0
+    assert c.get("/api/projects/" + pid + "/artifacts").json() == []
+
+
+@pytest.mark.parametrize(
+    ("goal", "result"),
+    [
+        ("Erstelle eine PowerPoint-Präsentation mit 10 Folien.", ("pptx", 10)),
+        ("Erstelle eine PowerPoint-Präsentation mit zehn Folien.", ("pptx", 10)),
+        ("Create a PDF file with one section.", ("pdf", 3)),
+        ("Erstelle eine Word-Datei.", ("docx", 3)),
+    ],
+)
+def test_format_and_slide_count_are_bound_to_explicit_user_text(goal, result):
+    assert request_format(goal) == result

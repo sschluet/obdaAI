@@ -2,24 +2,28 @@
 
 ## Aktueller Stand: Schema 0021 installiert, Dokumentfunktionen erweitert
 
-Produktiv ist `8ac09e6` / Schema 0021 installiert. Beide APIs gesund; bestehende
+Produktiv ist `bee17a4` / Schema 0021 installiert. Beide APIs gesund; bestehende
 IPv4-/IPv6-Regeln unverändert. Die Installation wurde vorher verschlüsselt gesichert.
 Zehn echte PostgreSQL-Integrationsfälle für diesen Release bestanden. Direkte OpenAI-
 und Anthropic-Anbieter sind in normalen Einstellungsdialogen vorbereitet; sie benötigen
 noch eigene Schlüssel und eine konkrete Serverfreigabe. OpenRouter bleibt der bisher
 zugelassene externe Anbieter. Neue Gespräche binden Cloudzustimmung an einen Anbieter.
 
-414 lokale Tests bestanden, zehn PostgreSQL-Fälle separat geprüft; Ruff/mypy,
+423 lokale Tests bestanden, zehn PostgreSQL-Fälle separat geprüft; Ruff/mypy,
 TS/Build und Source-Scan bestanden. Im neuen Quellstand ergänzt: gebundene Bilder und
 Bildunterschriften in Word, optionaler PDF-Download derselben geprüften Version,
 PDF-Erstellung aus Text/Tabellen/Bildern und Beschriftungen für zugeschnittene Collagen.
-Diese Erweiterung ist bis zum eigenen Linux- und Live-Test noch nicht ausgerollt.
+Diese Erweiterung ist ausgerollt; echte Linux-Abnahme: fünf Pläne, sieben
+Vorschaubilder und zusätzlicher Word-PDF-Export. Die neuen nativen Dateien werden
+noch live visuell geprüft und per authentifiziertem Download abgenommen.
 Alte Dateivorgaben behalten bei nicht verwendeten Erweiterungen ihre kanonische Form.
 
 Die echte Dateiabnahme hat Word, PDF und Bild per geprüftem HTTPS-Download bestätigt.
 Der verschlüsselte temporäre Restore von Schema 0020 prüfte acht Dateiversionen,
-42 Originale, Memory-Dateien und notwendige Schlüssel. PPTX-Fontkorrektur und lokale
-Modellabnahme werden auf der installierten Version erneut geprüft. Details und offene
+42 Originale, Memory-Dateien und notwendige Schlüssel. PPTX-Fontkorrektur, lokale
+Modellabnahme, Word-Folgeversion und Erhaltung des alten Downloads sind inzwischen
+real geprüft. Neue natürliche Dateiwünsche im Projektchat sind im Quellstand mit
+derselben begrenzten Dateipipeline umgesetzt; ihr eigener Rollout steht noch aus. Details und offene
 Fälle: [Dateiabnahme](docs/m4-acceptance-status.md). M3/M4/M5 sind nicht vollständig.
 
 GitHub konnte mehrere Jobs wegen nicht verfügbarer Hosted Runner nicht starten;

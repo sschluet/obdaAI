@@ -398,6 +398,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         "error": x.error,
                         "cost": x.cost,
                         "cost_basis": x.cost_basis,
+                        "artifact": json.loads(x.context_snapshot or "{}").get("artifact"),
                         "cost_estimate": x.cost_estimate,
                         "model": x.model,
                         "provider_revision": x.provider_revision,

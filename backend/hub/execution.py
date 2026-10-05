@@ -30,6 +30,10 @@ class MemoryCompleted(Exception):
     pass
 
 
+class ArtifactCompleted(Exception):
+    pass
+
+
 class ChatProvider(Protocol):
     async def title(self, parts: list[ContextPart], roles: list[str]) -> str: ...
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route: ...
@@ -200,6 +204,41 @@ async def execute_run(
                 )
                 if cancelled():
                     raise asyncio.CancelledError
+                if Capability.ARTIFACT in route.capabilities:
+                    if not set(route.capabilities).issubset(
+                        {Capability.CHAT, Capability.RETRIEVAL, Capability.ARTIFACT}
+                    ):
+                        raise ExecutionLimitError(
+                            "Dateierstellung bitte getrennt von Websuche, Aufgaben und Werkzeugen "
+                            "im Projektgespräch anfordern. Es wurde kein Werkzeug ausgeführt."
+                        )
+                    from hub.chat_artifacts import create_from_chat
+
+                    yield ("status", {"message": "Lokaler Dateientwurf wird erstellt"})
+                    try:
+                        artifact = await create_from_chat(factory, cfg, run_id, providers)
+                    except ValueError as exc:
+                        if cancelled():
+                            raise asyncio.CancelledError from None
+                        raise ExecutionLimitError(str(exc)) from None
+                    label = Privacy.LOCAL_ONLY
+                    output = (
+                        "Die " + artifact["kind"].upper() + "-Datei wird lokal erstellt. "
+                        "Öffne den Dateibereich dieses Projekts, prüfe alle Vorschauseiten "
+                        "und gib die Version anschließend zum Download frei. "
+                        "Verwendet wurde nur dein konkreter Dateiwunsch; Projektquellen "
+                        "kannst du im Dateidialog ausdrücklich ergänzen."
+                    )
+                    yield (
+                        "artifact",
+                        {
+                            "project_id": c.project_id,
+                            "artifact_id": artifact["artifact_id"],
+                            "revision": artifact["revision"],
+                            "requires_review": True,
+                        },
+                    )
+                    raise ArtifactCompleted
                 supported = {Capability.CHAT, Capability.WEB}
                 if route.read_tool:
                     supported.add(Capability.TOOL)
@@ -401,7 +440,7 @@ async def execute_run(
                 if not output:
                     raise ValueError("Empty provider response")
                 status = "succeeded"
-        except MemoryCompleted:
+        except (MemoryCompleted, ArtifactCompleted):
             status = "succeeded"
             yield ("delta", {"text": output})
         except asyncio.CancelledError:

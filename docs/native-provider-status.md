@@ -45,3 +45,7 @@ Die Laufhistorie und Metriken unterscheiden Schätzung und Provider-Meldung; feh
 Usage behält die volle Reservierung. Ein Kontext- oder Streamfehler wird nicht erneut
 kostenpflichtig ausgeführt. Die produktive Native-Live-Abnahme benötigt dedizierte
 Zugänge und Zielfreigaben und bleibt offen. M5 bleibt teilweise umgesetzt.
+
+Schema 0021 wurde auf der eigenen VM mit `8ac09e6` installiert und blieb bei
+`bee17a4` erhalten. Beide APIs gesund; zehn echte PostgreSQL-Integrationsfälle
+je Release bestanden. Keine neuen nativen Schlüssel oder Ausgänge aktiviert.

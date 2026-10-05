@@ -112,8 +112,15 @@ try{
   await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
   await page.getByText(kind==='docx'?'Synthetic local document draft · Version 1':'Synthetic local presentation draft · Version 1',{exact:true}).waitFor();
  }
+ await page.getByRole('button',{name:'Mit diesen Dokumenten chatten',exact:true}).click();
+ await page.getByLabel('Nachricht',{exact:true}).fill('Erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST');
+ await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+ await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
+ await page.getByRole('heading',{name,exact:true}).waitFor();
+ await page.getByText('Synthetic local document draft · Version 1',{exact:true}).first().waitFor();
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
- await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();
+ await page.locator('button.new').click();
  await page.getByLabel('Nachricht',{exact:true}).fill('A synthetic short answer for Word export.');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).waitFor();
