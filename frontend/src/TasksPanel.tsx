@@ -7,10 +7,11 @@ const initial={title:'',goal:'',project_id:null,sources:[],skills:[],timezone:'E
 export type TaskSeed={goal:string;project_id:string|null};
 export function TasksPanel({api,seed,onSeedConsumed}:{api:API;seed?:TaskSeed|null;onSeedConsumed?:()=>void}){
  const [fromChat,setFromChat]=useState(!!seed);
- useEffect(()=>{onSeedConsumed?.()},[]);
+
  const [schedule,setSchedule]=useState<ScheduleDraft>(emptySchedule),[clock,setClock]=useState({configured:false,healthy:false,last_tick:null as number|null}),[occurrences,setOccurrences]=useState<any[]>([]);
  const [projects,setProjects]=useState<any[]>([]),[sources,setSources]=useState<any[]>([]),[skills,setSkills]=useState<any[]>([]),[filter,setFilter]=useState('active'),[editor,setEditor]=useState(!!seed);
  const [tasks,setTasks]=useState<Task[]>([]),[selected,setSelected]=useState<Task|null>(null),[draft,setDraft]=useState<Record<string,any>>(seed?{...initial,title:'Aufgabe aus Gespräch',goal:seed.goal,project_id:seed.project_id}:initial),[runs,setRuns]=useState<Run[]>([]),[history,setHistory]=useState<any[]>([]),[goal,setGoal]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ useEffect(()=>{if(!seed)return;setEditor(true);setSelected(null);setDraft({...initial,title:'Aufgabe aus Gespräch',goal:seed.goal,project_id:seed.project_id});setSchedule(emptySchedule);setFromChat(true);onSeedConsumed?.()},[seed]);
  const scheduleValid=schedule.kind==='manual'||!!schedule.time&&(schedule.kind==='once'?!!schedule.date:schedule.kind==='weekly'?schedule.weekdays.length>0:true);
  const active=runs.some(r=>['queued','running'].includes(r.status)),hasModel=!!selected?.spec.steps?.some((s:any)=>s.tool_id==='ai.analyze'),dirty=!!selected&&(JSON.stringify(draft)!==JSON.stringify(selected.spec)||JSON.stringify(schedule)!==JSON.stringify(selected.schedule?.definition||emptySchedule));
  async function refresh(){setTasks(await api('/tasks'));setClock(await api('/scheduler/status'))}
