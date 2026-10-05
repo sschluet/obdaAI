@@ -57,8 +57,17 @@ Nur feste lokale Leseprüfungen, kein Modellaufruf, Kosten 0 USD, kein Zeitplan.
 Lokal 140 Tests bestanden, vier echte PostgreSQL-Checks für CI; Ruff/mypy,
 Frontendbuild und Secret-Scan bestanden. Browser-Fixture: Lifecycle, persistenter
 Lauf nach Reload, alte Revision nach Bearbeitung, Archiv/Restore pausiert und
-390px ohne horizontalen Überlauf bestätigt. Serverrollout und CI dieser Lieferung
-noch ausstehend. n8n-Export: streng validierter Manual Trigger → No operation,
+390px ohne horizontalen Überlauf bestätigt. Aufgaben-Commit `826b06d`: CI 37292382204 vollständig grün, 144 Tests mit
+allen vier PostgreSQL-Checks bestanden. Auf VM installiert, Schema 0014, beide
+APIs gesund, HTTPS und angemeldete Aufgaben-API zertifikatsgeprüft HTTP 200.
+Echte synthetische PG-Worker-Abnahme bestanden: ein lokaler Lesebeleg, wiederholte
+Anfrage ohne zweiten Lauf, alte Revision/Beleg nach Bearbeitung erhalten,
+Archiv/Restore pausiert. Kein Modellaufruf, Kosten 0 USD; Gateway weiterhin pausiert.
+Verschlüsselte Off-VM-Sicherung und isolierter Schema-0014-Restore bestanden:
+zwei Aufgabenrevisionen und ein Task-Lesebeleg, Skill-/Aktionsaudit,
+40 Originalhashes, sechs Memory-Dateien und Zugangsschlüssel geprüft.
+Bestehende Proxmox-Konfiguration unverändert. Drei zusätzliche negative Tests
+für beschädigte Laufmanifeste bestanden (17 Aufgaben-Tests insgesamt). n8n-Export: streng validierter Manual Trigger → No operation,
 installierte Nodeversionen lesend geprüft; separate Freigabe zum Anlegen auf dem
 Bestands-n8n angefragt. Kein Workflow dort angelegt oder aktiviert. Dieser Entwurf
 führt noch keine Aufgabe aus; A10 bleibt offen. Vertrag: `docs/tasks.md`.

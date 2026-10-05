@@ -222,3 +222,17 @@ def test_task_auth_csrf_and_tampered_run_snapshot(setup):
     assert terminal(c, task)["status"] == "failed"
     c.post("/api/logout", headers=h)
     assert c.get("/api/tasks").status_code == 401
+
+
+@pytest.mark.parametrize("snapshot", ["{}", '["unexpected"]', '{"spec":null}'])
+def test_corrupt_manifest_stops_without_a_read_receipt(setup, snapshot):
+    app, c, h, _ = setup
+    task = control(c, h, create(c, h)).json()
+    rid = queued(app, task)
+    with app.state.sessions() as db:
+        db.get(TaskRun, rid).snapshot = snapshot
+        db.commit()
+    execute_task_read(app.state.sessions, rid)
+    result = terminal(c, task)
+    assert result["status"] == "failed" and result["error"] == "Laufvorgabe verändert"
+    assert not result["steps"]

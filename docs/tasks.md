@@ -36,7 +36,7 @@ Installed n8n 2.7.5 node inventory confirmed both nodes at typeVersion 1 on
 05.10.2026. Export does not upload, activate or execute a workflow, and does not
 execute the task. Creating it on the existing n8n needs separate operator approval.
 
-Validation: 14 task API/lifecycle/drift/concurrency tests and seven compiler tests;
+Validation: 17 task API/lifecycle/drift/concurrency/corrupt-manifest tests and seven compiler tests;
 real PostgreSQL atomic enqueue and duplicate-worker receipt test in CI. Synthetic
 browser: paused creation, resume, read receipt, reload, revision 2 with preserved
 revision 1/receipt, archive/restore paused; 390px without horizontal overflow.
