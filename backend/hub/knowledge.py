@@ -95,6 +95,9 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
         else:
             result = await asyncio.to_thread(isolated_parse, path, suffix)
         with factory() as db:
+            from hub.task_api import lock
+
+            lock(db)
             source = db.get(Source, source_id)
             assert source is not None
             if source.revision != revision:
@@ -105,6 +108,9 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
             for chunk in result["chunks"]:
                 db.add(SourceChunk(source_id=source_id, **chunk))
             source.status, source.error = "ready", "; ".join(result["notes"])[:240]
+            from hub.source_events import record_ready
+
+            record_ready(db, source)
             db.commit()
     except (ValueError, OSError, TimeoutError):
         with factory() as db:

@@ -17,13 +17,22 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.action_api import StrictInput, digest, encode
 from hub.config import Settings, read_secret
-from hub.db import ScheduleOccurrence, ScheduleRevision, SchedulerPulse, Task, TaskRun, TaskSchedule
+from hub.db import (
+    ScheduleOccurrence,
+    ScheduleRevision,
+    SchedulerPulse,
+    SourceReadyEvent,
+    Task,
+    TaskEventOccurrence,
+    TaskRun,
+    TaskSchedule,
+)
 from hub.knowledge_api import Auth
 from hub.task_api import check_bindings, current, lock
 
 
 class ScheduleDefinition(StrictInput):
-    kind: Literal["manual", "once", "daily", "weekly"]
+    kind: Literal["manual", "once", "daily", "weekly", "source_ready"]
     timezone: str = Field(default="Europe/Berlin", max_length=80)
     time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     date: CalendarDate | None = None
@@ -71,7 +80,7 @@ def wall_instants(wall: datetime, timezone: str) -> list[float]:
 
 
 def next_due(definition: ScheduleDefinition, after: float) -> float | None:
-    if definition.kind == "manual":
+    if definition.kind in {"manual", "source_ready"}:
         return None
     local = datetime.fromtimestamp(after, ZoneInfo(definition.timezone))
     clock = datetime.strptime(definition.time, "%H:%M").time()
@@ -121,7 +130,9 @@ def schedule_summary(task: Task, plan: TaskSchedule | None) -> dict[str, Any] | 
         "needs_review": changed,
         "next_due": plan.next_due,
         "error": "Aufgabe geändert; Zeitplan erneut prüfen" if changed else plan.error,
-        "completed": plan.next_due is None and not plan.paused,
+        "completed": plan.next_due is None
+        and not plan.paused
+        and json.loads(plan.definition)["kind"] != "source_ready",
     }
 
 
@@ -213,10 +224,12 @@ def tick(db: Session, cfg: Settings, now: float) -> list[str]:
         except HTTPException as error:
             plan.paused, plan.error = True, str(error.detail)[:240]
             occurrence.status, occurrence.reason = "blocked", plan.error
-    return jobs
+    from hub.source_events import dispatch_events
+
+    return jobs + dispatch_events(db, cfg, now)
 
 
-def occurrence_status(db: Session, occurrence: ScheduleOccurrence) -> str:
+def occurrence_status(db: Session, occurrence: ScheduleOccurrence | TaskEventOccurrence) -> str:
     run = db.get(TaskRun, occurrence.run_id) if occurrence.run_id else None
     return run.status if run else occurrence.status
 
@@ -242,8 +255,12 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             ):
                 raise HTTPException(409, "Aufgabe oder Zeitplan inzwischen geändert")
             check_bindings(db, spec)
+            if body.definition.kind == "source_ready":
+                from hub.source_events import validate_subscription
+
+                validate_subscription(spec)
             due = next_due(body.definition, time.time())
-            if due is None and body.definition.kind != "manual":
+            if due is None and body.definition.kind not in {"manual", "source_ready"}:
                 raise HTTPException(422, "Bitte einen zukünftigen Termin wählen")
             if plan is None:
                 plan = TaskSchedule(task_id=task_id, revision=1)
@@ -256,6 +273,9 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 encode(body.definition.model_dump(mode="json")),
             )
             plan.paused, plan.error, plan.next_due = True, None, due
+            from hub.source_events import latest_event
+
+            plan.event_cursor = latest_event(db)
             db.add(
                 ScheduleRevision(
                     task_id=task_id,
@@ -268,6 +288,7 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                             "control_revision": plan.control_revision,
                             "spec_sha256": plan.spec_sha256,
                             "next_due": plan.next_due,
+                            "event_cursor": plan.event_cursor,
                         }
                     ),
                 )
@@ -296,8 +317,14 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 if not scheduler_status(db, cfg, time.time())["healthy"]:
                     raise HTTPException(409, "n8n-Zeitimpuls fehlt; Zeitplan bleibt pausiert")
                 check_bindings(db, spec)
-                due = next_due(ScheduleDefinition.model_validate_json(plan.definition), time.time())
-                if due is None:
+                definition = ScheduleDefinition.model_validate_json(plan.definition)
+                due = next_due(definition, time.time())
+                if definition.kind == "source_ready":
+                    from hub.source_events import latest_event, validate_subscription
+
+                    validate_subscription(spec)
+                    plan.event_cursor = latest_event(db)
+                elif due is None:
                     raise HTTPException(422, "Termin liegt in der Vergangenheit")
                 if task.paused:
                     task.paused = False
@@ -318,6 +345,7 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                             "control_revision": plan.control_revision,
                             "spec_sha256": plan.spec_sha256,
                             "next_due": plan.next_due,
+                            "event_cursor": plan.event_cursor,
                         }
                     ),
                 )
@@ -329,24 +357,47 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
 
     @app.get("/api/tasks/{task_id}/schedule/history")
     def history(task_id: str, auth: Auth) -> list[dict[str, Any]]:
+        from hub.source_events import event_detail
+
         with factory() as db:
             current(db, task_id)
-            return [
+            timed: list[dict[str, Any]] = [
                 {
                     "id": o.id,
                     "revision": o.schedule_revision,
                     "due": o.due,
-                    "status": occurrence_status(db, o),
+                    "status": run_status or o.status,
                     "run_id": o.run_id,
                     "reason": o.reason,
                 }
-                for o in db.scalars(
-                    select(ScheduleOccurrence)
+                for o, run_status in db.execute(
+                    select(ScheduleOccurrence, TaskRun.status)
+                    .outerjoin(TaskRun, TaskRun.id == ScheduleOccurrence.run_id)
                     .where(ScheduleOccurrence.task_id == task_id)
                     .order_by(ScheduleOccurrence.due.desc())
                     .limit(100)
                 )
             ]
+            events: list[dict[str, Any]] = [
+                {
+                    "id": o.id,
+                    "revision": o.schedule_revision,
+                    "due": event.created,
+                    "status": run_status or o.status,
+                    "run_id": o.run_id,
+                    "reason": o.reason,
+                    "event": event_detail(event),
+                }
+                for o, event, run_status in db.execute(
+                    select(TaskEventOccurrence, SourceReadyEvent, TaskRun.status)
+                    .join(SourceReadyEvent, SourceReadyEvent.id == TaskEventOccurrence.event_id)
+                    .outerjoin(TaskRun, TaskRun.id == TaskEventOccurrence.run_id)
+                    .where(TaskEventOccurrence.task_id == task_id)
+                    .order_by(TaskEventOccurrence.created.desc())
+                    .limit(100)
+                )
+            ]
+            return sorted(timed + events, key=lambda row: row["due"], reverse=True)[:100]
 
     @app.post("/api/scheduler/tick")
     async def pulse(request: Request, body: StrictInput) -> dict[str, int]:

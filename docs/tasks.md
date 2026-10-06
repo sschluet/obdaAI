@@ -114,3 +114,13 @@ The change responds to a measured 120-request HTTPS sample (concurrency four), w
 the previous per-task queries caused task-list p95 around 1.64 seconds. After deployment, the same bounded 120-request sample measured task-list p95
 540.29 ms (previously 1642.24 ms), and overall p95 469.97 ms. This sample does not
 include inference, task writes or full-load certification.
+
+
+## Document-ready events
+
+The ordinary editor supports the bounded source_ready trigger for one explicit
+project and local read/analysis steps. Schema 0022 preserves a cursor and unique
+first-readiness events without sending content to the existing n8n clock. Runs
+retain unchanged source selection and final worker authorization checks. See
+[source-ready-tasks.md](source-ready-tasks.md) for baseline, pause, overlap and
+120-second missed-event behavior. Other event types remain unsupported.

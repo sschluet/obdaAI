@@ -723,3 +723,24 @@ def test_memory_synced_external_revision_requires_fresh_compared_digest(knowledg
     result = c.patch("/api/memories/" + identifier, json=body, headers=h)
     assert result.status_code == 200
     assert "my preserved draft" in path.read_text()
+
+
+def test_real_extraction_records_one_local_readiness_event_across_retry(knowledge):
+    from hub.db import SourceReadyEvent
+
+    app, c, h, cfg, vault = knowledge
+    pid = project(c, h)
+    sid = upload(c, h, pid, "event.txt", b"Synthetic ready event original")
+    assert wait(app, sid).status == "ready"
+    with app.state.sessions() as db:
+        event = db.scalar(select(SourceReadyEvent).where(SourceReadyEvent.source_id == sid))
+        assert event.project_id == pid and event.source_revision == 1
+        assert event.source_sha256 == hashlib.sha256(b"Synthetic ready event original").hexdigest()
+        eid = event.id
+    assert (
+        c.post("/api/projects/" + pid + "/sources/" + sid + "/retry", headers=h).status_code == 200
+    )
+    assert wait(app, sid).status == "ready"
+    with app.state.sessions() as db:
+        events = list(db.scalars(select(SourceReadyEvent).where(SourceReadyEvent.source_id == sid)))
+        assert len(events) == 1 and events[0].id == eid

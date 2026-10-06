@@ -20,7 +20,9 @@ from hub.db import (
     Skill,
     SkillRevision,
     Source,
+    SourceReadyEvent,
     Task,
+    TaskEventOccurrence,
     TaskRevision,
     TaskRun,
     TaskSchedule,
@@ -363,11 +365,28 @@ def run_info(db: Session, run: TaskRun) -> dict[str, Any]:
 
 def check_schedule(db: Session, run: TaskRun) -> None:
     occurrence = db.scalar(select(ScheduleOccurrence).where(ScheduleOccurrence.run_id == run.id))
-    if occurrence is None:
+    event_occurrence = db.scalar(
+        select(TaskEventOccurrence).where(TaskEventOccurrence.run_id == run.id)
+    )
+    if occurrence is None and event_occurrence is None:
         return  # Manual task runs retain their existing authorization path.
     plan = db.get(TaskSchedule, run.task_id)
-    if plan is None or plan.paused or plan.revision != occurrence.schedule_revision:
+    if occurrence:
+        schedule_revision = occurrence.schedule_revision
+    else:
+        assert event_occurrence is not None
+        schedule_revision = event_occurrence.schedule_revision
+    if plan is None or plan.paused or plan.revision != schedule_revision:
         raise HTTPException(409, "Zeitplan pausiert oder geändert")
+    if event_occurrence:
+        from hub.source_events import check_event, validate_subscription
+
+        _, _, spec = current(db, run.task_id)
+        validate_subscription(spec)
+        event = db.get(SourceReadyEvent, event_occurrence.event_id)
+        if event is None or json.loads(plan.definition)["kind"] != "source_ready":
+            raise HTTPException(409, "Dokumentereignis fehlt oder Auslöser geändert")
+        check_event(db, event, str(spec.project_id))
 
 
 def execute_task_read(

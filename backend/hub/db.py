@@ -197,6 +197,18 @@ class SourceChunk(Base):
     structured: Mapped[str] = mapped_column(Text, default="")
 
 
+class SourceReadyEvent(Base):
+    __tablename__ = "source_ready_events"
+    __table_args__ = (UniqueConstraint("source_id", "source_sha256"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    source_id: Mapped[str] = mapped_column(ForeignKey("sources.id"))
+    source_revision: Mapped[int] = mapped_column(Integer)
+    source_sha256: Mapped[str] = mapped_column(String(64))
+    baseline: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
 class Artifact(Base):
     __tablename__ = "artifacts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -409,6 +421,20 @@ class TaskSchedule(Base):
     paused: Mapped[bool] = mapped_column(Boolean, default=True)
     next_due: Mapped[float | None] = mapped_column(Float, nullable=True)
     error: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    event_cursor: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class TaskEventOccurrence(Base):
+    __tablename__ = "task_event_occurrences"
+    __table_args__ = (UniqueConstraint("task_id", "schedule_revision", "event_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    schedule_revision: Mapped[int] = mapped_column(Integer)
+    event_id: Mapped[int] = mapped_column(ForeignKey("source_ready_events.id"))
+    status: Mapped[str] = mapped_column(String(20))
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("task_runs.id"), unique=True)
+    reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
 
 
 class ScheduleOccurrence(Base):
