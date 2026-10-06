@@ -4,6 +4,7 @@
 import ipaddress
 import json
 import secrets
+import select
 import socket
 import struct
 import subprocess
@@ -14,18 +15,6 @@ import time
 def command(*args, check=True):
     return subprocess.run(args, check=check, capture_output=True, text=True, timeout=8)
 
-
-def inside(script):
-    r = subprocess.run(
-        ["docker", "exec", "-i", "obdaai-api-1", "python", "-"],
-        input=script,
-        text=True,
-        capture_output=True,
-        timeout=15,
-    )
-    if r.returncode:
-        raise RuntimeError("Own API not ready")
-    return r.stdout
 
 
 def apply(plan):
@@ -109,26 +98,57 @@ def clear():
         command(program, "-A", "OBDAAI_SOURCES", "-j", "RETURN", check=False)
 
 
+def observe():
+    # Import the application once. Repeated cold imports contend with inference
+    # on a small VM and must not cause valid leases to oscillate.
+    script = (
+        "from hub.config import Settings\nfrom hub.db import session_factory\n"
+        "from hub.source_network import requests_plan,grant\nimport json,sys,time\n"
+        "factory=session_factory(Settings.from_env().database_url)\n"
+        "while True:\n"
+        " print(json.dumps(requests_plan(factory)),flush=True)\n"
+        " line=sys.stdin.readline()\n"
+        " if not line: break\n"
+        " grant(factory,json.loads(line))\n"
+        " time.sleep(2)\n"
+    )
+    process = subprocess.Popen(
+        ["docker", "exec", "-i", "obdaai-api-1", "python", "-u", "-c", script],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    first = True
+    try:
+        while True:
+            if not select.select([process.stdout], [], [], 60 if first else 10)[0]:
+                raise TimeoutError("Source observer stalled")
+            line = process.stdout.readline(1_000_000)
+            if not line or not line.endswith("\n"):
+                raise RuntimeError("Source observer exited")
+            plan = json.loads(line)
+            if not isinstance(plan, list):
+                raise ValueError("Invalid source plan")
+            ids = apply(plan)
+            process.stdin.write(json.dumps(ids) + "\n")
+            process.stdin.flush()
+            first = False
+    finally:
+        process.stdin.close()
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["--clear"]:
         clear()
         sys.exit(0)
     while True:
         try:
-            plan = json.loads(
-                inside(
-                    "from hub.config import Settings\nfrom hub.db import session_factory\n"
-                    "from hub.source_network import requests_plan\nimport json\n"
-                    "print(json.dumps(requests_plan(session_factory(Settings.from_env().database_url))))\n"
-                )
-            )
-            ids = apply(plan)
-            if ids:
-                inside(
-                    "from hub.config import Settings\nfrom hub.db import session_factory\n"
-                    "from hub.source_network import grant\n"
-                    "grant(session_factory(Settings.from_env().database_url)," + repr(ids) + ")\n"
-                )
+            observe()
         except Exception:
             # Fail closed; clear only our own temporary chain, preserve all other rules.
             clear()

@@ -87,7 +87,8 @@ def test_lease_waits_for_applied_ack_and_expired_requests_are_never_granted(tmp_
     )
     with factory() as db:
         old = SourceNetworkRequest(
-            kind="website", config=json.dumps({"url": "https://example.org/"}),
+            kind="website",
+            config=json.dumps({"url": "https://example.org/"}),
             expires=time.time() - 1,
         )
         db.add(old)
@@ -95,10 +96,14 @@ def test_lease_waits_for_applied_ack_and_expired_requests_are_never_granted(tmp_
         expired_id = old.id
 
     async def run():
-        pending = asyncio.create_task(request_network(
-            factory, Settings(source_network_enabled=True), "website",
-            {"url": "https://example.org/"},
-        ))
+        pending = asyncio.create_task(
+            request_network(
+                factory,
+                Settings(source_network_enabled=True),
+                "website",
+                {"url": "https://example.org/"},
+            )
+        )
         await asyncio.sleep(0.05)
         assert not pending.done()
         plan = requests_plan(factory)
@@ -119,3 +124,57 @@ def test_disabled_feature_creates_no_network_request(tmp_path):
     asyncio.run(request_network(factory, Settings(), "website", {"url": "https://example.org/"}))
     with factory() as db:
         assert list(db.scalars(select(SourceNetworkRequest))) == []
+
+
+@pytest.mark.parametrize("firewall_failed", [False, True])
+def test_persistent_observer_acknowledges_only_after_firewall_application(
+    monkeypatch, firewall_failed
+):
+    spec = importlib.util.spec_from_file_location(
+        "observer_protocol", Path("deploy/source-network.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    order, commands = [], []
+
+    class Stream:
+        def readline(self, limit):
+            return "[]\n" if not order else ""
+
+        def write(self, line):
+            order.append(("ack", json.loads(line)))
+
+        def flush(self):
+            pass
+
+        def close(self):
+            pass
+
+    class Process:
+        stdin, stdout = Stream(), Stream()
+
+        def terminate(self):
+            pass
+
+        def wait(self, timeout):
+            pass
+
+    def popen(command, **kwargs):
+        commands.append(command)
+        return Process()
+
+    def apply(plan):
+        order.append(("apply", plan))
+        if firewall_failed:
+            raise RuntimeError("synthetic firewall failure")
+        return ["synthetic-applied-id"]
+
+    monkeypatch.setattr(module.subprocess, "Popen", popen)
+    monkeypatch.setattr(module.select, "select", lambda *args: ([Process.stdout], [], []))
+    monkeypatch.setattr(module, "apply", apply)
+    with pytest.raises(RuntimeError):
+        module.observe()
+    assert len(commands) == 1 and commands[0][:4] == ["docker", "exec", "-i", "obdaai-api-1"]
+    assert order == [("apply", [])] + (
+        [] if firewall_failed else [("ack", ["synthetic-applied-id"])]
+    )
