@@ -44,3 +44,11 @@ Indexfehler wird nur dann protokolliert normalisiert, wenn genau ein Original
 gebunden ist und alle Auswahlindizes exakt 1 lauten: daraus wird Index 0. Mehrere
 Originale oder andere ungültige Indizes bleiben strikt, damit keine falsche Datei
 unterstellt wird.
+
+Bei genau einem gebundenen Original wählt das Modell keine Quelldatei: der Server
+setzt fehlende Auswahlfelder auf diese einzige Originalbindung. Eindeutige direkte
+Nutzerangaben wie „Seiten 2,1“, „zuerst Originalseite 2, danach Originalseite 1“,
+„erste Ausgabeseite um 90 Grad“ oder „rechte Hälfte auf 128 mal 128 Pixel“ werden
+zusätzlich als feste Datenvorgaben geparst. Sie überschreiben widersprechende
+Modellvorschläge und stehen mit ihrer Version im `command_binding`-Beleg. Freie
+Prosa, unbekannte Geometrie oder mehrere Originale werden nicht so geraten.

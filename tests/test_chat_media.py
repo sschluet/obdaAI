@@ -269,3 +269,44 @@ def test_single_original_one_based_model_index_is_unambiguous_and_audited(setup)
     row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
     assert row["spec"]["plan"]["tiles"][0]["source"] == 0
     assert row["draft"]["syntax_repair"] == "single_source_one_based"
+
+
+def test_single_original_is_server_bound_without_model_file_selection(setup):
+    app, c, h, cfg, pid, _ = setup
+    provider = FileProvider(
+        json.dumps({"title": "Server binding", "tiles": [{"crop": [0, 0, 1, 1]}]})
+    )
+    app.state.providers = provider
+    chat = conversation(c, h, pid)
+    result = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle eine Collage aus synthetic.png."},
+    )
+    assert "succeeded" in result.text, result.text
+    row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+    assert row["spec"]["plan"]["tiles"][0]["source"] == 0
+    assert "Exactly ONE original" in provider.parts[0].content
+
+
+def test_user_page_order_overrides_model_reordering_with_audited_command_binding(setup):
+    app, c, h, cfg, pid, _ = setup
+    raw = io.BytesIO()
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=200)
+    writer.add_blank_page(width=300, height=200)
+    writer.write(raw)
+    put(app, cfg, pid, "ordered.pdf", raw.getvalue())
+    app.state.providers = FileProvider(
+        json.dumps({"title": "Order", "pages": [{"page": 1}, {"page": 2}]})
+    )
+    chat = conversation(c, h, pid)
+    result = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle PDF mit Seiten 2,1 aus ordered.pdf."},
+    )
+    assert "succeeded" in result.text, result.text
+    row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+    assert [p["page"] for p in row["spec"]["plan"]["pages"]] == [2, 1]
+    assert row["draft"]["command_binding"]["version"] == 1
