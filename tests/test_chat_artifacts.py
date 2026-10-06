@@ -345,3 +345,27 @@ def test_revision_reuses_exact_sources_without_duplicate_reference_section(setup
     assert len(new["spec"]["plan"]["sections"]) == 2
     assert new["spec"]["plan"]["sections"][-1]["heading"] == "Verwendete Quellen"
     assert new["draft"]["citations"][0]["source_id"] == source_id
+
+
+@pytest.mark.parametrize(
+    "goal",
+    [
+        "Überarbeite die Word-Datei Anderer Bericht.",
+        "Kürze den Text.",
+        "Update a Word file.",
+        "Überarbeite die Word-Datei Anderer Bericht mit dem Text Letzte Woche.",
+        "Überarbeite die Word-Datei Anderer Bericht mit dem Text letzte Word-Datei.",
+    ],
+)
+def test_ambiguous_revision_does_not_guess_last_file_or_call_model(setup, goal):
+    app, c, h, cfg, pid, _ = setup
+    provider = FileProvider(DOCUMENT)
+    app.state.providers = provider
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    _, first = file_chat(c, h, chat, "Erstelle eine Word-Datei.")
+    calls = provider.calls
+    response, run = file_chat(c, h, chat, goal)
+    assert "succeeded" not in response.text and run["status"] == "failed"
+    assert provider.calls == calls
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    assert len(rows) == 1 and rows[0]["artifact_id"] == first["artifact"]["artifact_id"]

@@ -19,6 +19,47 @@ def requests_revision(goal: str) -> bool:
     return bool(re.search(r"\b(überarbeite|ändere|kürze|revise|shorten|update)\b", goal, re.I))
 
 
+def explicit_revision_target(goal: str) -> bool:
+    name = (
+        r"(?:word[- ](?:datei|dokument|file|document)|worddatei|worddokument|"
+        r"powerpoint(?:[- ](?:datei|file))?|präsentation|datei|version|dokument|"
+        r"docx|pptx|pdf|file|presentation|document)"
+    )
+    where = r"(?:\s+(?:hier|in\s+diesem\s+gespräch))?"
+    made = r"(?:erzeugte[nrs]?|erstellte[nrs]?)"
+    last = (
+        r"(?:letzte[nrs]?"
+        + where
+        + r"(?:\s+"
+        + made
+        + r")?|zuletzt"
+        + where
+        + r"\s+"
+        + made
+        + r"|(?:last|latest)(?:\s+(?:created|generated))?)"
+    )
+    action = r"^\s*(?:(?:bitte|please)\s+)?(?:überarbeite|ändere|kürze|revise|shorten|update)\s+"
+    target = (
+        r"(?:(?:(?:die|das|the)\s+)?"
+        + last
+        + r"\s+"
+        + name
+        + r"|(?:folie|slide)\s+\d{1,3}\s+(?:der|(?:of|in)(?:\s+the)?)\s+"
+        + last
+        + r"\s+"
+        + name
+        + r")\b"
+    )
+    return bool(
+        re.search(action + target, goal, re.I)
+        or re.fullmatch(
+            r"(?:kürze|überarbeite|shorten|revise)\s+(?:folie|slide)\s+\d{1,3}[.!]?",
+            goal.strip(),
+            re.I,
+        )
+    )
+
+
 def chat_base(db: Session, chat_id: str, project_id: str, run: Run) -> ArtifactRevision:
     # Only a file linked by a successful run in this exact conversation. Neither
     # arbitrary project files nor model-selected IDs establish an editing target.
@@ -159,7 +200,13 @@ async def create_from_chat(
         revision, goal, sha = message.revision, message.content, digest(message.content)
         if len(goal) > 4000:
             raise ValueError("Dateiwunsch darf höchstens 4000 Zeichen enthalten")
-        base = chat_base(db, chat_id, project_id, run) if requests_revision(goal) else None
+        revising = requests_revision(goal)
+        if revising and not explicit_revision_target(goal):
+            raise ValueError(
+                "Die letzte Chat-Datei ausdrücklich benennen oder eine konkrete Version "
+                "im Dateidialog wählen; es wurde keine Datei geändert"
+            )
+        base = chat_base(db, chat_id, project_id, run) if revising else None
         original = spec_for(base) if base else None
         sources = list(original.sources) if original else []
         if requests_project_sources(goal):

@@ -2,7 +2,10 @@
 
 Eine konkrete Änderungsbitte wie „Überarbeite die letzte Word-Datei“ oder
 „Kürze Folie 2 der letzten PowerPoint“ bindet die letzte erfolgreich verknüpfte
-Datei dieses Gesprächs. Es werden höchstens 50 vergangene erfolgreiche Runs
+Datei dieses Gesprächs. Die Änderung muss die letzte Datei ausdrücklich benennen;
+ein alleinstehender numerischer Folienbefehl ist ebenfalls zulässig. Ein anders
+benanntes oder unklar bezeichnetes Dokument wird nicht automatisch durch die
+letzte Datei ersetzt. Es werden höchstens 50 vergangene erfolgreiche Runs
 geprüft. Andere Gespräche, beliebige Projektdateien und vom Modell gelieferte IDs
 sind keine Auswahlquelle. Fehlt eine eindeutige aktuelle Ausgangsversion, wird
 nichts erstellt; die konkrete Version kann im normalen Dateidialog gewählt werden.
