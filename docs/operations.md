@@ -30,8 +30,8 @@ Restore ohne produktives Netz: DB migrieren, Files/Hashes prüfen, Memory reconc
 Jobs mit unklarem Ausgang markieren, Writes/global autonomy pausieren. n8n-Zeitpläne
 nicht automatisch nachholen. VM-Snapshot/GitHub ersetzen diese Sicherung nicht.
 `deploy/backup.sh` erstellt verschlüsselte eigene VM-Sicherungen; die separate
-Wiederherstellungsidentität bleibt auf dem WorkMac. Aktueller isolierter Restore auf Schema 0016 prüft
-Originalhashes, Provider-Masterkey, begrenzte SSH-Identitäten/Units und Memory-Dateien.
+Wiederherstellungsidentität bleibt auf dem WorkMac. Aktueller isolierter Restore auf Schema 0024 prüft
+55 Originalhashes, 32 Dateiversionen samt Vorschauen/Exports/Teilen, Recherche-/Querybelege, Provider-Masterkey, begrenzte SSH-Identitäten/Units und Memory-Dateien.
 Fehlender Mount und Transportfehler wurden an einer isolierten restaurierten
 PostgreSQL-Kopie geprüft, ohne den produktiven Mount zu unterbrechen. n8n-/HA-Daten
 sind noch keine Bestandteile dieser eigenen VM-Sicherung. Gemessene RTO/RPO und

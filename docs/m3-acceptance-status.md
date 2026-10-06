@@ -8,13 +8,13 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 | Tool-Gateway, versionierte Parameter, fünfminütige Freigaben, globale Schreibpause | API-/PG-Tests und live Abnahme vorhandener begrenzter Aktionen |
 | Skills: Versionen, Auswahl, Vertrauen, Rechte bleiben unverändert | lokale Tests, CI und live Prüfung |
 | Task-Center mit Dialog, Termine, Dokumentauslöser, Ergebnisse und Historie | UI/PG-Abnahme; vorhandener n8n-Minutenworkflow |
-| Aufgabenbezogene n8n-Vorlage, Veröffentlichung, Callback, lokale Ausführung | reale Execution 276; Testworkflow deaktiviert, Aufgabe archiviert |
+| Aufgabenbezogene n8n-Vorlage, Veröffentlichung, Callback, lokale Ausführung | reale Executions einschließlich 1725: achtknotiger Abschlussgraph, tatsächlicher lokaler Run und Replay geprüft; eigene Testworkflows deaktiviert und Aufgaben archiviert |
 | MCP-Katalog und parameterfreie explizite Text-Lesewerkzeuge | HTTP-/UI-Tests, Schema/Revision/Allowlist; keine echten MCP-Ziele angefordert |
 | Passive Browserprüfung mit Bild und Text | echter Chromium-Container, Sandbox und Netzwerksperre geprüft; nur fest freigegebene Ziele |
 | HA-Status, Backupmetadaten und Wartungsplan als Hintergrundaufgabe | realer PostgreSQL-Worker mit HA 2026.9.3 / 61 Backupmetadaten, null Writes |
 | Systemberichte im Chat / natürliche Aufgabenentwürfe | lokale Grenzen, gespeicherte Belege, echte lokale Router-/HA-Abnahme und installierter Samstag-02:00-Entwurf bestanden |
 | Aufgabenprofile und Schreibfreigaben | implementiert für genau eine wiederherstellbare lokale Projektarchivierung: Einzelfreigabe oder revisionsgebundene Autonomie mit Ablaufzeit, Widerruf, Verbrauch und unveränderlicher Historie; keine externen Writes |
-| obdaAI-Backup / temporärer Restore | Schema 0022, 23 Dateiversionen, 46 Originalhashes, Memory-Dateien, Schlüssel und Workflowbelege geprüft |
+| obdaAI-Backup / temporärer Restore | eigener isolierter Nachweis Schema 0024, 32 Dateiversionen, drei PDF-Teile, zwei Recherche-Dateibelege und 55 Originalhashes, Memory-Dateien, Schlüssel und Workflowbelege geprüft |
 
 ## Noch fehlend
 
@@ -59,3 +59,11 @@ Die zusätzliche lokale Ereignis-Analyse erhält nur eine ausdrücklich ausgewä
 synthetische Quelle und den exakten lokalen Lesebeleg; der neue auslösende Text
 ist nicht Teil des Modelleingangs. Keine externen Rechte oder neuen n8n-Workflows.
 Details und Grenzen: source-ready-tasks.md. Weitere Ereignistypen bleiben offen.
+
+
+Der normale Aufgabeneditor unterstützt bis zu fünf editierbare feste Schritte,
+explizite lokale Systemberichtsauswertung und „nur bei verfügbaren HA-Updates“.
+Eine echte HA-Lese-/Analysefolge sowie der achtknotige n8n-Abschlussgraph mit
+Status, Warten, Bedingungen und Fehlerstopp sind getrennt abgenommen. n8n erhält
+IDs/Betriebsstatus, keine privaten Ziele oder Modellantworten. Freie/parallel
+zusammengesetzte Graphen und zusätzliche Aktionsadapter bleiben davon getrennt.

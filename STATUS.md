@@ -1,6 +1,47 @@
 # obdaAI — Status 06.10.2026
 
-## Aktueller Stand: natürliche Medienoperationen und kontrollierte Abläufe
+## Aktueller Stand: PDF-Teile und getrennte öffentliche Recherche
+
+Produktiv `bf03aa3` / Schema 0024; beide APIs gesund, bestehende IPv4-/IPv6-Regeln
+bei Installation unverändert. Private CI 37513735183 mit sechs erfolgreichen Jobs,
+571 Tests einschließlich PostgreSQL und fünf Browserprüfungen. Lokal 556 Tests
+mit zwölf PG-Fällen für CI ausgelassen; Ruff, mypy (60 Module), Source-Scan und
+Frontendbuild bestanden.
+
+PDF-Seiten können in bis zu zwanzig echte Einzeldateien aufgeteilt werden. Der
+Dialog bietet Trennstellen und „jede Ausgabeseite als eigene PDF“. Alle Teildateien
+haben feste Namen, eigene Hashes, gemeinsame geordnete Vorschauen und ein ZIP mit
+genau denselben PDFs. Echte lokale Modell-/Linux-Abnahme: Seiten 3,1,2, erste
+90° gedreht; drei native Downloads gleich den ZIP-Mitgliedern, Original unverändert.
+Eigener QA-Raum archiviert.
+
+Ein Auftrag kann öffentliche Recherche und neue lokale DOCX/PPTX/Inhalts-PDF
+verbinden. Der Chat bestätigt einen separaten editierbaren Suchtext; Gespräch und
+Dokumente werden nicht automatisch als Suchtext übernommen. Query und Ergebnis
+sind am Run/Receipt gebunden; bestätigte site:domain-Grenzen filtern fremde Treffer.
+Explizit verlangte öffentliche Recherche darf der Router nicht als bloße
+Projekt-Recherche weglassen. Ein fortlaufender Dateiplanungsstream nutzt das
+Gesamtlauflimit; der HTTP-Stillstandtimeout bleibt unverändert.
+
+Reale gezielte Suche und lokaler Word-Entwurf mit vier offiziellen Python-Quellen
+bestanden. Einseitige Linux-Vorschau, nativer Hashdownload, Quellenreferenzen und
+der synthetische Listenklammer-Test geprüft; frühere inhaltlich abgelehnte
+Testversion gesperrt und erhalten. Alle eigenen Testchats/-räume archiviert.
+Dieser begrenzte Fall beweist keine allgemeine Faktentreue. Quellen sind als
+Suchauszüge gekennzeichnet, keine automatisch voll gelesenen Webseiten.
+
+V1 bleibt unvollständig: interaktiver Browser mit menschlichem Login/2FA, weitere
+begrenzte Aktionen/Graphen, komplexere Dateiänderungen und breite Layout-/Fakten-QA,
+reale Geräte sowie systemübergreifende Recovery. Begrenzte Mischlast mit 120 Reads, zwei 2200-Zeilen-Uploads, zwei Word-Läufen
+und zwei lokalen Chats bestanden; GET p95 233 ms, sichtbare erste Chatdaten
+10,227/18,22 s inklusive Queue, RAM gemessen (docs/m5-acceptance-status.md).
+Frische verschlüsselte Off-VM-Sicherung und isolierter Restore Schema 0024
+bestanden: 55 Originale, 32 Dateiversionen, drei PDF-Teile, zwei Recherche-Belege
+und sechs Memory-Dateien samt Schlüsseln. Temporäre Restore-DB entfernt. Produktive HA-Writes
+oder Restore wurden nicht ausgeführt. PR #3 bleibt Draft, globale Schreibpause aktiv.
+
+
+## Historischer Stand: natürliche Medienoperationen und kontrollierte Abläufe
 
 Produktiv `5c1930f` / Schema 0024. Der zusätzliche Dateiblock erlaubt natürliche
 PDF-Seitenauswahl/-reihenfolge/-drehung und Zuschnitt/Skalierung von ausdrücklich

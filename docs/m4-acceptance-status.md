@@ -1,7 +1,8 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026, produktiv `5c1930f` / Schema 0024; zusätzlicher PDF-Aufteilungsblock in Abnahme. Die Dateipipeline ist live;
-M4 bleibt wegen weiterer natürlicher Änderungen und breiter Qualitätsabnahme teilweise.
+Stand 06.10.2026, produktiv `ec0c364` / Schema 0024. Die Dateipipeline einschließlich
+PDF-Aufteilung und getrennt bestätigter Recherche-Dateien ist live; M4 bleibt
+wegen breiter Fakten-/Layoutprüfung und weiterer komplexer Änderungen teilweise.
 
 | Funktion | Implementiert und tatsächlich geprüft | Verbleibende Grenze |
 |---|---|---|
@@ -45,9 +46,11 @@ Siehe [offiziellen LibreOffice-Launcher](https://github.com/LibreOffice/core/blo
 
 Natürliche PDF-Seiten-/Bildoperationen und quellengebundene Einzelfolien sind
 umgesetzt und getrennt geprüft (siehe docs/chat-media-files.md). PDF-Aufteilung
-ist im lokalen Runner, normalen Dialog und Chat ergänzt; reale Linux-Abnahme folgt.
-Noch offen: komplexere bzw. dateiübergreifende Änderungen, kombinierte
-Recherche-Dateierstellung und breitere semantische/Layout-QA. Die normalen Dialoge unterstützen die genannten manuellen Operationen
+ist im lokalen Runner, normalen Dialog und Chat ergänzt und auf der eigenen VM
+mit drei hashgebundenen Einzel-PDFs und exakt übereinstimmendem ZIP abgenommen.
+Recherche-Dateierstellung ist mit gesondert bestätigter öffentlicher Query, offiziellen
+Quellenreferenzen und lokalem Word-Dokument geprüft (research-artifacts.md).
+Noch offen: komplexere bzw. dateiübergreifende Änderungen und breitere semantische/Layout-QA. Die normalen Dialoge unterstützen die genannten manuellen Operationen
 bereits. Konkrete Folgeänderungen der letzten Chat-Datei sind umgesetzt; siehe
 docs/chat-file-revisions.md. Keine vollständige M4-Abnahme aus Unit- oder
 Fixturetests ableiten.
