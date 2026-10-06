@@ -778,3 +778,41 @@ def test_blank_pdf_pages_keep_ordered_metadata_without_inventing_text(tmp_path, 
     assert result["chunks"][0]["locator"] == "PDF Seite 1"
     assert "200 × 400 Punkte" in result["chunks"][0]["content"]
     assert "nicht semantisch bewertet" in result["chunks"][0]["content"]
+
+
+def test_long_text_preserves_all_lines_in_bounded_located_windows(tmp_path):
+    from hub.extract import parse
+
+    path = tmp_path / "long.txt"
+    lines = [f"Public synthetic line {i}: blue seven." for i in range(1, 2201)]
+    path.write_text("\n".join(lines))
+    result = parse(path, ".txt")
+    assert len(result["chunks"]) < 2000
+    assert "\n".join(c["content"] for c in result["chunks"]) == "\n".join(lines)
+    assert result["chunks"][0]["locator"].startswith("Text · Zeilen 1–")
+    assert result["chunks"][-1]["locator"].endswith("2200")
+    assert all(len(c["content"]) <= 1600 for c in result["chunks"])
+
+
+def test_long_markdown_windows_do_not_cross_heading_boundaries(tmp_path):
+    from hub.extract import parse
+
+    path = tmp_path / "long.md"
+    lines = ["# First"] + ["A"] * 1100 + ["# Second"] + ["B"] * 1100
+    path.write_text("\n".join(lines))
+    result = parse(path, ".md")
+    assert "\n".join(c["content"] for c in result["chunks"]) == "\n".join(lines)
+    for chunk in result["chunks"]:
+        if chunk["locator"].startswith("First"):
+            assert "# Second" not in chunk["content"] and "B" not in chunk["content"]
+        else:
+            assert chunk["locator"].startswith("Second") and "A" not in chunk["content"]
+
+
+def test_text_character_limit_still_rejects_oversized_content(tmp_path):
+    from hub.extract import MAX_TEXT, parse
+
+    path = tmp_path / "oversized.txt"
+    path.write_text("a" * (MAX_TEXT + 1))
+    with pytest.raises(ValueError, match="Extraktionsgrenze"):
+        parse(path, ".txt")

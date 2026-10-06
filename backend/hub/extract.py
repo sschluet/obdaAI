@@ -84,11 +84,35 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
     if suffix in {".docx", ".pptx", ".xlsx"}:
         safe_archive(path)
     if suffix in {".md", ".txt"}:
+        content = path.read_text(encoding="utf-8-sig")
+        if len(content) > MAX_TEXT:
+            raise ValueError("Extraktionsgrenze überschritten")
+        lines = content.splitlines()
         heading = "Text"
-        for i, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
-            if line.startswith("#"):
-                heading = line.lstrip("# ")[:100]
-            add(f"{heading} · Zeile {i}", line)
+        if len(lines) <= MAX_UNITS:
+            # Preserve existing small-file locators and immutable receipts.
+            for i, line in enumerate(lines, 1):
+                if line.startswith("#"):
+                    heading = line.lstrip("# ")[:100]
+                add(f"{heading} · Zeile {i}", line)
+        else:
+            # Line count alone is not document complexity. Bounded contiguous
+            # windows retain every line and heading with exact source ranges.
+            start = 1
+            window: list[str] = []
+            used = 0
+            for i, line in enumerate(lines, 1):
+                if window and (line.startswith("#") or used + len(line) + 1 > 1600):
+                    add(f"{heading} · Zeilen {start}–{i - 1}", "\n".join(window))
+                    window, used = [], 0
+                if not window:
+                    start = i
+                if line.startswith("#"):
+                    heading = line.lstrip("# ")[:100]
+                window.append(line)
+                used += len(line) + 1
+            if window:
+                add(f"{heading} · Zeilen {start}–{len(lines)}", "\n".join(window))
     elif suffix == ".csv":
         content = path.read_text(encoding="utf-8-sig")
         try:
