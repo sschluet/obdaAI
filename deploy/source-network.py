@@ -16,7 +16,6 @@ def command(*args, check=True):
     return subprocess.run(args, check=check, capture_output=True, text=True, timeout=8)
 
 
-
 def apply(plan):
     ids = []
     rules = {"iptables": set(), "ip6tables": set()}
@@ -114,10 +113,13 @@ def observe():
     )
     process = subprocess.Popen(
         ["docker", "exec", "-i", "obdaai-api-1", "python", "-u", "-c", script],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
         text=True,
     )
     first = True
+    previous_plan, applied_ids = None, []
     try:
         while True:
             if not select.select([process.stdout], [], [], 60 if first else 10)[0]:
@@ -128,8 +130,21 @@ def observe():
             plan = json.loads(line)
             if not isinstance(plan, list):
                 raise ValueError("Invalid source plan")
-            ids = apply(plan)
-            process.stdin.write(json.dumps(ids) + "\n")
+            if plan != previous_plan or any(
+                command(program, "-S", "OBDAAI_SOURCES", check=False).returncode
+                for program in ("iptables", "ip6tables")
+            ):
+                applied_ids = apply(plan)
+                previous_plan = plan
+            else:
+                # Preserve leases without periodically flushing live rules. A
+                # separate egress reload may remove the hook, so check it again.
+                for program in ("iptables", "ip6tables"):
+                    if command(
+                        program, "-C", "OBDAAI_APP", "-j", "OBDAAI_SOURCES", check=False
+                    ).returncode:
+                        command(program, "-I", "OBDAAI_APP", "1", "-j", "OBDAAI_SOURCES")
+            process.stdin.write(json.dumps(applied_ids) + "\n")
             process.stdin.flush()
             first = False
     finally:

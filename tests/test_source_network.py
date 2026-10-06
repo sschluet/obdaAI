@@ -138,8 +138,11 @@ def test_persistent_observer_acknowledges_only_after_firewall_application(
     order, commands = [], []
 
     class Stream:
+        reads = 0
+
         def readline(self, limit):
-            return "[]\n" if not order else ""
+            self.reads += 1
+            return "[]\n" if self.reads <= 2 else ""
 
         def write(self, line):
             order.append(("ack", json.loads(line)))
@@ -172,9 +175,12 @@ def test_persistent_observer_acknowledges_only_after_firewall_application(
     monkeypatch.setattr(module.subprocess, "Popen", popen)
     monkeypatch.setattr(module.select, "select", lambda *args: ([Process.stdout], [], []))
     monkeypatch.setattr(module, "apply", apply)
+    monkeypatch.setattr(
+        module, "command", lambda *args, **kwargs: type("OK", (), {"returncode": 0})()
+    )
     with pytest.raises(RuntimeError):
         module.observe()
     assert len(commands) == 1 and commands[0][:4] == ["docker", "exec", "-i", "obdaai-api-1"]
     assert order == [("apply", [])] + (
-        [] if firewall_failed else [("ack", ["synthetic-applied-id"])]
+        [] if firewall_failed else [("ack", ["synthetic-applied-id"])] * 2
     )
