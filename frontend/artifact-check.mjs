@@ -103,6 +103,21 @@ try{
   if(await dialog.getByLabel('Bildunterschrift',{exact:true}).inputValue()!=='Synthetic blue image')throw Error('Bound image/caption lost in version editor');
   await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
  }
+ for(const kind of ['pdf','image']){
+  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  await dialog.getByText('Gebundene Quelldateien',{exact:true}).click();
+  await dialog.getByLabel('synthetic-artifact.'+(kind==='pdf'?'pdf':'png'),{exact:true}).check();
+  await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
+  await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill(kind==='pdf'?'Output page 2 rotated 90 degrees.':'Crop the right half and resize to 128 pixels.');
+  await dialog.getByRole('button',{name:'Lokal entwerfen',exact:true}).click();
+  await dialog.getByText('Lokaler Entwurf bereit',{exact:false}).waitFor();
+  if(kind==='pdf'&&await dialog.getByLabel('Seite im Original',{exact:true}).inputValue()!=='2')throw Error('Page operation not editable');
+  if(kind==='image'&&await dialog.getByLabel('Linker Rand (%)',{exact:true}).inputValue()!=='50')throw Error('Crop operation not editable');
+  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
+  await page.getByText('Synthetic local '+(kind==='pdf'?'PDF':'image')+' operation · Version 1',{exact:true}).waitFor();
+ }
  for(const kind of ['docx','pptx']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});

@@ -65,7 +65,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
   async function save(event:FormEvent){
     event.preventDefault();if(busy)return;setBusy(true);setError('');
     try{
-      const sourceIds=Array.from(new Set(kind==='pdf'&&pdfMode==='pages'?pages.map(p=>p.sourceId):kind==='image'?tiles.map(t=>t.sourceId):(kind==='docx'||kind==='pdf')?[...boundIds,...sections.flatMap(s=>(s.images||[]).map(image=>image.sourceId))]:boundIds));
+      const sourceIds=Array.from(new Set([...(draftToken?boundIds:[]),...(kind==='pdf'&&pdfMode==='pages'?pages.map(p=>p.sourceId):kind==='image'?tiles.map(t=>t.sourceId):(kind==='docx'||kind==='pdf')?[...boundIds,...sections.flatMap(s=>(s.images||[]).map(image=>image.sourceId))]:boundIds)]));
       if(sourceIds.some(id=>!id||!sources.find(s=>s.id===id)))throw Error('Bitte für jede Seite bzw. jedes Bild eine Quelldatei auswählen.');
       const bindings=sourceIds.map(id=>{const s=sources.find(s=>s.id===id)!;return{id:s.id,revision:s.revision,sha256:s.sha256}});
       let plan:any;
@@ -94,10 +94,12 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
     if(busy||!goal.trim())return;setBusy(true);setError('');
     try{
       const bindings=boundIds.map(id=>{const s=sources.find(s=>s.id===id);if(!s)throw Error('Ausgewählte Quelle fehlt');return{id:s.id,revision:s.revision,sha256:s.sha256}});
-      const draft=await api('/projects/'+project.id+'/artifact-drafts','POST',{goal,kind,slide_count:slideCount,sources:bindings,...(original?{base_artifact_id:original.artifact_id,base_revision:original.revision}:{})});
+      const draft=await api('/projects/'+project.id+'/artifact-drafts','POST',{goal,kind,pdf_mode:kind==='pdf'&&pdfMode==='pages'?'pages':'content',slide_count:slideCount,sources:bindings,...(original?{base_artifact_id:original.artifact_id,base_revision:original.revision}:{})});
       const plan=draft.spec.plan;setTitle(plan.title);
-      if(kind==='docx'||kind==='pdf')setSections(plan.sections.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[]})));
-      else setSlides(plan.slides.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''})));
+      if(kind==='docx'||(kind==='pdf'&&pdfMode==='text'))setSections(plan.sections.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[]})));
+      else if(kind==='pptx')setSlides(plan.slides.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''})));
+      else if(kind==='pdf')setPages(plan.pages.map((p:any)=>({sourceId:draft.spec.sources[p.source].id,page:p.page,rotation:p.rotation})));
+      else {setTiles(plan.tiles.map((t:any)=>({sourceId:draft.spec.sources[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''})));setColumns(plan.columns);setWidth(plan.tile_width);setHeight(plan.tile_height);setFormat(plan.format)}
       setDraftToken(draft.draft_token);setDraftInfo(draft);
     }catch(e){setError((e as Error).message)}finally{setBusy(false)}
   }
@@ -128,11 +130,11 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       {error&&<p className="error" role="alert">{error}</p>}
       <form onSubmit={save}>
         <label>Dateiformat<select aria-label="Dateiformat" value={kind} onChange={e=>{setKind(e.target.value);setDraftToken(null);setDraftInfo(null);setError('')}}><option value="docx">Word-Dokument</option><option value="pptx">PowerPoint-Präsentation</option><option value="pdf">PDF-Dokument</option><option value="image">Bild / Collage</option></select></label>
-        {(['docx','pptx'].includes(kind)||(kind==='pdf'&&pdfMode==='text'))&&<details><summary>Mit dem lokalen Modell entwerfen</summary>
-          <p className="hint">Beschreibe das Ergebnis. Es werden nur die ausdrücklich ausgewählten Projektquellen verwendet: bis zu vier Quellen, jeweils zwei passende Textauszüge. Danach Text, Fakten und Quellen selbst prüfen. Es entsteht noch keine Datei.</p>
+        {<details><summary>Mit dem lokalen Modell entwerfen</summary>
+          <p className="hint">Beschreibe das Ergebnis. Es werden nur die ausdrücklich ausgewählten Projektquellen verwendet. Textentwürfe nutzen bis zu vier Quellen mit Auszügen; Seiten- und Bildoperationen verwenden die ausgewählten Originale. Danach Text, Fakten und Quellen selbst prüfen. Es entsteht noch keine Datei.</p>
           <label>Gewünschtes Ergebnis<textarea aria-label="Gewünschtes Ergebnis" maxLength={4000} rows={3} value={goal} onChange={e=>setGoal(e.target.value)}/></label>
           {kind==='pptx'&&<label>Gewünschte Folienanzahl<input type="number" min={1} max={30} value={slideCount} onChange={e=>setSlideCount(Number(e.target.value))}/></label>}
-          <button type="button" disabled={busy||!goal.trim()||boundIds.length>4||!!chatSource} onClick={()=>void generate()}>{busy?'Lokaler Entwurf läuft…':'Lokal entwerfen'}</button>
+          <button type="button" disabled={busy||!goal.trim()||boundIds.length>((kind==='image'||(kind==='pdf'&&pdfMode==='pages'))?20:4)||!!chatSource} onClick={()=>void generate()}>{busy?'Lokaler Entwurf läuft…':'Lokal entwerfen'}</button>
           {chatSource&&<p className="hint">Die übernommene Antwort kannst du hier bearbeiten. KI-Folgeänderungen sind nach Erstellung der ersten Dateiversion verfügbar.</p>}{draftInfo&&<p role="status">Lokaler Entwurf bereit · {draftInfo.provider.model}. Inhalt bearbeiten, anschließend Datei und Vorschau erstellen.</p>}
         </details>}
         {kind==='pdf'&&<label>PDF erstellen aus<select aria-label="PDF erstellen aus" value={pdfMode} onChange={e=>{setPdfMode(e.target.value);setDraftToken(null);setDraftInfo(null)}}><option value="pages">Seiten vorhandener PDF-Dateien</option><option value="text">Text, Tabellen und Bilder</option></select></label>}
@@ -169,7 +171,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
           <label>Höhe je Bild (Pixel)<input type="number" min={128} max={2048} value={height} onChange={e=>setHeight(Number(e.target.value))}/></label>
           <label>Bildformat<select aria-label="Bildformat" value={format} onChange={e=>setFormat(e.target.value)}><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label>
         </>}
-        {(['docx','pptx'].includes(kind)||(kind==='pdf'&&pdfMode==='text'))&&sources.length>0&&<details><summary>Gebundene Quelldateien</summary><p className="hint">Die Auswahl dokumentiert die zugehörigen Originale. Der eingegebene Text wird unverändert übernommen.</p>{sources.map(source=><label key={source.id}><input type="checkbox" checked={boundIds.includes(source.id)} onChange={e=>setBoundIds(e.target.checked?[...boundIds,source.id]:boundIds.filter(id=>id!==source.id))}/>{source.name}</label>)}</details>}
+        {sources.length>0&&<details><summary>Gebundene Quelldateien</summary><p className="hint">Die Auswahl dokumentiert die zugehörigen Originale. Der eingegebene Text wird unverändert übernommen.</p>{(kind==='image'?images:kind==='pdf'&&pdfMode==='pages'?pdfs:sources).map(source=><label key={source.id}><input type="checkbox" checked={boundIds.includes(source.id)} onChange={e=>{setBoundIds(e.target.checked?[...boundIds,source.id]:boundIds.filter(id=>id!==source.id));setDraftToken(null);setDraftInfo(null)}}/>{source.name}</label>)}</details>}
         <p className="hint">Neue Versionen ersetzen keine älteren Dateien. Quellen anderer Projekte werden nicht einbezogen.</p>
         <button className="primary" disabled={busy}>Datei und Vorschau erstellen</button>
       </form><button disabled={busy} onClick={()=>setEditing(false)}>Abbrechen</button>

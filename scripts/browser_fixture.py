@@ -12,6 +12,7 @@ import hub.artifact_api as fixture_artifact_api
 import hub.browser_read as fixture_browser
 import hub.chat_tools as fixture_chat_tools
 import hub.ha_maintenance as fixture_maintenance
+import hub.knowledge_api as fixture_knowledge_api
 import hub.knowledge_connections as fixture_knowledge_connections
 import hub.websearch as fixture_web_pages
 from alembic import command
@@ -19,7 +20,7 @@ from alembic.config import Config
 from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
-from hub.db import Artifact, ArtifactRevision
+from hub.db import Artifact, ArtifactRevision, Source, SourceChunk
 from hub.knowledge_clients import Document
 from hub.mcp_client import schema_digest
 from hub.policy import CloudGrant, ContextPart
@@ -84,6 +85,31 @@ app = create_app(
         local_disable_thinking=True,
     )
 )
+
+# These two blank/binary UI fixtures intentionally do not test OCR. Real parsing
+# is exercised by integration tests and the separate production synthetic smoke.
+_extract_source = fixture_knowledge_api.extract_source
+
+
+async def synthetic_media_parse(factory, cfg, source_id):
+    with factory() as db:
+        row = db.get(Source, source_id)
+        if row and row.name in {"synthetic-artifact.pdf", "synthetic-artifact.png"}:
+            row.status = "ready"
+            if not db.query(SourceChunk).filter_by(source_id=source_id).first():
+                db.add(
+                    SourceChunk(
+                        source_id=source_id,
+                        locator="PDF Seite 2" if row.name.endswith(".pdf") else "Bild",
+                        content="Synthetic media fixture only",
+                    )
+                )
+            db.commit()
+            return
+    await _extract_source(factory, cfg, source_id)
+
+
+fixture_knowledge_api.extract_source = synthetic_media_parse
 
 
 async def synthetic_artifact(factory, cfg, artifact_id, revision):
@@ -215,7 +241,25 @@ class SyntheticProvider:
     ) -> AsyncIterator[str]:
         if parts and parts[0].source_id == "artifact-draft-policy":
             assert not external and not grants
-            if '"slides"' in parts[0].content:
+            if '"tiles"' in parts[0].content:
+                yield json.dumps(
+                    {
+                        "title": "Synthetic local image operation",
+                        "tiles": [{"source": 0, "crop": [0.5, 0, 1, 1]}],
+                        "columns": 1,
+                        "tile_width": 128,
+                        "tile_height": 128,
+                        "format": "png",
+                    }
+                )
+            elif '"pages"' in parts[0].content:
+                yield json.dumps(
+                    {
+                        "title": "Synthetic local PDF operation",
+                        "pages": [{"source": 0, "page": 2, "rotation": 90}],
+                    }
+                )
+            elif '"slides"' in parts[0].content:
                 import re
 
                 count = int(re.search(r"Exactly ([0-9]+) slides", parts[0].content)[1])

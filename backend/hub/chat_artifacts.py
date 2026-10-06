@@ -2,7 +2,9 @@
 
 import json
 import re
+import unicodedata
 import uuid
+from pathlib import PurePath
 from typing import Any
 
 from sqlalchemy import select
@@ -16,20 +18,66 @@ from hub.db import Artifact, ArtifactRevision, Conversation, Message, Run, Sourc
 
 
 def requests_revision(goal: str) -> bool:
-    return bool(re.search(r"\b(überarbeite|ändere|kürze|revise|shorten|update)\b", goal, re.I))
+    return bool(
+        re.search(
+            r"\b(überarbeite|ändere|kürze|drehe|schneide|verkleinere|vergrößere|skaliere|revise|shorten|update|rotate|crop|resize)\b",
+            goal,
+            re.I,
+        )
+    )
+
+
+def named_originals(db: Session, project_id: str, goal: str) -> list[Source]:
+    text = unicodedata.normalize("NFC", goal).casefold()
+    selected: list[tuple[int, Source]] = []
+    names: set[str] = set()
+    for source in db.scalars(select(Source).where(Source.project_id == project_id)):
+        name = unicodedata.normalize("NFC", source.name).casefold()
+        match = re.search(r"(?<![\w./\\-])" + re.escape(name) + r"(?![\w-]|\.[\w])", text)
+        if match:
+            if name in names or source.status != "ready":
+                raise ValueError("Quelldatei ist mehrdeutig oder noch nicht fertig eingelesen")
+            names.add(name)
+            selected.append((match.start(), source))
+    if len(selected) > 20:
+        raise ValueError("Höchstens zwanzig ausdrücklich benannte Originale auswählen")
+    return [source for _, source in sorted(selected, key=lambda item: item[0])]
+
+
+def media_operation(goal: str, originals: list[Source]) -> str | None:
+    if not originals or not re.search(
+        r"^\s*(?:(?:bitte|please)\s+)?(?:erstelle|erzeuge|generiere|kombiniere|"
+        r"führe|füge|verbinde|extrahiere|entferne|drehe|schneide|verkleinere|vergrößere|skaliere|ändere|"
+        r"create|make|merge|split|rotate|crop|resize)\b",
+        goal,
+        re.I,
+    ):
+        return None
+    suffixes = {PurePath(s.name).suffix.lower() for s in originals}
+    if suffixes == {".pdf"} and re.search(
+        r"\b(seiten?|pages?|zusammenführen|zusammen|kombiniere|merge|extrahiere|split|drehe|rotate)\b",
+        goal,
+        re.I,
+    ):
+        return "pdf"
+    if suffixes.issubset({".png", ".jpg", ".jpeg", ".webp"}) and re.search(
+        r"\b(collage|schneide|zuschnitt|crop|verkleinere|vergrößere|resize|skaliere)\b", goal, re.I
+    ):
+        return "image"
+    return None
 
 
 def ambiguous_file_revision(goal: str) -> bool:
     """Reject direct file edits with no bound target before model classification."""
     return bool(
         re.search(
-            r"^\s*(?:(?:bitte|please)\s+)?(?:überarbeite|ändere|kürze|revise|shorten|update)\s+",
+            r"^\s*(?:(?:bitte|please)\s+)?(?:überarbeite|ändere|kürze|drehe|schneide|verkleinere|vergrößere|skaliere|revise|shorten|update|rotate|crop|resize)\s+",
             goal,
             re.I,
         )
         and re.search(
             r"\b(?:word(?:[- ]?(?:datei|dokument|file|document))?|powerpoint|"
-            r"präsentation|datei|dokument|docx|pptx|pdf|file|presentation|document)\b",
+            r"präsentation|datei|dokument|docx|pptx|pdf|bild|image|png|jpeg|jpg|file|presentation|document)\b",
             goal,
             re.I,
         )
@@ -41,7 +89,7 @@ def explicit_revision_target(goal: str) -> bool:
     name = (
         r"(?:word[- ](?:datei|dokument|file|document)|worddatei|worddokument|"
         r"powerpoint(?:[- ](?:datei|file))?|präsentation|datei|version|dokument|"
-        r"docx|pptx|pdf|file|presentation|document)"
+        r"docx|pptx|pdf|bild|image|png|jpeg|jpg|file|presentation|document)"
     )
     where = r"(?:\s+(?:hier|in\s+diesem\s+gespräch))?"
     made = r"(?:erzeugte[nrs]?|erstellte[nrs]?)"
@@ -56,7 +104,10 @@ def explicit_revision_target(goal: str) -> bool:
         + made
         + r"|(?:last|latest)(?:\s+(?:created|generated))?)"
     )
-    action = r"^\s*(?:(?:bitte|please)\s+)?(?:überarbeite|ändere|kürze|revise|shorten|update)\s+"
+    action = (
+        r"^\s*(?:(?:bitte|please)\s+)?(?:überarbeite|ändere|kürze|drehe|schneide|"
+        r"verkleinere|vergrößere|skaliere|revise|shorten|update|rotate|crop|resize)\s+"
+    )
     target = (
         r"(?:(?:(?:die|das|the)\s+)?"
         + last
@@ -218,7 +269,9 @@ async def create_from_chat(
         revision, goal, sha = message.revision, message.content, digest(message.content)
         if len(goal) > 4000:
             raise ValueError("Dateiwunsch darf höchstens 4000 Zeichen enthalten")
-        revising = requests_revision(goal)
+        named = named_originals(db, project_id, goal)
+        operation = media_operation(goal, named)
+        revising = requests_revision(goal) and not operation
         if revising and not explicit_revision_target(goal):
             raise ValueError(
                 "Die letzte Chat-Datei ausdrücklich benennen oder eine konkrete Version "
@@ -227,7 +280,13 @@ async def create_from_chat(
         base = chat_base(db, chat_id, project_id, run) if revising else None
         original = spec_for(base) if base else None
         sources = list(original.sources) if original else []
-        if requests_project_sources(goal):
+        if original and (
+            original.plan.kind == "image" or (original.plan.kind == "pdf" and original.plan.pages)
+        ):
+            operation = original.plan.kind
+        if named and not original:
+            sources = [SourceBinding(id=s.id, revision=s.revision, sha256=s.sha256) for s in named]
+        elif requests_project_sources(goal):
             originals = list(db.scalars(select(Source).where(Source.project_id == project_id)))
             if not originals or len(originals) > 4 or any(s.status != "ready" for s in originals):
                 raise ValueError(
@@ -249,7 +308,12 @@ async def create_from_chat(
             r"\b(word|docx|powerpoint|pptx|präsentation|presentation|pdf)\b", goal, re.I
         ):
             format_goal += " " + original.plan.kind
-        kind, count = request_format(format_goal, default_count)
+        # A literal original name is a source selection, not an output format.
+        for source in named:
+            format_goal = re.sub(re.escape(source.name), "Quelldatei", format_goal, flags=re.I)
+        kind, count = (
+            (operation, default_count) if operation else request_format(format_goal, default_count)
+        )
         if original and original.plan.kind != kind:
             raise ValueError("Folgeversion behält ihr Format; Umwandlung im Dateidialog wählen")
         targets = set(re.findall(r"\b(?:folie|slide)\s+(\d{1,3})\b", goal, re.I)) if base else set()
@@ -263,8 +327,6 @@ async def create_from_chat(
             raise ValueError(
                 "Eine vorhandene Folie eindeutig auswählen; sonst Dateidialog verwenden"
             )
-        if targets and sources:
-            raise ValueError("Einzelne quellengebundene Folien im Dateidialog überarbeiten")
     # The latest user's goal and explicitly requested current project originals
     # are bound. History/memory/retrieval never supply implicit write instructions.
     section_count = (
@@ -273,8 +335,10 @@ async def create_from_chat(
     body = DraftInput(
         goal=goal,
         kind=kind,  # type: ignore[arg-type]
+        pdf_mode="pages" if operation == "pdf" else "content",
         slide_count=count,
         section_count=section_count,
+        target_slide=int(next(iter(targets))) if targets else None,
         sources=sources,
         base_artifact_id=base.artifact_id if base else None,
         base_revision=base.revision if base else None,

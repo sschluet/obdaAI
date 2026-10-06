@@ -174,10 +174,15 @@ async def execute_run(
                 update(status="streaming", provider="local", reason="Explizites Memory ohne Modell")
                 raise MemoryCompleted
             if c.project_id and latest and ambiguous_file_revision(latest.content):
-                raise ExecutionLimitError(
-                    "Die letzte Chat-Datei ausdrücklich benennen oder eine konkrete Version "
-                    "im Dateidialog wählen; es wurde keine Datei geändert"
-                )
+                from hub.chat_artifacts import media_operation, named_originals
+
+                with factory() as db:
+                    selected_originals = named_originals(db, c.project_id, latest.content)
+                if not media_operation(latest.content, selected_originals):
+                    raise ExecutionLimitError(
+                        "Die letzte Chat-Datei ausdrücklich benennen oder eine konkrete Version "
+                        "im Dateidialog wählen; es wurde keine Datei geändert"
+                    )
             if c.memory_scope and not cfg.vault_dir:
                 raise ExecutionLimitError("Keine Vault-Recherche: Zugang noch nicht angebunden")
             selected: dict[str, ProviderConfig] = {}
