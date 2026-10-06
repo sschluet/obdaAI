@@ -327,8 +327,9 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             )
             db.add(d)
             db.commit()  # Intent precedes the only external POST.
+        remote_result = None
         try:
-            await asyncio.to_thread(
+            remote_result = await asyncio.to_thread(
                 remote,
                 cfg,
                 "/webhook/obdaai-" + binding_id,
@@ -343,6 +344,21 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             assert final_dispatch is not None
             if final_dispatch.status == "prepared":
                 final_dispatch.status = "uncertain"
+            elif (
+                final_dispatch.status == "accepted"
+                and remote_result
+                and (
+                    remote_result.get("dispatch_id") == final_dispatch.id
+                    and remote_result.get("run_id") == final_dispatch.run_id
+                    and remote_result.get("execution_id") == final_dispatch.execution_id
+                    and remote_result.get("complete") is True
+                    and remote_result.get("succeeded") is True
+                )
+            ):
+                completed = db.get(TaskRun, final_dispatch.run_id)
+                waiting = current(db, bound(db, binding_id).task_id)[2].workflow_wait
+                if waiting and completed and completed.status == "succeeded":
+                    final_dispatch.status = "completed"
             db.commit()
             return public(db, bound(db, binding_id))
 

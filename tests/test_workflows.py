@@ -50,16 +50,23 @@ def review(t):
     return {k: v for k, v in run_body(t).items() if k != "request_id"}
 
 
-def ready(fixture):
+def ready(fixture, **task_changes):
     app, c, h, monkeypatch = fixture
-    t = create(c, h, goal="PRIVATE_TASK_CONTEXT_MUST_STAY_LOCAL")
+    t = create(c, h, goal="PRIVATE_TASK_CONTEXT_MUST_STAY_LOCAL", **task_changes)
     t = control(c, h, t).json()
     b = c.post("/api/tasks/" + t["id"] + "/workflows", headers=h, json=review(t)).json()
     provision = c.post(
         "/api/workflows/" + b["id"] + "/provisioning", headers=h, json=review(t)
     ).json()
     token = provision["credential"]["data"]["value"]
-    graph = task_workflow(b["id"], t["id"], t["revision"], "header-fixed", "ca-fixed")
+    graph = task_workflow(
+        b["id"],
+        t["id"],
+        t["revision"],
+        "header-fixed",
+        "ca-fixed",
+        wait_for_completion=t["spec"].get("workflow_wait", False),
+    )
     version = str(uuid.uuid4())
     remote_state = {
         **copy.deepcopy(graph),
@@ -406,3 +413,21 @@ def test_operational_completion_query_is_bound_and_excludes_private_results(work
     )
     control(c, h, t, paused=True)
     assert c.post(endpoint, headers={"X-OBDAAI-WORKFLOW": token}, json=body).status_code == 409
+
+
+def test_completion_response_is_verified_against_bound_run_not_arbitrary_remote_claim(workflows):
+    app, c, h, mp = workflows
+    t, b, token, calls, state = ready(workflows, workflow_wait=True)
+    original = __import__("hub.workflow_api", fromlist=["remote"]).remote
+
+    def remote(cfg, path, **kwargs):
+        result = original(cfg, path, **kwargs)
+        if path.startswith("/webhook/"):
+            terminal(c, t)
+            return result | {"complete": True, "succeeded": True}
+        return result
+
+    mp.setattr("hub.workflow_api.remote", remote)
+    result = c.post("/api/workflows/" + b["id"] + "/runs", headers=h, json=run_body(t))
+    assert result.status_code == 200, result.text
+    assert result.json()["dispatches"][0]["status"] == "completed"
