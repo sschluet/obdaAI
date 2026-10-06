@@ -94,6 +94,10 @@ def verify_token(
         or metadata["sources"] != [s.model_dump(mode="json") for s in spec.sources]
     ):
         raise ValueError("Dateientwurf oder Projekt-/Quellenbindung inzwischen geändert")
+    if metadata.get("web_research"):
+        from hub.artifact_research import verify
+
+        verify(db, metadata["web_research"], project_id)
     provider = metadata["provider"]
     base = metadata.get("base")
     if base:
@@ -133,7 +137,8 @@ def verify_token(
     if (
         metadata.get("section_count") is not None
         and spec.plan.kind in {"docx", "pdf"}
-        and len(spec.plan.sections) != metadata["section_count"] + bool(metadata["citations"])
+        and len(spec.plan.sections)
+        != metadata["section_count"] + bool(metadata["citations"] or metadata.get("web_research"))
     ):
         raise ValueError("Dateientwurf benötigt die verlangte Abschnittanzahl")
     metadata["user_edited"] = digest(canonical(spec)) != metadata["proposal_sha256"]
@@ -159,7 +164,13 @@ def verify_token(
 
 
 async def preview(
-    factory: Any, cfg: Any, project_id: str, body: DraftInput, provider: Any = None
+    factory: Any,
+    cfg: Any,
+    project_id: str,
+    body: DraftInput,
+    provider: Any = None,
+    *,
+    research_id: str | None = None,
 ) -> dict[str, Any]:
     transform = body.kind == "image" or (body.kind == "pdf" and body.pdf_mode == "pages")
     if body.pdf_mode == "pages" and body.kind != "pdf":
@@ -181,7 +192,16 @@ async def preview(
             "plan": {"kind": "docx", "title": "Bindung", "sections": [{"heading": "Bindung"}]},
         }
     )
-    source_parts, citations = [], []
+    source_parts: list[ContextPart] = []
+    citations: list[dict[str, Any]] = []
+    web_research = None
+    if research_id is not None:
+        from hub.artifact_research import binding as research_binding
+
+        if transform or body.base_artifact_id:
+            raise ValueError("Recherche-Dateien benötigen einen neuen Inhaltsentwurf")
+        with factory() as db:
+            source_parts, web_research = research_binding(db, research_id, project_id, body.goal)
     base = None
     original = None
     with factory() as db:
@@ -469,6 +489,8 @@ async def preview(
     # Server-owned references identify exactly the excerpts actually used. They
     # do not claim each model statement is semantically verified.
     references = [c["reference"] + " · Revision " + str(c["revision"]) for c in citations]
+    if web_research:
+        references.extend(c["reference"] for c in web_research["citations"])
     if references and spec.plan.kind in {"docx", "pdf"} and not transform:
         value["sections"].append({"heading": "Verwendete Quellen", "paragraphs": references})
     if references and spec.plan.kind == "pptx":
@@ -499,6 +521,10 @@ async def preview(
             raise ValueError("Entwurf verändert nicht ausgewählte Folien")
     with factory() as db:
         bind_sources(db, cfg, project_id, spec)
+        if web_research:
+            from hub.artifact_research import verify
+
+            verify(db, web_research, project_id)
         if db.get(Project, project_id).revision != project_revision:
             raise ValueError("Projekt inzwischen geändert")
         if row:
@@ -518,6 +544,7 @@ async def preview(
         "project_revision": project_revision,
         "sources": [s.model_dump(mode="json") for s in body.sources],
         "citations": citations,
+        **({"web_research": web_research} if web_research else {}),
         "slide_count": body.slide_count,
         "section_count": body.section_count,
         "target_slide": body.target_slide,

@@ -204,7 +204,13 @@ class SyntheticProvider:
 
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
         if any("SYNTHETIC_FILE_REQUEST" in p.content for p in parts):
-            return Route(capabilities=["artifact"], model_class="cloud", reason="synthetic file")
+            return Route(
+                capabilities=["artifact", "web"]
+                if any("SYNTHETIC_WEB_QUERY" in p.content for p in parts)
+                else ["artifact"],
+                model_class="cloud",
+                reason="synthetic file",
+            )
         if any("SYNTHETIC_TASK_PLAN" in p.content for p in parts):
             return Route(capabilities=["task"], model_class="cloud", reason="synthetic planning")
         if any("SYNTHETIC_HA_QUERY" in p.content for p in parts):

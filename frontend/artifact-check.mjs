@@ -150,6 +150,18 @@ try{
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
  await page.getByRole('heading',{name,exact:true}).waitFor();
  await page.getByText('Synthetic local document draft · Version 1',{exact:true}).first().waitFor();
+ await page.getByRole('tab',{name:/Gespräche ·/}).click();
+ await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
+ await page.getByLabel('Nachricht',{exact:true}).fill('Recherchiere und erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST SYNTHETIC_WEB_QUERY');
+ await page.getByLabel('Quellenoptionen',{exact:true}).selectOption('web');
+ await page.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).click();
+ await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+ await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
+ const researchCard=page.locator('article').filter({hasText:'Synthetic local document draft · Version 1'}).filter({hasText:'Verwendete Websuchauszüge'});
+ await researchCard.locator('summary').click();
+ await researchCard.getByText('Verwendete Websuchauszüge · lokal verarbeitet',{exact:true}).waitFor();
+ if(!(await researchCard.innerText()).includes('https://example.org/synthetic-source'))throw Error('Search citation missing in file provenance');
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.locator('button.new').click();
  await page.getByLabel('Nachricht',{exact:true}).fill('A synthetic short answer for Word export.');

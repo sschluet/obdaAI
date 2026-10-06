@@ -247,7 +247,7 @@ def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
 
 
 async def create_from_chat(
-    factory: Any, cfg: Any, run_id: str, provider: Any = None
+    factory: Any, cfg: Any, run_id: str, provider: Any = None, *, research_id: str | None = None
 ) -> dict[str, Any]:
     with factory() as db:
         run = db.get(Run, run_id)
@@ -343,7 +343,7 @@ async def create_from_chat(
         base_artifact_id=base.artifact_id if base else None,
         base_revision=base.revision if base else None,
     )
-    proposal = await preview(factory, cfg, project_id, body, provider)
+    proposal = await preview(factory, cfg, project_id, body, provider, research_id=research_id)
     proposed = ArtifactSpec.model_validate(proposal["spec"])
     if targets and original and original.plan.kind == "pptx" and proposed.plan.kind == "pptx":
         target = int(next(iter(targets))) - 1

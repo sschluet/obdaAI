@@ -149,7 +149,8 @@ def check() -> None:
     for folder in requests.iterdir():
         assert not process(folder, results), "Duplicate overwrote an immutable output"
     print(
-        "Five offline plans rendered; seven previews and Word PDF export; duplicate writes rejected"
+        "Six offline plans rendered; nine previews, native split PDFs and Word PDF export; "
+        "duplicate writes rejected"
     )
 
 
