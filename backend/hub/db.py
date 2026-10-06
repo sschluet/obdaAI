@@ -219,6 +219,16 @@ class KnowledgeDocument(Base):
     source_id: Mapped[str] = mapped_column(ForeignKey("sources.id"))
 
 
+class SourceNetworkRequest(Base):
+    __tablename__ = "source_network_requests"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    kind: Mapped[str] = mapped_column(String(20))
+    config: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+    expires: Mapped[float] = mapped_column(Float)
+    granted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class SourceChunk(Base):
     __tablename__ = "source_chunks"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)

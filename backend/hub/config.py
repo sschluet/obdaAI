@@ -56,6 +56,7 @@ class Settings:
     scheduler_enabled: bool = False
     scheduler_token_file: str = ""
     static_dir: str = "frontend/dist"
+    source_network_enabled: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":

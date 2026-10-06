@@ -118,6 +118,9 @@ async def index_connection(
     iterator = documents(body, password)
     imported, seen, total = [], set(), 0
     try:
+        from hub.source_network import request_network
+
+        await request_network(factory, cfg, body.kind, body.public())
         sentinel = object()
         while True:
             document = await asyncio.to_thread(next, iterator, sentinel)
@@ -365,6 +368,9 @@ def install_knowledge_connections(
                 iterator.close()
 
         try:
+            from hub.source_network import request_network
+
+            await request_network(factory, cfg, config.kind, config.public())
             await asyncio.to_thread(probe)
         except Exception:
             raise HTTPException(

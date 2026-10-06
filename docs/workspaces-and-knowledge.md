@@ -52,5 +52,15 @@ Grenzen: initiale Snapshotgrenzen, Dokumentanzahl, Dateigröße und Gesamtspool 
 begrenzt und sichtbar. Indexierung ist lokale Fundstellenretrieval, kein behaupteter
 semantischer Vektorindex. Echte individuelle NAS-/NFS-/SQL-Anbindungen benötigen vom
 Besitzer eingetragene Ziele und dort erlaubte lesende Zugriffe; ohne konkrete Quelle
-wird keine reale Verbindung als abgenommen bezeichnet. Bestehende Shares, Firewall,
+wird keine reale Verbindung als abgenommen bezeichnet. Bestehende Shares,
 Vaultsync, Home Assistant und n8n werden nicht umkonfiguriert.
+
+Die ausdrücklich genehmigte Quellen-Netzwerkfreigabe ergänzt eine eigene
+OBDAAI_SOURCES-Kette vor den unveränderten bisherigen App-Regeln. Nur authentifizierte
+manuelle Quellenaktionen beantragen fünf Minuten gültige Freigaben für aufgelöste
+numerische Zieladressen und das gewählte Protokoll. Öffentliche Webseiten erhalten
+ausschließlich HTTPS/443; interne HTTP-, Loopback- und Metadatenziele bleiben gesperrt.
+NFS erlaubt private Ziele mit 111/2049 und dem dort ermittelten MOUNT-v3-Port.
+Der eigene Root-Dienst bestätigt erst nach Anwendung der Regeln; bei Fehler oder
+Dienststopp leert er nur seine eigene Kette. Modellwerkzeuge können keine Freigaben
+beantragen. Die Freigabe aktiviert weder Cloudübertragung noch weitere Ziele.

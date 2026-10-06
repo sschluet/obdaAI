@@ -202,6 +202,9 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
                     raise HTTPException(409, "Webseitenauftrag anders verwendet")
                 return source_info(old)
         try:
+            from hub.source_network import request_network
+
+            await request_network(factory, cfg, "website", {"url": body.url})
             content = await fetch_page(cfg, body.url, True, user_selected=True)
             if not content.strip():
                 raise ValueError("Empty page")
