@@ -125,14 +125,17 @@ class FetchInput(BaseModel):
     public_url_approved: bool = False
 
 
-async def fetch_page(cfg: Settings, url: str, approved: bool) -> str:
+async def fetch_page(
+    cfg: Settings, url: str, approved: bool, *, user_selected: bool = False
+) -> str:
     if not approved:
         raise PermissionError("URL nicht freigegeben")
     u = urlsplit(url)
     domains = json.loads(cfg.web_domains_json)
     if (
         u.scheme != "https"
-        or u.hostname not in domains
+        or not u.hostname
+        or (not user_selected and u.hostname not in domains)
         or u.username
         or u.password
         or u.query

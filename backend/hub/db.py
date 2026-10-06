@@ -172,6 +172,7 @@ class Project(Base):
     label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
     revision: Mapped[int] = mapped_column(Integer, default=1)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    kind: Mapped[str] = mapped_column(String(20), default="project", server_default="project")
 
 
 class Source(Base):
@@ -186,6 +187,36 @@ class Source(Base):
     status: Mapped[str] = mapped_column(String(20), default="queued")
     error: Mapped[str] = mapped_column(String(240), default="")
     created: Mapped[float] = mapped_column(Float, default=time.time)
+    origin_url: Mapped[str] = mapped_column(String(2048), default="", server_default="")
+    web_request_id: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True)
+
+
+class KnowledgeConnection(Base):
+    __tablename__ = "knowledge_connections"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160))
+    kind: Mapped[str] = mapped_column(String(20))
+    address: Mapped[str] = mapped_column(String(1000), default="")
+    target_ref: Mapped[str] = mapped_column(String(100), default="")
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), unique=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(30), default="needs_setup")
+    indexed: Mapped[int] = mapped_column(Integer, default=0)
+    last_indexed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error: Mapped[str] = mapped_column(String(240), default="")
+    config: Mapped[str] = mapped_column(Text, default="{}")
+    encrypted_secret: Mapped[str] = mapped_column(Text, default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class KnowledgeDocument(Base):
+    __tablename__ = "knowledge_documents"
+    __table_args__ = (UniqueConstraint("connection_id", "path"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    connection_id: Mapped[str] = mapped_column(ForeignKey("knowledge_connections.id"), index=True)
+    path: Mapped[str] = mapped_column(String(1000))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    source_id: Mapped[str] = mapped_column(ForeignKey("sources.id"))
 
 
 class SourceChunk(Base):

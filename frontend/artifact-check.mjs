@@ -15,6 +15,7 @@ try{
  const name='Synthetic artifact version test '+Date.now();
  await page.getByLabel('Projektname',{exact:true}).fill(name);
  await page.getByRole('button',{name:'Projektraum erstellen',exact:true}).click();
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
  let dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic word version');
@@ -30,7 +31,8 @@ try{
  await page.reload();
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
- await page.getByRole('button',{name,exact:true}).click();
+ await page.getByRole('heading',{name,exact:true}).locator('..').click();
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
@@ -40,10 +42,13 @@ try{
  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
  await page.getByText('Synthetic word version two · Version 2',{exact:true}).waitFor();
  if(await page.getByRole('link',{name:'Datei herunterladen',exact:true}).count()!==1)throw Error('Old file lost or new version bypassed review');
+ await page.getByRole('tab',{name:/Quellen ·/}).click();
  await page.locator('input[type=file]').setInputFiles([
   {name:'synthetic-artifact.pdf',mimeType:'application/pdf',buffer:await readFile(output+'/artifact-input.pdf')},
   {name:'synthetic-artifact.png',mimeType:'image/png',buffer:await readFile(output+'/artifact-input.png')}
  ]);
+ await page.waitForFunction(()=>document.querySelectorAll('.source-list li').length===2); // Raw Office/PDF/image inputs do not require OCR in this UI fixture.
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  for(const kind of ['pptx','pdf','image']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
@@ -112,7 +117,8 @@ try{
   await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
   await page.getByText(kind==='docx'?'Synthetic local document draft · Version 1':'Synthetic local presentation draft · Version 1',{exact:true}).waitFor();
  }
- await page.getByRole('button',{name:'Mit diesen Dokumenten chatten',exact:true}).click();
+ await page.getByRole('tab',{name:/Gespräche ·/}).click();
+ await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
@@ -125,7 +131,8 @@ try{
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).click();
- await page.getByRole('button',{name,exact:true}).click();
+ await page.getByRole('heading',{name,exact:true}).locator('..').click();
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Chatantwort als Word übernehmen',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  if(!(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()).length)throw Error('Chat export lost content');

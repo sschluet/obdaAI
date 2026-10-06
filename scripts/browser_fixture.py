@@ -12,12 +12,15 @@ import hub.artifact_api as fixture_artifact_api
 import hub.browser_read as fixture_browser
 import hub.chat_tools as fixture_chat_tools
 import hub.ha_maintenance as fixture_maintenance
+import hub.knowledge_connections as fixture_knowledge_connections
+import hub.websearch as fixture_web_pages
 from alembic import command
 from alembic.config import Config
 from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
 from hub.db import Artifact, ArtifactRevision
+from hub.knowledge_clients import Document
 from hub.mcp_client import schema_digest
 from hub.policy import CloudGrant, ContextPart
 from hub.routing import Route
@@ -431,3 +434,22 @@ fixture_maintenance.state_inspect = synthetic_ha_inspect
 fixture_maintenance.backup_inspect = synthetic_ha_backups
 
 fixture_chat_tools.maintenance = fixture_maintenance.inspect
+
+
+# These are UI-only source adapters, never a real network-source acceptance.
+
+
+def synthetic_knowledge_documents(body, password, *, probe=False):
+    yield Document(
+        "synthetic-knowledge.txt",
+        b"Browser citation fact: synthetic external knowledge blue and seven.",
+    )
+
+
+async def synthetic_public_page(cfg, url, approved, *, user_selected=False):
+    assert approved and user_selected and url.startswith("https://example.org/")
+    return "Browser citation fact: synthetic public website blue and seven."
+
+
+fixture_knowledge_connections.documents = synthetic_knowledge_documents
+fixture_web_pages.fetch_page = synthetic_public_page

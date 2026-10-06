@@ -192,6 +192,9 @@ def context(
     project = db.get(Project, project_id)
     if not project or project.archived:
         raise ValueError("Projekt nicht verfügbar")
+    if project.kind == "knowledge":
+        from hub.knowledge_connections import check_chat_source
+        check_chat_source(db, project.id)
     parts = [
         ContextPart(
             content=f"Projekt: {project.name}\n{project.description}\n"

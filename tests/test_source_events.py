@@ -220,14 +220,27 @@ def test_migration_baselines_existing_ready_originals_without_emitting_new_event
     config = Config("alembic.ini")
     command.upgrade(config, "0021")
     factory = session_factory(url)
+    import uuid
+
+    from sqlalchemy import text
+
+    pid, sid = str(uuid.uuid4()), str(uuid.uuid4())
     with factory() as db:
-        p = Project(name="Existing original baseline")
-        db.add(p)
-        db.flush()
-        s = Source(project_id=p.id, name="existing.txt", sha256="f" * 64, size=1, status="ready")
-        db.add(s)
-        db.flush()
-        sid = s.id
+        db.execute(
+            text(
+                "INSERT INTO projects (id,name,description,instructions,label,revision,archived) "
+                "VALUES (:id,'Existing original baseline','','','LOCAL_ONLY',1,false)"
+            ),
+            {"id": pid},
+        )
+        db.execute(
+            text(
+                "INSERT INTO sources (id,project_id,name,sha256,size,label,"
+                "revision,status,error,created) "
+                "VALUES (:id,:pid,'existing.txt',:sha,1,'LOCAL_ONLY',1,'ready','',:created)"
+            ),
+            {"id": sid, "pid": pid, "sha": "f" * 64, "created": time.time()},
+        )
         db.commit()
     command.upgrade(config, "head")
     with factory() as db:

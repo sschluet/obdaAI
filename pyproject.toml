@@ -20,6 +20,7 @@ dependencies = [
   "Pillow==12.3.0",
   "python-multipart==0.0.32",
   "websockets==17.1",
+  "smbprotocol==1.17.0",
 ]
 
 [project.optional-dependencies]

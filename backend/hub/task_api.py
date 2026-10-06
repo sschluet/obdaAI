@@ -465,6 +465,65 @@ def execute_task_read(
 
 
 def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    @app.post("/api/task-examples")
+    def examples(body: StrictInput, auth: Auth) -> list[dict[str, Any]]:
+        import uuid
+
+        from hub.schedule_api import ScheduleDefinition, next_due
+
+        definitions = [
+            (
+                "workspace",
+                TaskSpec(
+                    title="Beispiel: Arbeitsraumüberblick",
+                    goal="Zeige die Anzahl meiner Projekte und Dokumente. "
+                    "Es werden keine Dokumentinhalte ausgewertet.",
+                    steps=[ReadStep()],
+                ),
+                None,
+            ),
+            (
+                "daily",
+                TaskSpec(
+                    title="Beispiel: tägliche Kurzfassung",
+                    goal="Prüfe den Arbeitsraum und fasse den gespeicherten Status "
+                    "kurz auf Deutsch zusammen.",
+                    steps=[ReadStep(), AnalyzeStep(tool_id="ai.analyze")],
+                    timeout_seconds=30,
+                ),
+                ScheduleDefinition(kind="daily", time="09:00"),
+            ),
+        ]
+        ids = []
+        with factory() as db:
+            lock(db)
+            for key, spec, definition in definitions:
+                tid = str(uuid.uuid5(uuid.NAMESPACE_URL, "obdaai-task-example-v1:" + key))
+                ids.append(tid)
+                if db.get(Task, tid):
+                    continue  # Never reset an example that its owner has edited.
+                document = encode(spec.model_dump(mode="json"))
+                db.add(Task(id=tid, paused=True))
+                db.flush()
+                db.add(
+                    TaskRevision(task_id=tid, revision=1, spec=document, sha256=digest(document))
+                )
+                if definition:
+                    db.add(
+                        TaskSchedule(
+                            task_id=tid,
+                            revision=1,
+                            task_revision=1,
+                            control_revision=1,
+                            spec_sha256=digest(document),
+                            definition=encode(definition.model_dump(mode="json")),
+                            paused=True,
+                            next_due=next_due(definition, time.time()),
+                        )
+                    )
+            db.commit()
+            return [task_info(db, tid) for tid in ids]
+
     @app.get("/api/tasks")
     def listing(auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:

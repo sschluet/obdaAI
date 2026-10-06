@@ -76,6 +76,17 @@ def enqueue_source(db: Session, cfg: Settings, source_id: str) -> None:
     )
 
 
+def enqueue_knowledge(db: Session, cfg: Settings, connection_id: str, revision: int) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable queue requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(
+        name="hub.knowledge-index", queue="sources", priority=-15, connection=raw
+    ).defer(connection_id=connection_id, revision=revision)
+
+
 def enqueue_task_read(db: Session, cfg: Settings, run_id: str) -> None:
     queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
     raw = db.connection().connection.driver_connection
@@ -163,6 +174,12 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
 
         await extract_source(factory, cfg, source_id)
 
+    @queue.task(name="hub.knowledge-index", queue="sources", retry=False)
+    async def knowledge_index(connection_id: str, revision: int) -> None:
+        from hub.knowledge_connections import index_connection
+
+        await index_connection(factory, cfg, connection_id, revision)
+
     @queue.task(name="hub.probe", queue="tests", retry=False)
     async def probe(test_id: str) -> None:
         await execute_probe(factory, cfg, test_id)
@@ -220,6 +237,7 @@ async def requeue_stalled(queue: procrastinate.App) -> None:
         "hub.title",
         "hub.probe",
         "hub.extract",
+        "hub.knowledge-index",
         "hub.task-read",
         "hub.artifact",
     ):

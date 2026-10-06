@@ -39,6 +39,7 @@ from hub.execution import execute_run
 from hub.jobs import enqueue
 from hub.knowledge import context as project_context
 from hub.knowledge_api import install_knowledge_api
+from hub.knowledge_connections import install_knowledge_connections
 from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
@@ -117,6 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     install_provider_api(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
+    install_knowledge_connections(app, cfg, factory)
     install_artifact_api(app, cfg, factory)
     install_artifact_drafts(app, cfg, factory)
     install_memory_api(app, cfg, factory)
@@ -260,10 +262,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/conversations")
     def list_chats(
-        session: SessionDependency, q: str = "", archived: bool = False
+        session: SessionDependency,
+        q: str = "",
+        archived: bool = False,
+        project_id: str | None = None,
     ) -> list[dict[str, object]]:
         with factory() as db:
             statement = select(Conversation).where(Conversation.archived == archived)
+            if project_id:
+                if not db.get(Project, project_id):
+                    raise HTTPException(404, "Projektraum nicht gefunden")
+                statement = statement.where(Conversation.project_id == project_id)
             title_match: ColumnElement[bool]
             message_match: ColumnElement[bool]
             if q:
@@ -315,6 +324,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 project = db.get(Project, body.project_id)
                 if not project or project.archived:
                     raise HTTPException(404, "Aktives Projekt nicht gefunden")
+                if project.kind == "knowledge":
+                    from hub.knowledge_connections import check_chat_source
+
+                    try:
+                        check_chat_source(db, project.id)
+                    except ValueError as error:
+                        raise HTTPException(409, str(error)) from None
                 if body.cloud_allowed:
                     raise HTTPException(409, "Projektquellen bleiben LOCAL_ONLY")
             if body.memory_scope and (body.cloud_allowed or body.project_id):

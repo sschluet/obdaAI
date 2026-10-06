@@ -2,8 +2,10 @@
 
 import asyncio
 import hashlib
+import time
 from pathlib import Path
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -29,6 +31,13 @@ class ProjectInput(BaseModel):
     archived: bool = False
 
 
+class WebsiteInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str = Field(min_length=8, max_length=2048)
+    public_url_approved: bool = False
+    request_id: UUID
+
+
 def project_info(p: Project) -> dict[str, Any]:
     return {
         "id": p.id,
@@ -38,6 +47,7 @@ def project_info(p: Project) -> dict[str, Any]:
         "label": p.label,
         "revision": p.revision,
         "archived": p.archived,
+        "kind": p.kind,
     }
 
 
@@ -51,6 +61,7 @@ def source_info(s: Source) -> dict[str, Any]:
         "error": s.error,
         "label": s.label,
         "revision": s.revision,
+        "origin_url": s.origin_url,
     }
 
 
@@ -58,7 +69,20 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
     @app.get("/api/projects")
     def projects(auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:
-            return [project_info(p) for p in db.scalars(select(Project).order_by(Project.name))]
+            return [
+                project_info(p)
+                for p in db.scalars(
+                    select(Project).where(Project.kind == "project").order_by(Project.name)
+                )
+            ]
+
+    @app.get("/api/projects/{project_id}")
+    def detail(project_id: str, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            p = db.get(Project, project_id)
+            if not p:
+                raise HTTPException(404, "Projektraum nicht gefunden")
+            return project_info(p)
 
     @app.post("/api/projects")
     def create(body: ProjectInput, auth: Auth) -> dict[str, Any]:
@@ -156,6 +180,85 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
             task = asyncio.create_task(extract_source(factory, cfg, source.id))
             app.state.tasks.add(task)
             task.add_done_callback(app.state.tasks.discard)
+        return info
+
+    @app.post("/api/projects/{project_id}/websites")
+    async def website(project_id: str, body: WebsiteInput, auth: Auth) -> dict[str, Any]:
+        from urllib.parse import urlsplit
+
+        import httpx
+
+        from hub.websearch import fetch_page
+
+        if not body.public_url_approved:
+            raise HTTPException(403, "Die konkrete öffentliche Webseite zuerst zum Abruf auswählen")
+        with factory() as db:
+            p = db.get(Project, project_id)
+            if not p or p.archived or p.kind != "project":
+                raise HTTPException(404, "Aktiver Projektraum nicht gefunden")
+            old = db.scalar(select(Source).where(Source.web_request_id == str(body.request_id)))
+            if old:
+                if old.project_id != project_id or old.origin_url != body.url:
+                    raise HTTPException(409, "Webseitenauftrag anders verwendet")
+                return source_info(old)
+        try:
+            content = await fetch_page(cfg, body.url, True, user_selected=True)
+            if not content.strip():
+                raise ValueError("Empty page")
+        except (ValueError, OSError, httpx.HTTPError):
+            raise HTTPException(
+                422,
+                "Öffentliche HTTPS-Seite nicht abrufbar. "
+                "Private Adressen, Anmeldung und Weiterleitungen werden nicht verwendet",
+            ) from None
+        payload = (
+            "Öffentliche Webseite: " + body.url + "\nAbruf: " + str(time.time()) + "\n\n" + content
+        ).encode()
+        with factory() as db:
+            if db.bind is not None and db.bind.dialect.name == "postgresql":
+                db.execute(text("SELECT pg_advisory_xact_lock(791103042)"))
+            p = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
+            if not p or p.archived:
+                raise HTTPException(409, "Projektraum inzwischen archiviert")
+            old = db.scalar(select(Source).where(Source.web_request_id == str(body.request_id)))
+            if old:
+                if old.project_id != project_id or old.origin_url != body.url:
+                    raise HTTPException(409, "Webseitenauftrag anders verwendet")
+                return source_info(old)
+            count, used = db.execute(
+                select(func.count(Source.id), func.sum(Source.size)).where(
+                    Source.project_id == project_id
+                )
+            ).one()
+            if (
+                count >= 100
+                or (used or 0) + len(payload) > 200 * 1024 * 1024
+                or (db.scalar(select(func.sum(Source.size))) or 0) + len(payload)
+                > 2 * 1024 * 1024 * 1024
+            ):
+                raise HTTPException(413, "Quellen-Speichergrenze erreicht")
+            name = "Webseite_" + (urlsplit(body.url).hostname or "quelle")[:150] + ".txt"
+            source = Source(
+                project_id=project_id,
+                name=name,
+                size=len(payload),
+                sha256=hashlib.sha256(payload).hexdigest(),
+                origin_url=body.url,
+                web_request_id=str(body.request_id),
+            )
+            db.add(source)
+            db.flush()
+            store(cfg, source, payload)
+            if not cfg.database_url.startswith("sqlite"):
+                from hub.jobs import enqueue_source
+
+                enqueue_source(db, cfg, source.id)
+            db.commit()
+            info = source_info(source)
+        if cfg.database_url.startswith("sqlite"):
+            job = asyncio.create_task(extract_source(factory, cfg, source.id))
+            app.state.tasks.add(job)
+            job.add_done_callback(app.state.tasks.discard)
         return info
 
     @app.get("/api/projects/{project_id}/sources/{source_id}/original")

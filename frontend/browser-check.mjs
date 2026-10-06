@@ -42,7 +42,7 @@ await page.getByLabel('Name der Aufgabe',{exact:true}).fill('Synthetic task from
 await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
 await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).waitFor();
 if(await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).isEnabled())throw Error('Chat transfer granted execution');
-await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
 await page.getByRole('button',{name:'Chat',exact:true}).click();
 await page.getByRole('button',{name:'Gespräch umbenennen',exact:true}).click();
 await page.getByLabel('Titel',{exact:true}).fill('Synthetic browser history');
@@ -77,12 +77,14 @@ if(await page.getByRole('dialog').locator('.project-list').count())throw Error('
 await page.getByLabel('Projektname',{exact:true}).fill('Synthetic browser project');
 await page.getByLabel('Beschreibung',{exact:true}).fill('Synthetic source isolation');
 await page.getByRole('button',{name:'Projektraum erstellen',exact:true}).click();
+await page.getByRole('tab',{name:/Quellen ·/}).click();
 await page.getByRole('heading',{name:'Dokumente',exact:true}).waitFor();
 await page.locator('input[type=file]').setInputFiles([
  {name:'synthetic.csv',mimeType:'text/csv',buffer:Buffer.from('Item;EUR\nA;10,20\nB;2,30')},
  {name:'synthetic.md',mimeType:'text/markdown',buffer:Buffer.from('# Synthetic evidence\nBrowser citation fact')}
 ]);
 await page.getByText('Bereit',{exact:true}).first().waitFor();
+await page.getByText('Weitere Dokumentfunktionen',{exact:true}).click();
 await page.getByLabel('Projektquellen durchsuchen',{exact:true}).fill('Browser citation');
 await page.getByRole('button',{name:'Fundstellen suchen',exact:true}).click();
 await page.getByText('synthetic.md · Synthetic evidence · Zeile 2',{exact:true}).waitFor();
@@ -91,7 +93,8 @@ await page.getByRole('button',{name:'Spalte 2 prüfen und summieren',exact:true}
 await page.getByText('Strukturierte Summe: 12.50',{exact:true}).waitFor();
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile project overflow');
 await page.screenshot({path:output+'/m2-projects.png',fullPage:true,animations:'disabled'});
-await page.getByRole('button',{name:'Mit diesen Dokumenten chatten',exact:true}).click();
+await page.getByRole('tab',{name:/Gespräche ·/}).click();
+await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
 await page.getByLabel('Nachricht',{exact:true}).fill('Browser citation fact');
 await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
@@ -136,16 +139,18 @@ await page.unroute('**/api/tasks');
 await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
 await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).click();
 await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).click();
-await page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true}).getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
-await page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true}).getByText('Gespeichertes Laufmanifest',{exact:true}).click();
-await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.locator('.task-detail').getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
+await page.locator('.task-detail').getByText('Gespeichertes Laufmanifest',{exact:true}).click();
+await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
+await page.getByRole('heading',{name:'Synthetic form task',exact:true}).locator('..').getByRole('button',{name:'Aufgabe öffnen',exact:true}).click();
 await page.getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
 await page.reload();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
 await page.getByRole('button',{name:'Aufgabe öffnen',exact:true}).first().click();
 await page.getByRole('button',{name:'Aufgabe pausieren',exact:true}).click();
-await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
+await page.getByRole('heading',{name:'Synthetic form task',exact:true}).locator('..').getByRole('button',{name:'Aufgabe öffnen',exact:true}).click();
 await page.getByText('SYNTHETIC_TASK_REPLY:',{exact:false}).waitFor();
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile tasks overflow');
 await page.getByText('Erweiterte Automatisierung mit n8n',{exact:true}).click();
@@ -166,8 +171,10 @@ await page.getByLabel('Uhrzeit',{exact:true}).fill('10:45');
 await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
 await page.getByRole('button',{name:'Zeitplan aktivieren',exact:true}).waitFor();
 if(await page.getByRole('button',{name:'Zeitplan aktivieren',exact:true}).isEnabled())throw Error('Missing clock permits activation');
+await page.getByRole('button',{name:'Aufgabe bearbeiten',exact:true}).click();
 if(await page.getByLabel('Uhrzeit',{exact:true}).inputValue()!=='10:45')throw Error('Schedule lost clock time');
 await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
 await page.getByRole('button',{name:'Neue Aufgabe',exact:true}).click();
 await page.getByLabel('Name der Aufgabe',{exact:true}).fill('Synthetic document event');
 await page.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Check the local workspace when a new document is ready.');
@@ -179,7 +186,7 @@ await page.getByLabel('Projektraum (optional)',{exact:true}).selectOption({label
 await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
 await page.getByRole('button',{name:'Dokumentauslöser aktivieren',exact:true}).waitFor();
 if(await page.getByRole('button',{name:'Dokumentauslöser aktivieren',exact:true}).isEnabled())throw Error('Document event activates without healthy clock');
-await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
 await page.getByLabel('Ansicht',{exact:true}).selectOption('events');
 await page.getByRole('heading',{name:'Synthetic document event',exact:true}).waitFor();
 if(await page.getByRole('heading',{name:'Synthetic weekly schedule',exact:true}).count())throw Error('Document event filter includes a timed task');
@@ -194,13 +201,15 @@ await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
 await page.getByLabel('Ansicht',{exact:true}).selectOption('recurring');
 await page.getByRole('heading',{name:'Synthetic weekly schedule',exact:true}).waitFor();
 await page.getByRole('button',{name:'Aufgabe öffnen',exact:true}).first().click();
+await page.getByRole('button',{name:'Aufgabe bearbeiten',exact:true}).click();
 if(await page.getByLabel('Uhrzeit',{exact:true}).inputValue()!=='10:45')throw Error('Schedule lost after reload');
 await page.getByLabel('Ausführung',{exact:true}).selectOption('manual');
 await page.getByRole('button',{name:'Änderungen speichern',exact:true}).click();
-await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
 
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Wissen',exact:true}).click();
+await page.getByRole('tab',{name:'Persönliche Merkliste',exact:true}).click();
 await page.getByLabel('Titel',{exact:true}).fill('Synthetic browser memory');
 await page.getByLabel('Memory-Inhalt',{exact:true}).fill('Explicit synthetic durable fact');
 await page.getByRole('button',{name:'Im Vault speichern',exact:true}).click();
@@ -213,7 +222,8 @@ await page.screenshot({path:output+'/m2-memory.png',fullPage:true,animations:'di
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.locator('button.new').and(page.getByRole('button',{name:'Neues Gespräch',exact:true})).click();
 await page.getByLabel('Nachricht',{exact:true}).fill('SYNTHETIC_WEB_QUERY public documentation');
-await page.getByLabel('Genauen Nachrichtentext für externe Websuche freigeben',{exact:true}).check();
+await page.getByLabel('Quellenoptionen',{exact:true}).selectOption('web');
+await page.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).click();
 await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 
@@ -309,7 +319,7 @@ for(const profile of ['confirm_each','bounded_autonomous']){
  await page.getByLabel('Zu archivierendes Projekt',{exact:true}).selectOption({label:projectName});
  await page.getByRole('button',{name:'Aufgabe anlegen',exact:true}).click();
  await page.getByRole('button',{name:'Aufgabe aktivieren',exact:true}).click();
- const dialog=page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true});
+ const dialog=page.locator('.task-detail');
  if(profile==='confirm_each'){
   await page.getByRole('button',{name:'Jetzt ausführen',exact:true}).click();
   await dialog.getByRole('heading',{name:'Lauf wartet auf deine Freigabe',exact:true}).waitFor();
@@ -326,7 +336,7 @@ for(const profile of ['confirm_each','bounded_autonomous']){
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Task write dialog mobile overflow');
  await page.screenshot({path:output+'/task-write-'+profile+'.png',fullPage:true,animations:'disabled'});
  await dialog.getByRole('button',{name:'Globale Aktionspause einschalten',exact:true}).click();
- await page.getByRole('button',{name:'Schließen',exact:true}).click();
+ await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click();
 }
 // Immutable project file versions through the regular mobile form. Preview is
 // explicitly a synthetic UI fixture; Linux runner checks the actual layout.
@@ -335,6 +345,7 @@ await page.getByRole('button',{name:'Projekte',exact:true}).click();
 await page.getByRole('button',{name:'Neues Projekt',exact:true}).click();
 await page.getByLabel('Projektname',{exact:true}).fill('Synthetic artifact project');
 await page.getByRole('button',{name:'Projektraum erstellen',exact:true}).click();
+await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
 await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
 let artifactDialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
 await artifactDialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic editable Word report');
@@ -353,7 +364,8 @@ await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
 await page.reload();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Projekte',exact:true}).click();
-await page.getByRole('button',{name:'Synthetic artifact project',exact:true}).click();
+await page.getByRole('heading',{name:'Synthetic artifact project',exact:true}).locator('..').click();
+await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
 await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
 await page.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
 artifactDialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
