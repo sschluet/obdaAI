@@ -21,7 +21,7 @@ try{
  await dialog.getByLabel('Wann auswerten?',{exact:true}).selectOption('ha_updates_available');
  await dialog.getByLabel('n8n soll auf den Aufgabenabschluss warten und Fehler sichtbar melden',{exact:true}).check();
  await save.click();
- await page.getByRole('heading',{name:title,exact:true}).waitFor();
+ await page.getByRole('heading',{name:title,exact:true,level:2}).waitFor();
  await page.getByRole('button',{name:'Aufgabe bearbeiten',exact:true}).click();
  if(!await dialog.getByLabel('n8n soll auf den Aufgabenabschluss warten und Fehler sichtbar melden',{exact:true}).isChecked())throw Error('Bound n8n completion option lost');
  if(!await dialog.getByLabel('Die ausgewählten Systemberichte ausdrücklich für diese lokale KI-Auswertung verwenden',{exact:true}).isChecked())throw Error('Explicit report scope lost');
