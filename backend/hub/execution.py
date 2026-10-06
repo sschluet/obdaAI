@@ -17,6 +17,7 @@ from sqlalchemy import update as sql_update
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.budgets import ExecutionLimitError, reserve, settle
+from hub.chat_artifacts import ambiguous_file_revision
 from hub.config import Settings
 from hub.db import Conversation, Memory, Message, ProviderConfig, Research, Run, RunEvent
 from hub.memory import digest, serialize, validate_mount
@@ -172,6 +173,11 @@ async def execute_run(
                 status = "succeeded"
                 update(status="streaming", provider="local", reason="Explizites Memory ohne Modell")
                 raise MemoryCompleted
+            if c.project_id and latest and ambiguous_file_revision(latest.content):
+                raise ExecutionLimitError(
+                    "Die letzte Chat-Datei ausdrücklich benennen oder eine konkrete Version "
+                    "im Dateidialog wählen; es wurde keine Datei geändert"
+                )
             if c.memory_scope and not cfg.vault_dir:
                 raise ExecutionLimitError("Keine Vault-Recherche: Zugang noch nicht angebunden")
             selected: dict[str, ProviderConfig] = {}

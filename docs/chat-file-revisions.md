@@ -5,7 +5,8 @@ Eine konkrete Änderungsbitte wie „Überarbeite die letzte Word-Datei“ oder
 Datei dieses Gesprächs. Die Änderung muss die letzte Datei ausdrücklich benennen;
 ein alleinstehender numerischer Folienbefehl ist ebenfalls zulässig. Ein anders
 benanntes oder unklar bezeichnetes Dokument wird nicht automatisch durch die
-letzte Datei ersetzt. Es werden höchstens 50 vergangene erfolgreiche Runs
+letzte Datei ersetzt. Direkte unklare Dateiänderungsaufträge werden bereits vor
+der Modellklassifikation mit einer konkreten Auswahlmeldung abgewiesen. Es werden höchstens 50 vergangene erfolgreiche Runs
 geprüft. Andere Gespräche, beliebige Projektdateien und vom Modell gelieferte IDs
 sind keine Auswahlquelle. Fehlt eine eindeutige aktuelle Ausgangsversion, wird
 nichts erstellt; die konkrete Version kann im normalen Dateidialog gewählt werden.

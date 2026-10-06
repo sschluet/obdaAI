@@ -369,3 +369,22 @@ def test_ambiguous_revision_does_not_guess_last_file_or_call_model(setup, goal):
     assert provider.calls == calls
     rows = c.get("/api/projects/" + pid + "/artifacts").json()
     assert len(rows) == 1 and rows[0]["artifact_id"] == first["artifact"]["artifact_id"]
+
+
+def test_unknown_named_file_is_rejected_before_router(setup):
+    app, c, h, cfg, pid, _ = setup
+    provider = FileProvider(DOCUMENT)
+    app.state.providers = provider
+    chat = c.post("/api/conversations", headers=h, json={"project_id": pid}).json()["id"]
+    _, first = file_chat(c, h, chat, "Erstelle eine Word-Datei.")
+
+    async def unexpected_route(parts, roles):
+        raise AssertionError("An ambiguous file target must not reach model classification")
+
+    provider.route = unexpected_route
+    response, run = file_chat(c, h, chat, "Überarbeite die Word-Datei Anderer Bericht.")
+    assert run["status"] == "failed"
+    assert run["error"].startswith("Die letzte Chat-Datei ausdrücklich benennen")
+    assert provider.calls == 1
+    rows = c.get("/api/projects/" + pid + "/artifacts").json()
+    assert len(rows) == 1 and rows[0]["artifact_id"] == first["artifact"]["artifact_id"]

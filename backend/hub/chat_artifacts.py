@@ -19,6 +19,24 @@ def requests_revision(goal: str) -> bool:
     return bool(re.search(r"\b(überarbeite|ändere|kürze|revise|shorten|update)\b", goal, re.I))
 
 
+def ambiguous_file_revision(goal: str) -> bool:
+    """Reject direct file edits with no bound target before model classification."""
+    return bool(
+        re.search(
+            r"^\s*(?:(?:bitte|please)\s+)?(?:überarbeite|ändere|kürze|revise|shorten|update)\s+",
+            goal,
+            re.I,
+        )
+        and re.search(
+            r"\b(?:word(?:[- ]?(?:datei|dokument|file|document))?|powerpoint|"
+            r"präsentation|datei|dokument|docx|pptx|pdf|file|presentation|document)\b",
+            goal,
+            re.I,
+        )
+        and not explicit_revision_target(goal)
+    )
+
+
 def explicit_revision_target(goal: str) -> bool:
     name = (
         r"(?:word[- ](?:datei|dokument|file|document)|worddatei|worddokument|"
