@@ -36,7 +36,7 @@ def child(request: Path, output: Path) -> None:
     inputs = [request / ("source-" + str(i)) for i in range(len(spec.sources))]
     manifest = render(spec, inputs, output / "version")
     path = output / "version" / manifest["filename"]
-    manifest["previews"] = previews(path)
+    manifest["previews"] = previews(path.with_suffix(".pdf") if manifest.get("parts") else path)
     if spec.plan.kind == "docx" and spec.plan.pdf_export:
         pdf = output / "version" / "previews" / "artifact.pdf"
         pdf.chmod(0o400)

@@ -48,14 +48,14 @@ def media_operation(goal: str, originals: list[Source]) -> str | None:
     if not originals or not re.search(
         r"^\s*(?:(?:bitte|please)\s+)?(?:erstelle|erzeuge|generiere|kombiniere|"
         r"führe|füge|verbinde|extrahiere|entferne|drehe|schneide|verkleinere|vergrößere|skaliere|ändere|"
-        r"create|make|merge|split|rotate|crop|resize)\b",
+        r"teile|trenne|create|make|merge|split|rotate|crop|resize)\b",
         goal,
         re.I,
     ):
         return None
     suffixes = {PurePath(s.name).suffix.lower() for s in originals}
     if suffixes == {".pdf"} and re.search(
-        r"\b(seiten?|pages?|zusammenführen|zusammen|kombiniere|merge|extrahiere|split|drehe|rotate)\b",
+        r"\b(seiten?|pages?|zusammenführen|zusammen|kombiniere|merge|extrahiere|teile|trenne|split|drehe|rotate)\b",
         goal,
         re.I,
     ):

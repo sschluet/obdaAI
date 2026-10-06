@@ -64,6 +64,9 @@ try{
   }else if(kind==='pdf'){
    await dialog.getByRole('button',{name:'Ausgabeseite hinzufügen',exact:true}).click();
    await dialog.getByLabel('Seite im Original',{exact:true}).fill('2');
+   await dialog.getByRole('button',{name:'Ausgabeseite hinzufügen',exact:true}).click();
+   await dialog.getByRole('button',{name:'Jede Ausgabeseite als eigene PDF',exact:true}).click();
+   if(!await dialog.getByLabel('Nach Ausgabeseite 1 einen neuen PDF-Teil beginnen',{exact:true}).isChecked())throw Error('Missing PDF partition');
   }else{
    await dialog.getByRole('button',{name:'Bild hinzufügen',exact:true}).click();
    await dialog.getByLabel('Bildbeschriftung',{exact:true}).fill('Synthetic blue');
@@ -74,11 +77,18 @@ try{
   const card=page.locator('article').filter({has:page.getByText(title+' · Version 1',{exact:true})});
   await card.getByRole('button',{name:'Vorschau öffnen',exact:true}).click();
   const view=page.getByRole('dialog',{name:'Dateivorschau',exact:true});
-  const expected=kind==='pptx'?2:1;
+  const expected=kind==='image'?1:2;
   if(await view.locator('img').count()!==expected)throw Error('Wrong preview page count');
   await view.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
   await view.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
-  await card.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+  await card.getByRole('link',{name:kind==='pdf'?'Alle PDF-Teile als ZIP herunterladen':'Datei herunterladen',exact:true}).waitFor();
+  if(kind==='pdf'){
+   await card.getByRole('link',{name:/PDF-Teil 1 herunterladen/}).waitFor();
+   await card.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
+   const edit=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+   if(!await edit.getByLabel('Nach Ausgabeseite 1 einen neuen PDF-Teil beginnen',{exact:true}).isChecked())throw Error('Partition lost after reload');
+   await edit.getByRole('button',{name:'Abbrechen',exact:true}).click();
+  }
  }
  for(const kind of ['docx','pdf']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();

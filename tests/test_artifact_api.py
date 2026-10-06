@@ -109,7 +109,9 @@ def pump(app, c, cfg, pid, row):
     )
     manifest["spec_sha256"] = row["spec_sha256"]
     manifest["status"] = "needs_review"
-    manifest["previews"] = previews(output / "version" / manifest["filename"])
+    manifest["previews"] = previews(
+        output / "version" / ("artifact.pdf" if manifest.get("parts") else manifest["filename"])
+    )
     (output / "manifest.json").write_text(json.dumps(manifest))
     rows = c.get("/api/projects/" + pid + "/artifacts").json()
     return next(
@@ -335,3 +337,67 @@ def test_optional_pdf_export_shares_review_gate_and_detects_drift(setup, monkeyp
     pdf.write_bytes(b"drift")
     assert c.get(base(pid, row) + "/download?pdf=true").status_code == 409
     assert c.get(base(pid, row) + "/download").status_code == 409
+
+
+def test_pdf_parts_require_full_review_and_reject_archive_or_piece_drift(setup, tmp_path):
+    import io
+    import zipfile
+
+    from pypdf import PdfReader, PdfWriter
+
+    app, c, h, cfg, pid, _ = setup
+    writer = PdfWriter()
+    for width in (100, 200, 300):
+        writer.add_blank_page(width=width, height=400)
+    stream = io.BytesIO()
+    writer.write(stream)
+    content = stream.getvalue()
+    with app.state.sessions() as db:
+        source = Source(
+            project_id=pid,
+            name="split-input.pdf",
+            size=len(content),
+            sha256=hashlib.sha256(content).hexdigest(),
+            status="ready",
+        )
+        db.add(source)
+        db.flush()
+        store(cfg, source, content)
+        bindings = [{"id": source.id, "revision": source.revision, "sha256": source.sha256}]
+        db.commit()
+    spec = {
+        "sources": bindings,
+        "plan": {
+            "kind": "pdf",
+            "title": "Mehrere PDFs",
+            "pages": [
+                {"source": 0, "page": 3, "rotation": 90},
+                {"source": 0, "page": 1},
+                {"source": 0, "page": 2},
+            ],
+            "split_after": [1],
+        },
+    }
+    row = create(c, h, pid, spec).json()
+    ready = pump(app, c, cfg, pid, row)
+    assert ready["status"] == "needs_review"
+    prefix = base(pid, ready)
+    assert c.get(prefix + "/download?part=1").status_code == 409
+    assert c.post(prefix + "/accept", headers=h, json=acceptance(ready, False)).status_code == 409
+    assert c.post(prefix + "/accept", headers=h, json=acceptance(ready)).status_code == 200
+    package = c.get(prefix + "/download")
+    assert package.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(package.content)) as archive:
+        for n, meta in enumerate(ready["output"]["parts"], 1):
+            result = c.get(prefix + "/download?part=" + str(n))
+            assert result.status_code == 200 and result.content == archive.read(
+                "part-" + str(n) + ".pdf"
+            )
+            assert len(PdfReader(io.BytesIO(result.content)).pages) == meta["pages"]
+    for query in ("part=0", "part=3", "part=1&pdf=true"):
+        assert c.get(prefix + "/download?" + query).status_code == 404
+    path = Path(cfg.artifact_result_dir) / (row["artifact_id"] + "-1") / "version/parts/part-1.pdf"
+    path.chmod(0o600)
+    path.write_bytes(b"altered")
+    assert c.get(prefix + "/download").status_code == 409
+    assert c.get(prefix + "/download?part=2").status_code == 409

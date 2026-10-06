@@ -310,3 +310,33 @@ def test_user_page_order_overrides_model_reordering_with_audited_command_binding
     row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
     assert [p["page"] for p in row["spec"]["plan"]["pages"]] == [2, 1]
     assert row["draft"]["command_binding"]["version"] == 1
+
+
+def test_named_pdf_split_overrides_model_partition_from_direct_user(setup, tmp_path):
+    app, c, h, cfg, pid, _ = setup
+    raw = io.BytesIO()
+    writer = PdfWriter()
+    for width in (100, 200, 300):
+        writer.add_blank_page(width=width, height=400)
+    writer.write(raw)
+    sid = put(app, cfg, pid, "split.pdf", raw.getvalue())
+    app.state.providers = FileProvider(
+        json.dumps(
+            {"title": "Einzeldateien", "pages": [{"source": 0, "page": 1}], "split_after": []}
+        )
+    )
+    chat = conversation(c, h, pid)
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Teile split.pdf mit Seiten 3,1,2 in Einzel-PDFs."},
+    )
+    assert "succeeded" in response.text, response.text
+    row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+    assert row["spec"]["plan"]["split_after"] == [1, 2]
+    assert [p["page"] for p in row["spec"]["plan"]["pages"]] == [3, 1, 2]
+    assert row["draft"]["command_binding"]["split_after"] == [1, 2]
+    with app.state.sessions() as db:
+        path = original(cfg, db.get(Source, sid))
+    manifest = render(ArtifactSpec.model_validate(row["spec"]), [path], tmp_path / "split")
+    assert len(manifest["parts"]) == 3

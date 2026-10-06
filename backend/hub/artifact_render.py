@@ -7,7 +7,9 @@ HTTP client or model-code execution. Office preview rendering is a separate stag
 import hashlib
 import io
 import math
+import shutil
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -299,7 +301,9 @@ def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, An
         raise ValueError("Ausgabeversion existiert bereits")
     output.mkdir(mode=0o700)
     plan = spec.plan
-    suffix = plan.format if isinstance(plan, ImagePlan) else plan.kind
+    split = isinstance(plan, PdfPlan) and bool(plan.split_after)
+    suffix = "zip" if split else plan.format if isinstance(plan, ImagePlan) else plan.kind
+    pieces = []
     path = output / ("artifact." + suffix)
     try:
         if isinstance(plan, DocumentPlan):
@@ -307,7 +311,42 @@ def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, An
         elif isinstance(plan, PresentationPlan):
             _presentation(plan, path)
         elif isinstance(plan, PdfPlan):
-            _pdf(plan, inputs, path)
+            if split:
+                # The joined PDF is only the ordered review surface. Downloads
+                # consist of these exact, separately checked immutable PDFs.
+                _pdf(plan, inputs, output / "artifact.pdf")
+                folder = output / "parts"
+                folder.mkdir(mode=0o700)
+                edges = [0, *plan.split_after, len(plan.pages)]
+                with zipfile.ZipFile(path, "x", compression=zipfile.ZIP_STORED) as archive:
+                    total = 0
+                    for number, (start, end) in enumerate(
+                        zip(edges[:-1], edges[1:], strict=True), 1
+                    ):
+                        part = folder / ("part-" + str(number) + ".pdf")
+                        _pdf(
+                            PdfPlan(kind="pdf", title=plan.title, pages=plan.pages[start:end]),
+                            inputs,
+                            part,
+                        )
+                        total += part.stat().st_size
+                        if total > MAX_OUTPUT:
+                            raise ValueError("PDF-Teile überschreiten das Ausgabegrößenlimit")
+                        content = part.read_bytes()
+                        archive.writestr(part.name, content)
+                        part.chmod(0o400)
+                        pieces.append(
+                            {
+                                "filename": "parts/" + part.name,
+                                "sha256": hashlib.sha256(content).hexdigest(),
+                                "bytes": len(content),
+                                "first_page": start + 1,
+                                "pages": end - start,
+                            }
+                        )
+                (output / "artifact.pdf").chmod(0o400)
+            else:
+                _pdf(plan, inputs, path)
         else:
             _image(plan, inputs, path)
         if not 0 < path.stat().st_size <= MAX_OUTPUT:
@@ -319,8 +358,8 @@ def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, An
             "bytes": path.stat().st_size,
             "label": "LOCAL_ONLY",
             "preview_verified": False,
+            **({"parts": pieces} if split else {}),
         }
     except Exception:
-        path.unlink(missing_ok=True)
-        output.rmdir()
+        shutil.rmtree(output)
         raise

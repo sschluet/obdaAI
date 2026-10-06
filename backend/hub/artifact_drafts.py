@@ -421,6 +421,10 @@ async def preview(
         if selected_pages:
             value["pages"] = selected_pages
             command_binding = {"version": 1, "pages": selected_pages}
+            splits = media_intent.split_after(body.goal, len(selected_pages))
+            if splits is not None:
+                value["split_after"] = splits
+                command_binding["split_after"] = splits
         elif selected_image:
             value.update(selected_image)
             command_binding = {"version": 1, **selected_image}

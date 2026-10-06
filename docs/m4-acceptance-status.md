@@ -1,12 +1,12 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026, produktiv `c13e41f` / Schema 0022. Die Dateipipeline ist live;
+Stand 06.10.2026, produktiv `5c1930f` / Schema 0024; zusätzlicher PDF-Aufteilungsblock in Abnahme. Die Dateipipeline ist live;
 M4 bleibt wegen weiterer natürlicher Änderungen und breiter Qualitätsabnahme teilweise.
 
 | Funktion | Implementiert und tatsächlich geprüft | Verbleibende Grenze |
 |---|---|---|
 | Word | Native editierbare Abschnitte/Tabellen/Bilder, blaue Gestaltung, optionaler PDF-Export; Linux-Vorschau, visuelle QA, authentifizierter Download, erneut geöffnet | Allgemeine semantische und Layoutprüfung jeder Nutzerdatei |
-| PowerPoint | Native Texte, feste Folienanzahl, Notizen, feste Fonts mit Mindestgrößen und Platzreserve; zwei dichte deutsche Folien visuell geprüft und erneut geöffnet | Breiter Inhalt-/Layoutkorpus; quellengebundene Einzelfolien im Dateidialog |
+| PowerPoint | Native Texte, feste Folienanzahl, Notizen, feste Fonts mit Mindestgrößen und Platzreserve; zwei dichte deutsche Folien visuell geprüft und erneut geöffnet | Breiter Inhalt-/Layoutkorpus; breitere Einzelfolien-Abnahme mit Nutzerdokumenten |
 | PDF | Gebundene Seiten auswählen, umordnen, drehen, weglassen; neue PDFs aus Text/Tabellen/Bildern, Word-PDF-Export; Live-Vorschau/Hashdownload | Keine überprüfte echte Schwärzung; verschlüsselte/signierte Eingaben abgewiesen |
 | Bilder | Zuschnitt, Größenanpassung, Collage, PNG/JPEG, Unicode-Beschriftung; echte Pixel-/Live-QA; Alpha-Erhaltung in Word und Komposition auf Collagehintergrund | Keine KI-Bildgenerierung; weitere natürliche Bildänderungen |
 | Quellen | Nur gebundene Originalrevisionen/Hashes; explizite Projektsammlung mit 1–4 fertig eingelesenen Originalen; Fundstellen im lokalen Modellplan | Keine automatische Mischung mit fremden Projekten, Memory oder Webrecherche |
@@ -43,8 +43,10 @@ Unix-Socket-tmpfs, allgemeines /tmp readonly. Status 81 beim Erststart wird gena
 einmal mit denselben festen Argumenten wiederholt; sonst keine Crashwiederholung.
 Siehe [offiziellen LibreOffice-Launcher](https://github.com/LibreOffice/core/blob/libreoffice-7.4.7.2/desktop/unx/source/start.c).
 
-Noch offen: natürliche PDF-Seiten-/Collageoperationen im Chat, komplexere bzw.
-dateiübergreifende Änderungen, quellengebundene Einzelfolien, kombinierte
+Natürliche PDF-Seiten-/Bildoperationen und quellengebundene Einzelfolien sind
+umgesetzt und getrennt geprüft (siehe docs/chat-media-files.md). PDF-Aufteilung
+ist im lokalen Runner, normalen Dialog und Chat ergänzt; reale Linux-Abnahme folgt.
+Noch offen: komplexere bzw. dateiübergreifende Änderungen, kombinierte
 Recherche-Dateierstellung und breitere semantische/Layout-QA. Die normalen Dialoge unterstützen die genannten manuellen Operationen
 bereits. Konkrete Folgeänderungen der letzten Chat-Datei sind umgesetzt; siehe
 docs/chat-file-revisions.md. Keine vollständige M4-Abnahme aus Unit- oder

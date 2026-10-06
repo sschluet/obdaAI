@@ -37,9 +37,18 @@ class PdfExport(BaseModel):
     bytes: int = Field(gt=0, le=MAX_OUTPUT)
 
 
+class PdfPart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(pattern=r"^parts/part-[0-9]{1,2}\.pdf$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    bytes: int = Field(gt=0, le=MAX_OUTPUT)
+    first_page: int = Field(ge=1, le=100)
+    pages: int = Field(ge=1, le=100)
+
+
 class OutputManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    filename: str = Field(pattern=r"^artifact\.(docx|pptx|pdf|png|jpeg)$")
+    filename: str = Field(pattern=r"^artifact\.(docx|pptx|pdf|png|jpeg|zip)$")
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     bytes: int = Field(gt=0, le=MAX_OUTPUT)
     label: str = Field(pattern=r"^LOCAL_ONLY$")
@@ -48,6 +57,7 @@ class OutputManifest(BaseModel):
     spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     status: str = Field(pattern=r"^needs_review$")
     pdf_export: PdfExport | None = None
+    parts: list[PdfPart] = Field(default_factory=list, max_length=20)
 
 
 def roots(cfg: Settings) -> tuple[Path, Path]:
@@ -146,7 +156,8 @@ def spool(db: Session, cfg: Settings, artifact: Artifact, row: ArtifactRevision)
 def output_file(cfg: Settings, row: ArtifactRevision, filename: str, sha256: str) -> Path:
     _, results = roots(cfg)
     pattern = (
-        r"artifact\.(docx|pptx|pdf|png|jpeg)|previews/page-[0-9]{1,3}\.png|previews/artifact\.pdf"
+        r"artifact\.(docx|pptx|pdf|png|jpeg|zip)|previews/page-[0-9]{1,3}\.png|"
+        r"previews/artifact\.pdf|parts/part-[0-9]{1,2}\.pdf"
     )
     if not re.fullmatch(pattern, filename):
         raise ValueError("Ungültige Ausgabedatei")
@@ -165,7 +176,8 @@ def checked_manifest(cfg: Settings, row: ArtifactRevision, raw: str) -> OutputMa
     spec = spec_for(row)
     if manifest.spec_sha256 != row.spec_sha256 or manifest.preview_verified:
         raise ValueError("Dateiauftrag passt nicht zur Vorschau")
-    suffix = spec.plan.format if spec.plan.kind == "image" else spec.plan.kind
+    split = spec.plan.kind == "pdf" and bool(spec.plan.split_after)
+    suffix = "zip" if split else spec.plan.format if spec.plan.kind == "image" else spec.plan.kind
     if manifest.filename != "artifact." + suffix:
         raise ValueError("Ausgabeformat passt nicht zur Vorgabe")
     expected = (
@@ -184,6 +196,50 @@ def checked_manifest(cfg: Settings, row: ArtifactRevision, raw: str) -> OutputMa
     output = output_file(cfg, row, manifest.filename, manifest.sha256)
     if output.stat().st_size != manifest.bytes:
         raise ValueError("Dateigröße passt nicht zum Beleg")
+    if split:
+        import zipfile
+
+        from pypdf import PdfReader
+
+        assert spec.plan.kind == "pdf"
+        edges = [0, *spec.plan.split_after, len(spec.plan.pages)]
+        if len(manifest.parts) != len(edges) - 1:
+            raise ValueError("PDF-Teile fehlen")
+        try:
+            with zipfile.ZipFile(output) as archive:
+                names = ["part-" + str(n) + ".pdf" for n in range(1, len(edges))]
+                if archive.namelist() != names:
+                    raise ValueError("PDF-Archiv enthält abweichende Dateien")
+                total = 0
+                for number, (part, start, end) in enumerate(
+                    zip(manifest.parts, edges[:-1], edges[1:], strict=True), 1
+                ):
+                    if (
+                        part.filename != "parts/part-" + str(number) + ".pdf"
+                        or part.first_page != start + 1
+                        or part.pages != end - start
+                    ):
+                        raise ValueError("PDF-Teile passen nicht zur Seitenfolge")
+                    native = output_file(cfg, row, part.filename, part.sha256)
+                    entry = archive.getinfo(names[number - 1])
+                    total += entry.file_size
+                    if (
+                        entry.file_size != part.bytes
+                        or total > MAX_OUTPUT
+                        or entry.compress_type != zipfile.ZIP_STORED
+                        or entry.flag_bits & 1
+                    ):
+                        raise ValueError("Ungültiger PDF-Archivteil")
+                    if (
+                        native.stat().st_size != part.bytes
+                        or len(PdfReader(native, strict=True).pages) != part.pages
+                        or hashlib.sha256(archive.read(entry)).hexdigest() != part.sha256
+                    ):
+                        raise ValueError("PDF-Archivteil wurde verändert")
+        except (zipfile.BadZipFile, EOFError, RuntimeError) as exc:
+            raise ValueError("Ungültiges PDF-Archiv") from exc
+    elif manifest.parts:
+        raise ValueError("PDF-Teile ohne Trennauftrag")
     wants_pdf = spec.plan.kind == "docx" and spec.plan.pdf_export
     if bool(manifest.pdf_export) != wants_pdf:
         raise ValueError("PDF-Export passt nicht zur Vorgabe")

@@ -25,7 +25,7 @@ class StrictPlan(BaseModel):
         data: dict[str, Any] = handler(self)
         # Absent extensions retain the exact canonical shape of existing V1
         # requests and receipts. Never invalidate an old immutable version.
-        for key in ("images", "pdf_export", "caption"):
+        for key in ("images", "pdf_export", "caption", "split_after"):
             if not data.get(key):
                 data.pop(key, None)
         if data.get("kind") == "pdf" and not data.get("sections"):
@@ -99,9 +99,18 @@ class PdfPlan(StrictPlan):
     title: Short
     pages: list[PageSelection] = Field(default_factory=list, max_length=100)
     sections: list[Section] = Field(default_factory=list, max_length=30)
+    split_after: list[Annotated[int, Field(strict=True)]] = Field(
+        default_factory=list, max_length=19
+    )
 
     @model_validator(mode="after")
     def one_mode(self) -> "PdfPlan":
+        if self.split_after and (
+            not self.pages
+            or any(type(n) is not int or not 1 <= n < len(self.pages) for n in self.split_after)
+            or self.split_after != sorted(set(self.split_after))
+        ):
+            raise ValueError("PDF-Trennstellen müssen eindeutig aufsteigend zwischen Seiten liegen")
         if bool(self.pages) == bool(self.sections):
             raise ValueError("PDF benötigt entweder Seiten oder Dokumentinhalt")
         if sum(len(section.images) for section in self.sections) > 12:

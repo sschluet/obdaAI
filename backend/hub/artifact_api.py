@@ -368,7 +368,12 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
 
     @app.get("/api/projects/{project_id}/artifacts/{artifact_id}/versions/{revision}/download")
     def download(
-        project_id: str, artifact_id: str, revision: int, auth: Auth, pdf: bool = False
+        project_id: str,
+        artifact_id: str,
+        revision: int,
+        auth: Auth,
+        pdf: bool = False,
+        part: int | None = None,
     ) -> FileResponse:
         enabled()
         with factory() as db:
@@ -379,14 +384,22 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 manifest = checked_manifest(cfg, row, row.manifest)
                 if pdf and not manifest.pdf_export:
                     raise HTTPException(404, "Für diese Version wurde kein PDF-Export erstellt")
-                file = manifest.pdf_export if pdf else manifest
+                if part is not None and (pdf or not 1 <= part <= len(manifest.parts)):
+                    raise HTTPException(404, "PDF-Teil fehlt")
+                file = (
+                    manifest.parts[part - 1]
+                    if part is not None
+                    else manifest.pdf_export
+                    if pdf
+                    else manifest
+                )
                 assert file is not None
                 path = output_file(cfg, row, file.filename, file.sha256)
             except (ValueError, OSError) as exc:
                 raise HTTPException(409, "Dateiversion wurde verändert") from exc
             return FileResponse(
                 path,
-                filename="artifact.pdf" if pdf else manifest.filename,
+                filename=file.filename.rsplit("/", 1)[-1],
                 headers={
                     "Cache-Control": "no-store",
                     "X-Content-Type-Options": "nosniff",

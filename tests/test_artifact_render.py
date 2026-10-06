@@ -460,3 +460,88 @@ def test_new_pdf_uses_fixed_office_conversion_and_cleans_temporary_docx(tmp_path
     ]:
         with pytest.raises(ValidationError):
             ArtifactSpec.model_validate({"plan": plan})
+
+
+def test_pdf_split_packages_exact_selected_order_and_rotation(tmp_path):
+    source = tmp_path / "split.pdf"
+    writer = PdfWriter()
+    for width in [100, 200, 300]:
+        writer.add_blank_page(width=width, height=400)
+    writer.add_js("never execute")
+    writer.write(source)
+    before = source.read_bytes()
+    spec = ArtifactSpec.model_validate(
+        {
+            "sources": [binding(source)],
+            "plan": {
+                "kind": "pdf",
+                "title": "Teile",
+                "pages": [
+                    {"source": 0, "page": 3, "rotation": 90},
+                    {"source": 0, "page": 1},
+                    {"source": 0, "page": 2},
+                ],
+                "split_after": [1],
+            },
+        }
+    )
+    out = tmp_path / "output"
+    manifest = render(spec, [source], out)
+    assert manifest["filename"] == "artifact.zip"
+    assert [(p["first_page"], p["pages"]) for p in manifest["parts"]] == [(1, 1), (2, 2)]
+    with zipfile.ZipFile(out / manifest["filename"]) as archive:
+        assert archive.namelist() == ["part-1.pdf", "part-2.pdf"]
+        for number, metadata in enumerate(manifest["parts"], 1):
+            content = archive.read("part-" + str(number) + ".pdf")
+            assert content == (out / metadata["filename"]).read_bytes()
+            assert hashlib.sha256(content).hexdigest() == metadata["sha256"]
+        first = PdfReader(io.BytesIO(archive.read("part-1.pdf")))
+        second = PdfReader(io.BytesIO(archive.read("part-2.pdf")))
+        assert first.pages[0].mediabox.width == 300 and first.pages[0].rotation == 90
+        assert [p.mediabox.width for p in second.pages] == [100, 200]
+        assert "/OpenAction" not in first.trailer["/Root"]
+    assert source.read_bytes() == before
+
+
+@pytest.mark.parametrize("splits", [[0], [3], [2, 1], [1, 1], [-1]])
+def test_pdf_split_rejects_invalid_boundaries(splits):
+    with pytest.raises(ValidationError):
+        ArtifactSpec.model_validate(
+            {
+                "sources": [
+                    {
+                        "id": "00000000-0000-0000-0000-000000000001",
+                        "revision": 1,
+                        "sha256": "a" * 64,
+                    }
+                ],
+                "plan": {
+                    "kind": "pdf",
+                    "title": "Teile",
+                    "pages": [{"source": 0, "page": 1}] * 3,
+                    "split_after": splits,
+                },
+            }
+        )
+
+
+def test_pdf_split_failure_leaves_no_partial_package(tmp_path):
+    source = tmp_path / "missing-page.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    writer.write(source)
+    spec = ArtifactSpec.model_validate(
+        {
+            "sources": [binding(source)],
+            "plan": {
+                "kind": "pdf",
+                "title": "Ungültig",
+                "pages": [{"source": 0, "page": 1}, {"source": 0, "page": 2}],
+                "split_after": [1],
+            },
+        }
+    )
+    out = tmp_path / "failed"
+    with pytest.raises(ValueError, match="existiert nicht"):
+        render(spec, [source], out)
+    assert not out.exists()

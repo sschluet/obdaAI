@@ -52,3 +52,18 @@ Nutzerangaben wie „Seiten 2,1“, „zuerst Originalseite 2, danach Originalse
 zusätzlich als feste Datenvorgaben geparst. Sie überschreiben widersprechende
 Modellvorschläge und stehen mit ihrer Version im `command_binding`-Beleg. Freie
 Prosa, unbekannte Geometrie oder mehrere Originale werden nicht so geraten.
+
+
+PDF-Aufteilung: Im normalen Seitendialog können Trennstellen zwischen Ausgabeseiten
+markiert werden, oder jede ausgewählte Seite wird eine eigene PDF. Maximal zwanzig
+Teile und insgesamt hundert Ausgabeseiten; Auswahl, Reihenfolge und Drehung gelten
+vor der Aufteilung. Downloads enthalten einzeln hashgebundene PDFs und ein ZIP
+mit genau denselben unverpackten Teildateien, festen Namen und ohne Pfadübernahme.
+Die gemeinsame Vorschau zeigt alle Teile in Ausgabereihenfolge und nennt den Teil.
+Erst die Prüfung sämtlicher Seiten schaltet alle Downloads frei. Beschädigte Teile
+oder ZIPs sperren die gesamte Version. Originale werden nicht überschrieben.
+
+Natürlicher direkter Auftrag, beispielsweise „Teile Bericht.pdf mit Seiten 3,1,2
+in Einzel-PDFs“, bindet die genannte Seitenfolge und die Trennstellen unabhängig
+von einem abweichenden Modellvorschlag. „Trenne nach Ausgabeseiten 1 und 3“ erlaubt
+konkrete Gruppen. Inhaltsabhängige automatische Kapiteltrennung wird nicht behauptet.

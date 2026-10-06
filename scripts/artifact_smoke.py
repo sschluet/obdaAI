@@ -64,6 +64,14 @@ plans = [
         ],
     },
 ]
+plans.append(
+    {
+        "kind": "pdf",
+        "title": "Synthetische Einzel-PDFs",
+        "pages": [{"source": 0, "page": 2, "rotation": 90}, {"source": 0, "page": 1}],
+        "split_after": [1],
+    }
+)
 
 
 def prepare() -> None:
@@ -101,15 +109,28 @@ def prepare() -> None:
 
 def check() -> None:
     manifests = [json.loads((p / "manifest.json").read_text()) for p in results.iterdir()]
-    assert len(manifests) == 5
+    assert len(manifests) == 6
     for manifest in manifests:
         assert manifest["status"] == "needs_review", manifest
         assert manifest["label"] == "LOCAL_ONLY"
         assert not manifest["preview_verified"]
-    assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 2, 2]
+    assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 2, 2, 2]
+    split = next(m for m in manifests if m.get("parts"))
+    assert [(p["first_page"], p["pages"]) for p in split["parts"]] == [(1, 1), (2, 1)]
     exports = [m["pdf_export"] for m in manifests if m.get("pdf_export")]
     assert len(exports) == 1 and exports[0]["bytes"] > 0
     for folder in results.iterdir():
+        package = folder / "version/artifact.zip"
+        if package.exists():
+            from pypdf import PdfReader
+
+            with zipfile.ZipFile(package) as archive:
+                assert archive.namelist() == ["part-1.pdf", "part-2.pdf"]
+                first = PdfReader(io.BytesIO(archive.read("part-1.pdf")))
+                second = PdfReader(io.BytesIO(archive.read("part-2.pdf")))
+                assert len(first.pages) == len(second.pages) == 1
+                assert first.pages[0].mediabox.width == 300 and first.pages[0].rotation == 90
+                assert second.pages[0].mediabox.width == 200
         document = folder / "version/artifact.docx"
         if document.exists():
             with zipfile.ZipFile(document) as archive:

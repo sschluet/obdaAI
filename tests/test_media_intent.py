@@ -32,3 +32,13 @@ def test_explicit_crop_coordinates_and_dimensions_do_not_come_from_model():
         "auf 128 mal 128 Pixel"
     )["tiles"][0]["crop"] == [0.5, 0, 1, 1]
     assert image("Schneide das Gesicht aus dem Bild") is None
+
+
+def test_split_is_bound_only_to_explicit_user_boundaries():
+    from hub.media_intent import split_after
+
+    assert split_after("Teile jede Ausgabeseite in Einzel-PDFs", 3) == [1, 2]
+    assert split_after("Trenne nach Ausgabeseiten 1 und 3", 4) == [1, 3]
+    assert split_after("Erstelle eine Zusammenfassung", 4) is None
+    with pytest.raises(ValueError):
+        split_after("Teile jede Seite in Einzel-PDFs", 21)

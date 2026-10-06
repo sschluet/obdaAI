@@ -82,3 +82,22 @@ def image(goal: str) -> dict[str, Any] | None:
         "tile_height": height,
         "format": "jpeg" if re.search(r"\b(?:jpeg|jpg)[- ]datei\b", text) else "png",
     }
+
+
+def split_after(goal: str, count: int) -> list[int] | None:
+    """Only explicit direct-user boundaries; no inferred document semantics."""
+    text = goal.casefold()
+    if re.search(r"\b(?:teile|aufteilen|split|trenne)\b", text) and re.search(
+        r"(?:jede\s+(?:ausgabe)?seite|einzel[- ]?pdfs?)", text
+    ):
+        if not 2 <= count <= 20:
+            raise ValueError("Zwei bis zwanzig Einzel-PDFs je Auftrag")
+        return list(range(1, count))
+    match = re.search(
+        r"trenne\s+nach\s+(?:den\s+)?ausgabeseiten?\s+"
+        r"(\d{1,3}(?:\s*(?:,|und)\s*\d{1,3})*)",
+        text,
+    )
+    if match:
+        return [int(n) for n in re.split(r"\s*(?:,|und)\s*", match[1])]
+    return None

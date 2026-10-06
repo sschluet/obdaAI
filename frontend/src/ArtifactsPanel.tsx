@@ -9,7 +9,7 @@ type Row = {artifact_id:string; revision:number; title:string; kind:string; stat
 type DocumentImage = {sourceId:string;caption:string;width:number};
 type Section = {heading:string; paragraphs:string; table:string[][]; images?:DocumentImage[]};
 type Slide = {title:string; bullets:string; notes:string};
-type Page = {sourceId:string; page:number; rotation:number};
+type Page = {sourceId:string; page:number; rotation:number; splitAfter?:boolean};
 type Tile = {sourceId:string; crop:number[];caption?:string};
 const status:Record<string,string> = {queued:'In Warteschlange', rendering:'Datei und Vorschau werden erstellt',
   needs_review:'Vorschau prüfen', published:'Freigegeben', failed:'Fehlgeschlagen', cancelled:'Abgebrochen'};
@@ -53,7 +53,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
     setBoundIds(row?.spec.sources?.map((s:any)=>s.id)||[]);
     setSlides(plan?.slides?.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''}))||[{title:'',bullets:'',notes:''}]);
     const bound=row?.spec.sources||[];
-    setPages(plan?.pages?.map((p:any)=>({sourceId:bound[p.source].id,page:p.page,rotation:p.rotation}))||[]);
+    setPages(plan?.pages?.map((p:any)=>({sourceId:bound[p.source].id,page:p.page,rotation:p.rotation,splitAfter:(plan.split_after||[]).includes(plan.pages.indexOf(p)+1)}))||[]);
     setTiles(plan?.tiles?.map((t:any)=>({sourceId:bound[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''}))||[]);
     setColumns(plan?.columns||1);setWidth(plan?.tile_width||1024);setHeight(plan?.tile_height||768);
     setFormat(plan?.format||'png');setSlideCount(plan?.slides?.length||3);setEditing(true);
@@ -80,7 +80,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
         plan={kind,title,slides:entries};
       }else if(kind==='pdf'){
         if(!pages.length)throw Error('Bitte mindestens eine Ausgabeseite hinzufügen.');
-        plan={kind,title,pages:pages.map(p=>({source:sourceIds.indexOf(p.sourceId),page:p.page,rotation:p.rotation}))};
+        plan={kind,title,pages:pages.map(p=>({source:sourceIds.indexOf(p.sourceId),page:p.page,rotation:p.rotation})),split_after:pages.flatMap((p,i)=>p.splitAfter&&i<pages.length-1?[i+1]:[])};
       }else{
         if(!tiles.length)throw Error('Bitte mindestens ein Bild hinzufügen.');
         plan={kind:'image',title,tiles:tiles.map(t=>({source:sourceIds.indexOf(t.sourceId),crop:t.crop.map(v=>v/100),caption:t.caption||''})),columns,tile_width:width,tile_height:height,format};
@@ -98,7 +98,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       const plan=draft.spec.plan;setTitle(plan.title);
       if(kind==='docx'||(kind==='pdf'&&pdfMode==='text'))setSections(plan.sections.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[]})));
       else if(kind==='pptx')setSlides(plan.slides.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''})));
-      else if(kind==='pdf')setPages(plan.pages.map((p:any)=>({sourceId:draft.spec.sources[p.source].id,page:p.page,rotation:p.rotation})));
+      else if(kind==='pdf')setPages(plan.pages.map((p:any)=>({sourceId:draft.spec.sources[p.source].id,page:p.page,rotation:p.rotation,splitAfter:(plan.split_after||[]).includes(plan.pages.indexOf(p)+1)})));
       else {setTiles(plan.tiles.map((t:any)=>({sourceId:draft.spec.sources[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''})));setColumns(plan.columns);setWidth(plan.tile_width);setHeight(plan.tile_height);setFormat(plan.format)}
       setDraftToken(draft.draft_token);setDraftInfo(draft);
     }catch(e){setError((e as Error).message)}finally{setBusy(false)}
@@ -120,7 +120,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       <b>{row.title} · Version {row.revision}</b>{row.chat&&<p className="hint">Aus Chatantwort · Revision {row.chat.revision} · lokal gespeichert</p>}{row.draft&&<details><summary>Modell und verwendete Quellen</summary><p>{row.draft.provider.model} · lokales Modell · {row.draft.user_edited?'Entwurf anschließend bearbeitet':'Entwurf übernommen'}</p>{row.draft.citations.map((c:any,i:number)=><p key={i}>{c.reference} · Revision {c.revision}</p>)}<p className="hint">Quellenbelege zeigen verwendete Auszüge. Die sachliche Richtigkeit wurde nicht automatisch bestätigt.</p></details>}<p>{status[row.status]||row.status} · {row.kind==='image'?'Bild':row.kind.toUpperCase()} · Lokal</p>
       {row.error&&<p className="error">{row.error}</p>}
       {['needs_review','published'].includes(row.status)&&<button onClick={()=>{setError('');setReviewed(false);setPreview(row)}}>Vorschau öffnen</button>}
-      {row.status==='published'&&<><a href={'/api'+base(row)+'/download'} download>Datei herunterladen</a>{row.output?.pdf_export&&<a href={'/api'+base(row)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}
+      {row.status==='published'&&<><a href={'/api'+base(row)+'/download'} download>{row.output?.parts?.length?'Alle PDF-Teile als ZIP herunterladen':'Datei herunterladen'}</a>{row.output?.parts?.map((part:any,i:number)=><a key={part.filename} href={'/api'+base(row)+'/download?part='+(i+1)} download>PDF-Teil {i+1} herunterladen · {part.pages} Seiten</a>)}{row.output?.pdf_export&&<a href={'/api'+base(row)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}
       {configured&&!project.archived&&row.revision===Math.max(...rows.filter(r=>r.artifact_id===row.artifact_id).map(r=>r.revision))&&<button onClick={()=>start(row)}>Neue Version bearbeiten</button>}
       {['queued','rendering','needs_review','failed'].includes(row.status)&&<button disabled={busy} onClick={async()=>{setBusy(true);try{await api(base(row)+'/cancel','POST');setRows(await api(prefix))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Diese Version abbrechen</button>}
     </article>)}
@@ -154,12 +154,12 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
           <label>Sprechernotizen<textarea aria-label="Sprechernotizen" maxLength={4000} value={slide.notes} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,notes:e.target.value}:s))}/></label>
           <button type="button" disabled={index===0} onClick={()=>setSlides(move(slides,index,-1))}>Folie nach oben</button><button type="button" disabled={index===slides.length-1} onClick={()=>setSlides(move(slides,index,1))}>Folie nach unten</button><button type="button" disabled={slides.length===1} onClick={()=>setSlides(slides.filter((_,i)=>i!==index))}>Folie entfernen</button>
         </fieldset>)}<button type="button" disabled={slides.length>=30} onClick={()=>setSlides([...slides,{title:'',bullets:'',notes:''}])}>Folie hinzufügen</button></>}
-        {kind==='pdf'&&pdfMode==='pages'&&<><p>Füge die gewünschten Ausgabeseiten in ihrer Reihenfolge hinzu. Nicht ausgewählte Seiten werden weggelassen; Originale bleiben erhalten.</p>{!pdfs.length&&<p>Bitte zuerst eine PDF unter Dokumente hinzufügen.</p>}{pages.map((page,index)=><fieldset key={index}><legend>Ausgabeseite {index+1}</legend>
+        {kind==='pdf'&&pdfMode==='pages'&&<><p>Füge Ausgabeseiten in ihrer Reihenfolge hinzu. Für mehrere PDF-Dateien markiere, nach welcher Ausgabeseite ein neuer Teil beginnen soll. Alle Teile werden einzeln und als ZIP zum Download angeboten.</p><button type="button" disabled={pages.length<2||pages.length>20} onClick={()=>setPages(pages.map((p,i)=>({...p,splitAfter:i<pages.length-1})))}>Jede Ausgabeseite als eigene PDF</button><button type="button" onClick={()=>setPages(pages.map(p=>({...p,splitAfter:false})))}>Eine zusammenhängende PDF</button>{!pdfs.length&&<p>Bitte zuerst eine PDF unter Dokumente hinzufügen.</p>}{pages.map((page,index)=><fieldset key={index}><legend>Ausgabeseite {index+1}</legend>
           <label>PDF-Quelldatei<select aria-label="PDF-Quelldatei" required value={page.sourceId} onChange={e=>setPages(pages.map((p,i)=>i===index?{...p,sourceId:e.target.value}:p))}><option value="">Bitte auswählen</option>{pdfs.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></label>
           <label>Seite im Original<input type="number" required min={1} max={1000} value={page.page} onChange={e=>setPages(pages.map((p,i)=>i===index?{...p,page:Number(e.target.value)}:p))}/></label>
           <label>Im Uhrzeigersinn drehen<select aria-label="Im Uhrzeigersinn drehen" value={page.rotation} onChange={e=>setPages(pages.map((p,i)=>i===index?{...p,rotation:Number(e.target.value)}:p))}>{[0,90,180,270].map(v=><option key={v} value={v}>{v}°</option>)}</select></label>
           <button type="button" disabled={index===0} onClick={()=>setPages(move(pages,index,-1))}>Seite nach oben</button><button type="button" disabled={index===pages.length-1} onClick={()=>setPages(move(pages,index,1))}>Seite nach unten</button><button type="button" onClick={()=>setPages(pages.filter((_,i)=>i!==index))}>Seite entfernen</button>
-        </fieldset>)}<button type="button" disabled={!pdfs.length||pages.length>=100} onClick={()=>setPages([...pages,{sourceId:pdfs[0].id,page:1,rotation:0}])}>Ausgabeseite hinzufügen</button><p className="hint">Signierte und verschlüsselte PDF werden hier nicht verändert. Die neue PDF übernimmt Seiteninhalte; Kommentare, Formularfelder und Links werden entfernt.</p></>}
+        <label><input type="checkbox" disabled={index===pages.length-1} checked={!!page.splitAfter&&index<pages.length-1} onChange={e=>setPages(pages.map((p,i)=>i===index?{...p,splitAfter:e.target.checked}:p))}/> Nach Ausgabeseite {index+1} einen neuen PDF-Teil beginnen</label></fieldset>)}<button type="button" disabled={!pdfs.length||pages.length>=100} onClick={()=>setPages([...pages,{sourceId:pdfs[0].id,page:1,rotation:0}])}>Ausgabeseite hinzufügen</button><p className="hint">Signierte und verschlüsselte PDF werden hier nicht verändert. Die neue PDF übernimmt Seiteninhalte; Kommentare, Formularfelder und Links werden entfernt.</p></>}
         {kind==='image'&&<><p>Wähle echte hochgeladene Bilder. Zuschnitte werden in Prozent der Bildbreite bzw. -höhe angegeben.</p>{!images.length&&<p>Bitte zuerst ein Bild unter Dokumente hinzufügen.</p>}{tiles.map((tile,index)=><fieldset key={index}><legend>Bild {index+1}</legend>
           <label>Bildquelle<select aria-label="Bildquelle" required value={tile.sourceId} onChange={e=>setTiles(tiles.map((t,i)=>i===index?{...t,sourceId:e.target.value}:t))}><option value="">Bitte auswählen</option>{images.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <label>Bildbeschriftung<input aria-label="Bildbeschriftung" maxLength={140} value={tile.caption||''} onChange={e=>setTiles(tiles.map((t,i)=>i===index?{...t,caption:e.target.value}:t))}/></label>
@@ -180,9 +180,9 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       <h2>{preview.title} · Version {preview.revision}</h2>
       {error&&<p className="error" role="alert">{error}</p>}
       <p>{preview.output?.previews.length||0} Vorschauseiten · Lokal · {status[preview.status]}</p>
-      {preview.output?.previews.map((page:any)=><figure key={page.page}><img className="artifact-preview" src={'/api'+base(preview)+'/preview/'+page.page} alt={'Vorschauseite '+page.page}/><figcaption>Seite {page.page}</figcaption></figure>)}
+      {preview.output?.previews.map((page:any)=><figure key={page.page}><img className="artifact-preview" src={'/api'+base(preview)+'/preview/'+page.page} alt={'Vorschauseite '+page.page}/><figcaption>Ausgabeseite {page.page}{preview.output?.parts?.length?' · PDF-Teil '+(preview.output.parts.findIndex((p:any)=>page.page>=p.first_page&&page.page<p.first_page+p.pages)+1):''}</figcaption></figure>)}
       {preview.status==='needs_review'&&<><label><input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/> Ich habe alle Vorschauseiten geprüft.</label><button className="primary" disabled={!reviewed||busy} onClick={()=>void accept()}>Diese Dateiversion freigeben</button></>}
-      {preview.status==='published'&&<><a href={'/api'+base(preview)+'/download'} download>Datei herunterladen</a>{preview.output?.pdf_export&&<a href={'/api'+base(preview)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}
+      {preview.status==='published'&&<><a href={'/api'+base(preview)+'/download'} download>{preview.output?.parts?.length?'Alle PDF-Teile als ZIP herunterladen':'Datei herunterladen'}</a>{preview.output?.parts?.map((part:any,i:number)=><a key={part.filename} href={'/api'+base(preview)+'/download?part='+(i+1)} download>PDF-Teil {i+1} herunterladen · {part.pages} Seiten</a>)}{preview.output?.pdf_export&&<a href={'/api'+base(preview)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}
       <button disabled={busy} onClick={()=>{setPreview(null);setError('')}}>Schließen</button>
     </div></div>}
   </section>;
