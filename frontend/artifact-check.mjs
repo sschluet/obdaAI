@@ -174,6 +174,10 @@ try{
  await page.getByRole('button',{name:'Chatantwort als Word übernehmen',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  if(!(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()).length)throw Error('Chat export lost content');
+ await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
+ await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Create a short Word section from the selected answer.');
+ await dialog.getByRole('button',{name:'Lokal entwerfen',exact:true}).click();
+ await dialog.getByText('Lokaler Entwurf bereit',{exact:false}).waitFor();
  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
  await page.getByText('Aus Chatantwort · Revision 1 · lokal gespeichert',{exact:true}).waitFor();
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile artifact overflow');

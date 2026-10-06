@@ -203,6 +203,10 @@ class SyntheticProvider:
         return "Synthetic automatic title"
 
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if any("SYNTHETIC_ANSWER_FILE_REQUEST" in p.content for p in parts):
+            return Route(
+                capabilities=["artifact"], model_class="local", reason="synthetic answer file"
+            )
         if any("SYNTHETIC_FILE_REQUEST" in p.content for p in parts):
             return Route(
                 capabilities=["artifact", "web"]

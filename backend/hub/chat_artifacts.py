@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from hub.artifact_api import CreateArtifact, artifact_service
+from hub.artifact_chat import ChatSource
 from hub.artifact_drafts import DraftInput, preview
 from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import digest, spec_for
@@ -179,6 +180,16 @@ def requests_public_research(goal: str) -> bool:
     return bool(direct and public)
 
 
+def requests_answer_source(goal: str) -> bool:
+    return bool(
+        re.search(
+            r"^\s*(?:(?:bitte|please)\s+)?(?:erstelle|erzeuge|generiere|schreibe|mach|mache|create|make|write)\b.{0,120}\b(?:daraus|aus\s+(?:der\s+)?letzten\s+antwort|from\s+(?:your\s+)?last\s+(?:answer|response))\b",
+            goal,
+            re.I,
+        )
+    )
+
+
 def requests_project_sources(goal: str) -> bool:
     """Only an explicit request for this project's complete document collection."""
     names = r"(?:projektunterlagen|projektdokumente(?:n)?|projektquellen|project documents)"
@@ -193,7 +204,7 @@ def requests_project_sources(goal: str) -> bool:
 
 def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
     if not requests_revision(goal) and not re.search(
-        r"\b(erstelle|erzeuge|generiere|schreibe|create|generate|make)\b", goal, re.I
+        r"\b(erstelle|erzeuge|generiere|schreibe|mach|mache|create|generate|make)\b", goal, re.I
     ):
         raise ValueError("Eine konkrete Bitte zur Dateierstellung fehlt")
     formats = []
@@ -280,6 +291,25 @@ async def create_from_chat(
         if not chat or not chat.project_id or chat.memory_scope or chat.archived or not message:
             raise ValueError("Dateien im aktiven Projektgespräch erstellen")
         project_id, chat_id, message_id = chat.project_id, chat.id, message.id
+        answer_source = None
+        if requests_answer_source(message.content) and not requests_revision(message.content):
+            active = list(
+                db.scalars(
+                    select(Message)
+                    .where(Message.conversation_id == chat.id, Message.active.is_(True))
+                    .order_by(Message.created, Message.id)
+                )
+            )
+            position = next(i for i, item in enumerate(active) if item.id == message.id)
+            answer = next(
+                (item for item in reversed(active[:position]) if item.role == "assistant"), None
+            )
+            if answer is None:
+                raise ValueError("Keine vorherige Chatantwort für diesen Dateiwunsch vorhanden")
+            answer_source = ChatSource(
+                conversation_id=chat.id, message_id=answer.id, revision=answer.revision
+            )
+
         revision, goal, sha = message.revision, message.content, digest(message.content)
         if len(goal) > 4000:
             raise ValueError("Dateiwunsch darf höchstens 4000 Zeichen enthalten")
@@ -353,6 +383,7 @@ async def create_from_chat(
         slide_count=count,
         section_count=section_count,
         target_slide=int(next(iter(targets))) if targets else None,
+        chat_source=answer_source,
         sources=sources,
         base_artifact_id=base.artifact_id if base else None,
         base_revision=base.revision if base else None,
@@ -431,5 +462,6 @@ async def create_from_chat(
             spec=proposed,
             expected_revision=base.revision if base else None,
             draft_token=proposal["draft_token"],
+            chat_source=answer_source,
         ),
     )

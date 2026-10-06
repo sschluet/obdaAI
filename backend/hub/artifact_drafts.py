@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from hub.artifact_chat import ChatSource
 from hub.artifact_runner import canonical
 from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import bind_sources, digest, spec_for
@@ -61,6 +62,7 @@ class DraftInput(BaseModel):
     slide_count: int = Field(default=3, ge=1, le=30)
     section_count: int | None = Field(default=None, ge=1, le=29)
     target_slide: int | None = Field(default=None, ge=1, le=30)
+    chat_source: ChatSource | None = None
     sources: list[SourceBinding] = Field(default_factory=list, max_length=20)
     base_artifact_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     base_revision: int | None = Field(default=None, ge=1)
@@ -98,6 +100,10 @@ def verify_token(
         from hub.artifact_research import verify
 
         verify(db, metadata["web_research"], project_id)
+    if metadata.get("chat_source"):
+        from hub.artifact_chat import verify as verify_chat
+
+        verify_chat(db, project_id, metadata["chat_source"])
     provider = metadata["provider"]
     base = metadata.get("base")
     if base:
@@ -202,6 +208,15 @@ async def preview(
             raise ValueError("Recherche-Dateien benötigen einen neuen Inhaltsentwurf")
         with factory() as db:
             source_parts, web_research = research_binding(db, research_id, project_id, body.goal)
+    chat_receipt = None
+    if body.chat_source:
+        from hub.artifact_chat import binding as bind_chat
+
+        if transform or body.base_artifact_id:
+            raise ValueError("Chatantwort für einen neuen Inhaltsentwurf verwenden")
+        with factory() as db:
+            part, chat_receipt = bind_chat(db, project_id, body.chat_source)
+            source_parts.append(part)
     base = None
     original = None
     with factory() as db:
@@ -536,6 +551,10 @@ async def preview(
             raise ValueError("Entwurf verändert nicht ausgewählte Folien")
     with factory() as db:
         bind_sources(db, cfg, project_id, spec)
+        if chat_receipt:
+            from hub.artifact_chat import verify as verify_chat
+
+            verify_chat(db, project_id, chat_receipt)
         if web_research:
             from hub.artifact_research import verify
 
@@ -559,6 +578,7 @@ async def preview(
         "project_revision": project_revision,
         "sources": [s.model_dump(mode="json") for s in body.sources],
         "citations": citations,
+        **({"chat_source": chat_receipt} if chat_receipt else {}),
         **({"web_research": web_research} if web_research else {}),
         "slide_count": body.slide_count,
         "section_count": body.section_count,

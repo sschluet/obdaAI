@@ -15,6 +15,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
+from hub.artifact_chat import ChatSource
 from hub.artifact_runner import canonical
 from hub.artifact_specs import ArtifactSpec
 from hub.artifacts import (
@@ -35,13 +36,6 @@ from hub.db import Artifact, ArtifactRevision, Conversation, LoginSession, Messa
 from hub.db_locks import ARTIFACT_STORAGE
 
 Auth = Annotated[LoginSession, Depends(require_session)]
-
-
-class ChatSource(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    conversation_id: uuid.UUID
-    message_id: uuid.UUID
-    revision: int = Field(ge=1)
 
 
 class CreateArtifact(BaseModel):
@@ -159,6 +153,15 @@ def artifact_service(
                 raise HTTPException(
                     409, "Dateientwurf abgelaufen oder verändert; erneut entwerfen"
                 ) from None
+        if body.draft_token:
+            source_receipt = json.loads(metadata).get("chat_source")
+            if source_receipt and (
+                not body.chat_source
+                or str(body.chat_source.conversation_id) != source_receipt["conversation_id"]
+                or str(body.chat_source.message_id) != source_receipt["message_id"]
+                or body.chat_source.revision != source_receipt["revision"]
+            ):
+                raise HTTPException(409, "Chatquelle des Entwurfs beibehalten")
         if db.bind is not None and db.bind.dialect.name == "postgresql":
             db.execute(text(f"SELECT pg_advisory_xact_lock({ARTIFACT_STORAGE})"))
         active = (
@@ -189,6 +192,21 @@ def artifact_service(
             previous = db.get(ArtifactRevision, (artifact.id, artifact.revision))
             if previous and not body.chat_source:
                 chat_metadata = previous.chat_metadata
+            if previous and not body.draft_token and previous.draft_metadata:
+                old_spec = spec_for(previous)
+                if old_spec.plan.kind == body.spec.plan.kind and list(old_spec.sources) == list(
+                    body.spec.sources
+                ):
+                    inherited = json.loads(previous.draft_metadata)
+                    inherited["user_edited"] = True
+                    inherited["manual_revision"] = True
+                    inherited["inherited_from"] = {
+                        "artifact_id": previous.artifact_id,
+                        "revision": previous.revision,
+                        "spec_sha256": previous.spec_sha256,
+                    }
+                    metadata = json.dumps(inherited, ensure_ascii=False, sort_keys=True)
+
             artifact.revision += 1
         else:
             if body.expected_revision is not None:

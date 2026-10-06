@@ -419,3 +419,26 @@ def test_draft_total_deadline_prevents_unsaved_output_without_retry(setup):
     assert provider.calls == 1
     with app.state.sessions() as db:
         assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 0
+
+
+def test_manual_version_preserves_original_model_receipt_without_new_model_call(setup):
+    app, c, h, cfg, pid, spec = setup
+    add_excerpt(app, spec)
+    provider = DraftProvider(DOCUMENT)
+    proposal = draft(app, c, h, pid, spec, provider).json()
+    row = save(c, h, pid, {"spec": proposal["spec"], "draft_token": proposal["draft_token"]}).json()
+    new_spec = proposal["spec"]
+    new_spec["plan"]["title"] = "Manually edited title"
+    import uuid
+
+    response = c.post(
+        "/api/projects/" + pid + "/artifacts/" + row["artifact_id"] + "/versions",
+        headers=h,
+        json={"request_id": str(uuid.uuid4()), "expected_revision": 1, "spec": new_spec},
+    )
+    assert response.status_code == 200, response.text
+    revised = response.json()
+    assert revised["draft"]["manual_revision"] and revised["draft"]["user_edited"]
+    assert revised["draft"]["inherited_from"]["revision"] == 1
+    assert revised["draft"]["raw_output_sha256"] == row["draft"]["raw_output_sha256"]
+    assert provider.calls == 1
