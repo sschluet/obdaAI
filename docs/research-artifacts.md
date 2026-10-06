@@ -28,3 +28,9 @@ Getrennte Abnahme: API-/Privacytests prüfen den exakten Suchtext, lokale Verarb
 Referenzen, fehlende Freigabe, leere Ergebnisse und Drift. Die Browser-Fixture
 prüft die normale Quellenbestätigung und Herkunftsanzeige; echte Recherche-, Modell-
 und Linux-Dateiabnahme müssen zusätzlich auf der eigenen Installation erfolgen.
+
+Fortlaufende Dateiplanung nutzt das konfigurierte Run-Gesamtzeitlimit (höchstens
+120 Sekunden für einen direkten Entwurf). Im Chat bleibt das gemeinsame Run-Limit
+einschließlich Router und Suche maßgeblich. Der Provider-Timeout begrenzt weiterhin
+einen stillstehenden HTTP-Empfang. Ein abgelaufenes Entwurfslimit erzeugt keine
+Dateiversion und keinen automatischen Modellretry. Beide Zeitgrenzen sind getestet.

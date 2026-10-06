@@ -365,3 +365,57 @@ def test_chat_export_binds_snapshot_and_denies_foreign_or_changed_message(setup)
         ).json()["chat"]["revision"]
         == 1
     )
+
+
+def test_progressing_draft_may_exceed_http_inactivity_timeout(setup):
+    app, c, h, cfg, pid, _ = setup
+
+    class ProgressingProvider(DraftProvider):
+        async def stream(self, parts, roles, *, external, grants):
+            assert not external and not grants
+            self.calls += 1
+            yield DOCUMENT[:20]
+            await asyncio.sleep(0.55)
+            yield DOCUMENT[20:40]
+            await asyncio.sleep(0.55)
+            yield DOCUMENT[40:]
+
+    provider = ProgressingProvider(DOCUMENT)
+    result = asyncio.run(
+        preview(
+            app.state.sessions,
+            replace(cfg, local_timeout=1, run_timeout=3),
+            pid,
+            DraftInput(goal="One short local Word section", kind="docx"),
+            provider,
+        )
+    )
+    assert result["spec"]["plan"]["title"] == "Local draft" and provider.calls == 1
+    with app.state.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 0
+
+
+def test_draft_total_deadline_prevents_unsaved_output_without_retry(setup):
+    app, c, h, cfg, pid, _ = setup
+
+    class SlowProvider(DraftProvider):
+        async def stream(self, parts, roles, *, external, grants):
+            self.calls += 1
+            yield DOCUMENT[:20]
+            await asyncio.sleep(1.1)
+            yield DOCUMENT[20:]
+
+    provider = SlowProvider(DOCUMENT)
+    with pytest.raises(ValueError, match="Zeitlimit"):
+        asyncio.run(
+            preview(
+                app.state.sessions,
+                replace(cfg, local_timeout=30, run_timeout=1),
+                pid,
+                DraftInput(goal="Short Word section", kind="docx"),
+                provider,
+            )
+        )
+    assert provider.calls == 1
+    with app.state.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 0

@@ -423,12 +423,19 @@ async def preview(
     ):
         raise ValueError("Dateientwurf überschreitet die lokalen Kontextgrenzen")
     answer = ""
-    async with asyncio.timeout(min(60, cfg.local_timeout)):
-        async with aclosing(provider.stream(parts, roles, external=False, grants=[])) as stream:
-            async for chunk in stream:
-                answer += chunk
-                if len(answer) > 24000:
-                    raise ValueError("Dateientwurf überschreitet die Ausgabegrenze")
+    # Provider timeout bounds a stalled HTTP read; an actively progressing file
+    # stream uses the bounded operation deadline, like normal chat generation.
+    try:
+        async with asyncio.timeout(min(120, cfg.run_timeout)):
+            async with aclosing(provider.stream(parts, roles, external=False, grants=[])) as stream:
+                async for chunk in stream:
+                    answer += chunk
+                    if len(answer) > 24000:
+                        raise ValueError("Dateientwurf überschreitet die Ausgabegrenze")
+    except TimeoutError:
+        raise ValueError(
+            "Lokaler Dateientwurf hat sein Zeitlimit erreicht; keine Datei gespeichert"
+        ) from None
     value, syntax_repair = parse_plan(answer)
     if not isinstance(value, dict) or "kind" in value:
         raise ValueError("Ungültiger Datenplan")
