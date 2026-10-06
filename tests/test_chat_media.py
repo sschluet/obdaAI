@@ -252,3 +252,20 @@ def test_source_bound_single_slide_preserves_other_slide_and_notes(setup):
     assert new["spec"]["plan"]["slides"][0] == old["spec"]["plan"]["slides"][0]
     assert new["spec"]["sources"] == old["spec"]["sources"] and new["draft"]["target_slide"] == 2
     assert "Verwendete Auszüge:" in new["spec"]["plan"]["slides"][1]["notes"]
+
+
+def test_single_original_one_based_model_index_is_unambiguous_and_audited(setup):
+    app, c, h, cfg, pid, _ = setup
+    app.state.providers = FileProvider(
+        json.dumps({"title": "Index repair", "tiles": [{"source": 1}]})
+    )
+    chat = conversation(c, h, pid)
+    result = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Erstelle eine Collage aus synthetic.png."},
+    )
+    assert "succeeded" in result.text, result.text
+    row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+    assert row["spec"]["plan"]["tiles"][0]["source"] == 0
+    assert row["draft"]["syntax_repair"] == "single_source_one_based"

@@ -174,6 +174,12 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
                     )
                     text = ocr(target / "page.png", target)
                 notes.append(f"Seite {i}: lokale OCR, Erkennung kann fehlerhaft sein")
+            if not text.strip():
+                text = (
+                    f"PDF-Seite {i}: {float(page.mediabox.width):g} × "
+                    f"{float(page.mediabox.height):g} Punkte. Kein Text extrahiert "
+                    "oder durch lokale OCR erkannt. Seiteninhalt wurde nicht semantisch bewertet."
+                )
             add(f"PDF Seite {i}", text)
     else:
         from PIL import Image
@@ -187,7 +193,16 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
                 with tempfile.TemporaryDirectory() as tmp:
                     target = Path(tmp)
                     image.convert("RGB").save(target / "image.png")
-                    add("Bild · lokale OCR", ocr(target / "image.png", target))
+                    text = ocr(target / "image.png", target)
+                    if text.strip():
+                        add("Bild · lokale OCR", text)
+                    else:
+                        add(
+                            "Bild · technische Daten",
+                            f"Bilddatei {image.format}: {image.width} × {image.height} Pixel. "
+                            "Kein Text durch lokale OCR erkannt. Bildinhalt und Diagrammsemantik "
+                            "wurden nicht erkannt oder bewertet.",
+                        )
         notes.append("Lokale OCR liest Text; keine zuverlässige Bild-/Diagrammsemantik")
     if not chunks:
         raise ValueError("Keine lesbaren Inhalte extrahiert")

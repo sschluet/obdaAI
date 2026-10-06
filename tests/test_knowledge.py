@@ -744,3 +744,37 @@ def test_real_extraction_records_one_local_readiness_event_across_retry(knowledg
     with app.state.sessions() as db:
         events = list(db.scalars(select(SourceReadyEvent).where(SourceReadyEvent.source_id == sid)))
         assert len(events) == 1 and events[0].id == eid
+
+
+def test_image_without_ocr_text_retains_verified_metadata_for_file_operations(
+    tmp_path, monkeypatch
+):
+    from PIL import Image
+
+    path = tmp_path / "photo.png"
+    Image.new("RGB", (200, 100), "blue").save(path)
+    monkeypatch.setattr("hub.extract.ocr", lambda *args: "  ")
+    result = parse(path, ".png")
+    assert len(result["chunks"]) == 1
+    assert result["chunks"][0]["locator"] == "Bild · technische Daten"
+    assert "200 × 100 Pixel" in result["chunks"][0]["content"]
+    assert "wurden nicht erkannt oder bewertet" in result["chunks"][0]["content"]
+
+
+def test_blank_pdf_pages_keep_ordered_metadata_without_inventing_text(tmp_path, monkeypatch):
+    import subprocess
+
+    from pypdf import PdfWriter
+
+    path = tmp_path / "blank.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=400)
+    writer.write(path)
+    monkeypatch.setattr("hub.extract.ocr", lambda *args: "")
+    monkeypatch.setattr(
+        "hub.extract.subprocess.run", lambda *a, **k: subprocess.CompletedProcess(a, 0)
+    )
+    result = parse(path, ".pdf")
+    assert result["chunks"][0]["locator"] == "PDF Seite 1"
+    assert "200 × 400 Punkte" in result["chunks"][0]["content"]
+    assert "nicht semantisch bewertet" in result["chunks"][0]["content"]

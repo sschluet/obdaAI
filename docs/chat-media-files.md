@@ -36,3 +36,11 @@ prüft der Offline-Runner; Metadaten aus Textfundstellen sind kein vollständige
 Seitennachweis. Ein Auftrag liefert eine neue Datei, keine behauptete Mehrdatei-
 Aufteilung. Keine echte Schwärzung, KI-Bildgenerierung oder semantische Abnahme aus
 bloßem Rendering ableiten. Livebelege werden getrennt von Fixturetests dokumentiert.
+
+Bilder ohne OCR-Text und leere PDF-Seiten behalten verifizierte technische
+Metadaten als lokale Fundstelle. Das ist keine Bildinterpretation. Der Parser läuft
+weiterhin isoliert; Originale bleiben erhalten. Ein beim echten Modell beobachteter
+Indexfehler wird nur dann protokolliert normalisiert, wenn genau ein Original
+gebunden ist und alle Auswahlindizes exakt 1 lauten: daraus wird Index 0. Mehrere
+Originale oder andere ungültige Indizes bleiben strikt, damit keine falsche Datei
+unterstellt wird.

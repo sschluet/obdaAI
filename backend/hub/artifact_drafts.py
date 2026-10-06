@@ -404,6 +404,26 @@ async def preview(
     value, syntax_repair = parse_plan(answer)
     if not isinstance(value, dict) or "kind" in value:
         raise ValueError("Ungültiger Datenplan")
+    # With one explicitly bound original there is no alternative file to select.
+    # Normalize only this unambiguous ordinal defect and retain it in the audit.
+    # Multi-original plans stay strict: index 1 could mean a different file.
+    if transform and len(body.sources) == 1:
+        selections = value.get("pages" if body.kind == "pdf" else "tiles")
+        if (
+            isinstance(selections, list)
+            and selections
+            and all(
+                isinstance(item, dict) and type(item.get("source")) is int and item["source"] == 1
+                for item in selections
+            )
+        ):
+            for item in selections:
+                item["source"] = 0
+            syntax_repair = (
+                "single_source_one_based"
+                if syntax_repair == "none"
+                else syntax_repair + "+single_source_one_based"
+            )
     value["kind"] = body.kind
     spec = ArtifactSpec.model_validate(
         {"plan": value, "sources": [s.model_dump(mode="json") for s in body.sources]}
