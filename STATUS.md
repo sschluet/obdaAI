@@ -1,12 +1,12 @@
 # obdaAI — Status 06.10.2026
 
-## Aktueller Stand: Dateien, Aufgaben und Schema 0021 live geprüft
+## Aktueller Stand: Dateien, Dokumentauslöser und Schema 0022 live geprüft
 
-Produktiv ist `ee7ab0f` / Schema 0021 installiert. Beide APIs sind gesund; die
-bestehenden IPv4-/IPv6-Regeln blieben unverändert. Lokal: 459 Tests bestanden,
-zehn PostgreSQL-Fälle bewusst ausgelassen und separat mit echter temporärer
+Produktiv ist `c13e41f` / Schema 0022 installiert. Beide APIs sind gesund; die
+bestehenden IPv4-/IPv6-Regeln blieben unverändert. Lokal: 471 Tests bestanden,
+elf PostgreSQL-Fälle bewusst ausgelassen und separat mit echter temporärer
 Datenbank auf der eigenen VM bestanden. Ruff/mypy und Source-Scan bestanden.
-Die CI prüft denselben Anwendungscode auf dem abschließenden PR-Stand: Python/PG, Secrets,
+Alle sechs CI-Jobs für Anwendungscode `c13e41f` bestanden: Python/PG, Secrets,
 Frontend mit drei Browserchecks, Appcontainer, Browserrunner und Dateirunner.
 Der frühere zufällige Token-Testfehler ist deterministisch korrigiert; finale CI
 wird im PR nachgewiesen. Tests-/Dokumentationscommits ändern den installierten
@@ -41,15 +41,25 @@ mit 120 Abfragen und vier gleichzeitigen Clients sank ihre p95 von etwa 1642 auf
 540 ms; gesamte p95 etwa 470 ms. Das ist eine begrenzte Leseprobe, keine Vollastabnahme.
 Der initiale Frontend-Build sank zuvor auf 446 kB durch nachgeladenes Task-/Settings-UI.
 
-Verschlüsselter Off-VM-Backup und isolierter Restore von Schema 0021 bestanden:
-23 Dateiversionen samt Ausgaben/Vorschauen/PDF-Export, 43 Originalhashes,
-6 Memory-Dateien, Provider-/Workflow-Schlüssel und begrenzte SSH-Identitäten.
+Dokumentauslöser im Dialog und Filter „Bei neuen Dokumenten“ sind installiert.
+Schema 0022 markiert bestehende Quellen als Bestand; Pause/Aktivierung, Projekt-
+und Originalbindung, eindeutiger Beleg/Cursor und atomare Queue verhindern alte
+oder doppelte Läufe. Die echte vorhandene n8n-Uhr löste genau einen lokalen
+Leselauf aus; frühere und erneut verarbeitete Originale erzeugten keinen zusätzlichen
+Lauf. Die zusätzliche echte lokale Ereignis-Analyse verwendet nur die ausdrücklich
+ausgewählte Quelle und den exakten vorherigen Lesebeleg. Der neue auslösende Text
+bleibt außerhalb des Modelleingangs. Keine Cloudkosten oder neuen n8n-Workflows.
+
+Verschlüsselter Off-VM-Backup und isolierter Restore von Schema 0022 bestanden:
+23 Dateiversionen samt Ausgaben/Vorschauen/PDF-Export, 46 Originalhashes,
+6 Memory-Dateien, Provider-/Workflow-Schlüssel und begrenzte SSH-Identitäten;
+Ereignisbelege, Cursor und gebundene Laufdigests zusätzlich geprüft.
 Temporäre Restore-DB entfernt. HTTPS-Sitzungen/Auth/CSRF/Origin/Logout live geprüft.
-Drei eigene QA-Projekte und acht eigene synthetische Chats wiederherstellbar
+Vier eigene QA-Projekte und acht eigene synthetische Chats wiederherstellbar
 archiviert; Dokumente erhalten, keine anderen Projekte dabei geändert.
 
 M0–M2 haben die dokumentierten Abnahmen. M3/M4/M5 sind weiterhin Teilstände.
-Noch zu entwickeln bzw. abzunehmen: ereignisbasierte Aufgaben, allgemeinere validierte
+Noch zu entwickeln bzw. abzunehmen: weitere Ereignistypen, allgemeinere validierte
 Workflowgraphen und zusätzliche feste Aktionsadapter, interaktiver Browser mit
 menschlicher Login-/2FA-Übergabe, natürliche PDF-/Bildoperationen, weitergehende
 Dateiänderungen und breite Layout-/Fakten-QA, Vollast und reale Geräteabnahme. MCP-Ziele sind derzeit nicht
@@ -59,9 +69,8 @@ reale eigene Schlüssel und konkrete Ausgangsfreigaben fehlen. OpenRouter bleibt
 der vorhandene zugelassene externe Anbieter. Produktive HA-Schreibwartung benötigt
 weiterhin einen verifizierten Backup-/Wiederherstellungsweg mit Schlüssel; HA- und
 n8n-Gesamtrestores sowie RTO/RPO sind nicht abgenommen. Kein Merge als fertige V1.
-Nächste unabhängige Entwicklungsarbeit: ereignisbasierte Aufgaben und daraus
-validierte feste Workflowgraphen; anschließend interaktiver Browser und weitere
-natürliche Dateioperationen. Details: docs/requirements.md und
+Nächste unabhängige Entwicklungsarbeit: validierte feste Workflowgraphen; anschließend
+interaktiver Browser und weitere natürliche Dateioperationen. Details: docs/requirements.md und
 docs/*-acceptance-status.md.
 
 ## Historischer Stand · M3 erweitert und live installiert

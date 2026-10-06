@@ -36,3 +36,11 @@ Die Aufgabenansicht bietet den Filter „Bei neuen Dokumenten“; Ereignishistor
 Laufergebnis sind verknüpft. Ein fehlender Zeitimpuls verhindert Aktivierung.
 Weitere Ereignistypen und automatische Analysen neu hochgeladener Inhalte benötigen
 einen eigenen begrenzten Vertrag; sie sind nicht durch diesen Auslöser freigegeben.
+
+
+Abnahme: Anwendung c13e41f / Schema 0022 auf eigener VM. Elf echte PostgreSQL-Fälle
+und alle drei synthetischen Browserprüfungen bestanden. Die bestehende n8n-Uhr hat
+lokale Lesearbeit sowie einen zweistufigen lokalen Lese-/Analysefall tatsächlich
+ausgeführt. Ausgewählte Quelle und exakter Lesebeleg sind im Modelleingang enthalten;
+der Inhalt des neuen auslösenden Dokuments ist ausgeschlossen. Keine Cloudkosten.
+Eigene QA-Aufgabe und Projektraum sind wiederherstellbar archiviert; Originale erhalten.

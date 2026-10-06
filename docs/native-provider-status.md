@@ -3,7 +3,7 @@
 Die native Transportgrenze für OpenAI Responses und Anthropic Messages ist vorhanden
 und mit synthetischen HTTP-Antworten geprüft. Im Entwicklungsstand ist sie mit
 verschlüsselter Konfiguration, Budgetreservierung und normalen Einstellungsdialogen
-integriert und auf der eigenen VM mit Schema 0021 installiert. Kein echter nativer Zugang eingerichtet,
+integriert und auf der eigenen VM mit Schema 0022 installiert. Kein echter nativer Zugang eingerichtet,
 kein bezahlter nativer API-Test, keine neue produktive Ausgangsfreigabe.
 
 Die Grenze prüft LOCAL_ONLY und genaue Quelle/Revision/Anbieter-Freigabe **vor DNS**.
@@ -25,7 +25,7 @@ Quellen: [OpenAI Streaming](https://developers.openai.com/api/docs/guides/stream
 [Anthropic Streaming](https://platform.claude.com/docs/en/build-with-claude/streaming),
 [Anthropic Modellpreise](https://platform.claude.com/docs/en/models/haiku-4-5/overview).
 
-Schema 0021 bindet ein Gespräch unveränderlich an den beim Anlegen gewählten Anbieter.
+Schema 0022 bindet ein Gespräch unveränderlich an den beim Anlegen gewählten Anbieter.
 Bestehende Gespräche bleiben auf OpenRouter gebunden. Nachrichtenedits benötigen
 weiterhin eine eigene Inhaltsrevision-Freigabe. Lokale Projekt-/Vault-Kontexte bleiben
 lokal; eine bloße Auswahl gewährt keine Übertragung. Synthetischer API-Gesamtablauf
@@ -46,7 +46,7 @@ Usage behält die volle Reservierung. Ein Kontext- oder Streamfehler wird nicht 
 kostenpflichtig ausgeführt. Die produktive Native-Live-Abnahme benötigt dedizierte
 Zugänge und Zielfreigaben und bleibt offen. M5 bleibt teilweise umgesetzt.
 
-Schema 0021 ist mit `ee7ab0f` auf der eigenen VM installiert. Beide APIs gesund;
+Schema 0022 ist mit `c13e41f` auf der eigenen VM installiert. Beide APIs gesund;
 zehn echte PostgreSQL-Integrationsfälle separat bestanden. Keine neuen nativen
-Schlüssel oder Ausgangsfreigaben aktiviert. Eigener Restore prüft Schema 0021
+Schlüssel oder Ausgangsfreigaben aktiviert. Eigener Restore prüft Schema 0022
 und vorhandene Schlüssel; fehlende native Live-Tests bleiben offen.

@@ -7,14 +7,14 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
 |---|---|
 | Tool-Gateway, versionierte Parameter, fünfminütige Freigaben, globale Schreibpause | API-/PG-Tests und live Abnahme vorhandener begrenzter Aktionen |
 | Skills: Versionen, Auswahl, Vertrauen, Rechte bleiben unverändert | lokale Tests, CI und live Prüfung |
-| Task-Center mit Dialog, einmalig/täglich/wöchentlich, Ergebnisse und Historie | UI/PG-Abnahme; vorhandener n8n-Minutenworkflow |
+| Task-Center mit Dialog, Termine, Dokumentauslöser, Ergebnisse und Historie | UI/PG-Abnahme; vorhandener n8n-Minutenworkflow |
 | Aufgabenbezogene n8n-Vorlage, Veröffentlichung, Callback, lokale Ausführung | reale Execution 276; Testworkflow deaktiviert, Aufgabe archiviert |
 | MCP-Katalog und parameterfreie explizite Text-Lesewerkzeuge | HTTP-/UI-Tests, Schema/Revision/Allowlist; keine echten MCP-Ziele angefordert |
 | Passive Browserprüfung mit Bild und Text | echter Chromium-Container, Sandbox und Netzwerksperre geprüft; nur fest freigegebene Ziele |
 | HA-Status, Backupmetadaten und Wartungsplan als Hintergrundaufgabe | realer PostgreSQL-Worker mit HA 2026.9.3 / 61 Backupmetadaten, null Writes |
 | Systemberichte im Chat / natürliche Aufgabenentwürfe | lokale Grenzen, gespeicherte Belege, echte lokale Router-/HA-Abnahme und installierter Samstag-02:00-Entwurf bestanden |
 | Aufgabenprofile und Schreibfreigaben | implementiert für genau eine wiederherstellbare lokale Projektarchivierung: Einzelfreigabe oder revisionsgebundene Autonomie mit Ablaufzeit, Widerruf, Verbrauch und unveränderlicher Historie; keine externen Writes |
-| obdaAI-Backup / temporärer Restore | Schema 0021, 23 Dateiversionen, 43 Originalhashes, Memory-Dateien, Schlüssel und Workflowbelege geprüft |
+| obdaAI-Backup / temporärer Restore | Schema 0022, 23 Dateiversionen, 46 Originalhashes, Memory-Dateien, Schlüssel und Workflowbelege geprüft |
 
 ## Noch fehlend
 
@@ -50,3 +50,12 @@ seinen begrenzten Grant. Jeweils eigenes leeres synthetisches Ziel genau einmal
 archiviert, Revision genau +1, zwei Schritte und Aktionsbeleg; Wiederholung derselben
 Anfrage lieferte denselben Lauf. Eigene Testaufgaben anschließend archiviert und
 globale Schreibpause wieder aktiv. Keine externen Schreibaktionen.
+
+
+Dokumentauslöser `source_ready` sind mit Schema 0022 auf der eigenen VM installiert.
+Echte vorhandene n8n-Uhr, lokale Lesearbeit, Pause/Bestand/revisionsgebundene
+Ereignisbelege und ausbleibender Doppelrun nach erneuter Verarbeitung wurden geprüft.
+Die zusätzliche lokale Ereignis-Analyse erhält nur eine ausdrücklich ausgewählte
+synthetische Quelle und den exakten lokalen Lesebeleg; der neue auslösende Text
+ist nicht Teil des Modelleingangs. Keine externen Rechte oder neuen n8n-Workflows.
+Details und Grenzen: source-ready-tasks.md. Weitere Ereignistypen bleiben offen.

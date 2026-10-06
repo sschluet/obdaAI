@@ -1,6 +1,6 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026, produktiv `ee7ab0f` / Schema 0021. Die Dateipipeline ist live;
+Stand 06.10.2026, produktiv `c13e41f` / Schema 0022. Die Dateipipeline ist live;
 M4 bleibt wegen weiterer natürlicher Änderungen und breiter Qualitätsabnahme teilweise.
 
 | Funktion | Implementiert und tatsächlich geprüft | Verbleibende Grenze |
@@ -13,7 +13,7 @@ M4 bleibt wegen weiterer natürlicher Änderungen und breiter Qualitätsabnahme 
 | Modell / Chat | Echte lokale Ein-Abschnitt-Datei ohne Quellen und Quellenbericht aus Projektunterlagen bestanden; belegte Farbe und Anzahl korrekt; native Vorschau/Download/Editierbarkeit sowie Word-/gezielte PPTX-Folgeversion live geprüft | Ein erfolgreicher synthetischer Bericht beweist keine allgemeine Faktentreue |
 | Versionen | Immutable Vorgaben/Ausgaben/Quellhashes, revisionsgebundene Folgeversionen, alte Word-Datei unverändert | Jede neue Ausgabe benötigt ihre eigene Vorschauprüfung |
 | Offline-Runner | Linux nonroot/netzlos/readonly, kein DB-/Secret-/Vaultzugang, Landlock und Ressourcenlimits; fünf Pläne/sieben Vorschauen, PDF-Export und Alpha/Metadatenprüfung bestanden | Kein fremder Code, Macro, Pfad oder URL ausführbar |
-| Dispatch / Betrieb | Gemeinsame PG-Transaktion für Version/Queue; dauerhafter Worker, Chat hat begrenzte readonly Spoolmounts; zehn echte PG-Fälle; verschlüsselter isolierter Restore mit 23 Versionen | Keine vollständige V1-/Fremdsystem-Restorebehauptung |
+| Dispatch / Betrieb | Gemeinsame PG-Transaktion für Version/Queue; dauerhafter Worker, Chat hat begrenzte readonly Spoolmounts; elf echte PG-Fälle; verschlüsselter isolierter Restore mit 23 Versionen | Keine vollständige V1-/Fremdsystem-Restorebehauptung |
 
 Download bleibt gesperrt, bis alle Vorschauseiten der exakten Version bestätigt
 wurden. Gültiges Rendering ist keine visuelle Freigabe. Originale, frühere Versionen

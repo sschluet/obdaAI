@@ -241,3 +241,79 @@ def test_migration_baselines_existing_ready_originals_without_emitting_new_event
     with factory() as db:
         events = list(db.scalars(select(SourceReadyEvent)))
         assert len(events) == 1 and events[0].baseline
+
+
+@pytest.mark.parametrize("drift", [False, True])
+def test_event_analysis_keeps_explicit_sources_and_rechecks_trigger_during_stream(setup, drift):
+    import asyncio
+
+    from hub.db import SourceChunk
+    from hub.task_model import execute_task
+    from test_task_model import AnalysisProvider
+
+    app, c, h, provider = setup
+    now = time.time()
+    pid = project(c, h)
+    selected, _ = ready(app, pid, now - 20)
+    with app.state.sessions() as db:
+        db.add(
+            SourceChunk(
+                source_id=selected,
+                locator="Selected paragraph",
+                content="EXPLICIT_SELECTED_SENTINEL",
+            )
+        )
+        db.commit()
+    task = test_tasks.control(
+        c,
+        h,
+        test_tasks.create(
+            c,
+            h,
+            project_id=pid,
+            sources=[{"id": selected, "revision": 1, "sha256": "a" * 64}],
+            steps=[{"tool_id": "ai.analyze"}],
+        ),
+    ).json()
+    task = test_schedules.put(c, h, task, kind="source_ready").json()
+    with app.state.sessions() as db:
+        plan = db.get(TaskSchedule, task["id"])
+        plan.paused = False
+        plan.event_cursor = latest_event(db)
+        db.commit()
+    trigger, _ = ready(app, pid, now)
+    with app.state.sessions() as db:
+        db.add(
+            SourceChunk(
+                source_id=trigger,
+                locator="Unselected paragraph",
+                content="UNAPPROVED_NEW_DOCUMENT_SENTINEL",
+            )
+        )
+        db.commit()
+    jobs = test_schedules.pulse(app, now + 1)
+    assert len(jobs) == 1
+
+    class EventProvider(AnalysisProvider):
+        async def stream(self, parts, roles, *, external, grants):
+            async for piece in super().stream(parts, roles, external=external, grants=grants):
+                yield piece
+                if drift:
+                    with app.state.sessions() as db:
+                        lock(db)
+                        db.get(Source, trigger).revision += 1
+                        db.commit()
+
+    model = EventProvider()
+    asyncio.run(execute_task(app.state.sessions, app.state.settings, jobs[0], model))
+    run = c.get("/api/tasks/" + task["id"] + "/runs").json()[0]
+    assert run["status"] == ("failed" if drift else "succeeded")
+    combined = "\n".join(part.content for part in model.parts)
+    assert (
+        "EXPLICIT_SELECTED_SENTINEL" in combined
+        and "UNAPPROVED_NEW_DOCUMENT_SENTINEL" not in combined
+        and trigger not in combined
+    )
+    assert model.stream_calls == [False]
+    asyncio.run(execute_task(app.state.sessions, app.state.settings, jobs[0], model))
+    assert model.stream_calls == [False]
