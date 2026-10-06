@@ -168,7 +168,8 @@ def test_foreign_project_forgery_and_excerpt_drift_denied(setup):
     assert provider.calls == 0
     body = draft(app, c, h, pid, spec, provider).json()
     original = body["draft_token"]
-    body["draft_token"] = "A" + original[1:]
+    body["draft_token"] = ("B" if original.startswith("A") else "A") + original[1:]
+    assert body["draft_token"] != original
     assert save(c, h, pid, body).status_code == 409
     body["draft_token"] = original
     assert save(c, h, other, body).status_code == 409
