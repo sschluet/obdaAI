@@ -2,13 +2,15 @@
 
 ## Aktueller Stand: Dateien, Aufgaben und Schema 0021 live geprüft
 
-Produktiv ist `6fbfb0e` / Schema 0021 installiert. Beide APIs sind gesund; die
-bestehenden IPv4-/IPv6-Regeln blieben unverändert. Lokal: 453 Tests bestanden,
+Produktiv ist `ee7ab0f` / Schema 0021 installiert. Beide APIs sind gesund; die
+bestehenden IPv4-/IPv6-Regeln blieben unverändert. Lokal: 459 Tests bestanden,
 zehn PostgreSQL-Fälle bewusst ausgelassen und separat mit echter temporärer
 Datenbank auf der eigenen VM bestanden. Ruff/mypy und Source-Scan bestanden.
-Alle sechs GitHub-Jobs für die Anwendung `6fbfb0e` bestanden: Python/PG, Secrets,
+Die CI prüft denselben Anwendungscode auf dem abschließenden PR-Stand: Python/PG, Secrets,
 Frontend mit drei Browserchecks, Appcontainer, Browserrunner und Dateirunner.
-Spätere Dokumentationscommits werden im PR gesondert geprüft.
+Der frühere zufällige Token-Testfehler ist deterministisch korrigiert; finale CI
+wird im PR nachgewiesen. Tests-/Dokumentationscommits ändern den installierten
+Anwendungscode nicht.
 
 Dateidialoge liefern editierbares Word/PowerPoint, PDF-Seitenoperationen,
 PDF-Erstellung aus Text/Tabellen/Bildern und Bildzuschnitt/Collage. Word kann Bilder
@@ -19,7 +21,9 @@ und erneut geöffneten nativen Dateien abgenommen. Der synthetische Quellenberic
 enthält die belegte Farbe und Anzahl korrekt; dies ersetzt keine allgemeine Fakten-QA.
 Natürliche Word-Folgeversion und gezielte Änderung der zweiten PowerPoint-Folie
 mit unveränderter erster Folie sind zusätzlich real gerendert, visuell geprüft,
-heruntergeladen und erneut nativ geöffnet. Die Ausgangsversion bleibt erhalten.
+heruntergeladen und erneut nativ geöffnet. Die Ausgangsversion bleibt erhalten. Direkte Dateiänderungsaufträge mit unklarem
+Ziel werden vor der Modellklassifikation abgewiesen; vier veröffentlichte
+synthetische Versionshashes bleiben dabei unverändert.
 Dichte deutsche PowerPoint-Folien passen in die vorgesehenen Textbereiche.
 Die Unicode-Collage v2 ist visuell und per Hash geprüft. Transparente PNGs behalten
 Alpha in Word; Collagen mischen Alpha auf den festen Hintergrund. EXIF/Profile

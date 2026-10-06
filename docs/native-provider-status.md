@@ -46,7 +46,7 @@ Usage behält die volle Reservierung. Ein Kontext- oder Streamfehler wird nicht 
 kostenpflichtig ausgeführt. Die produktive Native-Live-Abnahme benötigt dedizierte
 Zugänge und Zielfreigaben und bleibt offen. M5 bleibt teilweise umgesetzt.
 
-Schema 0021 ist mit `6fbfb0e` auf der eigenen VM installiert. Beide APIs gesund;
+Schema 0021 ist mit `ee7ab0f` auf der eigenen VM installiert. Beide APIs gesund;
 zehn echte PostgreSQL-Integrationsfälle separat bestanden. Keine neuen nativen
 Schlüssel oder Ausgangsfreigaben aktiviert. Eigener Restore prüft Schema 0021
 und vorhandene Schlüssel; fehlende native Live-Tests bleiben offen.

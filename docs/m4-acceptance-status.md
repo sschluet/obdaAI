@@ -1,6 +1,6 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026, produktiv `6fbfb0e` / Schema 0021. Die Dateipipeline ist live;
+Stand 06.10.2026, produktiv `ee7ab0f` / Schema 0021. Die Dateipipeline ist live;
 M4 bleibt wegen weiterer natürlicher Änderungen und breiter Qualitätsabnahme teilweise.
 
 | Funktion | Implementiert und tatsächlich geprüft | Verbleibende Grenze |
