@@ -1,6 +1,47 @@
 # obdaAI — Status 06.10.2026
 
-## Aktueller Stand: Projekträume, Quellen und Aufgaben überarbeitet
+## Aktueller Stand: natürliche Medienoperationen und kontrollierte Abläufe
+
+Produktiv `5c1930f` / Schema 0024. Der zusätzliche Dateiblock erlaubt natürliche
+PDF-Seitenauswahl/-reihenfolge/-drehung und Zuschnitt/Skalierung von ausdrücklich
+benannten Originalbildern. Eindeutige Zahlen/Koordinaten werden aus dem direkten
+Nutzerauftrag gebunden; Modellvorschläge können sie nicht vertauschen. Leere
+PDF-Seiten und Bilder ohne OCR erhalten neutrale technische Fundstellen.
+Bilder können Folgeversionen erzeugen; eine einzelne quellengebundene PPTX-Folie
+behält andere Folien und Notizen exakt. Bisherige Dateien bleiben unverändert.
+
+Echte lokale PDF-/PNG-Abnahme bestanden: zwei Ausgabeseiten 2,1, erste 90° gedreht;
+Originalbild rechts zugeschnitten, 128×128 blaue Pixel. Linuxvorschauen visuell
+geprüft, Download vor Freigabe gesperrt, danach authentifizierte Hash-/native
+Seiten-/Pixelprüfung. Eigene QA-Räume/Chats archiviert, Originale erhalten.
+Details: docs/chat-media-files.md.
+
+Aufgaben bieten bis zu fünf editierbare geprüfte Schritte, explizite lokale
+Systemberichtsauswertung und die Bedingung „nur bei verfügbaren HA-Updates“.
+Unbekannter Updatezustand wird nicht als Abwesenheit interpretiert. Echte HA-Lese-
+und lokale Analysepipeline mit dauerhaften geordneten Belegen bestanden, ohne
+HA-Writes oder Cloudtransfer. Der optionale achtknotige n8n-Graph verbindet Start,
+Status, Bedingungen, begrenztes Warten, Abschluss und Fehlerstopp. Echte Execution
+1725 und idempotenter Aufruf bestätigt; nur eigene Testaufgabe archiviert und
+Testworkflow deaktiviert, bestehende Workflows unverändert. n8n erhält technische
+IDs/Betriebsabschluss, keine Ziele, Berichte, Quellen oder Modellantworten.
+Details: docs/local-task-pipelines.md.
+
+530 lokale Tests, zwölf echte temporäre PostgreSQL-Prüfungen und fünf Browserchecks
+bestanden; Ruff/mypy/Source-Scan und sechs CI-Jobs grün. Aktueller verschlüsselter
+Off-VM-Backup/isolierter Restore von Schema 0024: 50 Originale, 25 Dateiversionen,
+sechs Memory-Dateien, Schlüssel und Workflowbelege einschließlich completed-Status.
+Temporäre Restore-DB entfernt. HTTPS/Auth/CSRF/Origin/Logout erneut geprüft.
+Globale Schreibpause aktiv. Branch milestone/m3-actions bleibt privat und PR #3 Draft.
+
+V1 ist weiterhin nicht vollständig: interaktiver Browser mit menschlichem Login/
+2FA, weitere feste externe Aktionsadapter, freiere geprüfte Workflowgraphen,
+Mehrdatei-PDF-Aufteilung/weitere Dateioperationen, breite semantische/Layout-QA,
+Vollast und reale Geräte sowie HA-/n8n-Recovery bleiben offen. Native Cloud- und
+MCP-Livechecks benötigen konkrete Konfiguration; produktive HA-Wartung benötigt
+Archiv-/Schlüssel-/Wiederherstellungsnachweis. Keine vollständige V1 behaupten.
+
+## Historischer Stand: Arbeitsräume und Quellen
 
 Produktiv ist `d6971b9` / Schema 0024 installiert; der eigene Quellen-Netzwerkdienst
 ist auf `f5a41c4` aktualisiert. Projekträume haben eigene
