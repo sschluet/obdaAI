@@ -8,7 +8,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import FastAPI, HTTPException
-from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_serializer, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, load_only, sessionmaker
 
@@ -81,6 +81,20 @@ class TaskSpec(StrictInput):
     output: Literal["task_center"] = "task_center"
     max_cost_usd: Literal[0] = 0
     timeout_seconds: int = Field(default=15, ge=1, le=30)
+    include_system_reports: bool = False
+    analysis_condition: Literal["always", "ha_updates_available"] = "always"
+    workflow_wait: bool = False
+
+    @model_serializer(mode="wrap")
+    def compatible_spec(self, handler: Any) -> dict[str, Any]:
+        value: dict[str, Any] = handler(self)
+        if not self.include_system_reports:
+            value.pop("include_system_reports", None)
+        if self.analysis_condition == "always":
+            value.pop("analysis_condition", None)
+        if not self.workflow_wait:
+            value.pop("workflow_wait", None)
+        return value
 
     @model_validator(mode="after")
     def model_step_last(self) -> "TaskSpec":
@@ -88,8 +102,19 @@ class TaskSpec(StrictInput):
         if analyses and analyses != [len(self.steps) - 1]:
             raise ValueError("At most one local analysis, as the final step")
         external = [s for s in self.steps if s.tool_id.startswith("ha.")]
-        if len(external) > 1 or (external and analyses):
+        if external and analyses and not self.include_system_reports:
             raise ValueError("One fixed HA report per task; no implicit model context transfer")
+        if len(external) > 3:
+            raise ValueError("At most three bounded system reports")
+        if self.include_system_reports and (not external or not analyses):
+            raise ValueError(
+                "Explicit report context needs bounded HA reads and final local analysis"
+            )
+        if self.analysis_condition != "always" and (
+            not self.include_system_reports
+            or not any(s.tool_id in {"ha.inspect", "ha.maintenance.plan"} for s in self.steps)
+        ):
+            raise ValueError("Update condition requires a selected local HA status report")
         writes = [i for i, step in enumerate(self.steps) if step.tool_id == "project.archive"]
         if writes:
             if (
@@ -465,6 +490,19 @@ def execute_task_read(
 
 
 def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    @app.get("/api/tasks/{task_id}/plan")
+    def pipeline(task_id: str, auth: Auth) -> dict[str, Any]:
+        from hub.task_pipeline import plan
+
+        with factory() as db:
+            task, revision, spec = current(db, task_id)
+            return {
+                "task_id": task.id,
+                "revision": task.revision,
+                "spec_sha256": revision.sha256,
+                **plan(spec),
+            }
+
     @app.post("/api/task-examples")
     def examples(body: StrictInput, auth: Auth) -> list[dict[str, Any]]:
         import uuid

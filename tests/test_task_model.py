@@ -246,3 +246,130 @@ def test_local_analysis_consumes_real_prior_read_evidence_once(setup):
     assert analysis["input"][-1]["content"] == t["spec"]["goal"]
     asyncio.run(execute_task(app.state.sessions, app.state.settings, receipt["id"], provider))
     assert provider.stream_calls == [False]
+
+
+def test_explicit_system_report_pipeline_preserves_order_and_local_audit(setup, monkeypatch):
+    app, c, h, _ = setup
+    calls = []
+
+    def report(cfg):
+        calls.append("ha")
+        return {"version": "SYNTHETIC_HA_REPORT", "updates": 0, "label": "LOCAL_ONLY"}
+
+    monkeypatch.setattr("hub.home_assistant.inspect", report)
+    provider = AnalysisProvider()
+    app.state.providers = provider
+    t = control(
+        c,
+        h,
+        create(
+            c,
+            h,
+            include_system_reports=True,
+            steps=[
+                {"tool_id": "ha.inspect"},
+                {"tool_id": "hub.inspect"},
+                {"tool_id": "ai.analyze"},
+            ],
+            timeout_seconds=30,
+        ),
+    ).json()
+    c.post("/api/tasks/" + t["id"] + "/runs", headers=h, json=run_body(t)).raise_for_status()
+    receipt = terminal(c, t)
+    assert receipt["status"] == "succeeded", receipt
+    assert [s["tool_id"] for s in receipt["steps"]] == ["ha.inspect", "hub.inspect", "ai.analyze"]
+    audit = receipt["steps"][-1]["result"]
+    assert any("SYNTHETIC_HA_REPORT" in p["content"] for p in audit["input"])
+    assert all(p["label"] == "LOCAL_ONLY" for p in audit["input"]) and audit["cost_usd"] == 0
+    asyncio.run(execute_task(app.state.sessions, app.state.settings, receipt["id"], provider))
+    assert calls == ["ha"] and provider.stream_calls == [False]
+
+
+def test_system_report_is_never_implicitly_given_to_model(setup):
+    app, c, h, _ = setup
+    result = c.post(
+        "/api/tasks",
+        headers=h,
+        json={
+            "title": "No consent",
+            "goal": "Read",
+            "steps": [{"tool_id": "ha.inspect"}, {"tool_id": "ai.analyze"}],
+        },
+    )
+    assert result.status_code == 422
+    from hub.task_api import TaskSpec
+
+    old = TaskSpec(title="Old scope", goal="Read")
+    assert "include_system_reports" not in old.model_dump(mode="json")
+
+
+def test_report_cancellation_stops_before_local_model(setup, monkeypatch):
+    app, c, h, _ = setup
+    provider = AnalysisProvider()
+    app.state.providers = provider
+    t = control(
+        c,
+        h,
+        create(
+            c,
+            h,
+            include_system_reports=True,
+            steps=[{"tool_id": "ha.inspect"}, {"tool_id": "ai.analyze"}],
+            timeout_seconds=30,
+        ),
+    ).json()
+
+    def report(cfg):
+        with app.state.sessions() as db:
+            from hub.db import Task
+
+            task = db.get(Task, t["id"])
+            task.paused = True
+            task.control_revision += 1
+            db.commit()
+        return {"label": "LOCAL_ONLY", "version": "SYNTHETIC_CANCELLED_REPORT"}
+
+    monkeypatch.setattr("hub.home_assistant.inspect", report)
+    c.post("/api/tasks/" + t["id"] + "/runs", headers=h, json=run_body(t)).raise_for_status()
+    result = terminal(c, t)
+    assert result["status"] == "failed" and provider.stream_calls == []
+    assert result["steps"][-1]["result"]["partial"]
+
+
+@pytest.mark.parametrize(
+    "available,unknown,expected_calls,expected_status",
+    [(0, 0, 0, "succeeded"), (2, 0, 1, "succeeded"), (0, 1, 0, "failed")],
+)
+def test_update_condition_is_local_bounded_and_does_not_guess_unknown_state(
+    setup, monkeypatch, available, unknown, expected_calls, expected_status
+):
+    app, c, h, _ = setup
+    monkeypatch.setattr(
+        "hub.home_assistant.inspect",
+        lambda cfg: {
+            "label": "LOCAL_ONLY",
+            "available_updates": available,
+            "unavailable_updates": unknown,
+        },
+    )
+    provider = AnalysisProvider()
+    app.state.providers = provider
+    t = control(
+        c,
+        h,
+        create(
+            c,
+            h,
+            include_system_reports=True,
+            analysis_condition="ha_updates_available",
+            steps=[{"tool_id": "ha.inspect"}, {"tool_id": "ai.analyze"}],
+            timeout_seconds=30,
+        ),
+    ).json()
+    c.post("/api/tasks/" + t["id"] + "/runs", headers=h, json=run_body(t)).raise_for_status()
+    result = terminal(c, t)
+    assert result["status"] == expected_status
+    assert len(provider.stream_calls) == expected_calls
+    if expected_status == "succeeded" and not expected_calls:
+        assert result["steps"][-1]["result"]["skipped"] is True
+        assert result["steps"][-1]["result"]["partial"] is False

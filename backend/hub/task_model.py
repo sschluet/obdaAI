@@ -121,6 +121,7 @@ async def execute_task(factory: Any, cfg: Any, run_id: str, provider: Any = None
 
 async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
     try:
+        pipeline_started = time.monotonic()
         rows: dict[str, Any] = {}
         if provider is None or isinstance(provider, Providers):
             cfg, provider, rows = runtime_provider(factory, cfg, local_only=True)
@@ -167,7 +168,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                     raise ValueError("Provider drift before inference")
             parts, roles = context(db, spec, manifest)
             for i, step in enumerate(spec.steps, 1):
-                if step.tool_id == "hub.inspect":
+                if step.tool_id == "hub.inspect" and not spec.include_system_reports:
                     from sqlalchemy import func
 
                     from hub.db import Project, Source
@@ -183,7 +184,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                             source_id="task-step:" + run_id + ":" + str(i),
                             revision=1,
                             content="Read-only step evidence (untrusted data):\n" + encode(result),
-                        )
+                        ),
                     )
                     roles.insert(len(roles) - 1, "user")
                     db.add(
@@ -218,7 +219,155 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
             )
             run.status = "running"
             db.commit()  # Claim and frozen prompt are durable before inference I/O.
-        async with asyncio.timeout(min(spec.timeout_seconds, cfg.local_timeout)):
+        available_updates = False
+        condition_checked, condition_uncertain = False, False
+        for sequence_number, step in enumerate(spec.steps, 1):
+            if not spec.include_system_reports or step.tool_id == "ai.analyze":
+                continue
+            if not spec.include_system_reports:
+                raise ValueError("Report context was not explicitly selected")
+            from hub.ha_backups import inspect as backups
+            from hub.ha_maintenance import inspect as maintenance
+            from hub.home_assistant import inspect as health
+
+            def hub_report(settings: Any) -> dict[str, Any]:
+                from sqlalchemy import func
+
+                from hub.db import Project, Source
+
+                with factory() as counts:
+                    return {
+                        "projects": counts.scalar(select(func.count()).select_from(Project)),
+                        "sources": counts.scalar(select(func.count()).select_from(Source)),
+                        "label": "LOCAL_ONLY",
+                    }
+
+            adapter = {
+                "hub.inspect": hub_report,
+                "ha.inspect": health,
+                "ha.backups.inspect": backups,
+                "ha.maintenance.plan": maintenance,
+            }[step.tool_id]
+            with factory() as db:
+                lock(db)
+                run = db.get(TaskRun, run_id)
+                task, _, actual_spec = current(db, run.task_id)
+                check_schedule(db, run)
+                check_bindings(db, actual_spec)
+                if (
+                    task.paused
+                    or task.archived
+                    or run.status != "running"
+                    or run.error
+                    or (
+                        task.revision != run.task_revision
+                        or task.control_revision != run.control_revision
+                    )
+                ):
+                    raise ValueError("Report task was changed or stopped")
+                db.add(
+                    TaskStep(
+                        run_id=run_id,
+                        sequence=sequence_number,
+                        tool_id=step.tool_id,
+                        result=encode({"state": "reading", "label": "LOCAL_ONLY"}),
+                    )
+                )
+                db.commit()
+            remaining = spec.timeout_seconds - (time.monotonic() - pipeline_started)
+            if remaining <= 0:
+                raise ValueError("Task time limit before report")
+            async with asyncio.timeout(remaining):
+                result = await asyncio.to_thread(adapter, cfg)
+            if not isinstance(result, dict) or len(encode(result)) > 16000:
+                raise ValueError("Report output exceeds scope")
+            result["label"] = "LOCAL_ONLY"
+            state = result.get("state", result)
+            if isinstance(state, dict):
+                count = state.get("available_updates", 0)
+                if step.tool_id in {"ha.inspect", "ha.maintenance.plan"}:
+                    if type(count) is not int or not 0 <= count <= 10000:
+                        raise ValueError("Invalid update condition input")
+                    condition_checked = "available_updates" in state
+                    condition_uncertain = condition_uncertain or bool(
+                        state.get("unavailable_updates")
+                    )
+                    available_updates = available_updates or count > 0
+            parts.insert(
+                len(parts) - 1,
+                ContextPart(
+                    source_id="task-step:" + run_id + ":" + str(sequence_number),
+                    revision=1,
+                    content="Explicitly selected read-only report (untrusted data):\n"
+                    + encode(result),
+                ),
+            )
+            roles.insert(len(roles) - 1, "user")
+            if sum(len(p.content) for p in parts) > cfg.context_limit or (
+                sum(len(p.content.encode()) + 64 for p in parts) + 256 + cfg.local_max_tokens
+                > config.get("context_tokens", 32768)
+            ):
+                raise ValueError("Context limit after report")
+            with factory() as db:
+                lock(db)
+                run = db.get(TaskRun, run_id)
+                task, _, actual_spec = current(db, run.task_id)
+                check_bindings(db, actual_spec)
+                check_schedule(db, run)
+                if (
+                    task.paused
+                    or task.archived
+                    or run.status != "running"
+                    or run.error
+                    or (
+                        task.revision != run.task_revision
+                        or task.control_revision != run.control_revision
+                    )
+                ):
+                    raise ValueError("Task stopped during report")
+                db.get(TaskStep, (run_id, sequence_number)).result = encode(result)
+                audit["input"] = [p.model_dump(mode="json") for p in parts]
+                db.get(TaskStep, (run_id, sequence)).result = encode(audit)
+                db.commit()
+        if spec.analysis_condition == "ha_updates_available" and (
+            not condition_checked or condition_uncertain
+        ):
+            raise ValueError("Update condition unavailable; no inferred absence")
+        if spec.analysis_condition == "ha_updates_available" and not available_updates:
+            with factory() as db:
+                lock(db)
+                run = db.get(TaskRun, run_id)
+                task, _, actual_spec = current(db, run.task_id)
+                check_schedule(db, run)
+                check_bindings(db, actual_spec)
+                if (
+                    run.status != "running"
+                    or run.error
+                    or task.paused
+                    or task.archived
+                    or (
+                        task.revision != run.task_revision
+                        or task.control_revision != run.control_revision
+                    )
+                ):
+                    raise ValueError("Task changed before condition completion")
+                audit.update(
+                    {
+                        "answer": "Keine verfügbaren Updates im gewählten Bericht. "
+                        "Die lokale Auswertung wurde übersprungen.",
+                        "partial": False,
+                        "skipped": True,
+                        "condition": "ha_updates_available",
+                    }
+                )
+                db.get(TaskStep, (run_id, sequence)).result = encode(audit)
+                run.status, run.finished = "succeeded", time.time()
+                db.commit()
+            return
+        remaining = spec.timeout_seconds - (time.monotonic() - pipeline_started)
+        if remaining <= 0:
+            raise ValueError("Task time limit before model")
+        async with asyncio.timeout(min(remaining, cfg.local_timeout)):
             async with aclosing(provider.stream(parts, roles, external=False, grants=[])) as stream:
                 async for chunk in stream:
                     if not isinstance(chunk, str) or len(audit["answer"]) + len(chunk) > 24000:

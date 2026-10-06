@@ -77,6 +77,7 @@ jobs:
           node artifact-check.mjs
           node native-provider-check.mjs
           node workspace-check.mjs
+          node pipeline-check.mjs
   container:
     runs-on: ubuntu-24.04
     steps:

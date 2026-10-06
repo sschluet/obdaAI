@@ -123,7 +123,8 @@ await page.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Summarize 
 await page.getByLabel('Projektraum (optional)',{exact:true}).selectOption({label:'Synthetic browser project'});
 await page.getByLabel('synthetic.md',{exact:true}).check();
 await page.getByLabel('Art der Aufgabe',{exact:true}).selectOption('hub_analysis');
-if(await page.getByRole('group',{name:'Geplante Schritte',exact:true}).getByRole('listitem').count()!==2)throw Error('Readable workflow steps missing');
+if(await page.getByRole('group',{name:'Geplanter Ablauf',exact:true}).getByRole('combobox').count()!==2)throw Error('Editable workflow steps missing');
+if(await page.getByLabel('Schritt 1',{exact:true}).inputValue()!=='hub.inspect'||await page.getByLabel('Schritt 2',{exact:true}).inputValue()!=='ai.analyze')throw Error('Ordered workflow plan lost');
 let unavailableWrites=0;
 await page.route('**/api/tasks',route=>{
  if(route.request().method()!=='POST')return route.continue();

@@ -67,7 +67,7 @@ def test_metadata_cannot_unlock_maintenance():
     "steps",
     [
         [{"tool_id": "ha.maintenance.plan"}, {"tool_id": "ai.analyze"}],
-        [{"tool_id": "ha.inspect"}, {"tool_id": "ha.backups.inspect"}],
+        [{"tool_id": "ha.inspect"}] * 4,
         [{"tool_id": "ha.update"}],
         [{"tool_id": "ha.inspect", "parameters": {"entity_id": "lock.frontdoor"}}],
     ],
@@ -106,3 +106,13 @@ def test_persisted_ha_task_report_and_duplicate_delivery(setup, monkeypatch):  #
     )
     assert len(calls) == 1 and run["snapshot"]["model"] is None and run["snapshot"]["cost_usd"] == 0
     assert "Authorization" not in json.dumps(run)
+
+
+def test_multiple_fixed_read_reports_do_not_imply_model_transfer():
+    spec = TaskSpec(
+        title="Bounded reports",
+        goal="Read selected reports",
+        steps=[{"tool_id": "ha.inspect"}, {"tool_id": "ha.backups.inspect"}],
+    )
+    assert not spec.include_system_reports
+    assert all(s.tool_id != "ai.analyze" for s in spec.steps)

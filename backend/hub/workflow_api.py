@@ -87,6 +87,13 @@ def remote(
 
 def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
     def public(db: Session, binding: WorkflowBinding) -> dict[str, Any]:
+        from hub.db import TaskRevision
+        from hub.task_pipeline import plan
+
+        revision = db.get(TaskRevision, (binding.task_id, binding.task_revision))
+        from hub.task_api import TaskSpec
+
+        pipeline = plan(TaskSpec.model_validate_json(revision.spec)) if revision else None
         return {
             "id": binding.id,
             "task_id": binding.task_id,
@@ -96,6 +103,7 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             "workflow_version": binding.remote_version,
             "label": "LOCAL_ONLY",
             "contains_private_context": False,
+            "pipeline": pipeline,
             "dispatches": [
                 {
                     "id": d.id,
@@ -199,8 +207,15 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
         with factory() as db:
             b = bound(db, binding_id)
             task_id, revision = b.task_id, b.task_revision
+        with factory() as db:
+            wait = current(db, task_id)[2].workflow_wait
         graph = task_workflow(
-            binding_id, task_id, revision, body.header_credential_id, body.ca_credential_id
+            binding_id,
+            task_id,
+            revision,
+            body.header_credential_id,
+            body.ca_credential_id,
+            wait_for_completion=wait,
         )
         try:
             actual = remote(cfg, "/api/v1/workflows/" + body.workflow_id)
@@ -343,6 +358,39 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             d.status = "cancelled"
             db.commit()
             return public(db, bound(db, d.binding_id))
+
+    @app.post("/api/workflow-status/{binding_id}")
+    def workflow_status(
+        binding_id: str, body: Callback, x_obdaai_workflow: str = Header(default="", repr=False)
+    ) -> dict[str, Any]:
+        with factory() as db:
+            b = bound(db, binding_id)
+            secret = decrypt(cfg, "workflow:" + b.id, b.encrypted_secret)
+            if not hmac.compare_digest(x_obdaai_workflow.encode(), secret.encode()):
+                raise HTTPException(401, "Workflow-Zugang fehlt")
+            d = db.get(WorkflowDispatch, str(body.dispatch_id))
+            if not d or d.binding_id != b.id or d.execution_id != body.execution_id or not d.run_id:
+                raise HTTPException(409, "Gebundener Ausführungsbeleg fehlt")
+            run = db.get(TaskRun, d.run_id)
+            task, rev, spec = current(db, b.task_id)
+            if (
+                not run
+                or task.archived
+                or task.paused
+                or task.revision != b.task_revision
+                or (task.control_revision != d.control_revision or rev.sha256 != b.spec_sha256)
+            ):
+                raise HTTPException(409, "Auftrag pausiert oder geändert")
+            # Only operational completion metadata. Never errors, prompt, goal,
+            # sources, report contents or condition results in n8n.
+            terminal = run.status not in {"queued", "running", "awaiting_approval"}
+            return {
+                "dispatch_id": d.id,
+                "execution_id": d.execution_id,
+                "run_id": run.id,
+                "complete": terminal,
+                "succeeded": run.status == "succeeded",
+            }
 
     @app.post("/api/workflow-callback/{binding_id}")
     async def callback(

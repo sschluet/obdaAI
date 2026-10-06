@@ -165,7 +165,12 @@ def execute_stages(factory: sessionmaker[Session], cfg: Settings, action_id: str
                 raise HTTPException(409, "Credentialbindung fehlt")
             b.graph = encode(
                 task_workflow(
-                    b.id, b.task_id, b.task_revision, b.header_id, cfg.n8n_ca_credential_id
+                    b.id,
+                    b.task_id,
+                    b.task_revision,
+                    b.header_id,
+                    cfg.n8n_ca_credential_id,
+                    wait_for_completion=current(db, b.task_id)[2].workflow_wait,
                 )
             )
             b.status, row.status = "workflow_pending", "dispatching"

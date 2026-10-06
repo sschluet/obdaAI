@@ -381,3 +381,28 @@ def test_cancel_unknown_dispatch_blocks_late_callback(workflows):
         json={"dispatch_id": body["request_id"], "execution_id": "42"},
     )
     assert r.status_code == 409
+
+
+def test_operational_completion_query_is_bound_and_excludes_private_results(workflows):
+    app, c, h, _ = workflows
+    t, b, token, calls, state = ready(workflows)
+    r = c.post("/api/workflows/" + b["id"] + "/runs", headers=h, json=run_body(t))
+    r.raise_for_status()
+    d = r.json()["dispatches"][0]
+    terminal(c, t)
+    body = {"dispatch_id": d["id"], "execution_id": "42"}
+    endpoint = "/api/workflow-status/" + b["id"]
+    assert c.post(endpoint, json=body).status_code == 401
+    good = c.post(endpoint, headers={"X-OBDAAI-WORKFLOW": token}, json=body)
+    assert good.status_code == 200, good.text
+    assert good.json()["complete"] and good.json()["succeeded"]
+    assert set(good.json()) == {"dispatch_id", "execution_id", "run_id", "complete", "succeeded"}
+    assert "PRIVATE_TASK" not in good.text and "sources" not in good.text
+    assert (
+        c.post(
+            endpoint, headers={"X-OBDAAI-WORKFLOW": token}, json=body | {"execution_id": "43"}
+        ).status_code
+        == 409
+    )
+    control(c, h, t, paused=True)
+    assert c.post(endpoint, headers={"X-OBDAAI-WORKFLOW": token}, json=body).status_code == 409

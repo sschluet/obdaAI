@@ -11,7 +11,9 @@ import hub.action_api as fixture_action_api
 import hub.artifact_api as fixture_artifact_api
 import hub.browser_read as fixture_browser
 import hub.chat_tools as fixture_chat_tools
+import hub.ha_backups as fixture_ha_backups
 import hub.ha_maintenance as fixture_maintenance
+import hub.home_assistant as fixture_ha
 import hub.knowledge_api as fixture_knowledge_api
 import hub.knowledge_connections as fixture_knowledge_connections
 import hub.websearch as fixture_web_pages
@@ -389,6 +391,7 @@ def synthetic_ha_inspect(cfg: Settings) -> dict:
 
 
 fixture_action_api.inspect_ha = synthetic_ha_inspect
+fixture_ha.inspect = synthetic_ha_inspect
 
 
 @app.post("/mcp")
@@ -453,6 +456,7 @@ def synthetic_ha_backups(cfg: Settings) -> dict:
 
 
 fixture_action_api.inspect_ha_backups = synthetic_ha_backups
+fixture_ha_backups.inspect = synthetic_ha_backups
 
 
 # Synthetic renderer response only; actual Chromium isolation is tested separately.
