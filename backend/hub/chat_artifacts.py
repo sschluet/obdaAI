@@ -165,6 +165,20 @@ def chat_base(db: Session, chat_id: str, project_id: str, run: Run) -> ArtifactR
     raise ValueError("In diesem Gespräch fehlt eine konkrete Datei für die Änderung")
 
 
+def requests_public_research(goal: str) -> bool:
+    """A clear direct user's public-search command is a mandatory step, not a grant."""
+    direct = re.search(
+        r"^\s*(?:(?:bitte|please)\s+)?(?:recherchiere|suche|research|search)\b", goal, re.I
+    )
+    public = re.search(r"\b(?:öffentlich|public|online|internet|web)\b|https://", goal, re.I)
+    negative = re.search(
+        r"\b(?:ohne|nicht|without|no)\b.{0,25}\b(?:web|internet|online)\b", goal, re.I
+    )
+    if direct and public and negative:
+        raise ValueError("Öffentliche Recherche und Webverbot widersprechen sich")
+    return bool(direct and public)
+
+
 def requests_project_sources(goal: str) -> bool:
     """Only an explicit request for this project's complete document collection."""
     names = r"(?:projektunterlagen|projektdokumente(?:n)?|projektquellen|project documents)"

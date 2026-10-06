@@ -34,3 +34,10 @@ Fortlaufende Dateiplanung nutzt das konfigurierte Run-Gesamtzeitlimit (höchsten
 einschließlich Router und Suche maßgeblich. Der Provider-Timeout begrenzt weiterhin
 einen stillstehenden HTTP-Empfang. Ein abgelaufenes Entwurfslimit erzeugt keine
 Dateiversion und keinen automatischen Modellretry. Beide Zeitgrenzen sind getestet.
+
+Ein eindeutiger direkter Auftrag wie „Recherchiere öffentlich … und erstelle …“
+verlangt die reale Websuche auch dann, wenn das lokale Modell nur Retrieval und
+Dateierstellung klassifiziert. Die Regel ergänzt keine Suchrechte: ohne bestätigten
+aktuellen Suchtext wird vorher abgebrochen. Zitate, Projektquelltexte und reine
+Projekt-Recherche lösen diese Regel nicht aus. Die Dateiplanung wird ausdrücklich
+über die bereits abgeschlossene Suche informiert. Tests prüfen beide Freigabewege.

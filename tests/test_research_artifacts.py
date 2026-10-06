@@ -151,3 +151,45 @@ def test_research_failure_does_not_invent_document_source(setup, monkeypatch):
     )
     assert "failed" in response.text and provider.calls == 0
     assert c.get("/api/projects/" + pid + "/artifacts").json() == []
+
+
+@pytest.mark.parametrize("approved", [False, True])
+def test_explicit_public_research_cannot_be_dropped_by_file_router(setup, monkeypatch, approved):
+    app, c, h, cfg, pid, chat, queries, provider = prepare(setup, monkeypatch)
+
+    async def incomplete(parts, roles):
+        return Route(
+            capabilities=["retrieval", "artifact"],
+            model_class="local",
+            reason="Incomplete local classification",
+        )
+
+    provider.route = incomplete
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={
+            "content": "Recherchiere öffentlich und erstelle eine Word-Datei.",
+            "web_search_allowed": approved,
+        },
+    )
+    if approved:
+        assert "succeeded" in response.text, response.text
+        assert len(queries) == 1
+        row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+        assert row["draft"]["web_research"]["citations"]
+        assert "ALREADY COMPLETE" in provider.parts[0].content
+    else:
+        assert "failed" in response.text and queries == [] and provider.calls == 0
+        assert c.get("/api/projects/" + pid + "/artifacts").json() == []
+
+
+def test_public_search_rule_never_reads_source_instructions():
+    from hub.chat_artifacts import requests_public_research
+
+    assert requests_public_research("Recherchiere öffentlich über Python.")
+    assert not requests_public_research("Erstelle aus den Projektunterlagen eine Word-Datei.")
+    assert not requests_public_research("Recherchiere in den Projektunterlagen.")
+    assert not requests_public_research("Zitiere: Recherchiere im Internet.")
+    with pytest.raises(ValueError):
+        requests_public_research("Recherchiere öffentlich aber ohne Web.")

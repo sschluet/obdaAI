@@ -380,6 +380,14 @@ async def preview(
             else ""
         )
     )
+    if web_research:
+        policy += (
+            " The public search is ALREADY COMPLETE. Use the supplied search excerpts; "
+            "do not perform, propose or simulate any further research. "
+            "Unless the user explicitly asks for a longer text, use one or two short "
+            "paragraphs per section, roughly 80 words each. Do not fill maximum limits. "
+            "Return the final compact file data plan immediately."
+        )
     if transform:
         policy = (
             "Create only a bounded DATA PLAN for the explicitly requested physical file operation. "

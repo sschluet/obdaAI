@@ -265,6 +265,16 @@ async def execute_run(
                 if cancelled():
                     raise asyncio.CancelledError
                 route = await providers.route(parts, roles)
+                # A definite authenticated request for public research cannot
+                # become an unsourced file because the model omitted one skill.
+                if Capability.ARTIFACT in route.capabilities and latest:
+                    from hub.chat_artifacts import requests_public_research
+
+                    if (
+                        requests_public_research(latest.content)
+                        and Capability.WEB not in route.capabilities
+                    ):
+                        route.capabilities.append(Capability.WEB)
                 update(
                     router_seconds=time.monotonic() - started,
                     reason=route.reason,
