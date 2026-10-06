@@ -64,3 +64,9 @@ NFS erlaubt private Ziele mit 111/2049 und dem dort ermittelten MOUNT-v3-Port.
 Der eigene Root-Dienst bestätigt erst nach Anwendung der Regeln; bei Fehler oder
 Dienststopp leert er nur seine eigene Kette. Modellwerkzeuge können keine Freigaben
 beantragen. Die Freigabe aktiviert weder Cloudübertragung noch weitere Ziele.
+
+Der lokale Router erhält für bereits beigefügte Quellen nur Metadaten statt der
+Dokumenttexte. Er ordnet die Anfrage ein; die vollständigen unveränderten Quellen
+bleiben im gespeicherten Laufkontext und erreichen das lokale Antwortmodell.
+Bei vorhandenen Quellen wird keine unbelegte Inline-Antwort des Routers übernommen.
+Alle Datenschutzprüfungen gelten weiterhin für den vollständigen Kontext.

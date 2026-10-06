@@ -8,6 +8,59 @@ from hub.policy import ContextPart
 from hub.providers import Providers
 
 
+@pytest.mark.parametrize(
+    "prefix", ["QUELLE [file]", "VAULT file", "WEBQUELLE https://example.org/"]
+)
+def test_source_text_is_classified_as_metadata_but_answer_receives_full_source(monkeypatch, prefix):
+    original = httpx.AsyncClient
+    requests = []
+    marker = "SYNTHETIC_UNTRUSTED_SOURCE_INSTRUCTIONS"
+
+    def handler(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        if not body.get("stream"):
+            value = json.dumps(
+                {
+                    "capabilities": ["chat"],
+                    "model_class": "local",
+                    "reason": "synthetic",
+                    "answer": "unsubstantiated shortcut",
+                }
+            )
+            return httpx.Response(200, json={"choices": [{"message": {"content": value}}]})
+        return httpx.Response(
+            200,
+            text='data: {"choices":[{"delta":{"content":"source answer"}}]}\n\ndata: [DONE]\n\n',
+        )
+
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    provider = Providers(Settings(local_model="fixture"))
+    monkeypatch.setattr(
+        provider, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
+    )
+    parts = [
+        ContextPart(content="Summarize my stored source", source_id="question", revision=1),
+        ContextPart(content=prefix + "\n" + marker, source_id="source", revision=2),
+    ]
+
+    async def run():
+        route = await provider.route(parts, ["user", "user"])
+        assert route.answer is None and "retrieval" in route.capabilities
+        answer = ""
+        async for chunk in provider.stream(parts, ["user", "user"], external=False, grants=[]):
+            answer += chunk
+        assert answer == "source answer"
+
+    asyncio.run(run())
+    assert marker not in json.dumps(requests[0])
+    assert marker in json.dumps(requests[1])
+
+
 @pytest.mark.parametrize("disable_thinking", [False, True])
 def test_json_router_one_call_and_bounded_repair(
     monkeypatch: pytest.MonkeyPatch, disable_thinking: bool
