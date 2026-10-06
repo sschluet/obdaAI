@@ -68,6 +68,7 @@ class LoginInput(Input):
 class ChatInput(Input):
     local_only: bool = False
     web_search_allowed: bool = False
+    web_query: str | None = Field(default=None, min_length=1, max_length=500)
     content: str = Field(min_length=1, max_length=16000)
     request_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
 
@@ -485,6 +486,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             body.request_id,
             content=body.content,
             web_search_allowed=body.web_search_allowed,
+            web_query=body.web_query,
             local_only=body.local_only,
         )
         start_development_run(run_id)
@@ -496,18 +498,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         *,
         content: str | None = None,
         web_search_allowed: bool = False,
+        web_query: str | None = None,
         local_only: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
         if local_only and web_search_allowed:
             raise HTTPException(422, "Nur lokal erlaubt keine externe Websuche")
+        if web_query is not None and (not web_search_allowed or not web_query.strip()):
+            raise HTTPException(422, "Öffentlichen Suchtext ausdrücklich bestätigen")
         action = {
             "chat_id": chat_id,
             "content": content,
             "web_search_allowed": web_search_allowed,
             "local_only": local_only,
-            "edit": [edit[0], edit[1].model_dump()] if edit else None,
+            "edit": [
+                edit[0],
+                edit[1].model_dump(exclude={"web_query"} if edit[1].web_query is None else set()),
+            ]
+            if edit
+            else None,
         }
+        if web_query is not None:
+            action["web_query"] = web_query
         digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
         with factory() as db:
             if request_id:
@@ -576,6 +588,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
             snapshot: dict[str, Any] = {
+                **({"web_query": web_query} if web_query is not None else {}),
                 "web_search_allowed": web_search_allowed,
                 "parts": [
                     ContextPart(
@@ -675,6 +688,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             body.request_id,
             edit=(message_id, body),
             web_search_allowed=body.web_search_allowed,
+            web_query=body.web_query,
             local_only=body.local_only,
         )
         start_development_run(run_id)

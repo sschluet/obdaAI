@@ -41,3 +41,17 @@ Dateierstellung klassifiziert. Die Regel ergänzt keine Suchrechte: ohne bestät
 aktuellen Suchtext wird vorher abgebrochen. Zitate, Projektquelltexte und reine
 Projekt-Recherche lösen diese Regel nicht aus. Die Dateiplanung wird ausdrücklich
 über die bereits abgeschlossene Suche informiert. Tests prüfen beide Freigabewege.
+
+Der Quellen-Dropdown enthält einen getrennten, editierbaren öffentlichen Suchtext.
+Der angezeigte Themenvorschlag wird erst nach expliziter Bestätigung gesendet.
+Der Dateiauftrag bleibt im lokalen Gespräch. API-Clients können `web_query` zusammen
+mit `web_search_allowed` übergeben; ohne Bestätigung bzw. bei „Nur lokal“ wird er
+abgewiesen. Bestehende Clients ohne eigenes Suchfeld behalten den ausdrücklich
+bestätigten vollständigen Nachrichtentext. Query und Inhalt sind am unveränderlichen
+Run-/Recherchebeleg gebunden; eine geänderte Query unter derselben Anfragekennung
+wird vor dem zweiten Suchaufruf abgewiesen. Quellenrelevanz und Faktentreue müssen
+zusätzlich geprüft werden: korrekte Hashes beweisen keine sachliche Richtigkeit.
+
+Eine ausdrücklich eingegebene `site:domain`-Beschränkung wird zusätzlich an den
+HTTPS-Ergebnisdomains geprüft. Fremde Treffer und ähnlich aussehende Hostnamen
+werden verworfen; der bestätigte Suchtext wird dabei unverändert gesendet.

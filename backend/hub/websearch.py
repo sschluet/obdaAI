@@ -2,6 +2,7 @@
 
 import ipaddress
 import json
+import re
 import socket
 import time
 from html.parser import HTMLParser
@@ -84,9 +85,17 @@ async def search(cfg: Settings, request: SearchInput) -> list[dict[str, Any]]:
                 data.extend(part)
     parsed = json.loads(data)
     result = []
+    sites = {
+        host.casefold() for host in re.findall(r"(?:^|\s)site:([a-z0-9.-]+)", request.query, re.I)
+    }
     for item in parsed.get("results", [])[:10]:
         u = urlsplit(item.get("url", ""))
         if u.scheme != "https" or not u.hostname or u.username or u.password:
+            continue
+        if sites and not any(
+            u.hostname.casefold() == host or u.hostname.casefold().endswith("." + host)
+            for host in sites
+        ):
             continue
         result.append(
             {

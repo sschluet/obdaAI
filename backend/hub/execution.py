@@ -115,10 +115,16 @@ async def execute_run(
     async def research(latest: Message | None) -> None:
         if not latest or not snapshot.get("web_search_allowed"):
             raise ExecutionLimitError(
-                "Keine Webrecherche: den genauen Nachrichtentext ausdrücklich "
-                "für die externe Websuche freigeben"
+                "Keine Webrecherche: den gewählten öffentlichen Suchtext "
+                "ausdrücklich für die Websuche bestätigen"
             )
-        if len(latest.content) > 500 or not cfg.search_url:
+        public_query = snapshot.get("web_query", latest.content)
+        if (
+            not isinstance(public_query, str)
+            or not public_query.strip()
+            or len(public_query) > 500
+            or not cfg.search_url
+        ):
             raise ExecutionLimitError("Keine Webrecherche: Suchzugang oder Textlimit prüfen")
         from hub.websearch import SearchInput
         from hub.websearch import search as search_web
@@ -126,7 +132,7 @@ async def execute_run(
         try:
             results = await search_web(
                 cfg,
-                SearchInput(request_id=run_id, query=latest.content, public_query_approved=True),
+                SearchInput(request_id=run_id, query=public_query, public_query_approved=True),
             )
         except (ValueError, OSError, PermissionError, httpx.HTTPError):
             raise ExecutionLimitError(
@@ -152,7 +158,7 @@ async def execute_run(
                 Research(
                     id=run_id,
                     project_id=c.project_id,
-                    query=latest.content,
+                    query=public_query,
                     results=json.dumps(results),
                 )
             )

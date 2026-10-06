@@ -193,3 +193,59 @@ def test_public_search_rule_never_reads_source_instructions():
     assert not requests_public_research("Zitiere: Recherchiere im Internet.")
     with pytest.raises(ValueError):
         requests_public_research("Recherchiere öffentlich aber ohne Web.")
+
+
+def test_separately_confirmed_query_excludes_file_goal_and_private_history(setup, monkeypatch):
+    app, c, h, cfg, pid, chat, queries, provider = prepare(setup, monkeypatch)
+    goal = "Recherchiere öffentlich und erstelle eine Word-Datei. PRIVATE_FILE_INSTRUCTIONS"
+    query = "site:docs.python.org Python lists"
+    response = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": goal, "web_search_allowed": True, "web_query": query},
+    )
+    assert "succeeded" in response.text, response.text
+    assert queries == [query]
+    row = c.get("/api/projects/" + pid + "/artifacts").json()[0]
+    with app.state.sessions() as db:
+        research = db.get(Research, row["draft"]["web_research"]["id"])
+        assert research.query == query
+    assert "PRIVATE_OLD_HISTORY" not in queries[0] and "PRIVATE_FILE_INSTRUCTIONS" not in queries[0]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"web_query": "public test"},
+        {"web_query": " ", "web_search_allowed": True},
+        {"web_query": "public test", "web_search_allowed": True, "local_only": True},
+    ],
+)
+def test_query_cannot_bypass_confirmation_or_strict_local_mode(setup, monkeypatch, extra):
+    app, c, h, cfg, pid, chat, queries, provider = prepare(setup, monkeypatch)
+    result = c.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=h,
+        json={"content": "Recherchiere öffentlich und erstelle eine Word-Datei.", **extra},
+    )
+    assert result.status_code == 422 and queries == [] and provider.calls == 0
+
+
+def test_query_is_bound_to_request_replay_and_change_requires_new_intent(setup, monkeypatch):
+    import uuid
+
+    app, c, h, cfg, pid, chat, queries, provider = prepare(setup, monkeypatch)
+    body = {
+        "content": "Recherchiere öffentlich und erstelle eine Word-Datei.",
+        "web_search_allowed": True,
+        "web_query": "public topic one",
+        "request_id": str(uuid.uuid4()),
+    }
+    url = "/api/conversations/" + chat + "/messages"
+    first = c.post(url, headers=h, json=body)
+    assert "succeeded" in first.text
+    assert "succeeded" in c.post(url, headers=h, json=body).text
+    assert queries == ["public topic one"] and provider.calls == 1
+    assert c.post(url, headers=h, json={**body, "web_query": "public topic two"}).status_code == 409
+    assert queries == ["public topic one"]
+    assert len(c.get("/api/projects/" + pid + "/artifacts").json()) == 1

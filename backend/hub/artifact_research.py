@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
-from hub.db import Research
+from hub.db import Research, Run
 from hub.policy import ContextPart, Privacy
 
 
@@ -15,8 +15,16 @@ def binding(
     db: Any, identifier: str, project_id: str, goal: str | None = None
 ) -> tuple[list[ContextPart], dict[str, Any]]:
     row = db.get(Research, identifier)
-    if not row or row.project_id != project_id or (goal is not None and row.query != goal):
+    if not row or row.project_id != project_id:
         raise ValueError("Recherche gehört nicht zum aktuellen Datei-Auftrag")
+    run = db.get(Run, identifier)
+    snapshot = json.loads(run.context_snapshot or "{}") if run else {}
+    if goal is not None and (
+        not run
+        or not snapshot.get("web_search_allowed")
+        or row.query != snapshot.get("web_query", goal)
+    ):
+        raise ValueError("Recherche gehört nicht zum bestätigten öffentlichen Suchtext")
     data = json.loads(row.results)
     if not isinstance(data, list) or not 1 <= len(data) <= 10:
         raise ValueError("Recherchebelege fehlen")

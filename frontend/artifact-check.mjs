@@ -154,6 +154,7 @@ try{
  await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Recherchiere und erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST SYNTHETIC_WEB_QUERY');
  await page.getByLabel('Quellenoptionen',{exact:true}).selectOption('web');
+ await page.getByLabel('Öffentlicher Suchtext',{exact:true}).fill('Synthetic public Python documentation');
  await page.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).click();
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
