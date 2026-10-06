@@ -1,6 +1,49 @@
 # obdaAI — Status 06.10.2026
 
-## Aktueller Stand: Dateien, Dokumentauslöser und Schema 0022 live geprüft
+## Aktueller Stand: Projekträume, Quellen und Aufgaben überarbeitet
+
+Produktiv ist `d6971b9` / Schema 0024 installiert; der eigene Quellen-Netzwerkdienst
+ist auf `f5a41c4` aktualisiert. Projekträume haben eigene
+Gespräche, Quellen und erstellte Dateien. Dokumentuploads und ausdrücklich
+hinzugefügte öffentliche HTTPS-Webseiten stehen dem normalen lokalen Projektchat
+zur Verfügung. Der echte Webseitenimport, Originalhash, wiederholter Auftrag und
+lokale Antwort mit gebundener Quelle sind abgenommen; eigene QA-Räume und Chats
+sind archiviert. Die ersten fehlgeschlagenen Routerläufe bleiben als Belege erhalten.
+Der Router klassifiziert Quellenmetadaten, das Antwortmodell bekommt die vollständigen
+lokalen Texte. So beeinflussen Dokumenttexte nicht das Steuerformat der Klassifikation.
+
+Aufgabenübersicht und Neuerstellungsdialog sind getrennt. Zwei sichtbare pausierte
+Beispiele zeigen einen Arbeitsraumüberblick mit realem lokalen Leseergebnis sowie
+eine tägliche Kurzfassung um 09:00 Europe/Berlin. Modell- und Quellenwahl liegen als
+Dropdowns im Chat-Eingabebereich; keine verstreuten Cloud-/Web-Checkboxen mehr.
+Wissen zeigt Quellenkarten und einen frei konfigurierbaren Dialog für Obsidian/SMB,
+NFS und PostgreSQL. Der vorhandene Vault bleibt erhalten. Neue NAS-Verbindungen
+werden erst nach Eingabe der eigenen Ziele geprüft; ohne konkrete Zielkonfiguration
+ist keine reale NAS-Abnahme behauptet. Adapterprüfung mit echter temporärer
+PostgreSQL-Datenbank ist zusätzlich dokumentiert. Retrieval bleibt lokal und begrenzt.
+
+Die ausdrücklich genehmigte Quellen-Netzwerkfreigabe verwendet eine separate eigene
+Kette und kurzlebige numerische Ziel-/Protokollfreigaben. Öffentliche Webseiten:
+nur HTTPS/443. System-, Loopback-, Metadaten- und interne HTTP-Ziele bleiben gesperrt;
+Modellwerkzeuge können keine Freigabe beantragen. Der dauerhaft laufende eigene
+Beobachter bestätigt angewandte Regeln, entfernt sie bei Fehler/Dienststopp und
+bewahrt die bisherigen App-/Proxy-/HTTPS-Regeln. Keine automatische Cloudfreigabe.
+
+Validierung: 504 lokale Tests bestanden, zwölf PostgreSQL-Fälle separat geprüft;
+Ruff, mypy und Source-Scan bestanden. CI führt vier Browserchecks für allgemeine
+UI, Dateien, Provider und die neuen Arbeitsräume aus. HTTPS/Auth/CSRF/Origin/Logout
+sowie reale Webseiten-/Projektchat-Abnahme bestanden. Verschlüsselter Off-VM-Backup
+und isolierter Restore von Schema 0024 mit Originalen, Dateiversionen, Memory,
+Schlüsseln und Ereignis-/Workflowbelegen bestanden. Temporäre Restore-DB entfernt.
+
+M3/M4/M5 bleiben Teilstände. Offene Fälle: allgemeine validierte Workflowgraphen,
+zusätzliche feste Aktionsadapter, Browser mit menschlicher Login-/2FA-Übergabe,
+weitere natürliche PDF-/Bildoperationen und breite Layout-/Fakten-QA, Vollast,
+Geräteabnahme und externe HA-/n8n-Recovery. MCP-Ziele und weitere Cloudschlüssel
+sind derzeit nicht konfiguriert. Kein Merge als fertige V1.
+Details: [Arbeitsräume und Quellen](docs/workspaces-and-knowledge.md).
+
+## Historischer Stand: Dateien, Dokumentauslöser und Schema 0022 live geprüft
 
 Produktiv ist `c13e41f` / Schema 0022 installiert. Beide APIs sind gesund; die
 bestehenden IPv4-/IPv6-Regeln blieben unverändert. Lokal: 471 Tests bestanden,
