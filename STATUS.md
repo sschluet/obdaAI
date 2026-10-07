@@ -1,4 +1,4 @@
-# obdaAI — Status 06.10.2026
+# obdaAI — Status 07.10.2026
 
 ## Projektwebsite — 07.10.2026
 
@@ -13,7 +13,9 @@ GitHub Pages aus dem privaten App-Repository wird vom aktuellen Kontotarif abgew
 `sschluet/obdaAI-website` enthält ausschließlich die Projektvorstellung.
 `scripts/publish_showcase.py` synchronisiert die Dateiallowlist nach erfolgreicher
 Website-CI der exakten Lieferung; GitHub Pages veröffentlicht dessen main-Branch.
-URL: https://sschluet.github.io/obdaAI-website/ (erste Veröffentlichung wird geprüft).
+Öffentlich: https://sschluet.github.io/obdaAI-website/. Erster Pages-Build bestanden;
+Liveprüfung von 43 Features, Suche/Filtern, Galerie/Assets/Dialog/Tastatur und
+320–1440-px-Layouts bestanden. App-Code und produktive Dienste unverändert.
 
 ## Aktueller Stand: PDF-Teile und getrennte öffentliche Recherche
 

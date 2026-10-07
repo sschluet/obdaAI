@@ -78,3 +78,7 @@ Feature/status changes and affected screenshots must be maintained before each
 publication. Verify Pages build success and the live page/assets after publishing.
 
 Public URL: `https://sschluet.github.io/obdaAI-website/`.
+
+Initial public deployment passed on 07.10.2026: Pages build and live browser checks
+for the complete feature catalog, asset loading, search/filtering, gallery/dialog/
+keyboard navigation and 320–1440 px layouts. App source remained private.
