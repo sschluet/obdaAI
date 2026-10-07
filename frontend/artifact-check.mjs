@@ -1,3 +1,4 @@
+import {loginFixture} from './fixture-login.mjs';
 // Focused synthetic UI check. Actual Office layout has a separate offline smoke.
 import {chromium} from 'playwright';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -7,8 +8,7 @@ const page=await browser.newPage({viewport:{width:390,height:844}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto('http://127.0.0.1:18765');
- await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
- await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+ await loginFixture(page);
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('button',{name:'Neues Projekt',exact:true}).click();

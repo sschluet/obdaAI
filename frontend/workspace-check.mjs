@@ -1,3 +1,4 @@
+import {loginFixture} from './fixture-login.mjs';
 import {chromium} from 'playwright';
 import {mkdir} from 'node:fs/promises';
 const output='../.local/browser';await mkdir(output,{recursive:true});
@@ -6,8 +7,7 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto('http://127.0.0.1:18765');
- await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
- await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+ await loginFixture(page);
  await page.getByRole('heading',{name:'Womit möchtest du beginnen?',exact:true}).waitFor();
  if(await page.locator('.chat-top select').count())throw Error('Duplicate model selector above conversation');
  const composer=page.locator('form.composer');

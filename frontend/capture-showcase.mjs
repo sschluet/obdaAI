@@ -1,3 +1,4 @@
+import {loginFixture} from './fixture-login.mjs';
 // Capture the real UI against an isolated synthetic fixture, never a live deployment.
 import {chromium} from 'playwright';
 import {mkdir} from 'node:fs/promises';
@@ -12,8 +13,7 @@ const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',an
 try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
- await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
- await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+ await loginFixture(page);
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.getByText('Ein klarer Plan für Projekt Aurora',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();

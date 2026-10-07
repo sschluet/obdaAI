@@ -1,3 +1,4 @@
+import {loginFixture} from './fixture-login.mjs';
 // Synthetic local browser acceptance, separate from real model-quality checks.
 import {chromium} from 'playwright';
 import {mkdir} from 'node:fs/promises';
@@ -8,7 +9,7 @@ const page=await context.newPage();
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 let original,csrf;
 const api=async(path,method='GET',body)=>{const r=await page.request.fetch(base+'/api'+path,{method,headers:{Origin:base,...(csrf?{'X-CSRF-Token':csrf}:{}),'Content-Type':'application/json'},...(body===undefined?{}:{data:body})});return {status:r.status(),body:await r.json()}};
-async function login(target){await target.goto(base);const reply=target.waitForResponse(r=>r.url()===base+'/api/login'&&r.request().method()==='POST');await target.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');await target.getByRole('button',{name:'Anmelden',exact:true}).click();return (await (await reply).json()).csrf}
+async function login(target){await target.goto(base);return (await loginFixture(target)).csrf}
 async function globalSettings(target){await target.getByRole('button',{name:'Einstellungen',exact:true}).click();await target.getByRole('button',{name:'Antwortverhalten',exact:true}).click();const region=target.getByRole('region',{name:'Antwortvorgaben',exact:true});await region.getByLabel('Antwortsprache',{exact:true}).waitFor();return region}
 async function save(region){await region.getByRole('button',{name:'Vorgaben speichern',exact:true}).click();await region.getByRole('status').filter({hasText:'Gespeichert.'}).waitFor()}
 try{

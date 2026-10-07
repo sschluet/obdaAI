@@ -1,11 +1,11 @@
+import {loginFixture} from './fixture-login.mjs';
 import {chromium} from 'playwright';
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto('http://127.0.0.1:18765');
- await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
- await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+ await loginFixture(page);
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
  await page.getByRole('button',{name:'Neue Aufgabe',exact:true}).click();

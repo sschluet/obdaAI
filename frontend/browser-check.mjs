@@ -1,3 +1,4 @@
+import {loginFixture} from './fixture-login.mjs';
 import {chromium} from 'playwright';
 import {mkdir} from 'node:fs/promises';
 const runSuffix=Date.now();
@@ -10,8 +11,7 @@ async function taskOptions(text){const d=page.locator('.task-options').filter({h
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
 await page.goto('http://127.0.0.1:18765');
-await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
-await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+await loginFixture(page);
 await page.getByRole('heading',{name:'Womit möchtest du beginnen?'}).waitFor();
 await page.screenshot({path:output+'/desktop.png',fullPage:true,animations:'disabled'});
 const createdChatResponse=page.waitForResponse(r=>r.url().endsWith('/api/conversations')&&r.request().method()==='POST'&&r.ok());

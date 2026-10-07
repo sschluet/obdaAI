@@ -73,6 +73,7 @@ jobs:
           done
           uv run python scripts/artifact_ui_inputs.py
           cd frontend
+          node fixture-login-check.mjs
           node browser-check.mjs
           node artifact-check.mjs
           node native-provider-check.mjs
