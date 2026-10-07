@@ -10,7 +10,12 @@ angesprochen, verändert oder aktualisiert. Quellen-/Versionsdrift sperrt wieder
 aufgenommene Entwürfe, Freigaben/Tokens werden nicht im Entwurf gespeichert.
 Lokale Python-Suite: 577 bestanden, 13 PostgreSQL-Fälle für CI ausgelassen;
 Ruff, Mypy (63 Module), Frontendbuild und Source-Scan bestanden. Acht Browser-
-prüfungen bestanden; aktuelle synthetische Website-Screenshots werden mitgeliefert. Teilumfang des Optimierungsplans, keine fertige V1.
+prüfungen bestanden; aktuelle synthetische Website-Screenshots werden mitgeliefert.
+GitHub-CI 37602855825 für b41b269: alle sechs Jobs erfolgreich, 590 Tests inklusive
+PostgreSQL und acht Browserprüfungen bestanden. Der frühere Frontend-CI-Abbruch
+war durch die unveränderte Login-Sperrfrist verursacht; die isolierte Testanmeldung
+respektiert nun deren Wartezeit und verwendet die CSRF-Daten der erfolgreichen
+Anmeldung. Die App-Sicherheitsregel blieb unverändert. Teilumfang des Optimierungsplans, keine fertige V1.
 Details und verbleibende Schritte: docs/ux-optimization.md.
 
 ## Projektwebsite — 07.10.2026

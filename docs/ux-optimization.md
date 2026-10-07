@@ -51,6 +51,11 @@ synthetische Daten und Anbieter. Datei-/Taskentwürfe werden über Reload und Dr
 geprüft, Layouts separat Desktop/Mobil. Keine allgemeine Fakten-, Server-, Geräte-
 oder Wiederherstellungsabnahme behaupten.
 
+Finale GitHub-CI: b41b269 / Lauf 37602855825, sechs Jobs erfolgreich, 590 Tests
+einschließlich temporärem PostgreSQL und alle acht Browserprüfungen bestanden.
+Die Testanmeldung respektiert die unveränderte App-Sperrfrist. Ein gezielter
+Test bestätigt den erfolgreichen CSRF-Wert nach einer abgewiesenen Anmeldung.
+
 ## Noch offen aus dem Gesamtplan
 
 - Durchgehende Suche über alle Objekttypen und umfangreichere Startübersicht.

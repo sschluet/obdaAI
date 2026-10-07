@@ -369,6 +369,9 @@
     "pythonPassed": 577,
     "pythonSkipped": 13,
     "browserChecks": 8,
-    "serverDeployment": false
+    "serverDeployment": false,
+    "commit": "b41b269",
+    "ciTests": 590,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37602855825"
   }
 }
