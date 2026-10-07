@@ -15,7 +15,9 @@ in Git. Do not inherit permissions from an older assistant deployment.
   run it against an existing platform implicitly.
 
 ## Git and completion
-Private repository only. Verify owner and visibility with official GitHub API.
+Application repository private only. The explicitly authorized public
+`sschluet/obdaAI-website` contains only the sanitized project presentation.
+Verify owner and visibility with official GitHub API.
 Use milestone branches and PRs; main must pass checks. Inspect staged diff, test,
 scan, commit and push each logical milestone. Never force push. A push does not
 approve deployment. Report branch, commit, push, test results and dirty files.
@@ -27,9 +29,12 @@ and the application private. Maintain `website/project.json`, website copy and
 affected screenshots in the same delivery as every feature/status/UI update.
 Keep implemented, live-tested and partial features distinct; never advertise a
 complete V1 from partial evidence. Update the last tested application commit and
-CI evidence only after the matching checks actually pass. Pages deployment adds
-the website source revision automatically on every push to the active delivery
-branch or main. Review and report the Pages deployment result after pushing.
+CI evidence only after the matching checks actually pass. After pushing each
+delivery, wait for its website CI and run `uv run python scripts/publish_showcase.py`.
+This required delivery step synchronizes the public allowlist and website source
+revision. GitHub Pages publishes the website repository automatically. Verify
+the public deployment and report its result before completing the delivery.
+The user authorized creating this separate public website repository on 07.10.2026.
 Only isolated synthetic UI fixtures may supply public screenshots. Never publish
 real chats, documents, internal addresses, configuration, logs, runtime data or credentials.
 `scripts/build_showcase.py` uploads an explicit public-file allowlist, never docs

@@ -54,20 +54,27 @@ intentional catalog changes. QA captures stay under `.local/showcase-qa`.
 
 ## Publication
 
-`.github/workflows/pages.yml` validates the website, runs its browser checks and
-uploads only the sanitized build. Pushes to `milestone/m3-actions` and `main`
-validate and prepare the site automatically. Publication is enabled only when
-the repository variable `SHOWCASE_PAGES_ENABLED` is `true` and the account supports
-Pages from this private repository. When changing the active delivery
-branch, update the workflow branch filter. Never deploy from pull-request events.
-GitHub Pages must be enabled with build type `workflow`; the account plan must
-support Pages from private repositories. If the account disallows that, preserve
-the private repository and report the deployment blocker.
+GitHub rejected Pages activation in the private application repository (HTTP 422,
+account plan). The user explicitly authorized a separate public repository on
+07.10.2026: `sschluet/obdaAI-website`. App source and runtime data stay private.
 
-Public URL after successful activation: `https://sschluet.github.io/obdaAI/`.
-Verify the rendered live page, assets and deployment state before claiming it live.
+`.github/workflows/pages.yml` validates the public-file allowlist and runs website
+browser checks on each push to `milestone/m3-actions` or `main`. Once its exact
+commit passes, publishing the site is a required delivery step:
 
-07.10.2026: GitHub rejected Pages activation with HTTP 422 because the current
-account plan does not support Pages for this private repository. Deployment remains
-disabled; a separate public website-only repository was proposed and requires
-the user's explicit approval. No public repository has been created yet.
+```sh
+uv run python scripts/publish_showcase.py
+```
+
+The publisher requires a clean committed working tree, successful website CI for
+that exact commit and the authorized public target. It copies only the validated
+build into a temporary checkout, creates a normal commit and pushes without force.
+It uses the operator's existing GitHub CLI authentication; no new token is copied
+into Actions secrets. GitHub Pages automatically publishes the public repo's main
+branch root. Source revision is generated separately from the tested app release.
+
+When changing the active delivery branch, update the private CI branch filter.
+Feature/status changes and affected screenshots must be maintained before each
+publication. Verify Pages build success and the live page/assets after publishing.
+
+Public URL: `https://sschluet.github.io/obdaAI-website/`.

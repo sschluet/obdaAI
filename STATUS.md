@@ -9,8 +9,11 @@ Galerie, Suche/Filter, mobile Darstellung und getrennte Abnahmestände. Browserp
 Die laufende Anwendung wurde nicht verändert. Regelmäßige Inhalts-/Screenshotpflege
 ist in AGENTS.md und docs/project-website.md verankert.
 GitHub Pages aus dem privaten App-Repository wird vom aktuellen Kontotarif abgewiesen
-(HTTP 422); Veröffentlichung wartet auf Freigabe eines separaten Website-Repositories
-oder ein passendes GitHub-Abonnement.
+(HTTP 422). Das ausdrücklich freigegebene öffentliche Repository
+`sschluet/obdaAI-website` enthält ausschließlich die Projektvorstellung.
+`scripts/publish_showcase.py` synchronisiert die Dateiallowlist nach erfolgreicher
+Website-CI der exakten Lieferung; GitHub Pages veröffentlicht dessen main-Branch.
+URL: https://sschluet.github.io/obdaAI-website/ (erste Veröffentlichung wird geprüft).
 
 ## Aktueller Stand: PDF-Teile und getrennte öffentliche Recherche
 
