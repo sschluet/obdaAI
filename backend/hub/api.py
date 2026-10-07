@@ -43,6 +43,8 @@ from hub.knowledge_connections import install_knowledge_connections
 from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
 from hub.policy import ContextPart, Privacy
+from hub.preference_api import install_preference_api
+from hub.preferences import resolve as resolve_preferences
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
 from hub.schedule_api import install_schedule_api
@@ -117,6 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await asyncio.gather(*application.state.tasks, return_exceptions=True)
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
+    install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
     install_knowledge_connections(app, cfg, factory)
@@ -588,6 +591,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
             snapshot: dict[str, Any] = {
+                "response_preferences": resolve_preferences(db, c),
                 **({"web_query": web_query} if web_query is not None else {}),
                 "web_search_allowed": web_search_allowed,
                 "parts": [

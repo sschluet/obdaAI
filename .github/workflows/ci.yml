@@ -78,6 +78,9 @@ jobs:
           node native-provider-check.mjs
           node workspace-check.mjs
           node pipeline-check.mjs
+          node workbench-check.mjs
+          node task-ux-check.mjs
+          node preference-ux-check.mjs
   container:
     runs-on: ubuntu-24.04
     steps:

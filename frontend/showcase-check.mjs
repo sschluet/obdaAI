@@ -12,9 +12,11 @@ page.on('response',r=>{if(r.status()>=400)failed.push(r.url());});
 try{
  await page.goto(base);
  await page.locator('.feature-card').first().waitFor();
- if(await page.locator('.feature-card').count()!==43)throw Error('Feature catalog incomplete');
+ const catalog=await (await page.request.get(new URL('project.json',base).href)).json();
+ const total=catalog.groups.reduce((sum,g)=>sum+g.features.length,0);
+ if(await page.locator('.feature-card').count()!==total)throw Error('Feature catalog incomplete');
  await page.getByRole('button',{name:'Chat & Modelle',exact:true}).click();
- if(await page.locator('.feature-card').count()!==6)throw Error('Category filter failed');
+ if(await page.locator('.feature-card').count()!==catalog.groups.find(g=>g.id==='chat').features.length)throw Error('Category filter failed');
  await page.getByRole('button',{name:'Alle Features',exact:true}).click();
  await page.getByLabel('Features durchsuchen').fill('PDF-Aufteilung');
  if(await page.locator('.feature-card').count()!==1)throw Error('Feature search failed');
@@ -45,5 +47,5 @@ try{
   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Overflow at '+width);
  }
  if(errors.length||failed.length)throw Error(JSON.stringify({errors,failed}));
- console.log('Showcase passed: 43 features, search/categories, all gallery assets, dialog/Escape/keyboard and 320–1440px layouts.');
+ console.log('Showcase passed: current feature catalog, search/categories, all gallery assets, dialog/Escape/keyboard and 320–1440px layouts.');
 }finally{await browser.close();}

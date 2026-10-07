@@ -5,3 +5,5 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 
 .mobile-showcase{display:flex;align-items:center;gap:60px;max-width:710px;margin:60px auto 0;border-top:1px solid #d2dbcb;padding-top:45px}.phone-frame{width:174px;flex:none;border:6px solid var(--ink);border-radius:27px;overflow:hidden;box-shadow:0 15px 30px #182d2b15}.mobile-showcase h3{font-size:32px}.mobile-showcase p{font-size:13px;color:var(--muted);margin-top:16px}.mobile-showcase .eyebrow{font-size:9px;margin-bottom:18px}@media(max-width:700px){.mobile-showcase{gap:25px;margin-top:35px;padding-top:30px}.phone-frame{width:130px;border-width:5px;border-radius:22px}.mobile-showcase h3{font-size:25px}.mobile-showcase p{font-size:11px}.mobile-showcase .eyebrow{font-size:7px;letter-spacing:1px}}
+
+.badge.local{color:#476899}.legend-local{background:#476899}.development-status{margin:0 0 28px;padding:20px 24px;border:1px solid #cdd8cf;background:#edf2e9;border-radius:14px;font-size:13px;color:var(--green)}

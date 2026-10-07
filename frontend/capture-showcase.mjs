@@ -16,7 +16,10 @@ try{
  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.getByText('Ein klarer Plan für Projekt Aurora',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();
+ await page.getByLabel('Antwortlänge',{exact:true}).waitFor();
  await capture('chat');
+ await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name:'Projekt Aurora',exact:true}).locator('..').click();
  await page.getByRole('tab',{name:/Quellen ·/}).click();
@@ -29,8 +32,7 @@ try{
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
- await dialog.getByLabel('Dateititel',{exact:true}).fill('Projekt Aurora · Überblick');
- await dialog.getByLabel('Dokumenttext',{exact:true}).fill('Ziel: Wissen, Gespräche und Ergebnisse in einem Projektraum verbinden.\n\nNächste Schritte\n1. Quellen sammeln und prüfen\n2. Fragen im lokalen Projektchat klären\n3. Eine editierbare Zusammenfassung erstellen');
+ await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Erstelle eine kurze Projektübersicht mit Ziel, offenen Fragen und drei nächsten Schritten. Verwende eine klare, sachliche Gliederung.');
  await capture('files');
  await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
  await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
@@ -38,7 +40,12 @@ try{
  await add.waitFor();
  if(!await page.getByRole('heading',{name:'Beispiel: Arbeitsraumüberblick',exact:true}).count())await add.click();
  await page.getByRole('heading',{name:'Beispiel: Arbeitsraumüberblick',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Neue Aufgabe',exact:true}).click();
+ const task=page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true});
+ await task.getByLabel('Name der Aufgabe',{exact:true}).fill('Projekt Aurora · Wochenüberblick');
+ await task.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Fasse den aktuellen Projektstand zusammen und nenne die nächsten Schritte.');
  await capture('tasks');
+ await task.getByRole('button',{name:'Schließen',exact:true}).click();
  await page.getByRole('button',{name:'Wissen',exact:true}).click();
  await page.getByRole('heading',{name:'Deine Wissensquellen',exact:true}).waitFor();
  if(!await page.getByRole('heading',{name:'Demo · Dokumentenarchiv',exact:true}).count()){

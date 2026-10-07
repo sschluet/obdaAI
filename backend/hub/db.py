@@ -568,3 +568,18 @@ class WorkflowDispatch(Base):
             postgresql_where=text("status IN ('prepared', 'uncertain')"),
         ),
     )
+
+
+class ResponsePreference(Base):
+    __tablename__ = "response_preferences"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer)
+
+
+class ResponsePreferenceRevision(Base):
+    __tablename__ = "response_preference_revisions"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    overrides: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created: Mapped[float] = mapped_column(Float, default=time.time)

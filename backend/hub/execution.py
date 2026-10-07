@@ -447,6 +447,32 @@ async def execute_run(
                     yield ("status", {"message": "Webquellen mit URL und Abrufzeit gespeichert"})
                     if sum(len(p.content) for p in parts) > cfg.context_limit:
                         raise ExecutionLimitError("Recherche gespeichert; Antwortkontext zu groß")
+                # Resolve only the frozen enqueue snapshot, never mutable settings.
+                # The router and artifact specifications retain their existing contracts.
+                from hub.preferences import instruction as preference_instruction
+
+                style_instruction = preference_instruction(snapshot.get("response_preferences"))
+                if style_instruction:
+                    style_part = ContextPart(
+                        content=style_instruction,
+                        label=label,
+                        source_id="response-style-enums-1",
+                        revision=1,
+                    )
+                    parts.append(style_part)
+                    roles.append("system")
+                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                        raise ExecutionLimitError("Antwortkontext überschreitet die Kontextgrenze")
+                    if c.cloud_allowed and style_part.label == Privacy.CLOUD_ALLOWED:
+                        grants.append(
+                            CloudGrant(
+                                source_id=style_part.source_id,
+                                revision=1,
+                                provider_id=c.cloud_provider,
+                            )
+                        )
+                    # A router's short answer has not seen these presentation preferences.
+                    route.answer = None
                 external = route.model_class == "cloud"
                 if external and (
                     not cfg.cloud_enabled

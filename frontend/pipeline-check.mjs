@@ -13,6 +13,7 @@ try{
  const title='Synthetic report pipeline '+Date.now();
  await dialog.getByLabel('Name der Aufgabe',{exact:true}).fill(title);
  await dialog.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Read the selected Home Assistant report and analyze it locally.');
+ await dialog.locator('summary').filter({hasText:'Weitere Einstellungen'}).click();
  await dialog.getByRole('button',{name:'Leseschritt hinzufügen',exact:true}).click();
  await dialog.getByLabel('Schritt 1',{exact:true}).selectOption('ha.inspect');
  const save=dialog.getByRole('button',{name:'Aufgabe anlegen',exact:true});
@@ -23,6 +24,7 @@ try{
  await save.click();
  await page.getByRole('heading',{name:title,exact:true,level:2}).waitFor();
  await page.getByRole('button',{name:'Aufgabe bearbeiten',exact:true}).click();
+ await dialog.locator('summary').filter({hasText:'Weitere Einstellungen'}).click();
  if(!await dialog.getByLabel('n8n soll auf den Aufgabenabschluss warten und Fehler sichtbar melden',{exact:true}).isChecked())throw Error('Bound n8n completion option lost');
  if(!await dialog.getByLabel('Die ausgewählten Systemberichte ausdrücklich für diese lokale KI-Auswertung verwenden',{exact:true}).isChecked())throw Error('Explicit report scope lost');
  if(await dialog.getByLabel('Wann auswerten?',{exact:true}).inputValue()!=='ha_updates_available')throw Error('Condition lost');

@@ -24,7 +24,7 @@ assert len({g["id"] for g in data["groups"]}) == len(data["groups"])
 for group in data["groups"]:
     assert group["features"]
     for feature in group["features"]:
-        assert feature["status"] in {"live", "implemented", "limited"}
+        assert feature["status"] in {"live", "implemented", "limited", "local"}
         assert feature["title"] and feature["description"]
 for shot in data["screenshots"]:
     assert re.fullmatch(r"assets/[a-z]+\.png", shot["image"])

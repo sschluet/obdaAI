@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {FormEvent} from 'react';
+import './artifacts.css';
 
 export type ArtifactSeed = {project_id:string|null;conversation_id:string;message_id:string;revision:number;content:string};
 type API = (path:string, method?:string, body?:unknown)=>Promise<any>;
@@ -14,8 +15,14 @@ type Tile = {sourceId:string; crop:number[];caption?:string};
 const status:Record<string,string> = {queued:'In Warteschlange', rendering:'Datei und Vorschau werden erstellt',
   needs_review:'Vorschau prüfen', published:'Freigegeben', failed:'Fehlgeschlagen', cancelled:'Abgebrochen'};
 
-export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:ArtifactSeed|null;
+export function ArtifactsPanel({api, project, sources, seed, embedded=false, contextLabel}:{api:API;seed?:ArtifactSeed|null;embedded?:boolean;contextLabel?:string;
   project:{id:string; archived:boolean}; sources:Source[]}) {
+  const storageKey='hub-ui-draft:artifact:'+project.id;
+  const [savedDraft,setSavedDraft] = useState<any|null>(null);
+  const [resumeNotice,setResumeNotice] = useState('');
+  const [resumeNeedsReview,setResumeNeedsReview] = useState(false);
+  const [mode,setMode] = useState<'model'|'manual'>('model');
+  const [contentOpen,setContentOpen] = useState(false);
   const [configured,setConfigured] = useState(false), [rows,setRows] = useState<Row[]>([]);
   const [editing,setEditing] = useState(false), [original,setOriginal] = useState<Row|null>(null);
   const [kind,setKind] = useState('docx'), [title,setTitle] = useState('');
@@ -45,7 +52,44 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
     const timer=setInterval(()=>void refresh().catch(()=>{}),3000);
     return()=>{alive=false;clearInterval(timer)};
   },[project.id]);
+  useEffect(()=>{
+    try { const raw=sessionStorage.getItem(storageKey);const value=raw?JSON.parse(raw):null;
+      setSavedDraft(value?.schema===1&&value.projectId===project.id?value:null);
+    } catch { setSavedDraft(null); }
+  },[storageKey]);
+  useEffect(()=>{
+    if(!editing)return;
+    const sourceIds=Array.from(new Set([...boundIds,...pages.map(p=>p.sourceId),...tiles.map(t=>t.sourceId),...sections.flatMap(s=>(s.images||[]).map(i=>i.sourceId))])).filter(Boolean);
+    const value={schema:1,requiresReview:resumeNeedsReview,projectId:project.id,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,
+      original:original?{artifact_id:original.artifact_id,revision:original.revision,spec_sha256:original.spec_sha256}:null,
+      chatSource,sourceBindings:sourceIds.map(id=>sources.find(s=>s.id===id)).filter(Boolean)};
+    try { sessionStorage.setItem(storageKey,JSON.stringify(value));setSavedDraft(value); } catch { /* Storage can be disabled or full. In-memory editing stays available. */ }
+  },[editing,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,original,chatSource,storageKey,resumeNeedsReview]);
+  function discardDraft(){try{sessionStorage.removeItem(storageKey)}catch{}setSavedDraft(null);setResumeNotice('');setResumeNeedsReview(false);}
+  async function resumeDraft(){
+    const saved=savedDraft;if(!saved||busy)return;setBusy(true);setError('');
+    try{
+      const bindings=saved.sourceBindings||[];
+      const stale=new Set<string>(bindings.filter((old:Source)=>!sources.some(s=>s.id===old.id&&s.revision===old.revision&&s.sha256===old.sha256)).map((s:Source)=>s.id));
+      let origin:Row|null=null,chat=saved.chatSource;
+      const notices:string[]=saved.requiresReview?['Der Entwurf benötigt weiterhin eine erneute Planung oder eine ausdrückliche manuelle Kopie.']:[];
+      if(saved.original){const current=await api(prefix);origin=current.find((r:Row)=>r.artifact_id===saved.original.artifact_id&&r.revision===saved.original.revision&&r.spec_sha256===saved.original.spec_sha256)||null;
+        if(current.some((r:Row)=>r.artifact_id===saved.original.artifact_id&&r.revision>saved.original.revision))origin=null;
+        if(!origin)notices.push('Die Ausgangsversion hat sich geändert. Der Inhalt wird als neuer Dateientwurf übernommen.');}
+      if(chat){try{const detail=await api('/conversations/'+chat.conversation_id);const message=detail.messages.find((m:any)=>m.id===chat.message_id&&m.role==='assistant'&&m.revision===chat.revision);
+          if(!message)throw Error('changed');}catch{chat=null;notices.push('Die Chatantwort konnte nicht unverändert bestätigt werden. Wähle sie erneut aus, um die Herkunft zu binden.');}}
+      if(stale.size)notices.push('Quellen wurden geändert oder fehlen. Die betroffenen Bindungen wurden entfernt; wähle Quellen erneut und prüfe den Inhalt.');
+      setOriginal(origin);setChatSource(chat);setKind(saved.kind);setTitle(saved.title);setGoal(saved.goal);setSlideCount(saved.slideCount);
+      setSections(saved.sections.map((section:Section)=>({...section,images:(section.images||[]).map(image=>({...image,sourceId:stale.has(image.sourceId)?'':image.sourceId}))})));
+      setBoundIds(saved.boundIds.filter((id:string)=>!stale.has(id)));setPdfExport(saved.pdfExport);setPdfMode(saved.pdfMode);setSlides(saved.slides);
+      setPages(saved.pages.map((page:Page)=>({...page,sourceId:stale.has(page.sourceId)?'':page.sourceId})));setTiles(saved.tiles.map((tile:Tile)=>({...tile,sourceId:stale.has(tile.sourceId)?'':tile.sourceId})));
+      setColumns(saved.columns);setWidth(saved.width);setHeight(saved.height);setFormat(saved.format);
+      setResumeNeedsReview(notices.length>0);setDraftToken(null);setDraftInfo(null);setMode('manual');setContentOpen(true);setEditing(true);
+      setResumeNotice([...notices,'Inhalt und Ziel wiederhergestellt. Modellbelege und Freigaben werden nicht wiederverwendet; du kannst den Inhalt manuell prüfen oder erneut lokal entwerfen.'].join(' '));
+    }catch{setError('Der gespeicherte Entwurf konnte nicht geöffnet werden. Du kannst ihn verwerfen und neu beginnen.');}finally{setBusy(false)}
+  }
   function start(row:Row|null=null){
+    setResumeNeedsReview(false);setResumeNotice('');setMode(row?'manual':'model');setContentOpen(!!row);
     setError('');setChatSource(null);setDraftToken(null);setDraftInfo(null);setGoal('');setOriginal(row);setTitle(row?.title||'');setKind(row?.kind||'docx');
     const plan=row?.spec.plan;
     setPdfExport(plan?.pdf_export||false);setPdfMode(plan?.sections?.length?'text':'pages');
@@ -63,7 +107,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
     [next[index],next[other]]=[next[other],next[index]];return next;
   }
   async function save(event:FormEvent){
-    event.preventDefault();if(busy)return;setBusy(true);setError('');
+    event.preventDefault();if(busy||resumeNeedsReview)return;setBusy(true);setError('');
     try{
       const sourceIds=Array.from(new Set([...(draftToken?boundIds:[]),...(kind==='pdf'&&pdfMode==='pages'?pages.map(p=>p.sourceId):kind==='image'?tiles.map(t=>t.sourceId):(kind==='docx'||kind==='pdf')?[...boundIds,...sections.flatMap(s=>(s.images||[]).map(image=>image.sourceId))]:boundIds)]));
       if(sourceIds.some(id=>!id||!sources.find(s=>s.id===id)))throw Error('Bitte für jede Seite bzw. jedes Bild eine Quelldatei auswählen.');
@@ -87,7 +131,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       }
       const body={request_id:crypto.randomUUID(),spec:{plan,sources:bindings},...(draftToken?{draft_token:draftToken}:{}),...(chatSource?{chat_source:chatSource}:{}),...(original?{expected_revision:original.revision}:{})};
       await api(original?prefix+'/'+original.artifact_id+'/versions':prefix,'POST',body);
-      setRows(await api(prefix));setEditing(false);
+      setRows(await api(prefix));setEditing(false);discardDraft();
     }catch(e){setError((e as Error).message)}finally{setBusy(false)}
   }
   async function generate(){
@@ -100,7 +144,7 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       else if(kind==='pptx')setSlides(plan.slides.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''})));
       else if(kind==='pdf')setPages(plan.pages.map((p:any)=>({sourceId:draft.spec.sources[p.source].id,page:p.page,rotation:p.rotation,splitAfter:(plan.split_after||[]).includes(plan.pages.indexOf(p)+1)})));
       else {setTiles(plan.tiles.map((t:any)=>({sourceId:draft.spec.sources[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''})));setColumns(plan.columns);setWidth(plan.tile_width);setHeight(plan.tile_height);setFormat(plan.format)}
-      setDraftToken(draft.draft_token);setDraftInfo(draft);
+      setDraftToken(draft.draft_token);setDraftInfo(draft);setContentOpen(true);setResumeNeedsReview(false);
     }catch(e){setError((e as Error).message)}finally{setBusy(false)}
   }
   async function accept(){
@@ -108,13 +152,15 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
     try{await api(base(preview)+'/accept','POST',{spec_sha256:preview.spec_sha256,output_sha256:preview.output.sha256,reviewed_all_pages:reviewed});setRows(await api(prefix));setPreview(null)}
     catch(e){setError((e as Error).message)}finally{setBusy(false)}
   }
-  return <section className="setting-card">
-    <h2>Dateien erstellen und bearbeiten</h2>
-    <p>Word und PowerPoint erstellen, PDF-Seiten zusammenstellen oder Bilder zuschneiden. Jede Ausgabe erhält eine eigene Version mit Vorschau.</p>
+  return <section className={"setting-card artifacts-panel"+(embedded?" artifacts-embedded":"")}>
+    <div className="artifact-panel-heading"><div><span className="artifact-eyebrow">Ergebnisse · Lokal</span><h2>Dateien erstellen und bearbeiten</h2></div><span className="artifact-count">{rows.length} Versionen</span></div>
+    {contextLabel&&<p className="artifact-context">Projekt: {contextLabel}</p>}
+    {!embedded&&<p>Vom gewünschten Ergebnis zur bearbeitbaren Datei. Word, PowerPoint, PDF und Bilder mit erhaltenen Originalen und geprüfter Vorschau.</p>}
     {!configured&&<p className="hint">Der lokale Dateirunner ist noch nicht eingerichtet. Vorhandene Originale kannst du weiterhin im Bereich Dokumente verwenden.</p>}
     {error&&!editing&&!preview&&<p className="error" role="alert">{error}</p>}
     <button className="primary" disabled={!configured||project.archived} onClick={()=>start()}>Neue Datei erstellen</button>
-    {seed&&(!seed.project_id||seed.project_id===project.id)&&<button disabled={!configured||project.archived} onClick={()=>{start();setTitle('Antwort als Dokument');setSections([{heading:'Antwort',paragraphs:seed.content.match(/[\s\S]{1,4000}/g)?.join('\n\n')||seed.content,table:[]}]);setChatSource({conversation_id:seed.conversation_id,message_id:seed.message_id,revision:seed.revision})}}>Chatantwort als Word übernehmen</button>}
+    {seed&&(!seed.project_id||seed.project_id===project.id)&&<button disabled={!configured||project.archived} onClick={()=>{start();setMode('manual');setContentOpen(true);setTitle('Antwort als Dokument');setSections([{heading:'Antwort',paragraphs:seed.content.match(/[\s\S]{1,4000}/g)?.join('\n\n')||seed.content,table:[]}]);setChatSource({conversation_id:seed.conversation_id,message_id:seed.message_id,revision:seed.revision})}}>Chatantwort als Word übernehmen</button>}
+    {savedDraft&&!editing&&<div className="artifact-context" role="status"><b>Gespeicherter Dateientwurf</b><p>{savedDraft.title||savedDraft.goal||'Noch ohne Titel'} · nur in dieser Browsersitzung</p><button disabled={busy||project.archived} onClick={()=>void resumeDraft()}>Entwurf fortsetzen</button><button disabled={busy} onClick={discardDraft}>Entwurf verwerfen</button></div>}
     {!rows.length&&<p className="muted">Noch keine erzeugten Dateien in diesem Projektraum.</p>}
     {rows.map(row=><article key={row.artifact_id+'-'+row.revision} className="citation">
       <b>{row.title} · Version {row.revision}</b>{row.chat&&<p className="hint">Aus Chatantwort · Revision {row.chat.revision} · lokal gespeichert</p>}{row.draft&&<details><summary>Modell und verwendete Quellen</summary><p>{row.draft.provider.model} · lokales Modell · {row.draft.user_edited?'Entwurf anschließend bearbeitet':'Entwurf übernommen'}</p>{row.draft.inherited_from&&<p>Ursprünglicher Modellentwurf: Version {row.draft.inherited_from.revision} · diese Folgeversion wurde manuell bearbeitet.</p>}{row.draft.citations.map((c:any,i:number)=><p key={i}>{c.reference} · Revision {c.revision}</p>)}{row.draft.web_research&&<><p>Verwendete Websuchauszüge · lokal verarbeitet</p>{row.draft.web_research.citations.map((c:any,i:number)=><p key={'web-'+i}>{c.reference}</p>)}</>}<p className="hint">Quellenbelege zeigen verwendete Auszüge. Die sachliche Richtigkeit wurde nicht automatisch bestätigt.</p></details>}<p>{status[row.status]||row.status} · {row.kind==='image'?'Bild':row.kind.toUpperCase()} · Lokal</p>
@@ -124,35 +170,45 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
       {configured&&!project.archived&&row.revision===Math.max(...rows.filter(r=>r.artifact_id===row.artifact_id).map(r=>r.revision))&&<button onClick={()=>start(row)}>Neue Version bearbeiten</button>}
       {['queued','rendering','needs_review','failed'].includes(row.status)&&<button disabled={busy} onClick={async()=>{setBusy(true);try{await api(base(row)+'/cancel','POST');setRows(await api(prefix))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Diese Version abbrechen</button>}
     </article>)}
-    {editing&&<div className="modal"><div role="dialog" aria-modal="true" aria-label="Datei erstellen">
+    {editing&&<div className="modal"><div className="artifact-editor" role="dialog" aria-modal="true" aria-label="Datei erstellen">
       <h2>{original?'Neue Dateiversion':'Neue Datei'}</h2>
-      <p>Die Erstellung erfolgt lokal. Nach der Verarbeitung prüfst du die Vorschau und gibst die Datei zum Download frei.</p>
+      <p>1. Inhalt entwerfen · 2. Datei erstellen · 3. Vorschau prüfen und freigeben</p>
+      <div className="artifact-mode" role="group" aria-label="Arbeitsweise"><button type="button" aria-pressed={mode==='model'} disabled={busy} onClick={()=>setMode('model')}>Mit KI entwerfen</button><button type="button" aria-pressed={mode==='manual'} disabled={busy} onClick={()=>{setMode('manual');setContentOpen(true)}}>Inhalt selbst eingeben</button></div>
+      <p className="hint">Beim Wechsel bleiben dein Ziel, Quellen und bearbeiteter Inhalt erhalten.</p>
+      {original&&<p className="artifact-context">Grundlage: {original.title} · Version {original.revision}. Es entsteht eine neue Version.</p>}
+      {chatSource&&<p className="artifact-context">Grundlage: ausgewählte Chatantwort · Revision {chatSource.revision}. Die Herkunft bleibt mit der Datei verbunden.</p>}
       {error&&<p className="error" role="alert">{error}</p>}
+      {resumeNotice&&<p className="artifact-context" role="status">{resumeNotice}</p>}
+      {resumeNeedsReview&&<div className="artifact-context"><p>Vor dem Erstellen musst du mit aktuell ausgewählten Quellen neu entwerfen oder den erhaltenen Text ausdrücklich als manuelle Kopie verwenden.</p><button type="button" disabled={busy} onClick={()=>{setOriginal(null);setChatSource(null);setResumeNeedsReview(false);setMode('manual');setContentOpen(true)}}>Als manuelle Kopie ohne frühere Herkunft verwenden</button></div>}
       <form onSubmit={save}>
         <label>Dateiformat<select aria-label="Dateiformat" value={kind} onChange={e=>{setKind(e.target.value);setDraftToken(null);setDraftInfo(null);setError('')}}><option value="docx">Word-Dokument</option><option value="pptx">PowerPoint-Präsentation</option><option value="pdf">PDF-Dokument</option><option value="image">Bild / Collage</option></select></label>
-        {<details><summary>Mit dem lokalen Modell entwerfen</summary>
+        {<details className="artifact-draft" open={mode==='model'}><summary onClick={e=>{e.preventDefault();setMode('model')}}>Mit dem lokalen Modell entwerfen</summary>
           <p className="hint">Beschreibe das Ergebnis. Es werden nur die ausdrücklich ausgewählten Projektquellen verwendet. Textentwürfe nutzen bis zu vier Quellen mit Auszügen; Seiten- und Bildoperationen verwenden die ausgewählten Originale. Danach Text, Fakten und Quellen selbst prüfen. Es entsteht noch keine Datei.</p>
           <label>Gewünschtes Ergebnis<textarea aria-label="Gewünschtes Ergebnis" maxLength={4000} rows={3} value={goal} onChange={e=>setGoal(e.target.value)}/></label>
           {kind==='pptx'&&<label>Gewünschte Folienanzahl<input type="number" min={1} max={30} value={slideCount} onChange={e=>setSlideCount(Number(e.target.value))}/></label>}
           <button type="button" disabled={busy||!goal.trim()||boundIds.length>((kind==='image'||(kind==='pdf'&&pdfMode==='pages'))?20:4)||(!!chatSource&&(kind==='image'||(kind==='pdf'&&pdfMode==='pages')))} onClick={()=>void generate()}>{busy?'Lokaler Entwurf läuft…':'Lokal entwerfen'}</button>
-          {chatSource&&<p className="hint">Die übernommene Antwort kannst du hier bearbeiten. KI-Folgeänderungen sind nach Erstellung der ersten Dateiversion verfügbar.</p>}{draftInfo&&<p role="status">Lokaler Entwurf bereit · {draftInfo.provider.model}. Inhalt bearbeiten, anschließend Datei und Vorschau erstellen.</p>}
+          {chatSource&&<p className="hint">Die übernommene Antwort kannst du hier bearbeiten. KI-Folgeänderungen sind nach Erstellung der ersten Dateiversion verfügbar.</p>}
         </details>}
         {kind==='pdf'&&<label>PDF erstellen aus<select aria-label="PDF erstellen aus" value={pdfMode} onChange={e=>{setPdfMode(e.target.value);setDraftToken(null);setDraftInfo(null)}}><option value="pages">Seiten vorhandener PDF-Dateien</option><option value="text">Text, Tabellen und Bilder</option></select></label>}
+        {draftInfo&&<p className="artifact-feedback" role="status">Lokaler Entwurf bereit · {draftInfo.provider.model}. Inhalt bearbeiten, anschließend Datei und Vorschau erstellen.</p>}
+        {sources.length>0&&<details className="artifact-source-selection"><summary>Gebundene Quelldateien</summary><p className="hint">Nur ausgewählte Quellen werden an das lokale Modell übergeben. Textentwürfe nutzen bis zu vier Quellen mit Auszügen. Jede Auswahl wird an Revision und Hash gebunden.</p>{(kind==='image'?images:kind==='pdf'&&pdfMode==='pages'?pdfs:sources).map(source=><label key={source.id}><input type="checkbox" checked={boundIds.includes(source.id)} onChange={e=>{setBoundIds(e.target.checked?[...boundIds,source.id]:boundIds.filter(id=>id!==source.id));setDraftToken(null);setDraftInfo(null)}}/>{source.name}</label>)}</details>}
+        <details className="artifact-content" open={contentOpen} onToggle={e=>setContentOpen(e.currentTarget.open)}><summary>Inhalt bearbeiten{original?' · neue Version':''}</summary>
         <label>Dateititel<input required value={title} maxLength={160} onChange={e=>setTitle(e.target.value)}/></label>
         {(kind==='docx'||(kind==='pdf'&&pdfMode==='text'))&&<>{kind==='docx'&&<label><input type="checkbox" checked={pdfExport} onChange={e=>setPdfExport(e.target.checked)}/> Zusätzlich als PDF zum Download bereitstellen</label>}{sections.map((section,index)=><fieldset key={index}><legend>Abschnitt {index+1}</legend>
           <label>Abschnittsüberschrift<input required maxLength={160} value={section.heading} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,heading:e.target.value}:s))}/></label>
           <label>Dokumenttext<textarea aria-label="Dokumenttext" maxLength={30000} rows={8} value={section.paragraphs} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,paragraphs:e.target.value}:s))}/></label>
+          <details className="artifact-advanced" open={section.table.length>0||(section.images||[]).length>0}><summary>Tabellen, Bilder und Abschnittsoptionen</summary>
           {section.table.map((row,r)=><fieldset key={r}><legend>Tabellenzeile {r+1}</legend>{row.map((cell,col)=><label key={col}>Spalte {col+1}<input required maxLength={160} value={cell} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,table:s.table.map((cells,j)=>j===r?cells.map((value,c)=>c===col?e.target.value:value):cells)}:s))}/></label>)}<button type="button" onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,table:s.table.filter((_,j)=>j!==r)}:s))}>Tabellenzeile entfernen</button></fieldset>)}
           {!section.table.length?<button type="button" onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,table:[['',''],['','']]}:s))}>Tabelle hinzufügen</button>:<><button type="button" disabled={section.table.length>=30} onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,table:[...s.table,s.table[0].map(()=>'')]}:s))}>Tabellenzeile hinzufügen</button><button type="button" disabled={section.table[0].length>=6} onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,table:s.table.map(row=>[...row,''])}:s))}>Tabellenspalte hinzufügen</button><button type="button" onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,table:[]}:s))}>Tabelle entfernen</button></>}
-          {(section.images||[]).map((picture,n)=><fieldset key={n}><legend>Dokumentbild {n+1}</legend><label>Bild im Dokument<select aria-label="Bild im Dokument" required value={picture.sourceId} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).map((image,j)=>j===n?{...image,sourceId:e.target.value}:image)}:s))}>{images.map(image=><option key={image.id} value={image.id}>{image.name}</option>)}</select></label><label>Bildunterschrift<input maxLength={160} value={picture.caption} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).map((image,j)=>j===n?{...image,caption:e.target.value}:image)}:s))}/></label><label>Bildbreite (Zoll)<input type="number" min={0.5} max={6.5} step={0.1} value={picture.width} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).map((image,j)=>j===n?{...image,width:Number(e.target.value)}:image)}:s))}/></label><button type="button" onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).filter((_,j)=>j!==n)}:s))}>Dokumentbild entfernen</button></fieldset>)}
+          {(section.images||[]).map((picture,n)=><fieldset key={n}><legend>Dokumentbild {n+1}</legend><label>Bild im Dokument<select aria-label="Bild im Dokument" required value={picture.sourceId} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).map((image,j)=>j===n?{...image,sourceId:e.target.value}:image)}:s))}>{images.map(image=><option key={image.id} value={image.id}>{image.name}</option>)}<option value="">Bitte auswählen</option></select></label><label>Bildunterschrift<input maxLength={160} value={picture.caption} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).map((image,j)=>j===n?{...image,caption:e.target.value}:image)}:s))}/></label><label>Bildbreite (Zoll)<input type="number" min={0.5} max={6.5} step={0.1} value={picture.width} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).map((image,j)=>j===n?{...image,width:Number(e.target.value)}:image)}:s))}/></label><button type="button" onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,images:(s.images||[]).filter((_,j)=>j!==n)}:s))}>Dokumentbild entfernen</button></fieldset>)}
           <button type="button" disabled={!images.length||(section.images||[]).length>=4||sections.reduce((count,s)=>count+(s.images||[]).length,0)>=12} onClick={()=>setSections(sections.map((s,i)=>i===index?{...s,images:[...(s.images||[]),{sourceId:images[0].id,caption:'',width:5.5}]}:s))}>Bild in Abschnitt einfügen</button>
-          <button type="button" disabled={index===0} onClick={()=>setSections(move(sections,index,-1))}>Abschnitt nach oben</button><button type="button" disabled={sections.length===1} onClick={()=>setSections(sections.filter((_,i)=>i!==index))}>Abschnitt entfernen</button>
+          <button type="button" disabled={index===0} onClick={()=>setSections(move(sections,index,-1))}>Abschnitt nach oben</button><button type="button" disabled={sections.length===1} onClick={()=>setSections(sections.filter((_,i)=>i!==index))}>Abschnitt entfernen</button></details>
         </fieldset>)}<button type="button" disabled={sections.length>=30} onClick={()=>setSections([...sections,{heading:'',paragraphs:'',table:[]}])}>Abschnitt hinzufügen</button><p className="hint">Eine Leerzeile trennt die Absätze. Text und Tabellen bleiben editierbar.</p></>}
         {kind==='pptx'&&<><p>{slides.length} Folie{slides.length===1?'':'n'} · Die Ausgabe enthält genau diese Folien.</p>{slides.map((slide,index)=><fieldset key={index}><legend>Folie {index+1}</legend>
           <label>Folientitel<input required maxLength={160} value={slide.title} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,title:e.target.value}:s))}/></label>
           <label>Stichpunkte<textarea aria-label="Stichpunkte" required rows={5} value={slide.bullets} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,bullets:e.target.value}:s))}/></label><p className="hint">Ein Stichpunkt je Zeile, maximal fünf.</p>
-          <label>Sprechernotizen<textarea aria-label="Sprechernotizen" maxLength={4000} value={slide.notes} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,notes:e.target.value}:s))}/></label>
-          <button type="button" disabled={index===0} onClick={()=>setSlides(move(slides,index,-1))}>Folie nach oben</button><button type="button" disabled={index===slides.length-1} onClick={()=>setSlides(move(slides,index,1))}>Folie nach unten</button><button type="button" disabled={slides.length===1} onClick={()=>setSlides(slides.filter((_,i)=>i!==index))}>Folie entfernen</button>
+          <details className="artifact-advanced"><summary>Notizen und Folienreihenfolge</summary><label>Sprechernotizen<textarea aria-label="Sprechernotizen" maxLength={4000} value={slide.notes} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,notes:e.target.value}:s))}/></label>
+          <button type="button" disabled={index===0} onClick={()=>setSlides(move(slides,index,-1))}>Folie nach oben</button><button type="button" disabled={index===slides.length-1} onClick={()=>setSlides(move(slides,index,1))}>Folie nach unten</button><button type="button" disabled={slides.length===1} onClick={()=>setSlides(slides.filter((_,i)=>i!==index))}>Folie entfernen</button></details>
         </fieldset>)}<button type="button" disabled={slides.length>=30} onClick={()=>setSlides([...slides,{title:'',bullets:'',notes:''}])}>Folie hinzufügen</button></>}
         {kind==='pdf'&&pdfMode==='pages'&&<><p>Füge Ausgabeseiten in ihrer Reihenfolge hinzu. Für mehrere PDF-Dateien markiere, nach welcher Ausgabeseite ein neuer Teil beginnen soll. Alle Teile werden einzeln und als ZIP zum Download angeboten.</p><button type="button" disabled={pages.length<2||pages.length>20} onClick={()=>setPages(pages.map((p,i)=>({...p,splitAfter:i<pages.length-1})))}>Jede Ausgabeseite als eigene PDF</button><button type="button" onClick={()=>setPages(pages.map(p=>({...p,splitAfter:false})))}>Eine zusammenhängende PDF</button>{!pdfs.length&&<p>Bitte zuerst eine PDF unter Dokumente hinzufügen.</p>}{pages.map((page,index)=><fieldset key={index}><legend>Ausgabeseite {index+1}</legend>
           <label>PDF-Quelldatei<select aria-label="PDF-Quelldatei" required value={page.sourceId} onChange={e=>setPages(pages.map((p,i)=>i===index?{...p,sourceId:e.target.value}:p))}><option value="">Bitte auswählen</option>{pdfs.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></label>
@@ -163,17 +219,18 @@ export function ArtifactsPanel({api, project, sources, seed}:{api:API;seed?:Arti
         {kind==='image'&&<><p>Wähle echte hochgeladene Bilder. Zuschnitte werden in Prozent der Bildbreite bzw. -höhe angegeben.</p>{!images.length&&<p>Bitte zuerst ein Bild unter Dokumente hinzufügen.</p>}{tiles.map((tile,index)=><fieldset key={index}><legend>Bild {index+1}</legend>
           <label>Bildquelle<select aria-label="Bildquelle" required value={tile.sourceId} onChange={e=>setTiles(tiles.map((t,i)=>i===index?{...t,sourceId:e.target.value}:t))}><option value="">Bitte auswählen</option>{images.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <label>Bildbeschriftung<input aria-label="Bildbeschriftung" maxLength={140} value={tile.caption||''} onChange={e=>setTiles(tiles.map((t,i)=>i===index?{...t,caption:e.target.value}:t))}/></label>
-          {['Linker Rand (%)','Oberer Rand (%)','Rechter Rand (%)','Unterer Rand (%)'].map((label,part)=><label key={part}>{label}<input type="number" required min={0} max={100} step={0.1} value={tile.crop[part]} onChange={e=>setTiles(tiles.map((t,i)=>i===index?{...t,crop:t.crop.map((v,j)=>j===part?Number(e.target.value):v)}:t))}/></label>)}
+          <details className="artifact-advanced" open={!!draftInfo}><summary>Zuschnitt in Prozent</summary>{['Linker Rand (%)','Oberer Rand (%)','Rechter Rand (%)','Unterer Rand (%)'].map((label,part)=><label key={part}>{label}<input type="number" required min={0} max={100} step={0.1} value={tile.crop[part]} onChange={e=>setTiles(tiles.map((t,i)=>i===index?{...t,crop:t.crop.map((v,j)=>j===part?Number(e.target.value):v)}:t))}/></label>)}</details>
           <button type="button" disabled={index===0} onClick={()=>setTiles(move(tiles,index,-1))}>Bild nach oben</button><button type="button" onClick={()=>setTiles(tiles.filter((_,i)=>i!==index))}>Bild entfernen</button>
         </fieldset>)}<button type="button" disabled={!images.length||tiles.length>=12} onClick={()=>setTiles([...tiles,{sourceId:images[0].id,crop:[0,0,100,100]}])}>Bild hinzufügen</button>
-          <label>Spalten in der Collage<input type="number" min={1} max={4} value={columns} onChange={e=>setColumns(Number(e.target.value))}/></label>
+          <details className="artifact-advanced"><summary>Collagegröße und Bildformat</summary><label>Spalten in der Collage<input type="number" min={1} max={4} value={columns} onChange={e=>setColumns(Number(e.target.value))}/></label>
           <label>Breite je Bild (Pixel)<input type="number" min={128} max={2048} value={width} onChange={e=>setWidth(Number(e.target.value))}/></label>
           <label>Höhe je Bild (Pixel)<input type="number" min={128} max={2048} value={height} onChange={e=>setHeight(Number(e.target.value))}/></label>
-          <label>Bildformat<select aria-label="Bildformat" value={format} onChange={e=>setFormat(e.target.value)}><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label>
+          <label>Bildformat<select aria-label="Bildformat" value={format} onChange={e=>setFormat(e.target.value)}><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label></details>
         </>}
-        {sources.length>0&&<details><summary>Gebundene Quelldateien</summary><p className="hint">Die Auswahl dokumentiert die zugehörigen Originale. Der eingegebene Text wird unverändert übernommen.</p>{(kind==='image'?images:kind==='pdf'&&pdfMode==='pages'?pdfs:sources).map(source=><label key={source.id}><input type="checkbox" checked={boundIds.includes(source.id)} onChange={e=>{setBoundIds(e.target.checked?[...boundIds,source.id]:boundIds.filter(id=>id!==source.id));setDraftToken(null);setDraftInfo(null)}}/>{source.name}</label>)}</details>}
+        </details>
         <p className="hint">Neue Versionen ersetzen keine älteren Dateien. Quellen anderer Projekte werden nicht einbezogen.</p>
-        <button className="primary" disabled={busy}>Datei und Vorschau erstellen</button>
+        <button className="primary" disabled={busy||resumeNeedsReview||(mode==='model'&&!draftInfo&&!original&&!chatSource)}>Datei und Vorschau erstellen</button>
+        {mode==='model'&&!draftInfo&&!original&&!chatSource&&<p className="hint">Erstelle zuerst einen lokalen Entwurf oder wähle „Inhalt selbst eingeben“.</p>}
       </form><button disabled={busy} onClick={()=>setEditing(false)}>Abbrechen</button>
     </div></div>}
     {preview&&<div className="modal"><div role="dialog" aria-modal="true" aria-label="Dateivorschau">

@@ -1,5 +1,18 @@
 # obdaAI — Status 07.10.2026
 
+## Lokale Bedienoptimierung — 07.10.2026
+
+Chat-Arbeitsbereich mit Dateien/Quellen/Vorgaben/Aufgaben, vereinfachte Dialoge,
+sichere Wiederaufnahme neuer Entwürfe und serverseitige revisionierte Antwortvorgaben
+sind lokal implementiert. Schema 0025 existiert ausschließlich im lokalen/CI-Stand;
+der bisherige produktive Nachweis bleibt 80179bc/0024. Der Testserver wurde nicht
+angesprochen, verändert oder aktualisiert. Quellen-/Versionsdrift sperrt wieder-
+aufgenommene Entwürfe, Freigaben/Tokens werden nicht im Entwurf gespeichert.
+Lokale Python-Suite: 577 bestanden, 13 PostgreSQL-Fälle für CI ausgelassen;
+Ruff, Mypy (63 Module), Frontendbuild und Source-Scan bestanden. Acht Browser-
+prüfungen bestanden; aktuelle synthetische Website-Screenshots werden mitgeliefert. Teilumfang des Optimierungsplans, keine fertige V1.
+Details und verbleibende Schritte: docs/ux-optimization.md.
+
 ## Projektwebsite — 07.10.2026
 
 Öffentliche Projektvorstellung in `website/` vorbereitet: 43 Features in acht

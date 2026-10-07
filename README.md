@@ -27,6 +27,7 @@ separately from local SQLite contract checks.
 - [Architecture](docs/architecture.md), [security](docs/security.md), [data model](docs/data-model.md)
 - [Implementation plan](docs/implementation-plan.md), [operations](docs/operations.md)
 - [Public project website and update workflow](docs/project-website.md)
+- [Integrated workspace and local UX delivery](docs/ux-optimization.md)
 - [Provider configuration, encrypted secrets and budgets](docs/providers.md)
 - [Versions and sources](docs/dependencies.md)
 - [Operator n8n connection check](docs/n8n-connection-check.md)

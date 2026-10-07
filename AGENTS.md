@@ -57,3 +57,11 @@ A vertical function must have unit/API tests and browser checks when applicable;
 real integration smoke tests are labeled separately. Documentation, migrations,
 lockfiles and reproducible builds match source. Preserve originals and inspect
 artifact previews. Report blocked live checks honestly. Never call partial V1 complete.
+
+## Current development target
+As of 07.10.2026 the user restricts development and application checks to the local
+workspace. Do not contact or mutate the unavailable test server, deploy there or
+run its migrations until the user explicitly reauthorizes server work. GitHub CI
+and public showcase synchronization remain authorized. Development subagents
+are explicitly authorized; coordinate shared contracts and file ownership and
+keep all runtime/fixture data local and out of Git.

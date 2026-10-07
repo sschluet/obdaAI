@@ -18,8 +18,17 @@ try{
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
  let dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
  await dialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic word version');
  await dialog.getByLabel('Dokumenttext',{exact:true}).fill('Editable synthetic original text.');
+ await dialog.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();
+ await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Synthetic preserved goal');
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
+ if(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='Editable synthetic original text.')throw Error('Mode switch lost manual content');
+ await dialog.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();
+ if(await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).inputValue()!=='Synthetic preserved goal')throw Error('Mode switch lost goal');
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
+ await dialog.getByText('Tabellen, Bilder und Abschnittsoptionen',{exact:true}).click();
  await dialog.getByRole('button',{name:'Tabelle hinzufügen',exact:true}).click();
  for(const [i,value]of ['Column A','Column B','Alpha','42'].entries())await dialog.locator('fieldset fieldset input').nth(i).fill(value);
  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
@@ -36,6 +45,7 @@ try{
  await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
  if(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='Editable synthetic original text.')throw Error('Version lost its editable text');
  if(await dialog.locator('fieldset fieldset input').nth(3).inputValue()!=='42')throw Error('Version lost editable table');
  await dialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic word version two');
@@ -49,9 +59,43 @@ try{
  ]);
  await page.waitForFunction(()=>document.querySelectorAll('.source-list li').length===2); // Raw Office/PDF/image inputs do not require OCR in this UI fixture.
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
+ // Persist manual work across reload; reject a stale recorded source revision on resume.
+ await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+ dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
+ await dialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic resumed draft');
+ await dialog.getByLabel('Dokumenttext',{exact:true}).fill('Preserved across reload, no silently rebound source.');
+ await dialog.getByText('Gebundene Quelldateien',{exact:true}).click();
+ await dialog.getByLabel('synthetic-artifact.png',{exact:true}).check();
+ await dialog.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();
+ await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Synthetic persistent goal');
+ await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await page.getByRole('button',{name:'Entwurf fortsetzen',exact:true}).waitFor();
+ await page.evaluate(()=>{
+   const key=Object.keys(sessionStorage).find(key=>key.startsWith('hub-ui-draft:artifact:'));
+   const draft=JSON.parse(sessionStorage.getItem(key));draft.sourceBindings[0].revision+=1;
+   sessionStorage.setItem(key,JSON.stringify(draft));
+ });
+ await page.reload();
+ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Projekte',exact:true}).click();
+ await page.getByRole('heading',{name,exact:true}).locator('..').click();
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
+ await page.getByRole('button',{name:'Entwurf fortsetzen',exact:true}).click();
+ dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ if(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='Preserved across reload, no silently rebound source.')throw Error('Reload lost manual draft');
+ await dialog.getByText('Gebundene Quelldateien',{exact:true}).click();
+ if(await dialog.getByLabel('synthetic-artifact.png',{exact:true}).isChecked())throw Error('Stale source silently rebound on resume');
+ await dialog.getByText('Quellen wurden geändert oder fehlen.',{exact:false}).waitFor();
+ if(!await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).isDisabled())throw Error('Stale draft allowed save without replan or explicit copy');
+ await dialog.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();
+ if(await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).inputValue()!=='Synthetic persistent goal')throw Error('Reload lost goal');
+ await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await page.getByRole('button',{name:'Entwurf verwerfen',exact:true}).click();
  for(const kind of ['pptx','pdf','image']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
   await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
   const title='Synthetic '+kind+' UI artifact';
   await dialog.getByLabel('Dateititel',{exact:true}).fill(title);
@@ -70,6 +114,7 @@ try{
   }else{
    await dialog.getByRole('button',{name:'Bild hinzufügen',exact:true}).click();
    await dialog.getByLabel('Bildbeschriftung',{exact:true}).fill('Synthetic blue');
+   await dialog.getByText('Collagegröße und Bildformat',{exact:true}).click();
    await dialog.getByLabel('Breite je Bild (Pixel)',{exact:true}).fill('128');
    await dialog.getByLabel('Höhe je Bild (Pixel)',{exact:true}).fill('128');
   }
@@ -93,11 +138,13 @@ try{
  for(const kind of ['docx','pdf']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
   await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
   if(kind==='pdf')await dialog.getByLabel('PDF erstellen aus',{exact:true}).selectOption('text');
   const title='Synthetic extended '+kind;
   await dialog.getByLabel('Dateititel',{exact:true}).fill(title);
   await dialog.getByLabel('Dokumenttext',{exact:true}).fill('Local document with a bound image.');
+  await dialog.getByText('Tabellen, Bilder und Abschnittsoptionen',{exact:true}).click();
   await dialog.getByRole('button',{name:'Bild in Abschnitt einfügen',exact:true}).click();
   await dialog.getByLabel('Bildunterschrift',{exact:true}).fill('Synthetic blue image');
   if(kind==='docx')await dialog.getByLabel('Zusätzlich als PDF zum Download bereitstellen',{exact:true}).check();
@@ -110,12 +157,14 @@ try{
   if(kind==='docx')await card.getByRole('link',{name:'Zusätzliches PDF herunterladen',exact:true}).waitFor();
   await card.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
   if(await dialog.getByLabel('Bildunterschrift',{exact:true}).inputValue()!=='Synthetic blue image')throw Error('Bound image/caption lost in version editor');
   await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
  }
  for(const kind of ['pdf','image']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
   await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
   await dialog.getByText('Gebundene Quelldateien',{exact:true}).click();
   await dialog.getByLabel('synthetic-artifact.'+(kind==='pdf'?'pdf':'png'),{exact:true}).check();
@@ -131,6 +180,7 @@ try{
  for(const kind of ['docx','pptx']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
   await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
   await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
   await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Create an editable synthetic local draft.');
@@ -148,8 +198,10 @@ try{
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
- await page.getByRole('heading',{name,exact:true}).waitFor();
+ await page.getByRole('complementary',{name:'Arbeitsbereich neben dem Chat',exact:true}).waitFor();
  await page.getByText('Synthetic local document draft · Version 1',{exact:true}).first().waitFor();
+ await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();
+ await page.getByRole('button',{name:name+' · Projektraum öffnen',exact:true}).click();
  await page.getByRole('tab',{name:/Gespräche ·/}).click();
  await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Recherchiere und erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST SYNTHETIC_WEB_QUERY');
@@ -163,16 +215,17 @@ try{
  await researchCard.locator('summary').click();
  await researchCard.getByText('Verwendete Websuchauszüge · lokal verarbeitet',{exact:true}).waitFor();
  if(!(await researchCard.innerText()).includes('https://example.org/synthetic-source'))throw Error('Search citation missing in file provenance');
+ await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
- await page.locator('button.new').click();
+ await Promise.all([page.waitForResponse(response=>response.url().includes('/api/conversations?q=')&&response.request().method()==='GET'),page.locator('button.new').click()]);
  await page.getByLabel('Nachricht',{exact:true}).fill('A synthetic short answer for Word export.');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).click();
- await page.getByRole('heading',{name,exact:true}).locator('..').click();
- await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
+ await page.getByLabel(/Datei in Projekt speichern/).selectOption({label:name});
  await page.getByRole('button',{name:'Chatantwort als Word übernehmen',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
  if(!(await dialog.getByLabel('Dokumenttext',{exact:true}).inputValue()).length)throw Error('Chat export lost content');
  await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
  await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Create a short Word section from the selected answer.');

@@ -48,9 +48,8 @@ cd frontend
 node showcase-check.mjs
 ```
 
-Browser checks cover the 43-feature initial catalog, search/filtering, gallery,
-keyboard interaction and mobile overflow. Update expected feature counts alongside
-intentional catalog changes. QA captures stay under `.local/showcase-qa`.
+Browser checks cover the current feature catalog, search/filtering, gallery,
+keyboard interaction and mobile overflow. Catalog counts are checked from the versioned project metadata. QA captures stay under `.local/showcase-qa`.
 
 ## Publication
 

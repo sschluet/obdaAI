@@ -1,5 +1,5 @@
 'use strict';
-const labels={live:'Live geprüft',implemented:'Implementiert',limited:'Begrenzter Teilstand'};
+const labels={live:'Live geprüft',implemented:'Implementiert',limited:'Begrenzter Teilstand',local:'Lokal geprüft'};
 const node=(tag,text,className)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;};
 let category='all',query='',selected=0,project;
 function renderFeatures(){
@@ -28,6 +28,7 @@ async function init(){
  const gallery=document.querySelector('#gallery-tabs');const names=['Chat','Projekte','Dateien','Aufgaben','Wissen'];project.screenshots.forEach((shot,i)=>{const b=node('button',names[i]);b.type='button';b.id='gallery-tab-'+i;b.setAttribute('role','tab');b.setAttribute('aria-controls','gallery-panel');b.addEventListener('click',()=>showScreenshot(i));b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?4:(i+(e.key==='ArrowRight'?1:4))%5;showScreenshot(n);gallery.children[n].focus();});gallery.append(b);});showScreenshot(0);
  const dialog=document.querySelector('#image-dialog');document.querySelector('#expand-image').addEventListener('click',()=>{const image=document.querySelector('#dialog-image');image.src=project.screenshots[selected].image;image.alt=project.screenshots[selected].title+' – synthetische Beispieldaten';dialog.showModal();});document.querySelector('#close-image').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
  const roadmap=document.querySelector('#roadmap-items');project.roadmap.forEach((item,i)=>{const el=node('article',undefined,'roadmap-item');el.append(node('span',String(i+1).padStart(2,'0')));const copy=node('div');copy.append(node('h4',item.title),node('p',item.text));el.append(copy);roadmap.append(el);});
+ if(project.development){document.querySelector('#development-status').textContent='Neu lokal geprüft: integrierter Chat-Arbeitsbereich, einfachere Dialoge und gespeicherte Antwortvorgaben · Schema '+project.development.schema+'. Noch keine Serverinstallation dieser Lieferung.';}
  document.querySelector('#updated').textContent='Stand: '+project.updated.split('-').reverse().join('.');document.querySelector('#tests-count').textContent=project.tests;document.querySelector('#app-release').textContent=project.applicationCommit;document.querySelector('#ci-link').href=project.ciUrl;renderFeatures();
  try{const build=await fetch('build.json');if(build.ok){const info=await build.json();document.querySelector('#website-revision').textContent='Website: '+info.revision;}}catch{/* Build metadata is optional for local previews. */}
 }

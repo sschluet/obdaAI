@@ -8,7 +8,7 @@
     {
       "id": "chat",
       "title": "Ein Gespräch. Viele Möglichkeiten.",
-      "description": "Persistente Gespräche, Markdown und Modell- sowie Quellenwahl direkt im Eingabebereich.",
+      "description": "Gespräch und Arbeitsbereich nebeneinander: Quellen, Dateien, Aufgaben und gespeicherte Antwortvorgaben direkt erreichbar.",
       "image": "assets/chat.png"
     },
     {
@@ -20,13 +20,13 @@
     {
       "id": "files",
       "title": "Aus Gedanken werden Dateien.",
-      "description": "Word, PowerPoint, PDF und Bilder über normale Dialoge planen und bearbeiten.",
+      "description": "Ziel und Format zuerst. KI-Entwurf und manuelle Eingabe wechseln, Inhalte erhalten und Details bei Bedarf öffnen.",
       "image": "assets/files.png"
     },
     {
       "id": "tasks",
       "title": "Aufgaben mit Überblick.",
-      "description": "Aufgabenliste, Auslöser, Zeitpläne und Ergebnisse getrennt vom Erstellungsdialog.",
+      "description": "Name und Ziel im Vordergrund, dazu ein nachvollziehbarer Aufgabenplan. Quellen und Ablaufdetails sind optional erreichbar.",
       "image": "assets/tasks.png"
     },
     {
@@ -72,6 +72,11 @@
           "title": "Modell- und Verbindungseinstellungen",
           "description": "Feste Endpunkte, konfigurierbare Modelle, Verbindungstests, Limits und revisionierte Einstellungen. Zusatzanbieter benötigen eine konkrete Freigabe.",
           "status": "implemented"
+        },
+        {
+          "title": "Integrierter Chat-Arbeitsbereich",
+          "description": "Dateien, Quellen, Antwortvorgaben und Aufgaben neben dem Gespräch öffnen. Projektkontext bleibt erhalten; Desktop nebeneinander, mobile Bedienung über Tabs. Lokal mit synthetischen Daten geprüft; noch kein Server-Rollout.",
+          "status": "local"
         }
       ]
     },
@@ -181,6 +186,11 @@
           "title": "Vorschau vor Download",
           "description": "Planung, Erzeugung, Validierung und Vorschau sind getrennte Schritte. Download erst nach Prüfung aller Vorschauseiten der exakten Version.",
           "status": "live"
+        },
+        {
+          "title": "Einfacher Dateidialog und sichere Entwurfwiederaufnahme",
+          "description": "KI-Entwurf oder manuelle Inhaltseingabe mit erhaltenem Ziel und Inhalt. Neue Entwürfe im Browser-Tab fortsetzen; veraltete Quellen-, Chat- oder Versionsbindungen blockieren das Speichern. Keine Tokens oder Freigaben im Entwurf.",
+          "status": "local"
         }
       ]
     },
@@ -242,6 +252,11 @@
           "title": "Schreibfreigaben und globale Pause",
           "description": "Einzelfreigabe und befristete begrenzte Autonomie sind für eine konkrete lokale Projektarchivierung geprüft. Weitere externe Schreibadapter bleiben offen.",
           "status": "limited"
+        },
+        {
+          "title": "Aufgabenplanung mit Ziel, Termin und Zusammenfassung",
+          "description": "Einfacher Standarddialog, optionale Quellen und Ablaufdetails sowie sichere Wiederaufnahme neuer Entwürfe. Aufgaben werden pausiert gespeichert; Drift braucht eine ausdrückliche Entscheidung. Lokal im Browser geprüft.",
+          "status": "local"
         }
       ]
     },
@@ -313,11 +328,20 @@
           "title": "Responsive Oberfläche",
           "description": "Helles und dunkles Design, mobile Navigation und Chromium-Browserchecks. Reale Safari-/Mobilgeräteabnahme steht aus.",
           "status": "implemented"
+        },
+        {
+          "title": "Serverseitige Antwortvorgaben mit sichtbarer Herkunft",
+          "description": "Sprache, Länge, Ton und Gliederung persönlich, pro Projekt und pro Gespräch einstellen. Revisionierte Speicherung und eingefrorene Vorgaben je Chatlauf. Keine vererbten Cloud-, Web- oder Schreibrechte. Schema 0025 lokal geprüft.",
+          "status": "local"
         }
       ]
     }
   ],
   "roadmap": [
+    {
+      "title": "Den integrierten Arbeitsraum erweitern",
+      "text": "Vorlagenbibliothek, Versionsvergleich, weitere Auftrags-/Modelloptionen und objektübergreifende Suche. Erste Bedienoptimierung lokal geprüft; reale Serverabnahme steht aus."
+    },
     {
       "title": "Interaktiver Browser",
       "text": "Getrennte Sitzungen sowie sichere menschliche Login- und 2FA-Übergabe."
@@ -338,5 +362,13 @@
       "title": "Externe Wiederherstellung",
       "text": "Vollständige HA-/n8n-Sicherung und Restore-Nachweise vor produktiven Wartungsaktionen."
     }
-  ]
+  ],
+  "development": {
+    "mode": "local",
+    "schema": "0025",
+    "pythonPassed": 577,
+    "pythonSkipped": 13,
+    "browserChecks": 8,
+    "serverDeployment": false
+  }
 }
