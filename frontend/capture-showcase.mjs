@@ -1,0 +1,62 @@
+// Capture the real UI against an isolated synthetic fixture, never a live deployment.
+import {chromium} from 'playwright';
+import {mkdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+const base=process.env.SHOWCASE_FIXTURE_ORIGIN||'http://127.0.0.1:18767';
+if(base!=='http://127.0.0.1:18767')throw Error('Only the dedicated synthetic fixture is permitted');
+const output=fileURLToPath(new URL('../website/assets/',import.meta.url));await mkdir(output,{recursive:true});
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:980},deviceScaleFactor:1});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled'});};
+try{
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.goto(base);
+ await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
+ await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+ await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
+ await page.getByText('Ein klarer Plan für Projekt Aurora',{exact:true}).waitFor();
+ await capture('chat');
+ await page.getByRole('button',{name:'Projekte',exact:true}).click();
+ await page.getByRole('heading',{name:'Projekt Aurora',exact:true}).locator('..').click();
+ await page.getByRole('tab',{name:/Quellen ·/}).click();
+ if(!await page.getByText('Projektueberblick.md',{exact:true}).count())await page.locator('input[type=file]').setInputFiles([
+  {name:'Projektueberblick.md',mimeType:'text/markdown',buffer:Buffer.from('# Projekt Aurora\nEin synthetisches Beispiel für eine lokale Wissensbasis.\nZiel: Ideen aus Quellen in überprüfbare Ergebnisse verwandeln.')},
+  {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
+ ]);
+ await page.getByText('Bereit',{exact:true}).first().waitFor();
+ await capture('projects');
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
+ await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+ await dialog.getByLabel('Dateititel',{exact:true}).fill('Projekt Aurora · Überblick');
+ await dialog.getByLabel('Dokumenttext',{exact:true}).fill('Ziel: Wissen, Gespräche und Ergebnisse in einem Projektraum verbinden.\n\nNächste Schritte\n1. Quellen sammeln und prüfen\n2. Fragen im lokalen Projektchat klären\n3. Eine editierbare Zusammenfassung erstellen');
+ await capture('files');
+ await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
+ const add=page.getByRole('button',{name:'Beispielaufgaben hinzufügen',exact:true});
+ await add.waitFor();
+ if(!await page.getByRole('heading',{name:'Beispiel: Arbeitsraumüberblick',exact:true}).count())await add.click();
+ await page.getByRole('heading',{name:'Beispiel: Arbeitsraumüberblick',exact:true}).waitFor();
+ await capture('tasks');
+ await page.getByRole('button',{name:'Wissen',exact:true}).click();
+ await page.getByRole('heading',{name:'Deine Wissensquellen',exact:true}).waitFor();
+ if(!await page.getByRole('heading',{name:'Demo · Dokumentenarchiv',exact:true}).count()){
+  await page.getByRole('button',{name:'Wissensquelle hinzufügen',exact:true}).click();
+  const source=page.getByRole('dialog',{name:'Wissensquelle konfigurieren',exact:true});
+  await source.getByLabel('Name',{exact:true}).fill('Demo · Dokumentenarchiv');
+  await source.getByLabel('Server oder IP-Adresse',{exact:true}).fill('192.0.2.10');
+  await source.getByLabel('Freigabename',{exact:true}).fill('Beispieldokumente');
+  await source.getByLabel('Benutzername',{exact:true}).fill('demo');
+  await source.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-source-password');
+  await source.getByRole('button',{name:'Quelle speichern',exact:true}).click();
+ }
+ await page.getByRole('heading',{name:'Demo · Dokumentenarchiv',exact:true}).waitFor();
+ await capture('knowledge');
+ await page.getByRole('button',{name:'Chat',exact:true}).click();
+ await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ await capture('mobile');
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('Six real UI screenshots captured with synthetic data only.');
+}finally{await browser.close();}

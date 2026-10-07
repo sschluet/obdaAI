@@ -1,0 +1,342 @@
+{
+  "updated": "2026-10-07",
+  "applicationCommit": "80179bc",
+  "schema": "0024",
+  "tests": 577,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37517517426",
+  "screenshots": [
+    {
+      "id": "chat",
+      "title": "Ein Gespräch. Viele Möglichkeiten.",
+      "description": "Persistente Gespräche, Markdown und Modell- sowie Quellenwahl direkt im Eingabebereich.",
+      "image": "assets/chat.png"
+    },
+    {
+      "id": "projects",
+      "title": "Ein Raum für dein Projekt.",
+      "description": "Dokumente und Quellen zusammenführen und im eigenen Projektchat verwenden.",
+      "image": "assets/projects.png"
+    },
+    {
+      "id": "files",
+      "title": "Aus Gedanken werden Dateien.",
+      "description": "Word, PowerPoint, PDF und Bilder über normale Dialoge planen und bearbeiten.",
+      "image": "assets/files.png"
+    },
+    {
+      "id": "tasks",
+      "title": "Aufgaben mit Überblick.",
+      "description": "Aufgabenliste, Auslöser, Zeitpläne und Ergebnisse getrennt vom Erstellungsdialog.",
+      "image": "assets/tasks.png"
+    },
+    {
+      "id": "knowledge",
+      "title": "Wissen mit einer Quelle.",
+      "description": "Externe Wissensquellen frei konfigurieren, prüfen und lokal indexieren.",
+      "image": "assets/knowledge.png"
+    }
+  ],
+  "groups": [
+    {
+      "id": "chat",
+      "name": "Chat & Modelle",
+      "symbol": "↗",
+      "intro": "Von der ersten Frage bis zur nachvollziehbaren Antwort.",
+      "features": [
+        {
+          "title": "Persistenter Streaming-Chat",
+          "description": "Antworten erscheinen schrittweise. Gespräche, Laufzustände und Historie bleiben gespeichert; Bearbeiten, erneut Antworten und Abbrechen sind unterstützt.",
+          "status": "live"
+        },
+        {
+          "title": "AUTO und lokale Modelle",
+          "description": "Automatische Fähigkeitswahl mit sichtbarem Anbieter- und Fehlerstatus. Lokale Verarbeitung ist der Standard; bei einem Fehler erfolgt kein heimlicher Cloudwechsel.",
+          "status": "live"
+        },
+        {
+          "title": "Titel, Suche und Verlauf",
+          "description": "Lokale automatische Titel, manuelle Umbenennung, deutsche Volltextsuche und Archivierung sorgen für Orientierung.",
+          "status": "live"
+        },
+        {
+          "title": "OpenRouter",
+          "description": "Echte Anbieter- und Chatabnahme dokumentiert. Externe Verarbeitung benötigt passende Betreiberfreigaben und Zustimmung für den Gesprächskontext.",
+          "status": "live"
+        },
+        {
+          "title": "Direkte OpenAI- und Anthropic-Anbieter",
+          "description": "Responses-/Messages-Adapter, Streaming, Budgetreservierung und verschlüsselte Konfiguration sind implementiert. Eigene native Livezugänge fehlen.",
+          "status": "implemented"
+        },
+        {
+          "title": "Modell- und Verbindungseinstellungen",
+          "description": "Feste Endpunkte, konfigurierbare Modelle, Verbindungstests, Limits und revisionierte Einstellungen. Zusatzanbieter benötigen eine konkrete Freigabe.",
+          "status": "implemented"
+        }
+      ]
+    },
+    {
+      "id": "projects",
+      "name": "Projekte & Quellen",
+      "symbol": "▧",
+      "intro": "Ein gemeinsamer Kontext für Unterlagen, Fragen und Ergebnisse.",
+      "features": [
+        {
+          "title": "Eigene Projekträume",
+          "description": "Getrennte Gespräche, Quellen und erstellte Dateien. Projektdaten werden nicht automatisch mit fremden Räumen vermischt.",
+          "status": "live"
+        },
+        {
+          "title": "Dokumentuploads",
+          "description": "PDF, DOCX, PPTX, CSV, XLSX, Markdown, Text und Bilder. Originale werden unverändert mit Hashes aufbewahrt und asynchron eingelesen.",
+          "status": "live"
+        },
+        {
+          "title": "Fundstellen und lokale OCR",
+          "description": "Quellenbasierte Antworten, technische Fundstellen und lokale Texterkennung. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
+          "status": "live"
+        },
+        {
+          "title": "Lange Textdateien",
+          "description": "Begrenzte zusammenhängende Textfenster erhalten Zeilen und Überschriften. Zwei Dateien mit je 2.200 Zeilen wurden unter Mischlast vollständig indexiert.",
+          "status": "live"
+        },
+        {
+          "title": "Öffentliche Webseiten als Quellen",
+          "description": "Ausdrücklich hinzugefügte HTTPS-Seiten werden als gebundene Quellensnapshots gespeichert. Netzwerk- und Zielprüfungen begrenzen den Zugriff.",
+          "status": "live"
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Wissen & Memory",
+      "symbol": "◎",
+      "intro": "Bestehendes Wissen verwenden und gezielt ergänzen.",
+      "features": [
+        {
+          "title": "Obsidian und kanonisches Memory",
+          "description": "Allgemeiner Vault-Zugriff ist lesend; Schreiben bleibt auf einen ausdrücklich freigegebenen Memory-Bereich begrenzt. Versionen und Konflikte sind nachvollziehbar.",
+          "status": "live"
+        },
+        {
+          "title": "Synchronisation und Reconciliation",
+          "description": "Vorhandener Sync bleibt erhalten. Umbenennung, Archivierung, Hashkonflikte und Wiederaufnahme nach Neustarts sind dokumentiert geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "SMB, NFS und PostgreSQL",
+          "description": "Frei konfigurierbare Quellenadapter mit lesender Prüfung und lokaler Indexierung. PostgreSQL wurde separat getestet; echte NAS-Zielabnahmen stehen aus.",
+          "status": "implemented"
+        },
+        {
+          "title": "Quellenbezogener Wissenschat",
+          "description": "Ausgewählte, indexierte Verbindungen dienen als begrenzter lokaler Gesprächskontext; Quellenwahl ist sichtbar.",
+          "status": "implemented"
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "name": "Dateien & Gestaltung",
+      "symbol": "◇",
+      "intro": "Editierbare Ergebnisse mit Vorschau und erhaltenen Originalen.",
+      "features": [
+        {
+          "title": "Word-Dokumente",
+          "description": "Native editierbare Abschnitte, Tabellen und Bilder; optionaler PDF-Export. Lokale Modellplanung und Linux-Vorschauen sind live geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "PowerPoint-Präsentationen",
+          "description": "Native Folien, Notizen und gezielte Folienänderungen. Dichte deutsche Folien und Folgeversionen wurden geprüft; breite Layoutabnahme bleibt offen.",
+          "status": "live"
+        },
+        {
+          "title": "PDF-Seitenoperationen",
+          "description": "Seiten auswählen, umordnen, drehen und weglassen. Neue Inhalts-PDFs aus Text, Tabellen und Bildern sind möglich.",
+          "status": "live"
+        },
+        {
+          "title": "PDF-Aufteilung und ZIP",
+          "description": "Bis zu 20 echte Einzeldateien mit festen Namen, eigenen Hashes und einem ZIP mit identischen PDF-Mitgliedern.",
+          "status": "live"
+        },
+        {
+          "title": "Bilder und Collagen",
+          "description": "Originalgebundener Zuschnitt, Skalierung und Collagen, PNG/JPEG-Export und Unicode-Beschriftungen. Transparenz und Pixeloperationen sind gezielt geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "Dateien aus der letzten Chatantwort",
+          "description": "„Mach daraus …“ bindet genau die aktive vorherige Antwort samt Revision und Hashes. Änderung oder Drift verhindert das Speichern.",
+          "status": "live"
+        },
+        {
+          "title": "Versionen und Herkunft",
+          "description": "Originale bleiben erhalten. Manuelle Folgeversionen können Quellen- und Modellursprung übernehmen, ohne einen neuen Modelllauf auszuführen.",
+          "status": "live"
+        },
+        {
+          "title": "Vorschau vor Download",
+          "description": "Planung, Erzeugung, Validierung und Vorschau sind getrennte Schritte. Download erst nach Prüfung aller Vorschauseiten der exakten Version.",
+          "status": "live"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Recherche",
+      "symbol": "⌕",
+      "intro": "Öffentliche Suche mit einem bewusst bestätigten Thema.",
+      "features": [
+        {
+          "title": "Bestätigter öffentlicher Suchtext",
+          "description": "Die Suchanfrage ist getrennt editierbar. Gesprächshistorie und Dokumente werden nicht automatisch als Suchtext übertragen.",
+          "status": "live"
+        },
+        {
+          "title": "Recherche zu lokalen Dateien",
+          "description": "Bestätigte Suche kann einen lokalen Word-, PowerPoint- oder Inhalts-PDF-Entwurf unterstützen. Query, Treffer und Quellenreferenzen sind am Lauf gebunden.",
+          "status": "live"
+        },
+        {
+          "title": "Domain-Grenzen und Belege",
+          "description": "Explizite site:-Grenzen filtern fremde Treffer. Quellen enthalten URLs und Abrufzeiten; Suchauszüge sind als solche gekennzeichnet. Keine Behauptung vollständig gelesener Webseiten.",
+          "status": "live"
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "name": "Aufgaben & n8n",
+      "symbol": "⇢",
+      "intro": "Nachvollziehbare Abläufe statt unsichtbarer Automatismen.",
+      "features": [
+        {
+          "title": "Task-Center",
+          "description": "Getrennte Übersicht und Aufgabeneditor mit Status, Ergebnissen und Historie. Aufgaben können erstellt, bearbeitet, pausiert, ausgeführt, abgebrochen und archiviert werden.",
+          "status": "live"
+        },
+        {
+          "title": "Natürliche Aufgabenentwürfe",
+          "description": "Chatwünsche können geprüfte Entwürfe mit bis zu fünf editierbaren festen Schritten erzeugen. Keine Ausführung beliebigen Modellcodes.",
+          "status": "live"
+        },
+        {
+          "title": "Termine und Dokumentauslöser",
+          "description": "Einmalige, tägliche und wöchentliche Termine sowie neue bereitgestellte Dokumente können Aufgaben auslösen. Bestehende Quellen und Doppeltrigger werden abgegrenzt.",
+          "status": "live"
+        },
+        {
+          "title": "Geordnete lokale Analyse",
+          "description": "Leseergebnisse können als ausdrücklich gebundene LOCAL_ONLY-Daten in einen folgenden lokalen Analyseschritt eingehen.",
+          "status": "live"
+        },
+        {
+          "title": "Begrenzter n8n-Abschlussgraph",
+          "description": "Eine geprüfte achtknotige Vorlage verbindet Start, Status, Warten, Bedingungen, Erfolg und Fehlerstopp. Echte Ausführung und idempotenter Replay sind dokumentiert.",
+          "status": "live"
+        },
+        {
+          "title": "Schreibfreigaben und globale Pause",
+          "description": "Einzelfreigabe und befristete begrenzte Autonomie sind für eine konkrete lokale Projektarchivierung geprüft. Weitere externe Schreibadapter bleiben offen.",
+          "status": "limited"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "Werkzeuge & Systeme",
+      "symbol": "⊞",
+      "intro": "Klare Ziele, feste Grenzen und dauerhafte Belege.",
+      "features": [
+        {
+          "title": "Versionierte Skills",
+          "description": "Verhaltensregeln mit Auswahl, Vertrauen, Versionen und Audit. Ein Skill erweitert keine bestehenden Rechte.",
+          "status": "live"
+        },
+        {
+          "title": "Home Assistant lesen",
+          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Produktive Wartung und Restore bleiben offen.",
+          "status": "limited"
+        },
+        {
+          "title": "MCP-Verbindungen",
+          "description": "Revisionierte Konfiguration, Katalogprüfung und begrenzte parameterfreie Text-Lesewerkzeuge. Echte Drittanbieterziele sind noch nicht abgenommen.",
+          "status": "implemented"
+        },
+        {
+          "title": "Passive Browserprüfung",
+          "description": "Freigegebene Webseiten als isolierter Snapshot mit Bild und Text. Chromium ohne JavaScript oder Netzwerk im Runner. Interaktives Login/2FA ist noch offen.",
+          "status": "limited"
+        },
+        {
+          "title": "Aktionsbelege und Wiederholungsschutz",
+          "description": "Parameter, Freigaben und Ergebnisse werden dauerhaft gebunden. Unklarer Ausgang wird sichtbar; Wiederholung soll keinen unkontrollierten zweiten Effekt erzeugen.",
+          "status": "limited"
+        }
+      ]
+    },
+    {
+      "id": "privacy",
+      "name": "Datenschutz & Betrieb",
+      "symbol": "◈",
+      "intro": "Lokale Kontrolle als Grundlage der Architektur.",
+      "features": [
+        {
+          "title": "LOCAL_ONLY als Standard",
+          "description": "Eingaben, Ausgaben und Ableitungen behalten ihre Datenschutzgrenzen. Cloudübertragung benötigt eine passende explizite Freigabe und eine Prüfung am finalen Ausgang.",
+          "status": "live"
+        },
+        {
+          "title": "Login und verschlüsselte Secrets",
+          "description": "Persistente Sitzungen, CSRF-/Origin-Prüfung, Loginlimits und verschlüsselte Anbieter-/Verbindungssecrets.",
+          "status": "live"
+        },
+        {
+          "title": "Isolierte Dateirunner",
+          "description": "Linux-Runner ohne Netzwerk, Datenbank, Vault, Providersecrets oder Docker-Socket; feste Operationen und Ressourcenlimits.",
+          "status": "live"
+        },
+        {
+          "title": "Dauerhafte Hintergrundjobs",
+          "description": "PostgreSQL und Procrastinate für App-Jobs. Wiederkehrende Aufgaben nutzen das bestehende n8n; kein zweiter allgemeiner Scheduler.",
+          "status": "live"
+        },
+        {
+          "title": "Verschlüsseltes Backup und isolierter Restore",
+          "description": "Dokumentierter eigener App-Restore auf Schema 0024 mit 55 Originalen und 34 Dateiversionen. Externe HA-/n8n-Recovery und RTO/RPO bleiben offen.",
+          "status": "limited"
+        },
+        {
+          "title": "Responsive Oberfläche",
+          "description": "Helles und dunkles Design, mobile Navigation und Chromium-Browserchecks. Reale Safari-/Mobilgeräteabnahme steht aus.",
+          "status": "implemented"
+        }
+      ]
+    }
+  ],
+  "roadmap": [
+    {
+      "title": "Interaktiver Browser",
+      "text": "Getrennte Sitzungen sowie sichere menschliche Login- und 2FA-Übergabe."
+    },
+    {
+      "title": "Weitere Aktionen und Graphen",
+      "text": "Zusätzliche feste Aktionsadapter und breitere geprüfte Workflowabdeckung."
+    },
+    {
+      "title": "Breitere Datei-QA",
+      "text": "Komplexere Dateiänderungen sowie ein größerer Fakten- und Layoutkorpus; echte PDF-Schwärzung und KI-Bilder sind noch nicht umgesetzt."
+    },
+    {
+      "title": "Betrieb und echte Geräte",
+      "text": "Dauer-/Kapazitätslast, native Anbieterzugänge, reale Safari-/Mobilgeräte und gemessene Wiederherstellungszeiten."
+    },
+    {
+      "title": "Externe Wiederherstellung",
+      "text": "Vollständige HA-/n8n-Sicherung und Restore-Nachweise vor produktiven Wartungsaktionen."
+    }
+  ]
+}

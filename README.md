@@ -25,6 +25,7 @@ separately from local SQLite contract checks.
 - [Requirements and acceptance](docs/requirements.md)
 - [Architecture](docs/architecture.md), [security](docs/security.md), [data model](docs/data-model.md)
 - [Implementation plan](docs/implementation-plan.md), [operations](docs/operations.md)
+- [Public project website and update workflow](docs/project-website.md)
 - [Provider configuration, encrypted secrets and budgets](docs/providers.md)
 - [Versions and sources](docs/dependencies.md)
 - [Operator n8n connection check](docs/n8n-connection-check.md)
@@ -42,7 +43,8 @@ approved public web research and canonical Vault Memory with revision comparison
 The authorized limited Vault/search integration is installed and live-tested on the
 dedicated VM. M3 starts with fixed local actions, persisted proposals, explicit grants and receipts
 ([contract](docs/actions.md)); [trusted revisioned chat skills](docs/skills.md) are implemented; [manual local Task-Center](docs/tasks.md) is implemented. A fixed local analysis step applies bound sources and trusted skills. Local title drafts and [once/daily/weekly schedules](docs/schedules.md) are implemented. The approved n8n clock bridge is installed; external action adapters remain in development.
-M4–M5 are not implemented yet. Cloud remains disabled in generic defaults and needs an
+M4 delivers tested local file workflows and revisions; M5 has deployment, CI, mobile
+fixture and isolated restore evidence. Both remain partially accepted. Cloud remains disabled in generic defaults and needs an
 explicit operator authorization plus conversation opt-in. Migrations must run before
 startup. SQLite is for local contract tests/development; durable jobs use PostgreSQL.
 

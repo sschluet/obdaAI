@@ -1,11 +1,23 @@
 # obdaAI — Status 06.10.2026
 
+## Projektwebsite — 07.10.2026
+
+Öffentliche Projektvorstellung in `website/` vorbereitet: 43 Features in acht
+Bereichen, sechs echte Oberflächen-Screenshots aus isolierter synthetischer Demo,
+Galerie, Suche/Filter, mobile Darstellung und getrennte Abnahmestände. Browserprüfung
+320–1440 px, Galerie/Tastatur/Dialog sowie Dateiallowlist und Source-Scan bestanden.
+Die laufende Anwendung wurde nicht verändert. Regelmäßige Inhalts-/Screenshotpflege
+ist in AGENTS.md und docs/project-website.md verankert.
+GitHub Pages aus dem privaten App-Repository wird vom aktuellen Kontotarif abgewiesen
+(HTTP 422); Veröffentlichung wartet auf Freigabe eines separaten Website-Repositories
+oder ein passendes GitHub-Abonnement.
+
 ## Aktueller Stand: PDF-Teile und getrennte öffentliche Recherche
 
-Produktiv `bf03aa3` / Schema 0024; beide APIs gesund, bestehende IPv4-/IPv6-Regeln
-bei Installation unverändert. Private CI 37513735183 mit sechs erfolgreichen Jobs,
-571 Tests einschließlich PostgreSQL und fünf Browserprüfungen. Lokal 556 Tests
-mit zwölf PG-Fällen für CI ausgelassen; Ruff, mypy (60 Module), Source-Scan und
+Produktiv `80179bc` / Schema 0024; beide APIs gesund, bestehende IPv4-/IPv6-Regeln
+bei Installation unverändert. Private CI 37517517426 mit sechs erfolgreichen Jobs,
+577 Tests einschließlich PostgreSQL und fünf Browserprüfungen. Lokal 565 Tests
+mit zwölf PG-Fällen für CI ausgelassen; Ruff, mypy (61 Module), Source-Scan und
 Frontendbuild bestanden.
 
 PDF-Seiten können in bis zu zwanzig echte Einzeldateien aufgeteilt werden. Der
@@ -30,13 +42,20 @@ Testversion gesperrt und erhalten. Alle eigenen Testchats/-räume archiviert.
 Dieser begrenzte Fall beweist keine allgemeine Faktentreue. Quellen sind als
 Suchauszüge gekennzeichnet, keine automatisch voll gelesenen Webseiten.
 
+Dateien aus der letzten Chatantwort sind ebenfalls live geprüft: „Mach daraus …“
+wählt genau die aktive vorherige Antwort, bindet Revision/vollständigen Hash/Auszug
+und prüft Drift vor dem Speichern. Echte lokale Aurora-Antwort als Word, native
+Fakten-/Hashdownload und Linux-Vorschau bestanden. Manuelle V2 erhielt Original-
+Antwort-/Modellbeleg, erzeugte keinen neuen Modelllauf und ließ V1 unverändert.
+Eigener QA-Raum/Chat archiviert. Details: docs/answer-artifacts.md.
+
 V1 bleibt unvollständig: interaktiver Browser mit menschlichem Login/2FA, weitere
 begrenzte Aktionen/Graphen, komplexere Dateiänderungen und breite Layout-/Fakten-QA,
 reale Geräte sowie systemübergreifende Recovery. Begrenzte Mischlast mit 120 Reads, zwei 2200-Zeilen-Uploads, zwei Word-Läufen
 und zwei lokalen Chats bestanden; GET p95 233 ms, sichtbare erste Chatdaten
 10,227/18,22 s inklusive Queue, RAM gemessen (docs/m5-acceptance-status.md).
 Frische verschlüsselte Off-VM-Sicherung und isolierter Restore Schema 0024
-bestanden: 55 Originale, 32 Dateiversionen, drei PDF-Teile, zwei Recherche-Belege
+bestanden: 55 Originale, 34 Dateiversionen, drei PDF-Teile, zwei Recherche-Belege
 und sechs Memory-Dateien samt Schlüsseln. Temporäre Restore-DB entfernt. Produktive HA-Writes
 oder Restore wurden nicht ausgeführt. PR #3 bleibt Draft, globale Schreibpause aktiv.
 

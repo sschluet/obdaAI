@@ -21,6 +21,22 @@ scan, commit and push each logical milestone. Never force push. A push does not
 approve deployment. Report branch, commit, push, test results and dirty files.
 Do not claim completion for mocks alone. STATUS records unmet acceptance cases.
 
+## Public project website
+The user requested a public GitHub Pages showcase while keeping this repository
+and the application private. Maintain `website/project.json`, website copy and
+affected screenshots in the same delivery as every feature/status/UI update.
+Keep implemented, live-tested and partial features distinct; never advertise a
+complete V1 from partial evidence. Update the last tested application commit and
+CI evidence only after the matching checks actually pass. Pages deployment adds
+the website source revision automatically on every push to the active delivery
+branch or main. Review and report the Pages deployment result after pushing.
+Only isolated synthetic UI fixtures may supply public screenshots. Never publish
+real chats, documents, internal addresses, configuration, logs, runtime data or credentials.
+`scripts/build_showcase.py` uploads an explicit public-file allowlist, never docs
+or the repository root. Keep the app repository private; do not create a public
+source repository to work around a GitHub plan limitation without authorization.
+See `docs/project-website.md` for capture, validation and publication commands.
+
 ## Boundaries
 LOCAL_ONLY is the default on every input, output and derivative. Only the user can
 authorize cloud transfer, with explicit scope and revision. Validate at the final

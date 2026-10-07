@@ -1,6 +1,6 @@
 # M4: lokale Dateierstellung und Versionen
 
-Stand 06.10.2026, produktiv `ec0c364` / Schema 0024. Die Dateipipeline einschließlich
+Stand 06.10.2026, produktiv `80179bc` / Schema 0024. Die Dateipipeline einschließlich
 PDF-Aufteilung und getrennt bestätigter Recherche-Dateien ist live; M4 bleibt
 wegen breiter Fakten-/Layoutprüfung und weiterer komplexer Änderungen teilweise.
 
@@ -54,3 +54,10 @@ Noch offen: komplexere bzw. dateiübergreifende Änderungen und breitere semanti
 bereits. Konkrete Folgeänderungen der letzten Chat-Datei sind umgesetzt; siehe
 docs/chat-file-revisions.md. Keine vollständige M4-Abnahme aus Unit- oder
 Fixturetests ableiten.
+
+Natürliche Erstellung aus der ausgewählten letzten Chatantwort und manuelle
+Folgeversionen mit erhaltenem Modell-/Quellenursprung sind auf eigener VM geprüft:
+exakte Antwortrevision/SHA, lokales Modell, Linux-Vorschauen, native DOCX-Fakten-/
+Hashchecks, keine zusätzliche Modellplanung bei manueller V2, V1 unverändert.
+Der Herkunftsbeleg bleibt informativ; aus manueller Bearbeitung wird keine neue
+Modell-/Faktenprüfung abgeleitet. Details: answer-artifacts.md.
