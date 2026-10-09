@@ -16,6 +16,10 @@ Gezielte lokale Composer-/Arbeitsraum-/Vorgaben-/Chat-/Datei-/Designprüfungen
 bestanden; 320–1440px und kurzer 640×360-Viewport. Neue synthetische Screenshots
 und 50 Websitefunktionen. GitHub-CI und Installation dieser Lieferung stehen
 noch aus; vorheriger installierter Release bleibt 8989b26 / Schema0025.
+CI fand eine mobile Reload-Race: die verzögerte Wiederaufnahme eines Gesprächs
+konnte bereits geöffnete Navigation schließen. Navigation wartet jetzt sichtbar
+auf abgeschlossene Wiederaufnahme; der Regressionstest verzögert diese absichtlich.
+Lange Eingaben passen ihre Höhe auch nach einem Fenstergrößenwechsel an.
 
 
 ## Design auf Test-VM installiert — 09.10.2026
