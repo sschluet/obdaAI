@@ -59,9 +59,12 @@ lockfiles and reproducible builds match source. Preserve originals and inspect
 artifact previews. Report blocked live checks honestly. Never call partial V1 complete.
 
 ## Current development target
-As of 07.10.2026 the user restricts development and application checks to the local
-workspace. Do not contact or mutate the unavailable test server, deploy there or
-run its migrations until the user explicitly reauthorizes server work. GitHub CI
-and public showcase synchronization remain authorized. Development subagents
-are explicitly authorized; coordinate shared contracts and file ownership and
-keep all runtime/fixture data local and out of Git.
+As of 09.10.2026 the user explicitly reauthorized the existing obdaAI test VM
+192.168.117.103 and requested deployment of each reviewed development delivery.
+Verify access/current state, backup/rollback, exact release, migrations and health
+before each update. Keep existing Compose overlays, originals, credentials and
+network rules intact. This authorizes the application's test-VM rollout; changes
+to unrelated infrastructure, HA/n8n services or firewall rules still need their
+own authorization. Local checks, GitHub CI and public showcase synchronization
+remain required. Development subagents are explicitly authorized; coordinate
+shared contracts and file ownership and keep runtime/fixture data out of Git.

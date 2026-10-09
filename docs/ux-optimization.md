@@ -75,3 +75,40 @@ Test bestätigt den erfolgreichen CSRF-Wert nach einer abgewiesenen Anmeldung.
 GitHub und die öffentliche Projektwebsite werden gemeinsam gepflegt. Die neuen
 Bedienfunktionen sind dort als lokal geprüft markiert; bestehende Live-Belege
 bleiben an den früher getesteten Anwendungscode gebunden.
+
+## Test-VM-Rollout am 09.10.2026
+
+Der Nutzer hat die bestehende Test-VM wieder freigegeben und verlangt die
+Installation jeder geprüften Weiterentwicklung. Installiert ist aea1ecc auf Schema
+0025. Alle neun eigenen App-/Runnercontainer tragen diesen Release; die bestehende
+Datenbank blieb bestehen. Beide APIs gesund, IPv4-/IPv6-Regeln semantisch identisch
+(Zeitstempel und Paketzähler aus dem Vergleich ausgeschlossen), bestehende
+Compose-Overlays, Secrets und fremde Dienste erhalten. Verschlüsselte Sicherung
+vor Installation wurde off-VM kopiert und per Hash geprüft.
+
+Echte lokale Modellprüfung mit eigenem Testprojekt: scoped Antwortvorgaben und
+englische kurze Ausgabe sowie Inventarwerte sieben/blau bestanden. Der erste
+Versuch mit einer ausdrücklich als synthetisch bezeichneten Quelle wurde vom
+Modell inhaltlich abgelehnt und bleibt als Fehlbeleg erhalten. Dies ist keine breite
+Faktenabnahme. Nur eigene QA-Projekte/Chats archiviert, Originale erhalten.
+HTTPS/Auth/CSRF/Origin/Logout bestanden; globale Antwortvorgaben unverändert.
+
+Frische verschlüsselte Off-VM-Sicherung und isolierter Restore: Schema0025,
+57 Originalhashes, 34 Artefaktversionsdatensätze, zwei Einstellungsrevisionen sowie
+Schlüssel und Overlays vorhanden. Temporäre Datenbank entfernt. Keine produktive
+Datenbankwiederherstellung oder HA-/n8n-Writes. Belege unter .local/deployment/.
+
+## Nächster lokaler Baustein: Dateivorlagen
+
+Word Projektübersicht/Besprechungsnotiz/Entscheidungsvorlage und PowerPoint
+Projektstatus mit vier Folien sind als leere, direkt bearbeitbare Gliederungen
+umgesetzt. Auswahl überschreibt keine Inhalte. Vorhandene Entwürfe verlangen
+eine ausdrückliche Ersetzungsbestätigung; alte gespeicherte Versionen bleiben
+erhalten. Ein eigener Button übernimmt einen tatsächlich wirksamen Vorlagenauftrag
+in die lokale Modellplanung, ohne Aussagen zu erfinden oder Freigaben zu erteilen.
+Lokaler Browsercheck für Prompt, Tokeninvalidierung, Ersetzungsentscheidung, native
+Vorschau, Versionen, Reload und mobile Darstellung bestanden.
+
+GitHub-Zugang ist am 09.10.2026 mit HTTP401 ungültig. Vorlagen-CI, Veröffentlichung
+der neuen Website und der folgende Vorlagen-Rollout warten auf Wiederanmeldung.
+Der bereits geprüfte Bedienstand ist davon unabhängig auf der Test-VM installiert.

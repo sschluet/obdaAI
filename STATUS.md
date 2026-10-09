@@ -1,4 +1,20 @@
-# obdaAI — Status 07.10.2026
+# obdaAI — Status 09.10.2026
+
+## Test-VM aktualisiert — 09.10.2026
+
+Installiert: aea1ecc / Schema0025. Beide APIs gesund, alle eigenen App-/Runner-
+container auf diesem Release, Datenbank und acht Compose-Overlays bewahrt.
+IPv4-/IPv6-Regeln unverändert nach normalisiertem Vergleich. Sicherung vorher
+verschlüsselt off-VM geprüft. Echte lokale Modellantwort mit vererbten Antwort-
+vorgaben, sieben/blau-Inventar und HTTPS/Auth/CSRF/Origin/Logout bestanden.
+Erster inhaltlich fehlgeschlagener synthetischer Quellenfall erhalten; keine
+allgemeine Faktentreue behauptet. Eigene QA-Räume/Chats archiviert.
+Frischer isolierter Restore Schema0025: 57 Originalhashes, 34 Versionsdatensätze,
+zwei Einstellungsrevisionen, Schlüssel/Overlays vorhanden; temporäre DB entfernt.
+
+Neue Dateivorlagen lokal fertig und gezielt browsergeprüft. Deren CI/Website-
+Aktualisierung und nächste Installation warten auf die erforderliche GitHub-
+Wiederanmeldung (HTTP401). Details: docs/ux-optimization.md. V1 bleibt teilweise.
 
 ## Lokale Bedienoptimierung — 07.10.2026
 

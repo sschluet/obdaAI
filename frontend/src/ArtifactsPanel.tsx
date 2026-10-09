@@ -12,6 +12,13 @@ type Section = {heading:string; paragraphs:string; table:string[][]; images?:Doc
 type Slide = {title:string; bullets:string; notes:string};
 type Page = {sourceId:string; page:number; rotation:number; splitAfter?:boolean};
 type Tile = {sourceId:string; crop:number[];caption?:string};
+type FileTemplate = {id:string;kind:'docx'|'pptx';name:string;headings:string[];instruction:string};
+const fileTemplates:FileTemplate[] = [
+  {id:'project-overview',kind:'docx',name:'Projektübersicht',headings:['Ziel und Umfang','Aktueller Stand','Risiken und offene Fragen','Nächste Schritte'],instruction:'Erstelle eine Projektübersicht mit Ziel und Umfang, aktuellem Stand, Risiken und offenen Fragen sowie nächsten Schritten.'},
+  {id:'meeting-note',kind:'docx',name:'Besprechungsnotiz',headings:['Anlass und Teilnehmende','Besprochene Themen','Entscheidungen','Aufgaben und offene Punkte'],instruction:'Erstelle eine Besprechungsnotiz mit Anlass und Teilnehmenden, besprochenen Themen, Entscheidungen sowie Aufgaben und offenen Punkten.'},
+  {id:'decision-brief',kind:'docx',name:'Entscheidungsvorlage',headings:['Entscheidungsfrage','Optionen und Kriterien','Abwägung','Entscheidung und nächste Schritte'],instruction:'Erstelle eine Entscheidungsvorlage mit Entscheidungsfrage, Optionen und Kriterien, Abwägung sowie Entscheidung und nächsten Schritten. Kennzeichne eine noch ausstehende Entscheidung.'},
+  {id:'project-status',kind:'pptx',name:'Projektstatus',headings:['Ziel und Überblick','Fortschritt und Ergebnisse','Risiken und offene Fragen','Nächste Schritte'],instruction:'Erstelle eine Projektstatus-Präsentation mit vier Folien: Ziel und Überblick, Fortschritt und Ergebnisse, Risiken und offene Fragen, nächste Schritte.'},
+];
 const status:Record<string,string> = {queued:'In Warteschlange', rendering:'Datei und Vorschau werden erstellt',
   needs_review:'Vorschau prüfen', published:'Freigegeben', failed:'Fehlgeschlagen', cancelled:'Abgebrochen'};
 
@@ -21,6 +28,9 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
   const [savedDraft,setSavedDraft] = useState<any|null>(null);
   const [resumeNotice,setResumeNotice] = useState('');
   const [resumeNeedsReview,setResumeNeedsReview] = useState(false);
+  const [templateId,setTemplateId] = useState('');
+  const [pendingTemplate,setPendingTemplate] = useState<FileTemplate|null>(null);
+  const [templateNotice,setTemplateNotice] = useState('');
   const [mode,setMode] = useState<'model'|'manual'>('model');
   const [contentOpen,setContentOpen] = useState(false);
   const [configured,setConfigured] = useState(false), [rows,setRows] = useState<Row[]>([]);
@@ -60,11 +70,11 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
   useEffect(()=>{
     if(!editing)return;
     const sourceIds=Array.from(new Set([...boundIds,...pages.map(p=>p.sourceId),...tiles.map(t=>t.sourceId),...sections.flatMap(s=>(s.images||[]).map(i=>i.sourceId))])).filter(Boolean);
-    const value={schema:1,requiresReview:resumeNeedsReview,projectId:project.id,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,
+    const value={schema:1,templateId,requiresReview:resumeNeedsReview,projectId:project.id,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,
       original:original?{artifact_id:original.artifact_id,revision:original.revision,spec_sha256:original.spec_sha256}:null,
       chatSource,sourceBindings:sourceIds.map(id=>sources.find(s=>s.id===id)).filter(Boolean)};
     try { sessionStorage.setItem(storageKey,JSON.stringify(value));setSavedDraft(value); } catch { /* Storage can be disabled or full. In-memory editing stays available. */ }
-  },[editing,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,original,chatSource,storageKey,resumeNeedsReview]);
+  },[editing,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,original,chatSource,storageKey,resumeNeedsReview,templateId]);
   function discardDraft(){try{sessionStorage.removeItem(storageKey)}catch{}setSavedDraft(null);setResumeNotice('');setResumeNeedsReview(false);}
   async function resumeDraft(){
     const saved=savedDraft;if(!saved||busy)return;setBusy(true);setError('');
@@ -79,6 +89,7 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
       if(chat){try{const detail=await api('/conversations/'+chat.conversation_id);const message=detail.messages.find((m:any)=>m.id===chat.message_id&&m.role==='assistant'&&m.revision===chat.revision);
           if(!message)throw Error('changed');}catch{chat=null;notices.push('Die Chatantwort konnte nicht unverändert bestätigt werden. Wähle sie erneut aus, um die Herkunft zu binden.');}}
       if(stale.size)notices.push('Quellen wurden geändert oder fehlen. Die betroffenen Bindungen wurden entfernt; wähle Quellen erneut und prüfe den Inhalt.');
+      setTemplateId(fileTemplates.some(t=>t.id===saved.templateId&&t.kind===saved.kind)?saved.templateId:'');setPendingTemplate(null);setTemplateNotice('');
       setOriginal(origin);setChatSource(chat);setKind(saved.kind);setTitle(saved.title);setGoal(saved.goal);setSlideCount(saved.slideCount);
       setSections(saved.sections.map((section:Section)=>({...section,images:(section.images||[]).map(image=>({...image,sourceId:stale.has(image.sourceId)?'':image.sourceId}))})));
       setBoundIds(saved.boundIds.filter((id:string)=>!stale.has(id)));setPdfExport(saved.pdfExport);setPdfMode(saved.pdfMode);setSlides(saved.slides);
@@ -89,6 +100,7 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     }catch{setError('Der gespeicherte Entwurf konnte nicht geöffnet werden. Du kannst ihn verwerfen und neu beginnen.');}finally{setBusy(false)}
   }
   function start(row:Row|null=null){
+    setTemplateId('');setPendingTemplate(null);setTemplateNotice('');
     setResumeNeedsReview(false);setResumeNotice('');setMode(row?'manual':'model');setContentOpen(!!row);
     setError('');setChatSource(null);setDraftToken(null);setDraftInfo(null);setGoal('');setOriginal(row);setTitle(row?.title||'');setKind(row?.kind||'docx');
     const plan=row?.spec.plan;
@@ -101,6 +113,29 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     setTiles(plan?.tiles?.map((t:any)=>({sourceId:bound[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''}))||[]);
     setColumns(plan?.columns||1);setWidth(plan?.tile_width||1024);setHeight(plan?.tile_height||768);
     setFormat(plan?.format||'png');setSlideCount(plan?.slides?.length||3);setEditing(true);
+  }
+  function applyTemplate(template:FileTemplate){
+    if(busy||template.kind!==kind)return;
+    if(template.kind==='docx')setSections(template.headings.map(heading=>({heading,paragraphs:'',table:[]})));
+    else {setSlides(template.headings.map(title=>({title,bullets:'',notes:''})));setSlideCount(template.headings.length);}
+    if(!title.trim())setTitle(template.name);
+    setDraftToken(null);setDraftInfo(null);setPendingTemplate(null);setMode('manual');setContentOpen(true);
+    setTemplateNotice('Gliederung „'+template.name+'“ eingesetzt. Die Inhalte sind leer; ergänze belegte Angaben oder entwirf mit dem lokalen Modell.');
+  }
+  function requestTemplate(){
+    const template=fileTemplates.find(t=>t.id===templateId&&t.kind===kind);if(!template||busy)return;
+    const content=kind==='docx'?sections.some(section=>section.paragraphs.trim()||section.table.length||(section.images||[]).length||section.heading!=='Ergebnis'):
+      slides.some(slide=>slide.title.trim()||slide.bullets.trim()||slide.notes.trim());
+    if(content||original||chatSource||draftToken)setPendingTemplate(template);else applyTemplate(template);
+  }
+  function addTemplateGoal(){
+    const template=fileTemplates.find(t=>t.id===templateId&&t.kind===kind);if(!template||busy)return;
+    const instruction=template.instruction+' Verwende nur belegte Angaben aus dem Auftrag und den ausdrücklich gewählten Quellen. Erfinde keine Namen, Zahlen, Termine, Entscheidungen oder Fortschritte. Kennzeichne fehlende Angaben als offen.';
+    if(goal.includes(instruction)){setTemplateNotice('Das Vorlagenziel steht bereits im KI-Auftrag.');setMode('model');return;}
+    const next=[goal.trim(),instruction].filter(Boolean).join('\n\n');
+    if(next.length>4000){setError('Der KI-Auftrag mit Vorlagenziel wäre länger als 4000 Zeichen. Kürze deinen Auftrag vor dem Übernehmen.');return;}
+    setGoal(next);setMode('model');if(template.kind==='pptx')setSlideCount(template.headings.length);
+    setTemplateNotice('Vorlagenziel ergänzt. Es wird beim nächsten „Lokal entwerfen“ als Teil deines KI-Auftrags verwendet. Bestehender Inhalt bleibt bis dahin erhalten.');
   }
   function move<T>(list:T[],index:number,direction:number):T[]{
     const next=[...list],other=index+direction;if(other<0||other>=list.length)return next;
@@ -181,7 +216,14 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
       {resumeNotice&&<p className="artifact-context" role="status">{resumeNotice}</p>}
       {resumeNeedsReview&&<div className="artifact-context"><p>Vor dem Erstellen musst du mit aktuell ausgewählten Quellen neu entwerfen oder den erhaltenen Text ausdrücklich als manuelle Kopie verwenden.</p><button type="button" disabled={busy} onClick={()=>{setOriginal(null);setChatSource(null);setResumeNeedsReview(false);setMode('manual');setContentOpen(true)}}>Als manuelle Kopie ohne frühere Herkunft verwenden</button></div>}
       <form onSubmit={save}>
-        <label>Dateiformat<select aria-label="Dateiformat" value={kind} onChange={e=>{setKind(e.target.value);setDraftToken(null);setDraftInfo(null);setError('')}}><option value="docx">Word-Dokument</option><option value="pptx">PowerPoint-Präsentation</option><option value="pdf">PDF-Dokument</option><option value="image">Bild / Collage</option></select></label>
+        <label>Dateiformat<select aria-label="Dateiformat" value={kind} onChange={e=>{setKind(e.target.value);setTemplateId('');setPendingTemplate(null);setTemplateNotice('');setDraftToken(null);setDraftInfo(null);setError('')}}><option value="docx">Word-Dokument</option><option value="pptx">PowerPoint-Präsentation</option><option value="pdf">PDF-Dokument</option><option value="image">Bild / Collage</option></select></label>
+        {(kind==='docx'||kind==='pptx')&&<div className="artifact-template">
+          <label>Vorlage<select aria-label="Vorlage" disabled={busy} value={templateId} onChange={e=>{setTemplateId(e.target.value);setPendingTemplate(null);setTemplateNotice('')}}><option value="">Ohne Vorlage</option>{fileTemplates.filter(t=>t.kind===kind).map(template=><option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
+          <p className="hint">Vorlagen liefern eine leere Gliederung. Sie ergänzen keine Fakten und ändern weder Quellen noch Freigaben.</p>
+          <button type="button" disabled={busy||!templateId} onClick={requestTemplate}>Gliederung einsetzen</button><button type="button" disabled={busy||!templateId} onClick={addTemplateGoal}>Vorlagenziel in KI-Auftrag übernehmen</button>
+          {pendingTemplate&&<div className="artifact-template-confirm" role="group" aria-label="Vorlagenwechsel bestätigen"><p>Die Gliederung „{pendingTemplate.name}“ ersetzt die Abschnitte bzw. Folien dieses Entwurfs einschließlich Text, Tabellen und Bildern. Gespeicherte Versionen bleiben erhalten. Dein Dateititel, KI-Auftrag und ausgewählte Quellen bleiben bestehen.</p><button type="button" disabled={busy} onClick={()=>applyTemplate(pendingTemplate)}>Entwurfsinhalt durch leere Gliederung ersetzen</button><button type="button" disabled={busy} onClick={()=>setPendingTemplate(null)}>Inhalt behalten</button></div>}
+          {templateNotice&&<p role="status" className="hint">{templateNotice}</p>}
+        </div>}
         {<details className="artifact-draft" open={mode==='model'}><summary onClick={e=>{e.preventDefault();setMode('model')}}>Mit dem lokalen Modell entwerfen</summary>
           <p className="hint">Beschreibe das Ergebnis. Es werden nur die ausdrücklich ausgewählten Projektquellen verwendet. Textentwürfe nutzen bis zu vier Quellen mit Auszügen; Seiten- und Bildoperationen verwenden die ausgewählten Originale. Danach Text, Fakten und Quellen selbst prüfen. Es entsteht noch keine Datei.</p>
           <label>Gewünschtes Ergebnis<textarea aria-label="Gewünschtes Ergebnis" maxLength={4000} rows={3} value={goal} onChange={e=>setGoal(e.target.value)}/></label>

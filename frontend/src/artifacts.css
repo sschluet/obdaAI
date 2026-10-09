@@ -16,3 +16,7 @@
 @media(max-width:600px) { .artifact-panel-heading { flex-wrap:wrap; } .artifact-editor { padding:1rem; } }
 
 .artifacts-panel .citation > a{display:inline-block;margin:.35rem .6rem .35rem 0}
+.artifact-template { border:1px solid var(--border);border-radius:.75rem;padding:.8rem;margin:.8rem 0;background:var(--soft); }
+.artifact-template > button { margin:.25rem .5rem .25rem 0; }
+.artifact-template-confirm { border-left:3px solid var(--accent);padding:.5rem .75rem;margin-top:.75rem;background:var(--panel); }
+.artifact-template-confirm button { margin:.25rem .5rem .25rem 0; }

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-07",
+  "updated": "2026-10-09",
   "applicationCommit": "80179bc",
   "schema": "0024",
   "tests": 577,
@@ -75,7 +75,7 @@
         },
         {
           "title": "Integrierter Chat-Arbeitsbereich",
-          "description": "Dateien, Quellen, Antwortvorgaben und Aufgaben neben dem Gespräch öffnen. Projektkontext bleibt erhalten; Desktop nebeneinander, mobile Bedienung über Tabs. Lokal mit synthetischen Daten geprüft; noch kein Server-Rollout.",
+          "description": "Dateien, Quellen, Antwortvorgaben und Aufgaben neben dem Gespräch öffnen. Projektkontext bleibt erhalten; Desktop nebeneinander, mobile Bedienung über Tabs. Lokal mit synthetischen Daten geprüft; auf der Test-VM installiert und gezielt mit lokalem Modell geprüft.",
           "status": "local"
         }
       ]
@@ -190,6 +190,11 @@
         {
           "title": "Einfacher Dateidialog und sichere Entwurfwiederaufnahme",
           "description": "KI-Entwurf oder manuelle Inhaltseingabe mit erhaltenem Ziel und Inhalt. Neue Entwürfe im Browser-Tab fortsetzen; veraltete Quellen-, Chat- oder Versionsbindungen blockieren das Speichern. Keine Tokens oder Freigaben im Entwurf.",
+          "status": "local"
+        },
+        {
+          "title": "Word- und PowerPoint-Vorlagen",
+          "description": "Leere Gliederungen für Projektübersicht, Besprechungsnotiz, Entscheidungsvorlage und vierteiligen Projektstatus. Vorhandene Inhalte brauchen eine Ersetzungsbestätigung. Lokal geprüft; neuer CI-/VM-Rollout noch offen.",
           "status": "local"
         }
       ]
@@ -369,9 +374,12 @@
     "pythonPassed": 577,
     "pythonSkipped": 13,
     "browserChecks": 8,
-    "serverDeployment": false,
+    "serverDeployment": true,
     "commit": "b41b269",
     "ciTests": 590,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37602855825"
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37602855825",
+    "deployedCommit": "aea1ecc",
+    "deployedSchema": "0025",
+    "liveScope": "Gezielter lokaler Modell-/HTTPS-Test auf der Test-VM; breite Fakten-/Geräteabnahme offen."
   }
 }

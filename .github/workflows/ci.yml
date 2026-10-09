@@ -82,6 +82,7 @@ jobs:
           node workbench-check.mjs
           node task-ux-check.mjs
           node preference-ux-check.mjs
+          node template-check.mjs
   container:
     runs-on: ubuntu-24.04
     steps:
