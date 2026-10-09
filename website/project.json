@@ -194,7 +194,7 @@
         },
         {
           "title": "Word- und PowerPoint-Vorlagen",
-          "description": "Leere Gliederungen für Projektübersicht, Besprechungsnotiz, Entscheidungsvorlage und vierteiligen Projektstatus. Vorhandene Inhalte brauchen eine Ersetzungsbestätigung. Lokal geprüft; neuer CI-/VM-Rollout noch offen.",
+          "description": "Leere Gliederungen für Projektübersicht, Besprechungsnotiz, Entscheidungsvorlage und vierteiligen Projektstatus. Vorhandene Inhalte brauchen eine Ersetzungsbestätigung. Lokal geprüft; CI bestanden und auf der Test-VM installiert.",
           "status": "local"
         }
       ]
@@ -341,7 +341,7 @@
         },
         {
           "title": "Modernes Design mit Hell- und Dunkelmodus",
-          "description": "Warme Arbeitsflächen, dunkle Navigation, Jade-Akzente, klare Typografie und einheitliche Dialoge. Desktop-/Mobilansichten und reduzierte Bewegung lokal geprüft.",
+          "description": "Warme Arbeitsflächen, dunkle Navigation, Jade-Akzente, klare Typografie und einheitliche Dialoge. Desktop-/Mobilansichten und reduzierte Bewegung lokal geprüft. Auf der Test-VM installiert; neue Assets über HTTPS geprüft.",
           "status": "local"
         }
       ]
@@ -378,12 +378,12 @@
     "schema": "0025",
     "pythonPassed": 577,
     "pythonSkipped": 13,
-    "browserChecks": 8,
+    "browserChecks": 10,
     "serverDeployment": true,
-    "commit": "b41b269",
+    "commit": "8989b26",
     "ciTests": 590,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37602855825",
-    "deployedCommit": "aea1ecc",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37914965230",
+    "deployedCommit": "8989b26",
     "deployedSchema": "0025",
     "liveScope": "Gezielter lokaler Modell-/HTTPS-Test auf der Test-VM; breite Fakten-/Geräteabnahme offen.",
     "designModernized": true

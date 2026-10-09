@@ -1,5 +1,20 @@
 # obdaAI — Status 09.10.2026
 
+## Design auf Test-VM installiert — 09.10.2026
+
+Release 8989b26 / Schema0025 auf allen neun App-/Runnercontainern. Beide API-
+Healthrequests und gepinnte HTTPS-/Assetprüfung bestanden; neue Design-Tokens
+und intern scrollbare Dialoge werden tatsächlich ausgeliefert. Datenbank, acht
+Overlays und IPv4-/IPv6-Regeln erhalten; verschlüsselte Off-VM-Sicherung mit
+Prüfsummen vor Cutover bestätigt. Unveränderte Runnerquellen verwenden dieselben
+geprüften Image-Digests unter neuem Release-Tag.
+CI 37914965230: sechs Jobs erfolgreich, 590 Python-/PostgreSQL-Tests und zehn
+Browserchecks einschließlich Vorlagen und Hell-/Dunkel-/Mobil-Design bestanden.
+Erster Design-CI-Fall deckte einen zu hohen Mobil-Dialog auf; echter Layoutfix und
+gezielter Test sind enthalten. GitHub wieder angemeldet; Vorlagen werden mitgeliefert.
+Website enthält 49 Funktionen und sechs neue synthetische Screenshots. Keine
+Backend-/Freigabeänderung; keine breite Modell-/Geräte-/V1-Abnahme behauptet.
+
 ## Designmodernisierung — 09.10.2026
 
 Neues durchgängiges visuelles System: warme neutrale Arbeitsfläche, dunkle

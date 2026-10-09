@@ -126,3 +126,10 @@ Der eigene Browsercheck prüft tatsächlich angewandte Farbtokens, 320–1440px 
 horizontalen Overflow, den geschlossenen mobilen Drawer bei reduzierter Bewegung
 und erhaltene Inhalte beim Wechsel zwischen KI-/manueller Dateibearbeitung.
 Öffentliche Screenshots enthalten ausschließlich eigene synthetische Beispiele.
+
+Design-Rollout geprüft: 8989b26 / Schema0025, CI37914965230 sechs Jobs grün mit
+590 Tests und zehn Browserchecks. Der mobile Quellenkonfigurationsdialog bleibt
+intern scrollbar, Abbrechen erreichbar. Test-VM liefert die neuen CSS-Tokens über
+gepinntes HTTPS aus; bestehende DB, Overlays, Secrets und Netzregeln bewahrt.
+Verschlüsselte Sicherung off-VM verifiziert, Rückweg zum vorherigen Image erhalten.
+Die bereits geprüften Dateivorlagen sind mit diesem Release installiert.
