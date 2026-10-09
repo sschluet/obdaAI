@@ -20,7 +20,8 @@ try{
  await page.getByRole('tab',{name:/Gespräche ·/}).click();
  await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Noch nicht gesendeter Entwurf');
- await page.getByRole('button',{name:'Quellen neben dem Chat öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Aktionen und Anhänge',exact:true}).click();
+ await page.getByRole('menuitem',{name:/Quellen/}).click();
  const bench=page.getByRole('complementary',{name:'Arbeitsbereich neben dem Chat',exact:true});
  await bench.getByRole('region',{name:'Quellen im Arbeitsbereich',exact:true}).getByText('Arbeitsgrundlage.md',{exact:true}).waitFor();
  await page.reload();
@@ -67,7 +68,7 @@ try{
  await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).waitFor();
  await page.setViewportSize({width:390,height:844});
  await bench.getByRole('tab',{name:'Vorgaben',exact:true}).click();
- await bench.getByLabel('Antwortlänge',{exact:true}).selectOption('short');
+ await bench.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).getByRole('radio',{name:'Kurz',exact:true}).check();
  await bench.getByRole('button',{name:'Vorgaben speichern',exact:true}).click();
  await bench.getByText('Gespeichert. Gilt für neue Antworten; laufende Antworten behalten ihre Vorgaben.',{exact:true}).waitFor();
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile workspace overflow');

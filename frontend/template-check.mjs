@@ -16,9 +16,9 @@ const editor=()=>page.getByRole('dialog',{name:'Datei erstellen',exact:true});
 const button=(label)=>editor().getByRole('button',{name:label,exact:true});
 async function newFile(kind='docx'){
  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
- await editor().getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+ await editor().getByRole('radio',{name:({docx:'Word-Dokument',pptx:'PowerPoint-Präsentation',pdf:'PDF-Dokument',image:'Bild / Collage'})[kind],exact:true}).check();
 }
-async function choose(id){await editor().getByLabel('Vorlage',{exact:true}).selectOption(id);await button('Gliederung einsetzen').click();}
+async function choose(id){await editor().getByRole('radio',{name:({'project-overview':'Projektübersicht','meeting-note':'Besprechungsnotiz','decision-brief':'Entscheidungsvorlage','project-status':'Projektstatus'})[id],exact:true}).check();await button('Gliederung einsetzen').click();}
 async function replace(){await button('Entwurfsinhalt durch leere Gliederung ersetzen').click();}
 async function fillWord(text){const fields=editor().getByLabel('Dokumenttext',{exact:true});for(let i=0;i<await fields.count();i++)await fields.nth(i).fill(text+' '+(i+1));}
 try{
@@ -77,7 +77,7 @@ try{
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name,exact:true}).locator('..').click();await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Entwurf fortsetzen',exact:true}).click();
- if(await editor().getByLabel('Vorlage',{exact:true}).inputValue()!=='decision-brief')throw Error('Reload lost template choice');
+ if(!await editor().getByRole('radio',{name:'Entscheidungsvorlage',exact:true}).isChecked())throw Error('Reload lost template choice');
  if(await editor().getByLabel('Dokumenttext',{exact:true}).first().inputValue()!=='Synthetic preserved template input')throw Error('Reload lost template contents');
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile template overflow');
  await page.screenshot({path:output+'/file-templates-mobile.png',fullPage:true,animations:'disabled'});

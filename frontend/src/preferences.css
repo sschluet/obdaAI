@@ -1,0 +1,22 @@
+.response-preferences .preference-fields{gap:20px;margin:24px 0}
+.response-preferences .preference-field{min-width:0;margin:0;padding:0;border:0}
+.response-preferences .preference-field legend{margin:0 0 9px;padding:0;font-size:13px;font-weight:650;color:var(--text)}
+.response-preferences .preference-segments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
+.response-preferences label.preference-option{position:relative;display:flex;align-items:stretch;margin:0;min-width:0;cursor:pointer}
+.response-preferences .preference-option input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;z-index:1;cursor:pointer}
+.response-preferences .preference-option span{display:flex;align-items:center;justify-content:center;min-height:44px;width:100%;padding:8px 5px;border:1px solid transparent;border-radius:9px;font-size:12px;line-height:1.3;text-align:center;overflow-wrap:anywhere;color:var(--muted);transition:background .15s,border-color .15s,color .15s}
+.response-preferences .preference-option input:checked+span{background:var(--panel);border-color:var(--border);color:var(--text);box-shadow:0 2px 5px #00000008;font-weight:600}
+.response-preferences .preference-option input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.response-preferences .preference-option input:disabled+span{opacity:.6;cursor:wait}
+.response-preferences .preference-option input:not(:checked):not(:disabled):hover+span{color:var(--text);background:var(--panel)}
+.response-preferences label.preference-inherit{display:inline-flex;margin:8px 0 6px}
+.response-preferences .preference-inherit span{min-height:32px;gap:6px;padding:6px 9px;border-radius:8px;font-size:11px}
+.response-preferences .preference-inherit span::before{content:'↳';font-size:15px;color:var(--muted)}
+.response-preferences .preference-inherit input:checked+span{background:var(--active);color:var(--accent);border-color:var(--border);box-shadow:none}
+.response-preferences .preference-provenance{display:block;line-height:1.5;font-size:11px;color:var(--muted)}
+.response-preferences .preference-save-bar{border-top:1px solid var(--border);padding-top:16px}
+.response-preferences .preference-save-bar .hint{margin:0 0 10px;font-size:12px}
+.response-preferences .preference-save-bar .button-row>button{min-height:40px;font-size:12px}
+.response-preferences .preference-save-bar .button-row>button:first-child:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--panel)}
+@media(max-width:700px){.response-preferences .preference-fields{gap:18px}.response-preferences .preference-save-bar .button-row{align-items:stretch}.response-preferences .preference-save-bar .button-row>button:first-child{flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){.response-preferences .preference-option span{transition:none}}

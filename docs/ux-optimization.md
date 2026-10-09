@@ -133,3 +133,19 @@ intern scrollbar, Abbrechen erreichbar. Test-VM liefert die neuen CSS-Tokens üb
 gepinntes HTTPS aus; bestehende DB, Overlays, Secrets und Netzregeln bewahrt.
 Verschlüsselte Sicherung off-VM verifiziert, Rückweg zum vorherigen Image erhalten.
 Die bereits geprüften Dateivorlagen sind mit diesem Release installiert.
+
+
+## 09.10.2026: Interaktion nach Nutzerfeedback
+
+Die erste Designrunde ließ native Auswahllisten im Composer zurück. Diese
+Lieferung modernisiert die Bedienung selbst: kompakte Plus-Aktionen, erklärtes
+Modellmenü, expliziter Webknopf und kontextgebundene Projektquellen. Vier doppelte
+Kopfaktionen werden durch einen Arbeitsbereich-Zugang und Antwortstil ersetzt.
+Antwortvorgaben, Dateiformate und Vorlagen werden direkt über Radiokarten statt
+Selects gewählt. Projekt- und Arbeitsbereichuploads teilen eine moderne lokale
+Ablagefläche mit Dateiauswahl und Drag-and-drop.
+Mitwachsendes Eingabefeld, Shift-Enter/IME, Menü-Fokus, Escape/Pfeiltasten und
+kurze mobile Viewports sind gezielt geprüft. Bestehende Daten-/Freigabegrenzen
+und Schema0025 bleiben erhalten. Native Listen in komplexen Verwaltungsformularen
+sind noch vorhanden; diese Lieferung behauptet keine vollständige UX-Neugestaltung
+aller Werkzeuge oder echte Safari-/Geräteabnahme.

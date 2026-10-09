@@ -8,19 +8,19 @@
     {
       "id": "chat",
       "title": "Ein Gespräch. Viele Möglichkeiten.",
-      "description": "Gespräch und Arbeitsbereich nebeneinander: Quellen, Dateien, Aufgaben und gespeicherte Antwortvorgaben direkt erreichbar.",
+      "description": "Direkte Gesprächsleiste mit Plus-Aktionen, bewusster Websuche und kompakter Modellwahl. Antwortstil als sichtbare Auswahl neben dem Chat.",
       "image": "assets/chat.png"
     },
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Dokumente und Quellen zusammenführen und im eigenen Projektchat verwenden.",
+      "description": "Unterlagen per Drag-and-drop oder Dateiauswahl lokal zusammenführen und im Projektchat verwenden.",
       "image": "assets/projects.png"
     },
     {
       "id": "files",
       "title": "Aus Gedanken werden Dateien.",
-      "description": "Ziel und Format zuerst. KI-Entwurf und manuelle Eingabe wechseln, Inhalte erhalten und Details bei Bedarf öffnen.",
+      "description": "Format und Vorlage direkt als Auswahlkarten wählen. KI-Entwurf und manuelle Eingabe wechseln; Inhalte und Originalversionen bleiben erhalten.",
       "image": "assets/files.png"
     },
     {
@@ -336,12 +336,17 @@
         },
         {
           "title": "Serverseitige Antwortvorgaben mit sichtbarer Herkunft",
-          "description": "Sprache, Länge, Ton und Gliederung persönlich, pro Projekt und pro Gespräch einstellen. Revisionierte Speicherung und eingefrorene Vorgaben je Chatlauf. Keine vererbten Cloud-, Web- oder Schreibrechte. Schema 0025 lokal geprüft.",
+          "description": "Sprache, Länge, Ton und Gliederung direkt als sichtbare Optionen wählen. Persönliche, Projekt- und Gesprächsvorgaben mit Herkunft, revisionierter Speicherung und eingefrorenen Werten je Chatlauf. Keine vererbten Cloud-, Web- oder Schreibrechte. Schema 0025.",
           "status": "local"
         },
         {
           "title": "Modernes Design mit Hell- und Dunkelmodus",
           "description": "Warme Arbeitsflächen, dunkle Navigation, Jade-Akzente, klare Typografie und einheitliche Dialoge. Desktop-/Mobilansichten und reduzierte Bewegung lokal geprüft. Auf der Test-VM installiert; neue Assets über HTTPS geprüft.",
+          "status": "local"
+        },
+        {
+          "title": "Direkte Gesprächsaktionen statt Formularauswahl",
+          "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, Websuche bewusst pro Nachricht und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten synthetisch geprüft.",
           "status": "local"
         }
       ]

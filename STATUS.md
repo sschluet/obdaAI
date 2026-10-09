@@ -1,5 +1,22 @@
 # obdaAI — Status 09.10.2026
 
+## Direkte Gesprächsbedienung — 09.10.2026
+
+Native Composer-Auswahllisten durch Aktionsleiste ersetzt: Plus-Menü für Dateien,
+Projektquellen, Aufgaben und Antwortstil, erklärte Modellwahl sowie bewusster
+Webknopf. Lokaler Modus sperrt Web; Cloud öffnet weiterhin das getrennte
+Anbieter-Freigabegespräch. Projekt-/Wissensquellen bleiben gebunden. Kompakter
+Kopfbereich, mitwachsendes Eingabefeld ohne Resize-Griff; IME-Komposition sendet
+nicht versehentlich mit Enter. Sichtbare Radioauswahl für Antwortvorgaben mit
+Herkunft, Vererbung und Kennzeichnung ungespeicherter Änderungen. Dateiformate
+und Vorlagen als Auswahlkarten; gemeinsame lokale Dateiablagefläche für Projekt
+und Chat-Arbeitsbereich.
+Gezielte lokale Composer-/Arbeitsraum-/Vorgaben-/Chat-/Datei-/Designprüfungen
+bestanden; 320–1440px und kurzer 640×360-Viewport. Neue synthetische Screenshots
+und 50 Websitefunktionen. GitHub-CI und Installation dieser Lieferung stehen
+noch aus; vorheriger installierter Release bleibt 8989b26 / Schema0025.
+
+
 ## Design auf Test-VM installiert — 09.10.2026
 
 Release 8989b26 / Schema0025 auf allen neun App-/Runnercontainern. Beide API-

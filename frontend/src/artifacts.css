@@ -20,3 +20,26 @@
 .artifact-template > button { margin:.25rem .5rem .25rem 0; }
 .artifact-template-confirm { border-left:3px solid var(--accent);padding:.5rem .75rem;margin-top:.75rem;background:var(--panel); }
 .artifact-template-confirm button { margin:.25rem .5rem .25rem 0; }
+
+/* Visible format and starting-point choices replace native dropdowns. */
+.artifact-editor .artifact-choice-field{border:0;padding:0;margin:15px 0;min-width:0}
+.artifact-choice-field legend{padding:0;margin-bottom:9px;font-size:12px;font-weight:600;color:var(--ink)}
+.artifact-format-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.artifact-editor label.artifact-format-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:0;padding:13px 10px;min-width:0;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer;line-height:1.35}
+.artifact-format-card>svg{color:var(--accent);flex-shrink:0}
+.artifact-format-card strong{font-size:11px;font-weight:600;overflow-wrap:anywhere}
+.artifact-format-card small{font-size:9px;color:var(--muted);line-height:1.4}
+.artifact-editor .artifact-format-card input,.artifact-editor .artifact-template-card input{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0;margin:0;cursor:pointer}
+.artifact-editor .artifact-format-card.is-selected,.artifact-editor .artifact-template-card.is-selected{background:var(--active);border-color:var(--accent)}
+.artifact-format-card .artifact-choice-check{position:absolute;right:7px;top:7px}
+.artifact-format-card:focus-within,.artifact-template-card:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.artifact-format-card:hover,.artifact-template-card:hover{border-color:var(--accent)}
+.artifact-choice-field:disabled label{opacity:.55;cursor:default}
+.artifact-template-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.artifact-editor label.artifact-template-card{position:relative;display:flex;align-items:center;gap:7px;margin:0;padding:11px;min-height:59px;border:1px solid var(--border);border-radius:10px;background:var(--panel);cursor:pointer}
+.artifact-template-card>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.artifact-template-card strong{font-size:11px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.artifact-template-card small{font-size:9px;color:var(--muted);line-height:1.4}
+.artifact-template-card>svg{color:var(--accent);flex-shrink:0}
+.workbench .artifact-format-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.artifact-format-options{grid-template-columns:repeat(2,minmax(0,1fr))}.artifact-template-options{grid-template-columns:1fr}}

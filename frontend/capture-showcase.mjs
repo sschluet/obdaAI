@@ -17,7 +17,7 @@ try{
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.getByText('Ein klarer Plan für Projekt Aurora',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();
- await page.getByLabel('Antwortlänge',{exact:true}).waitFor();
+ await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).waitFor();
  await capture('chat');
  await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();

@@ -11,11 +11,13 @@ try{
  await page.getByRole('heading',{name:'Womit möchtest du beginnen?',exact:true}).waitFor();
  if(await page.locator('.chat-top select').count())throw Error('Duplicate model selector above conversation');
  const composer=page.locator('form.composer');
- if(await composer.getByLabel('Modellwahl',{exact:true}).count()!==1||await composer.getByLabel('Quellenoptionen',{exact:true}).count()!==1)throw Error('Composer pickers missing');
+ if(await composer.getByLabel('Modellwahl',{exact:true}).count()!==1||await composer.getByRole('button',{name:'Websuche',exact:true}).count()!==1)throw Error('Composer tools missing');
  if(await page.locator('.composer-note input[type=checkbox]').count())throw Error('Legacy composer checkboxes remain');
- await composer.getByLabel('Modellwahl',{exact:true}).selectOption('local');
- if(!await composer.getByLabel('Quellenoptionen',{exact:true}).isDisabled())throw Error('Local mode permits web selection');
- await composer.getByLabel('Modellwahl',{exact:true}).selectOption('auto');
+ await composer.getByLabel('Modellwahl',{exact:true}).click();
+ await page.getByRole('menuitemradio',{name:/Nur lokal/}).click();
+ if(!await composer.getByRole('button',{name:'Websuche',exact:true}).isDisabled())throw Error('Local mode permits web selection');
+ await composer.getByLabel('Modellwahl',{exact:true}).click();
+ await page.getByRole('menuitemradio',{name:/^Auto/}).click();
  await page.screenshot({path:output+'/workspace-chat.png',fullPage:true});
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name:'Deine Projekträume',exact:true}).waitFor();
@@ -78,5 +80,5 @@ try{
  await page.screenshot({path:output+'/workspace-source-mobile.png',fullPage:true});
  await sourceDialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Workspace UX passed: composer dropdowns, website-backed project room/chat, separated task overview/editor with examples, free source configuration/indexing, mobile. Synthetic adapters only.');
+ console.log('Workspace UX passed: composer actions, website-backed project room/chat, separated task overview/editor with examples, free source configuration/indexing, mobile. Synthetic adapters only.');
 }finally{await browser.close()}

@@ -96,7 +96,7 @@ try{
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
-  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  await dialog.getByRole('radio',{name:({docx:'Word-Dokument',pptx:'PowerPoint-Präsentation',pdf:'PDF-Dokument',image:'Bild / Collage'})[kind],exact:true}).check();
   const title='Synthetic '+kind+' UI artifact';
   await dialog.getByLabel('Dateititel',{exact:true}).fill(title);
   if(kind==='pptx'){
@@ -139,7 +139,7 @@ try{
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
-  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  await dialog.getByRole('radio',{name:({docx:'Word-Dokument',pptx:'PowerPoint-Präsentation',pdf:'PDF-Dokument',image:'Bild / Collage'})[kind],exact:true}).check();
   if(kind==='pdf')await dialog.getByLabel('PDF erstellen aus',{exact:true}).selectOption('text');
   const title='Synthetic extended '+kind;
   await dialog.getByLabel('Dateititel',{exact:true}).fill(title);
@@ -165,7 +165,7 @@ try{
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
-  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  await dialog.getByRole('radio',{name:({docx:'Word-Dokument',pptx:'PowerPoint-Präsentation',pdf:'PDF-Dokument',image:'Bild / Collage'})[kind],exact:true}).check();
   await dialog.getByText('Gebundene Quelldateien',{exact:true}).click();
   await dialog.getByLabel('synthetic-artifact.'+(kind==='pdf'?'pdf':'png'),{exact:true}).check();
   await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
@@ -181,7 +181,7 @@ try{
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
-  await dialog.getByLabel('Dateiformat',{exact:true}).selectOption(kind);
+  await dialog.getByRole('radio',{name:({docx:'Word-Dokument',pptx:'PowerPoint-Präsentation',pdf:'PDF-Dokument',image:'Bild / Collage'})[kind],exact:true}).check();
   await dialog.getByText('Mit dem lokalen Modell entwerfen',{exact:true}).click();
   await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Create an editable synthetic local draft.');
   if(kind==='pptx')await dialog.getByLabel('Gewünschte Folienanzahl',{exact:true}).fill('2');
@@ -205,7 +205,7 @@ try{
  await page.getByRole('tab',{name:/Gespräche ·/}).click();
  await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Recherchiere und erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST SYNTHETIC_WEB_QUERY');
- await page.getByLabel('Quellenoptionen',{exact:true}).selectOption('web');
+ await page.getByRole('button',{name:'Websuche',exact:true}).click();
  await page.getByLabel('Öffentlicher Suchtext',{exact:true}).fill('Synthetic public Python documentation');
  await page.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).click();
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();

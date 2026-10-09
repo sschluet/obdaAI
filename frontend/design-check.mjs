@@ -14,7 +14,7 @@ try{
  await page.screenshot({path:output+'/welcome-light.png'});
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();
- await page.getByLabel('Antwortlänge',{exact:true}).waitFor();await page.screenshot({path:output+'/chat-light.png'});
+ await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).waitFor();await page.screenshot({path:output+'/chat-light.png'});
  const ink=await page.locator('body').evaluate(e=>getComputedStyle(e).color);
  if(ink!=='rgb(32, 55, 44)')throw Error('Design tokens not applied: '+ink);
  await page.getByRole('button',{name:'Dunkles Design',exact:true}).click();
