@@ -31,6 +31,10 @@ try{
  await page.getByLabel('Dokumenttext',{exact:true}).fill('Ein synthetischer Entwurf für die Designprüfung.');
  await page.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();await page.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
  if(await page.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='Ein synthetischer Entwurf für die Designprüfung.')throw Error('Design change lost draft');
- await page.getByRole('button',{name:'Abbrechen',exact:true}).click();if(errors.length)throw Error(errors.join('\n'));
+ await page.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();await page.getByRole('button',{name:'Wissen',exact:true}).click();await page.getByRole('button',{name:'Wissensquelle hinzufügen',exact:true}).click();
+ const source=page.getByRole('dialog',{name:'Wissensquelle konfigurieren',exact:true});await source.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ if(await source.count())throw Error('Long mobile source dialog cannot be dismissed');
+ if(errors.length)throw Error(errors.join('\n'));
  console.log('Design passed: light/dark tokens, dialog draft preservation and 320–1440px layouts. Synthetic only.');
 }finally{await browser.close();}

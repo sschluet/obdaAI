@@ -148,3 +148,7 @@ input[type=file]{font-size:11px;padding:8px;border:0;background:transparent}inpu
 @media(prefers-reduced-motion:reduce){button,.room-card,.suggestions button,.sidebar{transition:none!important}.room-card:hover{transform:none}}
 .send:disabled{background:var(--accent);color:var(--panel);opacity:.42}
 [data-theme=dark] .send:disabled{background:#71917a;color:#172b1c;opacity:.55}
+/* Every overlay must stay operable when its content is taller than the viewport. */
+.modal>form,.modal>div{max-height:calc(100dvh - 48px);overflow-y:auto;min-height:0;overscroll-behavior:contain}
+@media(max-width:600px){.modal>form,.modal>div{max-height:calc(100dvh - 24px)}}
+.workbench-content .modal>form,.workbench-content .modal>div{max-height:none;overflow-y:visible}
