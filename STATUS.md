@@ -6,7 +6,8 @@ Native Composer-Auswahllisten durch Aktionsleiste ersetzt: Plus-Menü für Datei
 Projektquellen, Aufgaben und Antwortstil, erklärte Modellwahl sowie bewusster
 Webknopf. Lokaler Modus sperrt Web; Cloud öffnet weiterhin das getrennte
 Anbieter-Freigabegespräch. Projekt-/Wissensquellen bleiben gebunden. Kompakter
-Kopfbereich, mitwachsendes Eingabefeld ohne Resize-Griff; IME-Komposition sendet
+Kopfbereich und Tastaturfokus in Cloud-/Webfreigabedialogen (Tab, Escape,
+Fokusrückkehr), mitwachsendes Eingabefeld ohne Resize-Griff; IME-Komposition sendet
 nicht versehentlich mit Enter. Sichtbare Radioauswahl für Antwortvorgaben mit
 Herkunft, Vererbung und Kennzeichnung ungespeicherter Änderungen. Dateiformate
 und Vorlagen als Auswahlkarten; gemeinsame lokale Dateiablagefläche für Projekt

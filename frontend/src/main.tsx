@@ -58,6 +58,15 @@ const [query,setQuery]=useState(''),[archived,setArchived]=useState(false),[mobi
 const [config,setConfig]=useState<Config|null>(null),[cloud,setCloud]=useState(false),[rename,setRename]=useState<string|null>(null),[deleteDialog,setDeleteDialog]=useState(false);
 const [cloudProvider,setCloudProvider]=useState('openrouter');
 const [choice,setChoice]=useState<string>(defaultMode),[pendingProvider,setPendingProvider]=useState<string|null>(null),[pendingWeb,setPendingWeb]=useState<string|null>(null),[room,setRoom]=useState<any|null>(null);
+useEffect(()=>{
+ if(pendingProvider===null&&pendingWeb===null)return;
+ const dialog=document.querySelector<HTMLElement>('.modal [role="dialog"]');if(!dialog)return;
+ const previous=document.activeElement as HTMLElement|null;
+ const controls=()=>Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled),textarea:not(:disabled),input:not(:disabled),a[href]'));
+ (dialog.querySelector<HTMLElement>('textarea')||controls()[0])?.focus();
+ const handle=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setPendingProvider(null);setPendingWeb(null)}else if(event.key==='Tab'){const items=controls(),first=items[0],last=items.at(-1);if(!items.length)return;if(event.shiftKey&&(document.activeElement===first||!dialog.contains(document.activeElement))){event.preventDefault();last?.focus()}else if(!event.shiftKey&&(document.activeElement===last||!dialog.contains(document.activeElement))){event.preventDefault();first?.focus()}}};
+ document.addEventListener('keydown',handle);return()=>{document.removeEventListener('keydown',handle);previous?.focus()};
+},[pendingProvider,pendingWeb]);
 useEffect(()=>{let stopped=false;setRoom(null);if(chat?.project_id)api('/projects/'+chat.project_id).then(p=>{if(!stopped)setRoom(p)}).catch(()=>{});return()=>{stopped=true}},[chat?.project_id]);
 function chooseModel(value:string){if(value.startsWith('cloud:')){setPendingProvider(value.slice(6));return}setChoice(value);setMode(value==='local'?'local':'auto');setCloud(false);setWebAllowed(false)}
 async function confirmProvider(){if(!pendingProvider)return;const provider=pendingProvider;try{const c=await api('/conversations','POST',{cloud_allowed:true,cloud_provider:provider});setText(readChatDraft(c.id));setArtifactSeed(null);setTaskSeed(null);setChat({...c,messages:[],runs:[]});setCloudProvider(provider);setCloud(true);setChoice('cloud:'+provider);setMode('auto');setPendingProvider(null);setWebAllowed(false);await refresh()}catch(e){setError((e as Error).message)}}

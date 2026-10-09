@@ -6,6 +6,8 @@ const page=await browser.newPage({viewport:{width:1440,height:900}});
 const output='../.local/composer-qa';await mkdir(output,{recursive:true});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
 try {
+ // Isolated UI configuration exposes a cloud choice; no real provider is contacted.
+ await page.route('**/api/settings',async route=>{const response=await route.fetch();const body=await response.json();await route.fulfill({response,json:{...body,cloud_enabled:true,external_provider_kinds:['openrouter']}})});
  await page.goto('http://127.0.0.1:18765');await loginFixture(page);
  const composer=page.locator('form.composer'),model=composer.getByRole('button',{name:'Modellwahl',exact:true}),plus=composer.getByRole('button',{name:'Aktionen und Anhänge',exact:true});
  if(await composer.locator('select').count())throw Error('Native composer selects remain');
@@ -13,6 +15,8 @@ try {
  if(!await page.getByRole('menuitemradio',{name:'Auto',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Menu does not focus first option');
  await page.keyboard.press('ArrowDown');if(!await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Arrow navigation failed');
  await page.keyboard.press('Escape');if(!await model.evaluate(e=>e===document.activeElement))throw Error('Escape lost model trigger focus');
+ let creates=0;page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/api/conversations'))creates++});
+ await model.click();await page.getByRole('menuitemradio',{name:'Auto + OpenRouter',exact:true}).click();const cloud=page.getByRole('dialog',{name:'Cloud-Modell wählen',exact:true});await cloud.waitFor();await page.keyboard.press('Escape');if(await cloud.count()||creates)throw Error('Cloud cancellation created a grant/chat');if(!await model.evaluate(e=>e===document.activeElement))throw Error('Cloud cancel lost focus');
  await model.click();await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).click();
  if(!await composer.getByRole('button',{name:'Websuche',exact:true}).isDisabled())throw Error('Local mode permits web search');
  await model.click();await page.getByRole('menuitemradio',{name:'Auto',exact:true}).click();
@@ -22,7 +26,7 @@ try {
  const tall=await input.evaluate(e=>e.getBoundingClientRect().height);if(tall<=short||tall>181)throw Error('Composer auto height failed');
  if(await input.evaluate(e=>getComputedStyle(e).resize)!=='none')throw Error('Native resize handle remains');
  await input.fill('Öffentliche synthetische Frage');await composer.getByRole('button',{name:'Websuche',exact:true}).click();
- const consent=page.getByRole('dialog',{name:'Websuche für diese Nachricht',exact:true});await consent.waitFor();await consent.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ const consent=page.getByRole('dialog',{name:'Websuche für diese Nachricht',exact:true});await consent.waitFor();if(!await consent.getByRole('textbox',{name:'Öffentlicher Suchtext',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Search dialog did not focus query');await page.keyboard.press('Shift+Tab');if(!await consent.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Search consent focus escaped');await page.keyboard.press('Escape');
  if(await composer.getByRole('button',{name:'Websuche aktiviert',exact:true}).count())throw Error('Cancelled search granted web');
  await plus.click();await page.keyboard.press('End');if(!await page.getByRole('menuitem',{name:/Antwortstil einstellen/}).evaluate(e=>e===document.activeElement))throw Error('End navigation failed');await page.keyboard.press('Home');await page.keyboard.press('Escape');
  await plus.click();await input.click();if(await page.getByRole('menu',{name:'Aktionen und Anhänge',exact:true}).count())throw Error('Outside click did not close menu');
