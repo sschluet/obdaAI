@@ -1,5 +1,6 @@
 """Idempotent synthetic data for the dedicated public-screenshot fixture only."""
 
+import os
 from pathlib import Path
 
 from hub.db import Conversation, Message, Project
@@ -7,7 +8,11 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 ROOT = Path(__file__).resolve().parents[1]
-database = ROOT / ".local" / "website-fixture" / "fixture.sqlite"
+fixture = Path(os.getenv("HUB_BROWSER_FIXTURE_DIR", ".local/website-fixture"))
+folder = (ROOT / fixture).resolve()
+if not folder.is_relative_to((ROOT / ".local").resolve()):
+    raise SystemExit("Only an isolated local fixture may be seeded")
+database = folder / "fixture.sqlite"
 if not database.is_file():
     raise SystemExit("Start the dedicated website fixture first")
 engine = create_engine("sqlite:///" + str(database))

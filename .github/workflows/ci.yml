@@ -83,6 +83,10 @@ jobs:
           node task-ux-check.mjs
           node preference-ux-check.mjs
           node template-check.mjs
+          cd ..
+          HUB_BROWSER_FIXTURE_DIR=.local/browser uv run python scripts/seed_showcase.py
+          cd frontend
+          HUB_DESIGN_ORIGIN=http://127.0.0.1:18765 node design-check.mjs
   container:
     runs-on: ubuntu-24.04
     steps:

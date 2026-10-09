@@ -112,3 +112,17 @@ Vorschau, Versionen, Reload und mobile Darstellung bestanden.
 GitHub-Zugang ist am 09.10.2026 mit HTTP401 ungültig. Vorlagen-CI, Veröffentlichung
 der neuen Website und der folgende Vorlagen-Rollout warten auf Wiederanmeldung.
 Der bereits geprüfte Bedienstand ist davon unabhängig auf der Test-VM installiert.
+
+## Designmodernisierung vom 09.10.2026
+
+Neue gemeinsame Design-Tokens für warme helle Flächen, dunkle grüne Navigation,
+Jade-Akzente, klare Systemtypografie und editoriale Startansicht. Karten, Eingaben,
+Quellen-/Statuschips, Chat, Arbeitsbereich und Datei-/Aufgabendialoge teilen eine
+ruhige Hierarchie. Hell-/Dunkelmodus und bewegungsreduzierte mobile Navigation
+werden getrennt geprüft. Keine externen Fonts/Tracker oder neue Abhängigkeiten.
+Keine Änderungen an Backend- oder Freigabeverträgen.
+
+Der eigene Browsercheck prüft tatsächlich angewandte Farbtokens, 320–1440px ohne
+horizontalen Overflow, den geschlossenen mobilen Drawer bei reduzierter Bewegung
+und erhaltene Inhalte beim Wechsel zwischen KI-/manueller Dateibearbeitung.
+Öffentliche Screenshots enthalten ausschließlich eigene synthetische Beispiele.

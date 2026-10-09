@@ -1,5 +1,15 @@
 # obdaAI — Status 09.10.2026
 
+## Designmodernisierung — 09.10.2026
+
+Neues durchgängiges visuelles System: warme neutrale Arbeitsfläche, dunkle
+Navigation, Jade-Akzente, editoriale Startüberschrift, ruhige Cards, moderne
+Segmentwahl und größere, einheitliche Dialoge. Hell-/Dunkelmodus sowie reduzierte
+Bewegung geprüft. Designcheck erhält Entwürfe und prüft 320–1440px. Sechs aktuelle
+synthetische Screenshots aktualisieren die öffentliche Projektvorstellung.
+Backend, Freigaben und Schema bleiben unverändert. Vorlagen aus der vorherigen
+lokal geprüften Lieferung werden im selben geprüften Rollout mitgenommen.
+
 ## Test-VM aktualisiert — 09.10.2026
 
 Installiert: aea1ecc / Schema0025. Beide APIs gesund, alle eigenen App-/Runner-

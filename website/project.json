@@ -338,6 +338,11 @@
           "title": "Serverseitige Antwortvorgaben mit sichtbarer Herkunft",
           "description": "Sprache, Länge, Ton und Gliederung persönlich, pro Projekt und pro Gespräch einstellen. Revisionierte Speicherung und eingefrorene Vorgaben je Chatlauf. Keine vererbten Cloud-, Web- oder Schreibrechte. Schema 0025 lokal geprüft.",
           "status": "local"
+        },
+        {
+          "title": "Modernes Design mit Hell- und Dunkelmodus",
+          "description": "Warme Arbeitsflächen, dunkle Navigation, Jade-Akzente, klare Typografie und einheitliche Dialoge. Desktop-/Mobilansichten und reduzierte Bewegung lokal geprüft.",
+          "status": "local"
         }
       ]
     }
@@ -380,6 +385,7 @@
     "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37602855825",
     "deployedCommit": "aea1ecc",
     "deployedSchema": "0025",
-    "liveScope": "Gezielter lokaler Modell-/HTTPS-Test auf der Test-VM; breite Fakten-/Geräteabnahme offen."
+    "liveScope": "Gezielter lokaler Modell-/HTTPS-Test auf der Test-VM; breite Fakten-/Geräteabnahme offen.",
+    "designModernized": true
   }
 }
