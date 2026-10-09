@@ -149,3 +149,11 @@ kurze mobile Viewports sind gezielt geprüft. Bestehende Daten-/Freigabegrenzen
 und Schema0025 bleiben erhalten. Native Listen in komplexen Verwaltungsformularen
 sind noch vorhanden; diese Lieferung behauptet keine vollständige UX-Neugestaltung
 aller Werkzeuge oder echte Safari-/Geräteabnahme.
+
+
+Abnahme dieser Interaktionsrunde: Release854e587 / Schema0025, CI37921380828
+mit sechs erfolgreichen Jobs, 590 Tests und elf Browserprüfungen. Eigene Test-VM
+installiert; gepinnte HTTPS-Assets und gezielter Live-Browsercheck (keine neuen
+Nachrichten oder Einstellungswrites) bestätigt. Backup/Off-VM-Hashes, Rollback,
+DB, acht Overlays und unveränderte Netzwerkregeln geprüft. Neue öffentliche
+Screenshots stammen ausschließlich aus der getrennten synthetischen Demo.

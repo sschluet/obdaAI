@@ -346,7 +346,7 @@
         },
         {
           "title": "Direkte Gesprächsaktionen statt Formularauswahl",
-          "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, Websuche bewusst pro Nachricht und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten synthetisch geprüft.",
+          "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, Websuche bewusst pro Nachricht und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten synthetisch geprüft. Auf der Test-VM installiert und gezielt im Browser geprüft.",
           "status": "local"
         }
       ]
@@ -355,7 +355,7 @@
   "roadmap": [
     {
       "title": "Den integrierten Arbeitsraum erweitern",
-      "text": "Vorlagenbibliothek, Versionsvergleich, weitere Auftrags-/Modelloptionen und objektübergreifende Suche. Erste Bedienoptimierung lokal geprüft; reale Serverabnahme steht aus."
+      "text": "Weitere Auftrags-/Modelloptionen, Versionsvergleich und objektübergreifende Suche. Vertiefte Bedienoptimierung auf der Test-VM installiert; breite Modell-/Geräteabnahme bleibt offen."
     },
     {
       "title": "Interaktiver Browser",
@@ -383,14 +383,15 @@
     "schema": "0025",
     "pythonPassed": 577,
     "pythonSkipped": 13,
-    "browserChecks": 10,
+    "browserChecks": 11,
     "serverDeployment": true,
-    "commit": "8989b26",
+    "commit": "854e587",
     "ciTests": 590,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37914965230",
-    "deployedCommit": "8989b26",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37921380828",
+    "deployedCommit": "854e587",
     "deployedSchema": "0025",
-    "liveScope": "Gezielter lokaler Modell-/HTTPS-Test auf der Test-VM; breite Fakten-/Geräteabnahme offen.",
-    "designModernized": true
+    "liveScope": "Gezielte Browser-/HTTPS-Abnahme der neuen Oberfläche auf der Test-VM; kein neuer Modell- oder echter Gerätenachweis.",
+    "designModernized": true,
+    "interactionModernized": true
   }
 }

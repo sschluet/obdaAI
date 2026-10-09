@@ -1,5 +1,22 @@
 # obdaAI — Status 09.10.2026
 
+## Direkte UX auf Test-VM bestätigt — 09.10.2026
+
+Installierter App-/Runnerrelease 854e587, unverändertes Schema0025. CI37921380828:
+alle sechs Jobs erfolgreich, 590 Python-/PostgreSQL-Tests und elf synthetische
+Browserprüfungen. Native Composer-, Antwortvorgaben-, Format- und Vorlagenauswahl
+ersetzt; integrierte Aktionen, lokale Dateiablage und mobile Reload-Korrektur
+werden vom tatsächlichen Server ausgeliefert. Gepinnte HTTPS-/Assetabnahme und
+Live-Browsercheck für Aktionsmenü, lokale Websperre, Vorgaben und Mobilansicht
+bestanden. Dabei keine Chatnachricht gesendet und keine Vorgabe geändert.
+Neun App-/Runnercontainer aktualisiert, beide APIs gesund; DB, acht Overlays
+und normalisierte IPv4-/IPv6-Regeln erhalten. Verschlüsselte Off-VM-Sicherung
+vor Cutover hashgeprüft; vorheriger Release und Release-Env als Rollback vorhanden.
+Öffentliche Vorstellung: 50 Funktionen, sechs aktuelle synthetische Screenshots.
+Native Listen in komplexen Verwaltungsformularen bleiben; echte Geräte-/Safari-
+und breite Modellabnahme offen. Keine vollständige V1 behauptet.
+
+
 ## Direkte Gesprächsbedienung — 09.10.2026
 
 Native Composer-Auswahllisten durch Aktionsleiste ersetzt: Plus-Menü für Dateien,
