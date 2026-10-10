@@ -458,7 +458,7 @@
         },
         {
           "title": "Modernes Design mit Hell- und Dunkelmodus",
-          "description": "Warme Arbeitsflächen, dunkle Navigation, Jade-Akzente, klare Typografie und einheitliche Dialoge. Desktop-/Mobilansichten und reduzierte Bewegung lokal geprüft. Auf der Test-VM installiert; neue Assets über HTTPS geprüft.",
+          "description": "Neutrale Weiß-/Grauoberfläche mit klarer Sans-Serif-Typografie, heller Navigation und zurückhaltenden Indigo-Akzenten. Dunkelmodus in Anthrazit, gemeinsame Farb-/Fokusregeln für Chat, Skills, Profil und Dialoge. Textkontrast und Layouts von320 bis1440Pixeln lokal geprüft; alle18öffentlichen Beispielbilder neu erfasst. Auf der Test-VM bestätigt: Hell-/Dunkelmodus, Profil-/Skill-Dialoge und mobile Navigation; bestehende Einstellungen unverändert.",
           "status": "local"
         },
         {
@@ -505,12 +505,12 @@
     "schema": "0031",
     "browserChecks": 23,
     "serverDeployment": true,
-    "commit": "0c16523",
+    "commit": "4b7ee47",
     "ciTests": 729,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38078593167",
-    "deployedCommit": "0c16523",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38079964003",
+    "deployedCommit": "4b7ee47",
     "deployedSchema": "0031",
-    "liveScope": "Vorbereitung bei langen Gesprächen optimiert und auf der Test-VM geprüft: echte lokale Folgefrage nach 11.081 Zeichen synthetischem Assistentenkontext in27,31s erfolgreich, Kennzeichen aus der Textmitte erhalten und fehlerfreier Reload. Profil- und Skill-Bibliothek bleiben installiert; vorherige reale Skillprobe und synthetische Profil-/Cloudfeldprüfungen dokumentiert. Schema0031, bestehende Konfiguration erhalten. Breite Geräte-/Cloudmodell-/V1-Abnahme offen.",
+    "liveScope": "Neutrales Weiß-/Grau-/Indigodesign auf der Test-VM bestätigt: helle Navigation, Anthrazit-Dunkelmodus mit passendem Markenkontrast, Profil- und Skill-Dialoge, mobile Navigation und Breiten320/390/768/1440px. Keine gespeicherten Einstellungen oder Chats verändert. Lokale Kontrast-/Designprüfung320–1440px, öffentliche Galerie und alle18synthetischen Bilder aktualisiert. Schema0031 unverändert; breite reale Geräte-/Safari-/V1-Abnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }
