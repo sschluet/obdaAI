@@ -1,5 +1,21 @@
 # obdaAI — Status 10.10.2026
 
+## Recherchefehler auf Test-VM korrigiert – 10.10.2026
+
+Release a0eef3b / unverändertes Schema 0027 auf allen neun App-/Runnercontainern.
+CI 38054014847: sechs Jobs erfolgreich, 643 Tests und 16 Browserprüfungen.
+Der konkrete Managed-Services-Recherchewunsch wurde mit dem echten lokalen Router
+als chat/web eingeordnet; keine Datei-, Aufgaben-, Workflow- oder Systemaktion.
+Ohne Webfreigabe erscheint der zutreffende Freigabehinweis exakt einmal, auch nach
+Reload. Mit freigegebenen synthetischen Suchtreffern ist die Textrecherche durch
+API-Tests bestätigt; keine echte Web-/Cloudrecherche dieses privaten Verlaufs.
+Gepinnte HTTPS-Assets, reale lokale Antwort und Modellherkunft, mobile Ansicht und
+leeres Passwortformular bestätigt. Eigener QA-Chat archiviert und abgemeldet.
+Verschlüsseltes Off-VM-Backup hashgeprüft; Originalnachrichten-Digest, acht Overlays,
+Datenbank und Netzwerkregeln bewahrt. Öffentliche Vorstellung um synthetische
+Fehleransicht ergänzt: 54 Funktionen, zehn Screenshots inklusive Mobilansicht.
+Website-Veröffentlichung dieses abschließenden Belegstands noch ausstehend.
+
 ## Rechercheeinordnung und Fehleranzeige – implementiert, 10.10.2026
 
 Ein echter fehlgeschlagener Lauf auf der Test-VM wurde als web/retrieval/artifact/

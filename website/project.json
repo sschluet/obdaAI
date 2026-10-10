@@ -114,8 +114,8 @@
         },
         {
           "title": "Nachvollziehbare Recherche und Fehler",
-          "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Webfreigaben bleiben erforderlich. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar.",
-          "status": "implemented"
+          "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Webfreigaben bleiben erforderlich. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar. Die Rechercheeinordnung und einzelne Fehleranzeige sind auf der Test-VM geprüft; freigegebene Suchtreffer wurden synthetisch getestet.",
+          "status": "live"
         }
       ]
     },
@@ -425,14 +425,14 @@
   "development": {
     "mode": "local",
     "schema": "0027",
-    "browserChecks": 15,
+    "browserChecks": 16,
     "serverDeployment": true,
-    "commit": "a698d72",
-    "ciTests": 620,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38050170365",
-    "deployedCommit": "a698d72",
+    "commit": "a0eef3b",
+    "ciTests": 643,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38054014847",
+    "deployedCommit": "a0eef3b",
     "deployedSchema": "0027",
-    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, echte lokale QA-Antwort und Arbeitsraumsuche mit direkter Gesprächsöffnung. Passwort unverändert; breite Cloud-/Geräteabnahme bleibt offen.",
+    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, echte lokale QA-Antwort, Arbeitsraumsuche und konkrete Rechercheeinordnung mit einzelnem Freigabefehler nach Reload. Keine echte Web-/Cloudrecherche dieser Abnahme; Passwort unverändert. Breite Geräteabnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }
