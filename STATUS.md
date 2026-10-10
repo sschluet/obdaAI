@@ -1,5 +1,14 @@
 # obdaAI — Status 10.10.2026
 
+## Auto wartet auf Serverkonfiguration – implementiert, 10.10.2026
+
+Liveprüfung erkannte unmittelbares Neues-Gespräch-Klicken vor geladener Konfiguration:
+fehlende Cloudfreigabe trotz freigegebenem Server. Bedienelemente und Submit-Handler
+warten jetzt auf Modell-/Webkonfiguration; Logout verwirft diese und verspätete
+Antworten werden ignoriert. Deterministisch verzögerte Settingsantwort prüft auch
+Enter ohne Conversation-POST vor Freigabe. TS/Build und Routing-Browsercheck grün.
+Schema0029 und Backend017469b unverändert; Folge-CI und VM-Rollout ausstehend.
+
 ## Auto mit Cloud und nachvollziehbarem Routing – implementiert, 10.10.2026
 
 Gewöhnliche neue Auto-Gespräche und aktuelle Eingaben/Revisionen/Wiederholungen

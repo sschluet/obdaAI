@@ -98,7 +98,7 @@
         },
         {
           "title": "Auto mit lokalen Modellen und Cloud",
-          "description": "Gewöhnlicher Chat startet mit Auto einschließlich konfigurierter Cloudmodelle und aktivierter Websuche. Ausgewogene Regeln bevorzugen komplexe Recherche in der Cloud; private Kontexte und „Nur lokal“ bleiben geschützt. Neue Regeln implementiert; echte releasegebundene Abnahme folgt.",
+          "description": "Gewöhnlicher Chat startet mit Auto einschließlich konfigurierter Cloudmodelle und aktivierter Websuche. Ausgewogene Regeln bevorzugen komplexe Recherche in der Cloud; private Kontexte und „Nur lokal“ bleiben geschützt. Neue Regeln implementiert; echte releasegebundene Abnahme folgt. Neue Eingaben warten auf geladene Modell- und Webeinstellungen.",
           "status": "implemented"
         },
         {
