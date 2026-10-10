@@ -1,5 +1,13 @@
 # obdaAI — Status 10.10.2026
 
+## PostgreSQL-Sperrprüfung an neue Besitzprüfung angepasst –10.10.2026
+
+CI bestand762Tests; ein bestehender Vault-Paralleltest suchte ausschließlich die
+innere Memory-Sperre. Die zweite Transaktion wartet jetzt bereits an der äußeren
+Besitzsperre. Prüfung berücksichtigt beide Grenzen und verlangt unverändert, dass
+der zweite Scan bis zum Commit blockiert bleibt. Neue Lösch-/Migration-/FK- und
+Kostenbuchprüfungen waren erfolgreich. Finale CI für angepasste Prüfung folgt.
+
 ## Löschaktionen im vollständigen Browserlauf –10.10.2026
 
 Erste CI fand einen veralteten Projektgesprächs-Selektor: Der neue Löschbutton wurde

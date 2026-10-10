@@ -184,6 +184,8 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         assert client.get("/api/conversations?q=Geheimbegriff").json() == []
     # Real PostgreSQL serialization prevents overlapping API/worker Vault scans
     # from importing the same canonical note twice before either commits.
+    # Scoped ownership now precedes the memory index lock, so a competing scan
+    # can wait at either protected boundary.
     import concurrent.futures
     import tempfile
     import time
@@ -214,7 +216,7 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
                             probe.scalar(
                                 text(
                                     "SELECT count(*) FROM pg_locks WHERE locktype='advisory' "
-                                    "AND objid=791103043 AND NOT granted"
+                                    "AND objid IN (791103043, 791103049) AND NOT granted"
                                 )
                             )
                         )
