@@ -1,5 +1,19 @@
 # obdaAI — Status 10.10.2026
 
+## Drei eindeutige Modellmodi – implementiert, 10.10.2026
+
+Composer bietet genau Auto, Nur lokal und Cloud; alte Anbieter-Auswahl und
+Neugesprächs-Freigabedialog entfernt. Cloud fordert direkt den konfigurierten
+externen Anbieter an, ohne lokale Einordnung oder lokale Ersatzantwort. Lauf-Snapshot
+und Routingbeleg binden den Modus an Senden/Bearbeiten/Wiederholen. Private Projekte,
+Wissen, geschützte Historie, nicht geteilte Skills und selektive Profilfreigaben
+bleiben geschützt; Provider/Budget bleiben verbindlich. Websuche für Auto/Cloud
+verfügbar, in Nur lokal aus. Abgelehnte Eingaben/Bearbeitungen bleiben als Entwurf.
+Schema0033 unverändert. 96 gezielte Backendtests, Ruff/Mypy71, TypeScript/Build
+und Composer-/Routing-/Webpräferenz-Browserprüfungen bestanden. Website62 Features
+und22 synthetische Bilder, alle visuell sowie Galerie/Tastatur/Mobil geprüft.
+Breite GitHub-CI, reale VM-Abnahme und öffentliche Veröffentlichung folgen.
+
 ## Projektlogos auf Test-VM bestätigt – 10.10.2026
 
 Release `bc8f3a9`, Schema0033: [CI38087025082](https://github.com/sschluet/obdaAI/actions/runs/38087025082),

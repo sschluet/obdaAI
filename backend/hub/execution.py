@@ -199,7 +199,10 @@ async def execute_run(
         preparation_step = "lokale Einordnung"
         started = time.monotonic()
         yield ("run", {"id": run_id})
-        yield ("status", {"message": "Anfrage wird lokal eingeordnet"})
+        yield ("status", {"message": (
+            "Cloudantwort wird vorbereitet" if snapshot.get("model_cloud_only")
+            else "Anfrage wird lokal eingeordnet"
+        )})
         try:
             # Only a direct authenticated user message can request this bounded write.
             # Source/Memory/Web content and model output are never parsed as commands.
@@ -207,6 +210,8 @@ async def execute_run(
             remember = (
                 re.fullmatch(r"(?is)merke dir\s*[:：]?\s+(.+)", latest.content) if latest else None
             )
+            if remember and latest and snapshot.get("model_cloud_only"):
+                raise ExecutionLimitError("Memory speichern ist lokal. Auto oder Nur lokal wählen.")
             if remember and latest:
                 if cancelled():
                     raise asyncio.CancelledError
@@ -274,31 +279,47 @@ async def execute_run(
             selected: dict[str, ProviderConfig] = {}
             if isinstance(providers, Providers):
                 cfg, providers, selected = runtime_provider(
-                    factory, cfg, external_kind=c.cloud_provider
+                    factory, cfg, external_kind=c.cloud_provider,
+                    cloud_only=bool(snapshot.get("model_cloud_only"))
                 )
-                local = selected.get("local")
-                if not local or not local.enabled:
-                    raise ExecutionLimitError("Lokaler Router ist deaktiviert")
-                limits = json.loads(local.config)
-                if not {"text", "structured"}.issubset(limits["capabilities"]):
-                    raise ExecutionLimitError(
-                        "Lokaler Router benötigt Text und strukturierte Ausgabe"
-                    )
-                input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
-                if (
-                    sum(len(p.content) for p in parts) > limits["context_chars"]
-                    or input_bound + min(1024, limits["output_tokens"]) > limits["context_tokens"]
-                ):
-                    raise ExecutionLimitError("Kontextgrenze des lokalen Modells erreicht")
-                if any(p.label not in limits["allowed_labels"] for p in parts):
-                    raise PermissionError("Local model privacy class not allowed")
+                if not snapshot.get("model_cloud_only"):
+                    local = selected.get("local")
+                    if not local or not local.enabled:
+                        raise ExecutionLimitError("Lokaler Router ist deaktiviert")
+                    limits = json.loads(local.config)
+                    if not {"text", "structured"}.issubset(limits["capabilities"]):
+                        raise ExecutionLimitError(
+                            "Lokaler Router benötigt Text und strukturierte Ausgabe"
+                        )
+                    input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    if (
+                        sum(len(p.content) for p in parts) > limits["context_chars"]
+                        or input_bound + min(1024, limits["output_tokens"])
+                        > limits["context_tokens"]
+                    ):
+                        raise ExecutionLimitError("Kontextgrenze des lokalen Modells erreicht")
+                    if any(p.label not in limits["allowed_labels"] for p in parts):
+                        raise PermissionError("Local model privacy class not allowed")
             async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
                     raise asyncio.CancelledError
-                route = await providers.route(parts, roles)
+                if snapshot.get("model_cloud_only"):
+                    # Explicit Cloud needs no local inference. This route permits only
+                    # text and the separately authorized public research operation.
+                    from hub.routing import Route
+
+                    route = Route(capabilities=[Capability.CHAT], model_class="cloud",
+                                  reason="Cloud ausdrücklich gewählt")
+                    if latest and snapshot.get("web_search_allowed"):
+                        from hub.chat_artifacts import requests_public_research
+
+                        if requests_public_research(latest.content):
+                            route.capabilities.append(Capability.WEB)
+                else:
+                    route = await providers.route(parts, roles)
                 preparation_step = "Antwortvorbereitung"
-                classifier = route.model_class
-                classifier_reason = route.reason
+                classifier = None if snapshot.get("model_cloud_only") else route.model_class
+                classifier_reason = "" if snapshot.get("model_cloud_only") else route.reason
                 if latest:
                     from hub.skill_api import request_without_skill_prefix
 
@@ -328,6 +349,14 @@ async def execute_run(
                 )
                 if cancelled():
                     raise asyncio.CancelledError
+                if snapshot.get("model_cloud_only") and (
+                    route.read_tool or not set(route.capabilities).issubset(
+                        {Capability.CHAT, Capability.WEB}
+                    )
+                ):
+                    raise ExecutionLimitError(
+                        "Diese Anfrage benötigt lokale Werkzeuge. Auto oder Nur lokal wählen."
+                    )
                 if Capability.ARTIFACT in route.capabilities:
                     if not set(route.capabilities).issubset(
                         {Capability.CHAT, Capability.RETRIEVAL, Capability.ARTIFACT, Capability.WEB}
@@ -527,14 +556,20 @@ async def execute_run(
                     classifier=classifier, classifier_reason=classifier_reason,
                     cloud_enabled=cfg.cloud_enabled, cloud_allowed=c.cloud_allowed,
                     model_local_only=bool(snapshot.get("model_local_only")),
+                    model_cloud_only=bool(snapshot.get("model_cloud_only")),
                     private_context=bool(c.project_id or c.memory_scope),
                     private_parts=any(p.label == Privacy.LOCAL_ONLY for p in parts),
                     builtin=builtin_answer,
                 )
                 update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                if snapshot.get("model_cloud_only") and trace["blockers"]:
+                    raise ExecutionLimitError(
+                        "Cloud nicht möglich: " + "; ".join(trace["blockers"])
+                    )
                 external = trace["effective_model_class"] == "cloud"
                 if external:
                     route.answer = None
+                    builtin_answer = False
                 if external and (
                     snapshot.get("model_local_only")
                     or not cfg.cloud_enabled
@@ -543,6 +578,10 @@ async def execute_run(
                 ):
                     # Complex requests can still be answered locally. This is a
                     # policy choice, not an external provider outage fallback.
+                    if snapshot.get("model_cloud_only"):
+                        raise ExecutionLimitError(
+                            "Cloud nicht möglich: vollständige Freigabe fehlt"
+                        )
                     external = False
                     trace["effective_model_class"] = "local"
                     trace["blockers"].append(
@@ -573,14 +612,17 @@ async def execute_run(
                     builtin_answer = False
                     if sum(len(p.content) for p in parts) > cfg.context_limit:
                         raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
-                if external and selected:
+                if external and isinstance(providers, Providers):
                     cloud = selected.get(c.cloud_provider)
-                    if cloud is None:
+                    if cloud is None or not cloud.enabled:
                         trace["blockers"].append(
                             "Cloud-Provider ist nicht eingerichtet oder deaktiviert"
                         )
                         update(routing_trace=json.dumps(trace, ensure_ascii=False))
-                        raise ValueError("Cloud provider not configured")
+                        raise ExecutionLimitError(
+                            "Cloud-Anbieter ist nicht eingerichtet oder deaktiviert. "
+                            "In Einstellungen prüfen; keine lokale Ersatzantwort."
+                        )
                     check_egress(parts, external=True, provider_id=c.cloud_provider, grants=grants)
                     assert isinstance(providers, Providers)
                     cloud = await fresh_cloud_prices(factory, cloud, providers)
@@ -706,12 +748,18 @@ async def execute_run(
             # Class only: never emit prompts, SQL parameters, response bodies or
             # credentials to operational logs while retaining a useful diagnosis.
             logging.getLogger(__name__).warning("Chat execution failed (%s)", type(error).__name__)
-            update(error="Provider nicht verfügbar oder ungültige Antwort")
+            message = (
+                "Cloud-Anbieter nicht verfügbar oder ungültige Antwort; "
+                "keine lokale Ersatzantwort." if snapshot.get("model_cloud_only")
+                else "Provider nicht verfügbar oder ungültige Antwort"
+            )
+            update(error=message)
             yield (
                 "error",
                 {
-                    "message": "Antwort fehlgeschlagen. Lokalen Dienst und Provider prüfen; "
-                    "kein Cloud-Fallback."
+                    "message": (message if snapshot.get("model_cloud_only") else
+                                "Antwort fehlgeschlagen. Lokalen Dienst und Provider prüfen; "
+                                "kein Cloud-Fallback.")
                 },
             )
         finally:

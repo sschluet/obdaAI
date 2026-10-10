@@ -1,12 +1,11 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import type {KeyboardEvent} from 'react';
-import {Plus,Sparkles,LockKeyhole,Globe,ChevronDown,Check,FileText,FolderPlus,ListChecks,SlidersHorizontal,BookOpen,ArrowUpRight} from 'lucide-react';
+import {Plus,Sparkles,LockKeyhole,Globe,ChevronDown,Check,FileText,FolderPlus,ListChecks,SlidersHorizontal,BookOpen,Cloud} from 'lucide-react';
 import './composer-tools.css';
 
 export type ComposerAction='files'|'sources'|'task'|'preferences'|'skills';
 export type ComposerToolsProps={
  choice:string;
- providers:Array<{id:string;label:string}>;
  cloudEnabled:boolean;
  cloudBlocked:boolean;
  disabled:boolean;
@@ -19,14 +18,13 @@ export type ComposerToolsProps={
 };
 type Menu='actions'|'models';
 
-/** Web preference is explicit and persistent; cloud model grants have their own flow. */
-export function ComposerTools({choice,providers,cloudEnabled,cloudBlocked,disabled,webConfigured,webAllowed,sourceLabel,onChooseModel,onToggleWeb,onAction}:ComposerToolsProps){
+/** Modes apply to the next current input; provider setup stays in Settings. */
+export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConfigured,webAllowed,sourceLabel,onChooseModel,onToggleWeb,onAction}:ComposerToolsProps){
  const [menu,setMenu]=useState<Menu|null>(null);
  const root=useRef<HTMLDivElement>(null),actions=useRef<HTMLButtonElement>(null),models=useRef<HTMLButtonElement>(null),popup=useRef<HTMLDivElement>(null);
  const id=useId();
  const isLocal=choice==='local';
- const provider=providers.find(p=>'cloud:'+p.id===choice);
- const modelLabel=isLocal?'Nur lokal':provider?'Auto + '+provider.label:cloudEnabled&&!cloudBlocked?'Auto · Lokal + Cloud':'Auto · Lokal';
+ const modelLabel=isLocal?'Nur lokal':choice==='cloud'?'Cloud':'Auto';
  const webDisabled=disabled||isLocal||!webConfigured;
  const webHint=isLocal?'Im Modus Nur lokal bleibt die Websuche ausgeschaltet.':!webConfigured?'Websuche ist noch nicht eingerichtet.':webAllowed?'Automatische Webrecherche ausschalten.':'Automatische Webrecherche einschalten.';
  function close(restore=false){const trigger=menu==='actions'?actions.current:models.current;setMenu(null);if(restore)trigger?.focus()}
@@ -49,7 +47,7 @@ export function ComposerTools({choice,providers,cloudEnabled,cloudBlocked,disabl
  function choose(value:string){close(true);onChooseModel(value)}
  return <div className="composer-tools" ref={root} onKeyDown={keys}>
   <button ref={actions} className="composer-tool composer-add" type="button" aria-label="Aktionen und Anhänge" aria-haspopup="menu" aria-expanded={menu==='actions'} aria-controls={menu==='actions'?id+'-actions':undefined} disabled={disabled} onClick={()=>toggle('actions')} onKeyDown={event=>triggerKeys(event,'actions')} title="Dateien, Quellen, Aufgaben und Antwortstil"><Plus size={19}/></button>
-  <button ref={models} className="composer-tool composer-model" type="button" aria-label="Modellwahl" aria-haspopup="menu" aria-expanded={menu==='models'} aria-controls={menu==='models'?id+'-models':undefined} disabled={disabled} onClick={()=>toggle('models')} onKeyDown={event=>triggerKeys(event,'models')}><span className="composer-model-icon">{isLocal?<LockKeyhole size={14}/>:<Sparkles size={14}/>}</span><span>{modelLabel}</span><ChevronDown className="composer-chevron" size={13}/></button>
+  <button ref={models} className="composer-tool composer-model" type="button" aria-label="Modellwahl" aria-haspopup="menu" aria-expanded={menu==='models'} aria-controls={menu==='models'?id+'-models':undefined} disabled={disabled} onClick={()=>toggle('models')} onKeyDown={event=>triggerKeys(event,'models')}><span className="composer-model-icon">{isLocal?<LockKeyhole size={14}/>:choice==='cloud'?<Cloud size={14}/>:<Sparkles size={14}/>}</span><span>{modelLabel}</span><ChevronDown className="composer-chevron" size={13}/></button>
   {sourceLabel&&<button className="composer-tool composer-source" type="button" disabled={disabled} onClick={()=>onAction('sources')} aria-label="Quellen für dieses Gespräch öffnen"><BookOpen size={14}/><span>{sourceLabel}</span></button>}
   <button className={'composer-tool composer-web'+(webAllowed?' is-enabled':'')} type="button" aria-label={webAllowed?'Websuche aktiviert':'Websuche'} aria-pressed={webAllowed} disabled={webDisabled} title={webHint} onClick={onToggleWeb}><Globe size={15}/><span>{webAllowed?'Websuche an':'Websuche'}</span>{webAllowed&&<Check size={13}/>}</button>
   {menu&&<div className="composer-popover" ref={popup} id={id+'-'+menu} role="menu" aria-label={menu==='actions'?'Aktionen und Anhänge':'Modellwahl'}>
@@ -63,8 +61,7 @@ export function ComposerTools({choice,providers,cloudEnabled,cloudBlocked,disabl
    </>:<>
     <button type="button" role="menuitemradio" aria-label="Auto" aria-checked={choice==='auto'} onClick={()=>choose('auto')}><Sparkles size={19}/><span><strong>Auto</strong><small>{cloudBlocked?'Private Quellen bleiben lokal':cloudEnabled?'Lokal oder Cloud nach deinen Routingregeln':'Lokales Modell · Cloud am Server ausgeschaltet'}</small></span>{choice==='auto'&&<Check size={17}/>}</button>
     <button type="button" role="menuitemradio" aria-label="Nur lokal" aria-checked={isLocal} onClick={()=>choose('local')}><LockKeyhole size={19}/><span><strong>Nur lokal</strong><small>Lokales Modell, ohne Cloud und Websuche</small></span>{isLocal&&<Check size={17}/>}</button>
-    {cloudEnabled&&providers.length>0&&<div className="composer-menu-divider">Weitere Cloudanbieter</div>}
-    {cloudEnabled&&providers.map(item=><button key={item.id} type="button" role="menuitemradio" aria-label={'Auto + '+item.label} aria-checked={choice==='cloud:'+item.id} disabled={cloudBlocked} onClick={()=>choose('cloud:'+item.id)}><ArrowUpRight size={19}/><span><strong>Auto + {item.label}</strong><small>{cloudBlocked?'Für Projekt- und Wissensgespräche nicht verfügbar':'Neues Gespräch · Anbieter und Übertragung bestätigen'}</small></span>{choice==='cloud:'+item.id&&<Check size={17}/>}</button>)}
+    <button type="button" role="menuitemradio" aria-label="Cloud" aria-checked={choice==='cloud'} disabled={cloudBlocked||!cloudEnabled} onClick={()=>choose('cloud')}><Cloud size={19}/><span><strong>Cloud</strong><small>{cloudBlocked?'Private Projekt- und Wissensquellen bleiben lokal':!cloudEnabled?'Cloud am Server ausgeschaltet':'Konfiguriertes Cloudmodell für diese Nachricht verwenden'}</small></span>{choice==='cloud'&&<Check size={17}/>}</button>
    </>}
   </div>}
  </div>;

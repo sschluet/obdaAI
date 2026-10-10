@@ -71,4 +71,5 @@ profile fields and skill revisions need their own explicit cloud sharing. See
 [personal profile](docs/personal-profile.md) and STATUS for acceptance evidence.
 
 Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.
+Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen Anbieter-Dialog; Unterschiede und Freigabegrenzen stehen in [docs/model-modes.md](docs/model-modes.md).
 Projekte erhalten unter **Projekt bearbeiten** ein konfigurierbares Logo aus 32 frei verwendbaren Lucide-Symbolen; Suche, Vorschau, lokale Darstellung und Lizenzhinweise siehe [docs/project-icons.md](docs/project-icons.md).

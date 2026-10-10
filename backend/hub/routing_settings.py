@@ -26,6 +26,7 @@ class RoutingInput(RoutingOptions):
 class PreviewInput(StrictInput):
     prompt: str = Field(min_length=1, max_length=12000)
     model_local_only: bool = False
+    model_cloud_only: bool = False
     private_context: bool = False
     cloud_allowed: bool = True
 
@@ -51,6 +52,7 @@ def decision(
     cloud_allowed: bool,
     model_local_only: bool,
     private_context: bool,
+    model_cloud_only: bool = False,
     private_parts: bool = False,
     builtin: bool = False,
     preview: bool = False,
@@ -88,6 +90,9 @@ def decision(
         reasons.append("Lokale Einordnung entscheidet; kein automatischer Komplexitätsaufschlag")
     else:
         reasons.append("Ausgewogene Auswahl anhand der lokalen Einordnung")
+    if model_cloud_only:
+        chosen = "cloud"
+        reasons = ["Cloud für diesen Lauf ausdrücklich gewählt; Komplexität ist unerheblich"]
     blockers = []
     if model_local_only:
         blockers.append("Nur lokal ist für diesen Lauf gewählt")
@@ -97,7 +102,7 @@ def decision(
         blockers.append("Cloud ist für diesen Gesprächskontext nicht freigegeben")
     if private_context or private_parts:
         blockers.append("Der Antwortkontext enthält lokal geschützte Inhalte")
-    if builtin:
+    if builtin and not model_cloud_only:
         blockers.append("Diese Antwort ist eine lokale Systemauskunft")
     return {
         "policy_revision": options.get("revision", 0),
@@ -105,7 +110,10 @@ def decision(
         "classifier_model_class": classifier,
         "classifier_reason": classifier_reason,
         "policy_model_class": chosen,
-        "effective_model_class": "local" if blockers else chosen,
+        "effective_model_class": (
+            ("blocked" if model_cloud_only else "local") if blockers else chosen
+        ),
+        "requested_mode": "cloud" if model_cloud_only else "local" if model_local_only else "auto",
         "complexity": "complex" if complex_request else "simple",
         "reasons": reasons,
         "blockers": blockers,
@@ -149,6 +157,7 @@ def install_routing_settings_api(
             cloud_enabled=cfg.cloud_enabled,
             cloud_allowed=body.cloud_allowed,
             model_local_only=body.model_local_only,
+            model_cloud_only=body.model_cloud_only,
             private_context=body.private_context,
             preview=True,
         )

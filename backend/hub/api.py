@@ -87,6 +87,7 @@ class ChatInput(Input):
     cloud_provider: Literal["openrouter", "openai", "anthropic"] | None = None
     local_only: bool = False
     model_local_only: bool = False
+    model_cloud_only: bool = False
     web_search_allowed: bool = False
     web_query: str | None = Field(default=None, min_length=1, max_length=500)
     content: str = Field(min_length=1, max_length=16000)
@@ -110,6 +111,7 @@ class RetryInput(Input):
     cloud_provider: Literal["openrouter", "openai", "anthropic"] | None = None
     local_only: bool = False
     model_local_only: bool = False
+    model_cloud_only: bool = False
     web_search_allowed: bool = False
     web_query: str | None = Field(default=None, min_length=1, max_length=500)
     request_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
@@ -536,6 +538,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             web_query=body.web_query,
             local_only=body.local_only,
             model_local_only=body.model_local_only,
+            model_cloud_only=body.model_cloud_only,
         )
         start_development_run(run_id)
         return response_for(run_id, request)
@@ -551,8 +554,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         web_query: str | None = None,
         local_only: bool = False,
         model_local_only: bool = False,
+        model_cloud_only: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
+        if model_cloud_only and (local_only or model_local_only or cloud_allowed is False):
+            raise HTTPException(422, "Cloud und Nur lokal können nicht kombiniert werden")
+        if model_cloud_only:
+            cloud_allowed = True
         model_local_only = model_local_only or cloud_allowed is False
         if local_only and web_search_allowed:
             raise HTTPException(422, "Nur lokal erlaubt keine externe Websuche")
@@ -564,6 +572,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "web_search_allowed": web_search_allowed,
             "local_only": local_only,
             "model_local_only": model_local_only,
+            "model_cloud_only": model_cloud_only,
             "edit": [
                 edit[0],
                 edit[1].model_dump(exclude={"web_query"} if edit[1].web_query is None else set()),
@@ -685,6 +694,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 ),
                 "web_search_allowed": web_search_allowed,
                 "model_local_only": model_local_only,
+                "model_cloud_only": model_cloud_only,
                 "parts": [
                     ContextPart(
                         content=m.content,
@@ -722,6 +732,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if local_only or model_local_only:
                 for part in snapshot["parts"]:
                     part["label"] = Privacy.LOCAL_ONLY.value
+            if model_cloud_only and any(
+                p["label"] == Privacy.LOCAL_ONLY.value for p in snapshot["parts"]
+            ):
+                raise HTTPException(
+                    409, "Cloud nicht möglich: geschützte Historie oder Skills bleiben lokal. "
+                    "Neues Gespräch beginnen oder Auto/Nur lokal wählen."
+                )
             if sum(len(p["content"]) for p in snapshot["parts"]) > cfg.context_limit:
                 raise HTTPException(413, "Projektkontext zu groß; Quellen gezielter durchsuchen")
             run = Run(
@@ -774,6 +791,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             cloud_allowed=body.cloud_allowed,
             cloud_provider=body.cloud_provider,
             model_local_only=body.model_local_only,
+            model_cloud_only=body.model_cloud_only,
             web_search_allowed=body.web_search_allowed,
             web_query=body.web_query,
         )
@@ -800,6 +818,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             web_query=body.web_query,
             local_only=body.local_only,
             model_local_only=body.model_local_only,
+            model_cloud_only=body.model_cloud_only,
         )
         start_development_run(run_id)
         return response_for(run_id, request)

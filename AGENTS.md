@@ -52,6 +52,12 @@ revision, public web results bound to that run, and their permitted derivatives.
 It does not relabel older LOCAL_ONLY history or authorize private projects,
 knowledge, Vault or Memory. Those contexts and the visible Nur lokal choice stay
 local; configured provider, server and cost boundaries continue to apply.
+On 10.10.2026 the user requested exactly Auto, Nur lokal and Cloud in the composer.
+Cloud explicitly requests the configured external model for the current ordinary
+question or edited/retried question; it bypasses local classification and must not
+silently answer locally if blocked. Existing private context, history, profile and
+skill permissions remain binding. This is deliberate Cloud selection, not fallback
+after a local outage. No new conversation or extra provider-confirmation dialog.
 On 10.10.2026 the user explicitly requested web research without repeated confirmation.
 The browser's persistent Websuche setting is enabled by default and authorizes the
 current entered question as the public query on each authenticated run, edit and

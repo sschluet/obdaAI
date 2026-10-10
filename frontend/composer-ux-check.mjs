@@ -18,7 +18,7 @@ try {
  await page.keyboard.press('ArrowDown');if(!await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Arrow navigation failed');
  await page.keyboard.press('Escape');if(!await model.evaluate(e=>e===document.activeElement))throw Error('Escape lost model trigger focus');
  let creates=0;page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/api/conversations'))creates++});
- await model.click();await page.getByRole('menuitemradio',{name:'Auto + OpenRouter',exact:true}).click();const cloud=page.getByRole('dialog',{name:'Cloud-Modell wählen',exact:true});await cloud.waitFor();await page.keyboard.press('Escape');if(await cloud.count()||creates)throw Error('Cloud cancellation created a grant/chat');if(!await model.evaluate(e=>e===document.activeElement))throw Error('Cloud cancel lost focus');
+ await model.click();const modes=page.getByRole('menuitemradio');if(JSON.stringify(await modes.evaluateAll(items=>items.map(e=>e.getAttribute('aria-label'))))!==JSON.stringify(['Auto','Nur lokal','Cloud']))throw Error('Unexpected model modes');await page.getByRole('menuitemradio',{name:'Cloud',exact:true}).click();if(await page.getByRole('dialog').count()||creates)throw Error('Cloud selection creates a dialog or a new conversation');if(!await model.evaluate(e=>e===document.activeElement))throw Error('Cloud selection lost focus');
  await model.click();await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).click();
  if(!await composer.getByRole('button',{name:'Websuche',exact:true}).isDisabled())throw Error('Local mode permits web search');
  await model.click();await page.getByRole('menuitemradio',{name:'Auto',exact:true}).click();

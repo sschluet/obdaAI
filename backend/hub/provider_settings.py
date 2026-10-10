@@ -162,6 +162,7 @@ def runtime_provider(
     cfg: Settings,
     *,
     local_only: bool = False,
+    cloud_only: bool = False,
     external_kind: str = "openrouter",
 ) -> tuple[Settings, Providers, dict[str, ProviderConfig]]:
     with factory() as db:
@@ -169,6 +170,8 @@ def runtime_provider(
         query = select(ProviderConfig).where(ProviderConfig.is_default.is_(True))
         if local_only:
             query = query.where(ProviderConfig.kind == "local")
+        elif cloud_only:
+            query = query.where(ProviderConfig.kind == external_kind)
         rows = list(db.scalars(query))
         db.commit()
     selected = {r.kind: r for r in rows}
@@ -176,7 +179,10 @@ def runtime_provider(
     keys: dict[str, str] = {}
     if local_only:
         values.update(cloud_enabled=False, openrouter_model="", openrouter_key_file="")
-    for kind in ("local",) if local_only else ("local", external_kind):
+    kinds = (
+        ("local",) if local_only else (external_kind,) if cloud_only else ("local", external_kind)
+    )
+    for kind in kinds:
         row = selected.get(kind)
         if not row or not row.enabled:
             values[("local" if kind == "local" else "openrouter") + "_model"] = ""
