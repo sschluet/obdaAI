@@ -20,6 +20,7 @@ from hub.db_locks import ownership_lock
 from hub.deletion import DeletionInput, permanently_delete, preview
 from hub.extract import EXTENSIONS, MAX_BYTES
 from hub.knowledge import calculate, extract_source, original, retrieve, store
+from hub.project_icons import DEFAULT_PROJECT_ICON, PROJECT_ICONS, ProjectIcon
 
 Auth = Annotated[LoginSession, Depends(require_session)]
 
@@ -31,6 +32,7 @@ class ProjectInput(BaseModel):
     instructions: str = Field(default="", max_length=8000)
     revision: int | None = None
     archived: bool = False
+    icon: ProjectIcon | None = None
 
 
 class WebsiteInput(BaseModel):
@@ -44,6 +46,7 @@ def project_info(p: Project) -> dict[str, Any]:
     return {
         "id": p.id,
         "name": p.name,
+        "icon": p.icon,
         "description": p.description,
         "instructions": p.instructions,
         "label": p.label,
@@ -68,6 +71,10 @@ def source_info(s: Source) -> dict[str, Any]:
 
 
 def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    @app.get("/api/project-icons")
+    def project_icons(auth: Auth) -> list[str]:
+        return list(PROJECT_ICONS)
+
     @app.get("/api/projects")
     def projects(auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:
@@ -91,7 +98,10 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
         with factory() as db:
             ownership_lock(db)
             project = Project(
-                name=body.name, description=body.description, instructions=body.instructions
+                name=body.name,
+                description=body.description,
+                instructions=body.instructions,
+                icon=body.icon or DEFAULT_PROJECT_ICON,
             )
             db.add(project)
             db.commit()
@@ -108,6 +118,8 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
                 raise HTTPException(409, "Projekt inzwischen geändert")
             project.name, project.description = body.name, body.description
             project.instructions, project.archived = body.instructions, body.archived
+            if body.icon is not None:
+                project.icon = body.icon
             project.revision += 1
             db.commit()
             return project_info(project)

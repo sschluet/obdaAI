@@ -181,6 +181,7 @@ class Project(Base):
     __tablename__ = "projects"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(160))
+    icon: Mapped[str] = mapped_column(String(40), default="folder", server_default="folder")
     description: Mapped[str] = mapped_column(Text, default="")
     instructions: Mapped[str] = mapped_column(Text, default="")
     label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")

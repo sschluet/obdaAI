@@ -14,8 +14,14 @@
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Unterlagen per Drag-and-drop oder Dateiauswahl lokal zusammenführen und im Projektchat verwenden.",
+      "description": "Unterlagen lokal zusammenführen und im Projektchat verwenden. Ein frei gewähltes Projektsymbol macht den fiktiven Raum Aurora sofort erkennbar.",
       "image": "assets/projects.png"
+    },
+    {
+      "id": "projecticons",
+      "title": "Ein Zeichen für jedes Projekt.",
+      "description": "Ein persönliches Projektsymbol aus 32 frei nutzbaren Lucide-Icons suchen und als eigenes Projektlogo wählen. Ausschließlich fiktives Projekt Aurora.",
+      "image": "assets/projecticons.png"
     },
     {
       "id": "files",
@@ -209,6 +215,11 @@
           "title": "Eigene Projekträume",
           "description": "Getrennte Gespräche, Quellen und erstellte Dateien. Projektdaten werden nicht automatisch mit fremden Räumen vermischt.",
           "status": "live"
+        },
+        {
+          "title": "Konfigurierbare Projektsymbole",
+          "description": "Projekte mit einem eigenen Symbol schneller wiedererkennen. Suchbare Auswahl aus 32 lokal eingebundenen, frei verwendbaren Lucide-Icons; die Wahl bleibt gespeichert und erscheint in Projektübersicht und Projektchat.",
+          "status": "implemented"
         },
         {
           "title": "Dokumentuploads",

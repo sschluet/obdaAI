@@ -29,7 +29,10 @@ for group in data["groups"]:
 for shot in data["screenshots"]:
     assert re.fullmatch(r"assets/[a-z]+\.png", shot["image"])
     assert (SOURCE / shot["image"]).is_file()
-public_files = ["index.html", "styles.css", "app.js", "project.json", "assets/mark.svg"]
+public_files = [
+    "index.html", "styles.css", "app.js", "project.json", "assets/mark.svg",
+    "assets/lucide-license.txt",
+]
 public_files += [s["image"] for s in data["screenshots"]]
 public_files.append("assets/mobile.png")
 if output.exists():

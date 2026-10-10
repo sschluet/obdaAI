@@ -1,5 +1,21 @@
 # obdaAI — Status 10.10.2026
 
+## Konfigurierbare Projektlogos – implementiert, 10.10.2026
+
+32 lokal eingebundene, frei verwendbare Lucide-Symbole mit Suche, Vorschau,
+Tastaturauswahl und Rücksetzung auf Ordner. Erstellung und Projektbearbeitung
+speichern das Symbol; Projektkarten, Kopf und Projektchat zeigen es. Auswahl bleibt
+bis zum Speichern ein Entwurf; Abbrechen/Escape erhalten das gespeicherte Logo.
+Schema0033 ergänzt reine Metadaten mit Ordner-Voreinstellung; ältere PATCH-Clients
+setzen Symbole nicht zurück. Allowlist weist externe URLs/SVG und unbekannte Namen
+ab. Vollständige Lucide-/Feather-Lizenzhinweise mit App und Website ausgeliefert.
+68 Backendtests bestanden, neuer echter PostgreSQL-Migrationstest folgt in CI;
+Ruff/Mypy71 und TypeScript/Build erfolgreich; Hauptpaket durch verzögertes Laden
+487,20KB ohne Größenwarnung. Neue Icon- und bestehende Arbeitsraum-Browserprüfung
+bestanden; Suche, Auswahl, Persistenz/Reload, Abbrechen/Escape/Fokus, Archivierung
+und 320px geprüft. Alle21 synthetischen Bilder visuell geprüft, Websitegalerie und
+Tastatur/Mobil320–1440px erfolgreich. Breite CI, VM-Abnahme und Veröffentlichung folgen.
+
 ## Endgültige Löschung auf Test-VM bestätigt – 10.10.2026
 
 Release `45f93c8`, Schema0032: [CI38085032750](https://github.com/sschluet/obdaAI/actions/runs/38085032750),
