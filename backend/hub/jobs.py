@@ -146,6 +146,7 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
                     db.add(
                         Message(
                             conversation_id=run.conversation_id,
+                            run_id=run.id,
                             role="assistant",
                             content=output,
                             label=Privacy.LOCAL_ONLY,

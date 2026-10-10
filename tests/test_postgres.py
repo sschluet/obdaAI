@@ -15,7 +15,7 @@ from hub.db import Conversation, Message, Run, RunEvent, session_factory
 from hub.jobs import enqueue, requeue_stalled, worker_app
 from hub.routing import Route
 from hub.titles import reserve_title
-from sqlalchemy import create_engine, inspect, select, text
+from sqlalchemy import create_engine, inspect, select, text, update
 from test_chat import FakeProviders
 
 
@@ -117,7 +117,13 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         )
     # A stalled task redispatch reconciles output without a second model call.
     with factory() as db:
-        stale = Run(conversation_id=chat_id, status="streaming")
+        stale = Run(
+            conversation_id=chat_id,
+            status="streaming",
+            provider="openrouter",
+            model="synthetic/crashed-answer-model",
+            answer_model_used=True,
+        )
         db.add(stale)
         db.flush()
         db.add(
@@ -151,6 +157,11 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         assert db.get(Run, stale_id).status == "interrupted"
         partial = db.scalar(select(Message).where(Message.content == "SYNTHETIC_CRASH_PARTIAL"))
         assert partial is not None and partial.label == "LOCAL_ONLY"
+        assert partial.run_id == stale_id
+        recovered = db.get(Run, partial.run_id)
+        assert recovered.provider == "openrouter"
+        assert recovered.model == "synthetic/crashed-answer-model"
+        assert recovered.answer_model_used is True
     with factory() as db:
         db.add(Message(conversation_id=chat_id, role="user", content="Häuser wurden gebaut"))
         db.add(
@@ -218,6 +229,15 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
             with factory() as db:
                 imported = list(db.scalars(select(Memory).where(Memory.path == "synthetic.md")))
                 assert len(imported) == 1 and not imported[0].deleted
+    with pytest.raises(RuntimeError, match="Preserve message processing provenance"):
+        command.downgrade(cfg, "base")
+    # This guarded loopback hub_ci database is disposable. Explicitly remove
+    # this test's scratch provenance before exercising a destructive reset.
+    # Production must retain it and the downgrade guard remains unchanged.
+    with factory() as db:
+        db.execute(update(Message).where(Message.conversation_id == chat_id).values(run_id=None))
+        db.execute(update(Run).where(Run.conversation_id == chat_id).values(answer_model_used=None))
+        db.commit()
     engine.dispose()
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")
