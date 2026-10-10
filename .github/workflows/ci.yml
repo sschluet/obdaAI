@@ -85,6 +85,7 @@ jobs:
           node web-settings-check.mjs
           node processing-check.mjs
           node run-error-check.mjs
+          node chat-scroll-check.mjs
           node pipeline-check.mjs
           node workbench-check.mjs
           node task-ux-check.mjs

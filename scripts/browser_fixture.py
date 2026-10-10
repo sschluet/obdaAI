@@ -203,6 +203,10 @@ class SyntheticProvider:
         return "Synthetic automatic title"
 
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route:
+        if any("SYNTHETIC_LONG_STREAM_RESPONSE" in p.content for p in parts):
+            return Route(
+                capabilities=["chat"], model_class="local", reason="synthetic delayed stream"
+            )
         if any("SYNTHETIC_ANSWER_FILE_REQUEST" in p.content for p in parts):
             return Route(
                 capabilities=["artifact"], model_class="local", reason="synthetic answer file"
@@ -251,6 +255,17 @@ class SyntheticProvider:
         external: bool,
         grants: list[CloudGrant],
     ) -> AsyncIterator[str]:
+        if any("SYNTHETIC_LONG_STREAM_RESPONSE" in p.content for p in parts):
+            assert not external and not grants
+            for index in range(48):
+                yield (
+                    f"\n\n### Synthetischer Abschnitt {index + 1}\n\n"
+                    "Dieser isolierte Testtext prüft das Lesen einer langen Antwort während "
+                    "der Erzeugung. Die Ansicht soll an der gewählten Leseposition bleiben. "
+                    "Weitere Absätze kommen zeitversetzt über den echten Ereignisstrom.\n"
+                )
+                await asyncio.sleep(0.3)
+            return
         if parts and parts[0].source_id == "artifact-draft-policy":
             assert not external and not grants
             if '"tiles"' in parts[0].content:

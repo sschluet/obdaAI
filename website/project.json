@@ -64,6 +64,12 @@
       "title": "Recherche nach deinen Vorgaben.",
       "description": "Eigener Einstellungsbereich für Webrecherche: zentrale Aktivierung, Suchsprache, SafeSearch, Trefferanzahl und Zeitlimit. Die Verbindung lässt sich mit einer festen öffentlichen Beispielsuche prüfen. Synthetische Demo.",
       "image": "assets/websettings.png"
+    },
+    {
+      "id": "chatreading",
+      "title": "Lange Antworten in deinem Tempo.",
+      "description": "Beim Hochscrollen bleibt die Leseposition erhalten. Über „Zum Ende“ wieder an die neueste Antwort springen; der Chat bleibt per Tastatur und mobil bedienbar. Ausschließlich synthetischer langer Beispieltext.",
+      "image": "assets/chatreading.png"
     }
   ],
   "groups": [
@@ -122,6 +128,11 @@
           "title": "Nachvollziehbare Recherche und Fehler",
           "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Der dauerhafte Webschalter bestimmt die Sucherlaubnis ohne erneute Bestätigungsdialoge. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar. Die Rechercheeinordnung und einzelne Fehleranzeige sind auf der Test-VM geprüft; freigegebene Suchtreffer wurden synthetisch getestet.",
           "status": "live"
+        },
+        {
+          "title": "Leseposition bei langen Streaming-Antworten",
+          "description": "Neue Antwortteile folgen am Gesprächsende automatisch. Eigenes Hochscrollen unterbricht das Folgen und bewahrt die Leseposition; „Zum Ende“ setzt es fort. Der Gesprächsbereich ist per Tastatur erreichbar und bleibt auch mobil lesbar. Lokale Browserabnahme und Test-VM-Prüfung stehen für diese Lieferung noch aus.",
+          "status": "implemented"
         }
       ]
     },

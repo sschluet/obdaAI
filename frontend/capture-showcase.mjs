@@ -71,5 +71,24 @@ try{
  await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();await page.getByLabel('Nachricht',{exact:true}).fill('Ein rein synthetisches Beispiel: Zeige eine kurze Antwort mit Herkunftshinweis.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Lokal · synthetic-fixture'}).waitFor();await capture('processing');
  await page.getByRole('button',{name:'Arbeitsraum durchsuchen',exact:true}).click();const search=page.getByRole('dialog',{name:'Suchen und weiterarbeiten',exact:true});await search.getByRole('combobox').fill('Projekt');await search.getByRole('option').first().waitFor();await capture('search');await search.getByRole('button',{name:'Suche schließen',exact:true}).click();
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Ten real UI screenshots captured with synthetic data only.');
+ // A stored synthetic long answer illustrates detached reading; never open real chats.
+ const csrf=(await (await page.request.get(base+'/api/me')).json()).csrf;
+ const created=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':csrf,Origin:base},data:{cloud_allowed:false}});
+ if(!created.ok())throw Error('Synthetic reading conversation could not be created');
+ const reading=await created.json();
+ const sections=[
+ ['Ein gemeinsamer Ausgangspunkt','Projekt Aurora bündelt Ideen, Quellen und nächste Schritte in einem persönlichen Arbeitsraum. Ein klarer Überblick erleichtert den Einstieg: Was wissen wir bereits, welche Fragen sind offen und welches Ergebnis brauchen wir als Nächstes?'],
+ ['Erst verstehen, dann entscheiden','Eine gute Recherche ordnet Informationen ein. Wir halten Annahmen sichtbar, vergleichen Perspektiven und unterscheiden gesicherte Aussagen von offenen Fragen. So entsteht ein nachvollziehbarer Weg von den ersten Notizen zu einer belastbaren Entscheidung.'],
+ ['In deinem Tempo lesen','Lange Antworten dürfen in Ruhe gelesen werden. Wenn du zu einem früheren Abschnitt zurückgehst, bleibt deine Leseposition erhalten. Der Text kann weiter wachsen, während du einen Gedanken prüfst. Über „Zum Ende“ kehrst du direkt zum neuesten Abschnitt zurück.'],
+ ['Aus Wissen werden nächste Schritte','Wir führen die Ergebnisse in einer kurzen Übersicht zusammen: Ziel, wichtigste Erkenntnisse, offene Fragen und konkrete nächste Schritte. Ein kleiner, klarer nächster Schritt ist hilfreicher als eine lange Liste ohne Reihenfolge.']
+ ];
+ const longText='## Ein klarer Blick auf Projekt Aurora\n\n*Synthetischer Beispieltext zur Illustration der Leseposition.*\n\n'+Array.from({length:12},(_,i)=>'### '+(i+1)+'. '+sections[i%sections.length][0]+'\n\n'+sections[i%sections.length][1]+'\n\n').join('');
+ await page.route('**/api/conversations/'+reading.id,async route=>{if(route.request().method()!=='GET'){await route.continue();return}await route.fulfill({json:{...reading,title:'Projekt Aurora · Gedanken in Ruhe lesen',title_status:'succeeded',messages:[{id:'synthetic-reading-user',role:'user',content:'Zeige mir eine ausführliche Übersicht zu unserem Beispielprojekt Aurora.',label:'LOCAL_ONLY'},{id:'synthetic-reading-answer',role:'assistant',content:longText,label:'LOCAL_ONLY',processing:{run_id:'synthetic-reading-run',provider:'local',model:'synthetic-fixture',model_used:true,status:'succeeded'}}],runs:[]}});});
+ await page.goto(base+'/?view=Chat&chat='+reading.id);
+ await page.getByRole('heading',{name:'Ein klarer Blick auf Projekt Aurora',exact:true}).waitFor();
+ await page.locator('.chat-scroll').hover();await page.mouse.wheel(0,-10000);
+ await page.getByRole('button',{name:'Zum Ende',exact:true}).waitFor();
+ await capture('chatreading');
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('Eleven gallery screenshots plus mobile captured with synthetic data only.');
 }finally{await browser.close();}

@@ -254,3 +254,19 @@ Abnahme: Release8337ebf / Schema0028, CI38058159977: 667 Tests und
 Reload und Mobilansicht geprüft; reale Konfiguration unverändert. Migration,
 Originalnachrichten-Digest und Off-VM-Sicherung bestätigt.
 Details: [Webrecherche-Einstellungen](web-settings.md).
+
+
+## 10.10.2026: Leseposition während langer Antworten
+
+Der Chat folgt neuen Antwortteilen nur, solange der Benutzer am Gesprächsende
+liest. Eigene Aufwärtsbewegungen lösen die Ansicht vom Ende; weitere
+Streamingteile, Statuswechsel und die Speicherung der fertigen Antwort sollen
+die Leseposition dann bewahren. „Zum Ende“ führt gezielt zur aktuellen Antwort
+zurück und setzt das Folgen fort. Der Gesprächsbereich und der Sprungknopf
+bleiben per Tastatur erreichbar und berücksichtigen reduzierte Bewegung.
+
+Die Änderung betrifft die Gesprächsansicht, keine Modell- oder Webeinstellungen.
+Eine neue Unterhaltung darf ihren eigenen Startzustand erhalten; Entwürfe bleiben
+von der Scrollposition unabhängig. Die öffentliche Illustration verwendet einen
+längeren isolierten synthetischen Text. Lokale Browserabnahme und reale
+Test-VM-Prüfung werden erst nach ihrer Ausführung dokumentiert.

@@ -1,5 +1,17 @@
 # obdaAI — Status 10.10.2026
 
+## Ruhiges Lesen während der Chatgenerierung – implementiert, 10.10.2026
+
+Erzwungene scrollIntoView-Sprünge bei Tokens/Status entfernt. Der Chatcontainer
+folgt nur im Folgemodus; eigenes Hochscrollen pausiert, „Zum Ende“ oder manuelles
+Erreichen des Endes setzt das Folgen fort. Touch, Tastatur, Scrollbalken und
+verschachtelte Scrollbereiche berücksichtigt. rAF/ResizeObserver ohne glatte
+Animationen und ohne Scrollen des äußeren Dokuments. Neues Senden/Gesprächswechsel
+setzen den Folgemodus zurück; Wiederholen erzwingt kein Folgen. Keine Migration
+oder Backendänderung. Verzögerte synthetische SSE-Ausgabe und gespeicherte Antwort
+mit stabiler Leseposition, mobilem Touch und Abbruchlayout geprüft. TS/Build,
+Ruff/Mypy66 und öffentliche Website geprüft. GitHub-CI/VM-Abnahme ausstehend.
+
 ## Webrecherche-Einstellungen auf Test-VM bestätigt – 10.10.2026
 
 Release8337ebf / Schema0028 auf neun App-/Runnercontainern. CI38058159977:
