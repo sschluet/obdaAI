@@ -1,5 +1,29 @@
 # obdaAI — Status 10.10.2026
 
+## Persönliches Profil und intuitive Skill-Dateien – implementiert, 10.10.2026
+
+Einstellungen → Über mich: acht freiwillige Felder, Aktivierung, gezielte Cloud-
+Feldfreigabe, lokale Speicherung mit revisionsgeschütztem Speichern und bewusstem
+Leeren. Profilinhalt wird je Lauf eingefroren und erst nach Anbieterwahl ergänzt:
+lokal alle aktivierten Angaben, extern nur freigegebene Felder. Suchtexte, Titel und
+Router erhalten diese Angaben nicht automatisch; Audit zeigt nur Feldnamen.
+Profilentwürfe bleiben bei Tabwechsel, Haupt- und Verlaufnavigation geschützt.
+Neue Skill-Bibliothek: Suche, Filter, Vorlagen, Markdown-Vorschau, Einzeldateiimport
+mit begrenztem YAML-/JSON-Frontmatter oder reinem Markdown, reviewed save+activate,
+Verwendung Immer/Aufruf/Stichwort, Cloudfreigabe je Revision, Export und Archivieren.
+Import übernimmt keine Cloudfreigaben; Rohdatei-/Scope-/Formularentwürfe sind geschützt.
+Chatpicker fügt /Aufruf ein, respektiert feste/Keine-Skills-Auswahl, schützt Fokus
+und lange Namen auf mobilen Geräten. Laufhistorie bindet Profil-/Skillbelege.
+Migration0030/0031 bewahrt bestehende Daten und schützt konfigurierte Profile bzw.
+Archiventscheidungen vor Downgrade. Lokale Gesamtabnahme:705Tests bestanden,
+18PostgreSQLfälle fürCI ausgelassen; zusätzlicher Deaktivierungs-Datensparsamkeitstest
+und betroffene Profil-/Skilltests bestanden. Ruff/Mypy68, TypeScript/Build und neue Profil-,
+Skillbibliothek-/Chatpicker-Browserchecks sowie betroffene Composer-/Vorgabensuiten
+bestanden. CI jetzt23UI-Browsersuiten plus separate Fixture-Anmeldung.
+Öffentliche Vorstellung vorbereitet:60Funktionen/18synthetischeBilder, neue vier
+Ansichten visuell geprüft und Galerie/Mobillayouts validiert. GitHub-CI, VM-Rollout,
+echte lokale Skillantwort und Veröffentlichung dieser Lieferung ausstehend.
+
 ## Auto-/Routing-Release auf Test-VM bestätigt – 10.10.2026
 
 Release db3f8a0 / Schema0029 auf neun App-/Runnercontainern, beide APIs gesund.

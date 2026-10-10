@@ -370,6 +370,7 @@ class Skill(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     revision: Mapped[int] = mapped_column(Integer, default=1)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
     trusted_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
 
@@ -617,6 +618,18 @@ class WebSettings(Base):
     safe_search: Mapped[int] = mapped_column(Integer, default=1)
     max_results: Mapped[int] = mapped_column(Integer, default=8)
     timeout: Mapped[int] = mapped_column(Integer, default=15)
+
+
+class PersonalProfile(Base):
+    __tablename__ = "personal_profile"
+    __table_args__ = (
+        CheckConstraint("id = 1 AND revision >= 0", name="personal_profile_singleton"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    fields: Mapped[str] = mapped_column(Text, default="{}")
+    cloud_fields: Mapped[str] = mapped_column(Text, default="[]")
 
 
 class RoutingSettings(Base):

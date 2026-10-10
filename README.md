@@ -61,3 +61,11 @@ then run `cd frontend && node browser-check.mjs`. It uses only synthetic data an
 is never a deployment configuration. Build: `docker build -t obdaai .`; this builds
 an image only. Production Compose, secrets, egress, TLS and VM provisioning remain
 behind the deployment gates in docs/operations.md.
+
+
+Personalization is available under Settings → About me: optional personal facts,
+explicit field sharing and an immutable per-run profile snapshot. The revised
+[skill library](docs/skills.md) supports Markdown instruction files, reviewed
+activation, always/keyword/explicit-invocation modes and a chat picker. Private
+profile fields and skill revisions need their own explicit cloud sharing. See
+[personal profile](docs/personal-profile.md) and STATUS for acceptance evidence.

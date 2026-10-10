@@ -3,7 +3,7 @@ import type {KeyboardEvent} from 'react';
 import {Plus,Sparkles,LockKeyhole,Globe,ChevronDown,Check,FileText,FolderPlus,ListChecks,SlidersHorizontal,BookOpen,ArrowUpRight} from 'lucide-react';
 import './composer-tools.css';
 
-export type ComposerAction='files'|'sources'|'task'|'preferences';
+export type ComposerAction='files'|'sources'|'task'|'preferences'|'skills';
 export type ComposerToolsProps={
  choice:string;
  providers:Array<{id:string;label:string}>;
@@ -58,6 +58,7 @@ export function ComposerTools({choice,providers,cloudEnabled,cloudBlocked,disabl
     <button type="button" role="menuitem" onClick={()=>action('files')}><FileText size={19}/><span><strong>Datei erstellen</strong><small>Antwort als Word oder Präsentation ausarbeiten</small></span></button>
     <button type="button" role="menuitem" onClick={()=>action('sources')}><FolderPlus size={19}/><span><strong>{sourceLabel?'Quellen ansehen':'Mit Projektquellen arbeiten'}</strong><small>{sourceLabel?'Unterlagen für dieses Gespräch verwalten':'Im Projektgespräch verfügbar'}</small></span></button>
     <button type="button" role="menuitem" onClick={()=>action('task')}><ListChecks size={19}/><span><strong>Aufgabe planen</strong><small>Aus einer Idee einen kontrollierten Ablauf machen</small></span></button>
+    <button type="button" role="menuitem" onClick={()=>action('skills')}><Sparkles size={19}/><span><strong>Skill einsetzen</strong><small>Eine aktivierte Regel für diese Anfrage aufrufen</small></span></button>
     <button type="button" role="menuitem" onClick={()=>action('preferences')}><SlidersHorizontal size={19}/><span><strong>Antwortstil einstellen</strong><small>Sprache, Länge und Darstellung einstellen</small></span></button>
    </>:<>
     <button type="button" role="menuitemradio" aria-label="Auto" aria-checked={choice==='auto'} onClick={()=>choose('auto')}><Sparkles size={19}/><span><strong>Auto</strong><small>{cloudBlocked?'Private Quellen bleiben lokal':cloudEnabled?'Lokal oder Cloud nach deinen Routingregeln':'Lokales Modell · Cloud am Server ausgeschaltet'}</small></span>{choice==='auto'&&<Check size={17}/>}</button>

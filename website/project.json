@@ -82,6 +82,30 @@
       "title": "Verstehen, welches Modell übernimmt.",
       "description": "Routingstrategie wählen und einen synthetischen Aurora-Testprompt lokal prüfen. Die Vorschau erklärt Regeln und Grenzen ohne Cloud- oder Modellaufruf. Ausschließlich isolierte Beispieldaten.",
       "image": "assets/routing.png"
+    },
+    {
+      "id": "profile",
+      "title": "Dein persönlicher Hintergrund",
+      "description": "Freiwillige Profilangaben und bewusste Cloudfreigabe pro Feld. Alex Beispiel und alle Angaben sind ausschließlich synthetisch.",
+      "image": "assets/profile.png"
+    },
+    {
+      "id": "skills",
+      "title": "Deine Skill-Bibliothek",
+      "description": "Anleitungen suchen, prüfen und mit klaren Verwendungsarten organisieren. Ausschließlich synthetische Beispielskills.",
+      "image": "assets/skills.png"
+    },
+    {
+      "id": "skilleditor",
+      "title": "Skill-Dateien einfach bearbeiten",
+      "description": "Strukturierter Editor, Markdown-Vorschau und direkte Wahl zwischen Standardverwendung, Erwähnung und Stichwörtern. Ausschließlich synthetische Inhalte.",
+      "image": "assets/skilleditor.png"
+    },
+    {
+      "id": "skillchat",
+      "title": "Skills direkt im Chat aufrufen",
+      "description": "Eine aktivierte Anleitung auswählen und ihren Aufruf in die Nachricht übernehmen. Ausschließlich synthetische Beispielskills.",
+      "image": "assets/skillchat.png"
     }
   ],
   "groups": [
@@ -155,6 +179,11 @@
           "title": "Routing verstehen und beeinflussen",
           "description": "Einstellungen → Routing: Auswahlkarten für Ausgewogen, Lokal bevorzugen und Cloud bevorzugen, mit eigener Komplexitätsoption. Sichtbare Cloudmodelle, Antwort-/Kostenlimits und Testprompt-Vorschau ohne Provideraufruf, revisionierte Regeln und tatsächliche Entscheidung in der Laufhistorie. Einstellungen, lokale Vorschau und tatsächliche Cloudentscheidung auf der Test-VM geprüft.",
           "status": "live"
+        },
+        {
+          "title": "Persönliches Profil mit gezielter Feldfreigabe",
+          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt.",
+          "status": "implemented"
         }
       ]
     },
@@ -356,8 +385,8 @@
       "features": [
         {
           "title": "Versionierte Skills",
-          "description": "Verhaltensregeln mit Auswahl, Vertrauen, Versionen und Audit. Ein Skill erweitert keine bestehenden Rechte.",
-          "status": "live"
+          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt.",
+          "status": "implemented"
         },
         {
           "title": "Home Assistant lesen",
@@ -378,6 +407,11 @@
           "title": "Aktionsbelege und Wiederholungsschutz",
           "description": "Parameter, Freigaben und Ergebnisse werden dauerhaft gebunden. Unklarer Ausgang wird sichtbar; Wiederholung soll keinen unkontrollierten zweiten Effekt erzeugen.",
           "status": "limited"
+        },
+        {
+          "title": "Skills direkt im Chat einsetzen",
+          "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Synthetisch geprüft; releasegebundene VM-Abnahme folgt.",
+          "status": "implemented"
         }
       ]
     },

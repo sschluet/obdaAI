@@ -321,3 +321,28 @@ Test-VM bestätigt: CI38070872371 mit695Tests und20Browsersuiten; tatsächliche
 kurze öffentliche Recherche mit acht Webquellen und OpenRouter-Antwort erfolgreich,
 Routingvorschau und Reload geprüft. Der QA-Suchtext war ausdrücklich für den
 synthetischen Test gewählt; detaillierter Umfang und Grenzen stehen in STATUS.
+
+
+## 10.10.2026: Persönliches Profil und einfachere Skill-Dateien
+
+Einstellungen → Über mich bietet freiwillige Felder für Name, Anrede, Beruf, Familie,
+Herausforderungen, Ziele, Interessen und weitere Hinweise. Das Profil startet leer
+und ausgeschaltet. Lokal werden aktivierte Angaben berücksichtigt; Cloudantworten
+erhalten nur ausdrücklich freigegebene Felder. Entwürfe, Konflikte, Verlaufnavigation
+und bewusstes Leeren sind geschützt. Hintergrunddaten werden nicht automatisch
+zu Suchtexten oder Titel-/Routinginformationen. Details: [Persönliches Profil](personal-profile.md).
+
+Die neue Skill-Bibliothek ist über die Hauptnavigation und Einstellungen → Skills
+erreichbar. Vorlagen, Suche, Filter, strukturierter Editor und Markdown-Vorschau
+ersetzen die bisher primär technische Oberfläche. Einzelne SKILL.md-Dateien mit
+YAML-/JSON-Frontmatter oder reines Markdown lassen sich als ungeprüfte Entwürfe
+importieren. Jede Revision erhält die Verwendung Immer/Bei Erwähnung/Nach Stichwort
+und eine eigene Cloudentscheidung. Speichern & aktivieren bindet die bewusste
+Prüfung atomar an den Inhalt. Entfernen archiviert statt alte Laufbelege zu löschen.
+Chat → + → Skill einsetzen fügt einen expliziten Aufruf in die Nachricht ein und
+beachtet vorhandene Gesprächsauswahlen. Details: [Skills](skills.md).
+
+Synthetische Browser-/API-Abnahme und echte releasegebundene VM-Belege werden
+in STATUS getrennt dokumentiert. Eine vollständige Unterstützung ausführbarer
+Claude-Skillpakete oder eine automatische Verarbeitung privater Quellen wird
+nicht behauptet.

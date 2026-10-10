@@ -1,7 +1,7 @@
 import {loginFixture} from './fixture-login.mjs';
 // Capture the real UI against an isolated synthetic fixture, never a live deployment.
 import {chromium} from 'playwright';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 const base=process.env.SHOWCASE_FIXTURE_ORIGIN||'http://127.0.0.1:18767';
 if(base!=='http://127.0.0.1:18767')throw Error('Only the dedicated synthetic fixture is permitted');
@@ -10,8 +10,10 @@ const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:980},deviceScaleFactor:1});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 // Synthetic endpoint only: the public screenshot never displays internal addresses.
+const demoProfile={revision:0,enabled:true,fields:{name:'Alex Beispiel',preferred_name:'Alex',profession:'Projektleitung im fiktiven Projekt Aurora',family_status:'Fiktiver Haushalt mit einer Partnerperson',challenges:'Aufgaben priorisieren und Fokuszeiten schützen',goals:'Klare Entscheidungen und mehr Zeit für Wichtiges',interests:'Technologie, Lesen und Natur',additional_info:'Ausschließlich synthetische Angaben für diese öffentliche Illustration.'},cloud_fields:['profession']};
+await page.route('**/api/personal-profile',route=>route.request().method()==='GET'?route.fulfill({json:demoProfile}):route.continue());
 await page.route('**/api/web-settings',async route=>{if(route.request().method()!=='GET'){await route.continue();return;}const response=await route.fetch();const settings=await response.json();await route.fulfill({response,json:{...settings,endpoint:'https://search.example.org/search'}});});
-const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:['websettings','routing'].includes(name)});};
+const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:['websettings','routing','profile'].includes(name)});};
 try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
@@ -69,7 +71,15 @@ try{
  await page.setViewportSize({width:1440,height:980});await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Sicherheit',exact:true}).click();await page.getByRole('heading',{name:'Passwort ändern',exact:true}).waitFor();await capture('security');
  await page.setViewportSize({width:1440,height:1520});await page.getByRole('button',{name:'Webrecherche',exact:true}).click();await page.getByRole('heading',{name:'Suchdienst und Ergebnisse',exact:true}).waitFor();await page.getByRole('radio',{name:'Alle Sprachen',exact:true}).waitFor();await capture('websettings');await page.setViewportSize({width:1440,height:980});
  await page.setViewportSize({width:1440,height:1900});await page.getByRole('button',{name:'Routing',exact:true}).click();await page.getByRole('region',{name:'Routing-Einstellungen',exact:true}).waitFor();await page.getByLabel('Routing-Testprompt',{exact:true}).fill('Erstelle eine komplexe Recherche zu neuen Ideen für unser fiktives Projekt Aurora. Vergleiche Perspektiven und begründe die nächsten Schritte.');await page.getByRole('button',{name:'Routing prüfen',exact:true}).click();await page.getByText('Voraussichtliches Routing:',{exact:false}).waitFor();await capture('routing');await page.setViewportSize({width:1440,height:980});
+ await page.setViewportSize({width:1440,height:1750});await page.getByRole('button',{name:'Über mich',exact:true}).click();await page.getByRole('region',{name:'Persönliches Profil',exact:true}).waitFor();await page.getByLabel('Name',{exact:true}).filter({visible:true}).waitFor();await capture('profile');await page.setViewportSize({width:1440,height:1080});
+ const skillCsrf=(await(await page.request.get(base+'/api/me')).json()).csrf;
+ const demoSkills=[{name:'Klar und kompakt',description:'Antworten klar strukturieren und auf das Wesentliche konzentrieren.',usage:'always',keywords:[],body:'Nenne zuerst das Ergebnis. Formuliere verständlich und nutze ein konkretes Beispiel.'},{name:'Gründlich recherchieren',description:'Quellen, Annahmen und nächste Schritte nachvollziehbar ordnen.',usage:'auto',keywords:['recherche'],body:'Ordne Erkenntnisse nach Fragestellung. Trenne Belege von Annahmen und nenne offene Fragen.'},{name:'Texte überarbeiten',description:'Den Text verbessern und seine Aussage bewahren.',usage:'mention',keywords:[],body:'Verbessere Aufbau und Verständlichkeit. Bewahre die Aussage und halte den gewünschten Ton.'}];
+ const existingDemo=(await(await page.request.get(base+'/api/skills')).json());
+ for(const demo of demoSkills){if(existingDemo.some(s=>s.name===demo.name))continue;const document='---\n'+JSON.stringify({format:'obdaai-skill-1',name:demo.name,description:demo.description,usage:demo.usage,keywords:demo.keywords,cloud_allowed:false},null,2)+'\n---\n'+demo.body;const saved=await page.request.post(base+'/api/skills',{headers:{'X-CSRF-Token':skillCsrf,Origin:base},data:{document,activate:true}});if(!saved.ok())throw Error('Synthetic skill setup failed')}
+ await page.getByRole('button',{name:'Skills',exact:true}).last().click();await page.getByRole('heading',{name:'Einmal erklären. Immer passend antworten.',exact:true}).waitFor();await page.locator('.skill-card').filter({has:page.getByRole('heading',{name:'Texte überarbeiten',exact:true})}).waitFor();await capture('skills');
+ const textCard=page.locator('.skill-card').filter({has:page.getByRole('heading',{name:'Texte überarbeiten',exact:true})});await textCard.getByRole('button',{name:'Bearbeiten',exact:true}).click();const skillEditor=page.getByRole('dialog',{name:'Skill bearbeiten',exact:true});await skillEditor.getByRole('radio',{name:/Bei Erwähnung/}).waitFor();await capture('skilleditor');await skillEditor.getByRole('button',{name:'Skill-Editor schließen',exact:true}).click();await skillEditor.waitFor({state:'hidden'});await page.setViewportSize({width:1440,height:980});
  await page.getByRole('button',{name:'Neues Gespräch',exact:true}).first().click();await page.getByLabel('Nachricht',{exact:true}).fill('Ein rein synthetisches Beispiel: Zeige eine kurze Antwort mit Herkunftshinweis.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Lokal · synthetic-fixture'}).waitFor();await capture('processing');
+ await page.getByRole('button',{name:'Aktionen und Anhänge',exact:true}).click();await page.getByRole('menuitem',{name:/Skill einsetzen/}).click();const chatSkills=page.getByRole('dialog',{name:'Skill im Chat einsetzen',exact:true});await chatSkills.getByRole('button',{name:/Klar und kompakt/}).waitFor();await capture('skillchat');await chatSkills.getByRole('button',{name:'Skillauswahl schließen',exact:true}).click();
  await page.getByRole('button',{name:'Arbeitsraum durchsuchen',exact:true}).click();const search=page.getByRole('dialog',{name:'Suchen und weiterarbeiten',exact:true});await search.getByRole('combobox').fill('Projekt');await search.getByRole('option').first().waitFor();await capture('search');await search.getByRole('button',{name:'Suche schließen',exact:true}).click();
  if(errors.length)throw Error(errors.join('\n'));
  // A stored synthetic long answer illustrates detached reading; never open real chats.
@@ -103,5 +113,5 @@ try{
  await page.locator('.chat-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight;});
  await capture('partial');
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Thirteen gallery screenshots plus mobile captured with synthetic data only.');
+ console.log((JSON.parse(await readFile(new URL('../website/project.json',import.meta.url),'utf8')).screenshots.length)+' gallery screenshots plus mobile captured with synthetic data only.');
 }finally{await browser.close();}

@@ -1,0 +1,23 @@
+.personal-profile .profile-heading{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.personal-profile .profile-heading h2,.personal-profile .profile-heading p{margin:0}
+.personal-profile .profile-heading p{color:var(--muted);font-size:13px;margin-top:4px}
+.personal-profile .profile-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--soft);color:var(--accent);flex-shrink:0}
+.personal-profile .profile-enable{display:flex;align-items:center;gap:13px;padding:17px;border:1px solid var(--border);border-radius:15px;background:var(--soft);margin:20px 0}
+.personal-profile .profile-enable input,.personal-profile .profile-share input{width:auto;flex-shrink:0;margin:0}
+.personal-profile .profile-enable small{display:block;margin-top:5px;color:var(--muted);line-height:1.5;font-weight:400}
+.personal-profile .profile-privacy{display:flex;align-items:flex-start;gap:10px;color:var(--muted);font-size:12px;line-height:1.6}
+.personal-profile .profile-privacy svg{flex-shrink:0;margin-top:3px;color:var(--accent)}
+.personal-profile .profile-privacy p{margin:0}
+.personal-profile .profile-section{border:0;padding:0;margin:27px 0;min-width:0}
+.personal-profile .profile-section legend{font-size:16px;font-weight:650;padding:0}
+.personal-profile .profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:16px}
+.personal-profile .profile-field{min-width:0}
+.personal-profile .profile-field>label:first-child{font-weight:550;font-size:13px;margin-bottom:8px}
+.personal-profile .profile-field input[type=text],.personal-profile .profile-field textarea{width:100%;box-sizing:border-box;min-width:0;margin:0;border-radius:11px;padding:11px 12px;font-size:14px}
+.personal-profile .profile-field textarea{resize:vertical;min-height:96px}
+.personal-profile .profile-share{display:flex;align-items:flex-start;gap:7px;font-weight:400;color:var(--muted);font-size:11px;line-height:1.5;margin:8px 0 0}
+.personal-profile .profile-share svg,.personal-profile .profile-share input{margin-top:2px;flex-shrink:0}
+.personal-profile .profile-save{border-top:1px solid var(--border);padding-top:14px}
+.personal-profile .profile-clear{display:flex;gap:6px;align-items:center}
+.personal-profile .profile-confirm{border:1px solid var(--border);border-radius:13px;padding:16px;margin-top:16px;background:var(--soft);font-size:13px}
+@media(max-width:700px){.personal-profile .profile-fields{grid-template-columns:1fr}.personal-profile .dialog-actions{flex-wrap:wrap}.personal-profile .dialog-actions button{white-space:normal}}

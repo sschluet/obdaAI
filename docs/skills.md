@@ -1,49 +1,75 @@
-# M3 Skills: erste Chat-Vertikale
+# Skills: persönliche Anleitungen als Dateien
 
-Skills sind Markdown-Dokumente mit JSON-Frontmatter zwischen `---`-Zeilen.
-JSON ist ein bewusst begrenzter YAML-Teilumfang; beliebiges YAML, Tags, Aliase,
-Code und unbekannte Metadaten werden nicht interpretiert. Das Format lautet:
+Die **Skill-Bibliothek** ist über Skills in der Hauptnavigation und unter
+**Einstellungen → Skills** erreichbar. Karten zeigen Aktivierung, Verwendung,
+Geltungsbereich, lokale/Cloud-Nutzung und den Aufruf. Suche, Filter und Vorlagen
+helfen beim Einstieg. Der Editor bietet strukturierte Angaben, Markdown-Vorschau
+und ein portables Dateiformat; JSON muss nicht von Hand geschrieben werden.
+
+Pro geprüfter Revision stehen drei Verwendungsarten zur Wahl:
+
+- **Immer verwenden:** als Standard in passenden Gesprächen berücksichtigen.
+- **Bei Erwähnung:** nur bei einem expliziten Aufruf wie `/text-ueberarbeiten`
+  oder `@text-ueberarbeiten` in der aktuellen Benutzernachricht.
+- **Nach Stichwort:** bei passenden konfigurierten Stichwörtern; bestehende Skills
+  behalten diese frühere Auswahlregel.
+
+**Chat → + → Skill einsetzen** zeigt aktivierte, aktuell geprüfte Skills des
+Arbeitsraums und fügt ihren Aufruf in die Nachricht ein. Ein Aufruf übergeht keine
+explizite Gesprächseinstellung „Keine Skills“. Der Benutzer kann im Dialog bewusst
+wieder die automatische Auswahl einschalten. Eine feste manuelle Gesprächsauswahl
+bleibt ebenfalls vorrangig. Mehrdeutige Aufrufnamen erzeugen eine Auswahlfehlermeldung;
+URL-, E-Mail- oder Pfadbestandteile gelten nicht als explizite Skillaufrufe.
+Höchstens drei Skills dürfen einen Lauf begleiten. Mehr Treffer verlangen eine
+gezielte manuelle Auswahl; fremde Projektskills werden abgewiesen.
+
+## Dateien und Prüfung
+
+Import unterstützt einzelne `.md`/`.markdown`-Anleitungen mit begrenztem YAML-
+Frontmatter sowie das bisherige JSON-Frontmatter. Der Grundaufbau mit `name` und
+`description` entspricht der offiziellen
+[Claude-Skill-Dokumentation](https://support.claude.com/en/articles/12512198-how-to-create-custom-skills).
+ZIP-Pakete, Skripte, Ressourcen, Abhängigkeiten oder fremde Werkzeugrechte werden
+nicht ausgeführt oder automatisch übernommen. YAML-Tags, Aliase, zusätzliche
+Rechte und unbekannte Metadaten bleiben ungültig. Das ist eine Verwaltung einzelner
+Anleitungen, keine vollständige Implementierung ausführbarer Claude-Skillpakete.
 
 ```markdown
 ---
-{"format":"obdaai-skill-1","name":"Analyse","description":"Befunde ordnen","keywords":["analysiere"]}
+name: text-ueberarbeiten
+description: Texte verständlicher formulieren, wenn ich diesen Skill aufrufe.
 ---
-Nenne Befunde, offene Fragen und nächste Schritte.
-
-Beispiel: Ein Befund mit Quelle und Unsicherheit.
+Bewahre die Aussage. Verbessere Aufbau, Verständlichkeit und Ton.
 ```
 
-Import und Erstellung nutzen denselben Validator und starten deaktiviert. Eine
-Bearbeitung erzeugt eine unveränderliche neue Revision und entfernt Vertrauen
-und Aktivierung. Erst die menschliche Prüfung des exakten SHA-256 und der Revision
-aktiviert den Skill. Export enthält nur das portable Dokument, keine Aktivierung,
-Zugänge, Toolrechte oder lokal gültigen Projekt-IDs. Scope wird beim Import gewählt.
+Reines Markdown wird als Entwurf mit einem aus dem Dateinamen abgeleiteten,
+editierbaren Titel geöffnet. Import setzt Cloudfreigaben zurück. Der Benutzer
+prüft Inhalt, Verwendung und Scope und kann mit **Speichern & aktivieren** die
+exakte neue Revision atomar freigeben. **Entwurf speichern** speichert ohne
+Aktivierung. Bearbeitung entfernt die bisherige Aktivierung und erzeugt eine
+unveränderliche neue Revision. Veraltete Revisionen oder Hashes führen zu 409.
+Ungespeicherte Editor- und Rohdateiänderungen bleiben beim Schließen geschützt;
+ein ausdrückliches Verwerfen ist erforderlich. Export liefert das portable
+`*-SKILL.md`, ohne Schlüssel, Toolrechte oder lokale
+Projekt-IDs. Import übernimmt keine lokale Aktivierung oder Vertrauensentscheidung.
 
-Globale und projektgebundene Skills stehen im Chat bereit. Automatisch werden
-nur aktivierte, aktuell vertraute Skills mit einem passenden literalem Stichwort
-in der letzten Benutzernachricht ausgewählt. Mehr als drei Treffer erfordern eine
-manuelle Auswahl. Pro Gespräch kann der Benutzer automatisch, keine Skills oder
-bis zu drei explizite Skills wählen. Fremde Projektskills werden abgewiesen.
-Deaktivierte/geänderte manuell gewählte Skills stoppen den nächsten Chatlauf mit
-409, anstatt still andere Skills zu laden. Auswahländerungen sind vergleichsgebunden
-und während eines laufenden Gesprächs gesperrt.
+Skills starten lokal. Die ausdrückliche Option **Diese Anleitung darf auch an das
+gewählte Cloudmodell gesendet werden** gilt nur für die geprüfte Skillrevision.
+Sie gibt keine anderen privaten Inhalte frei. Der endgültige Providerübergang
+prüft weiterhin Gesprächsfreigaben, Labels und gebundene Grants. Ein privater Skill
+kann deshalb eine lokale Auto-Antwort bewirken; die Routing-Erklärung macht diese
+Begrenzung sichtbar. Anleitungen sind Benutzerkontext und kein ausführbarer Code.
 
-Jeder neue Lauf speichert Dokumentinhalt, Revision, SHA-256 und Auswahlgrund in
-seinem unveränderlichen Kontext. Laufhistorie zeigt die geladenen Hashes. Skills
-bleiben LOCAL_ONLY und werden als Benutzerkontext verarbeitet. Skilltext und
-Metadaten erteilen keine Freigaben; es gibt keinen ausführbaren Code oder Werkzeug-
-Dispatcher im Skillpfad. Vorhandene Quellenuploads werden nie als Skills aktiviert.
-Spätere Cloud- und Task-Skills brauchen eigene Revisions-/Datenschutzverträge.
+## Verlauf und Entfernen
 
-Migration 0013 ergänzt Skills/Revisionen und Chat-Auswahl additiv. Downgrade mit
-vorhandenen Skills wird zum Schutz der Historie verweigert. API-/Kontrakttests
-prüfen Importvertrauen, Hashbindung, Revisionen, Scope, Override, Deaktivierung
-und Rechte-/Labelinjektion. A08 mit dem echten lokalen Modell ist bestanden: gleiche synthetische Frage,
-Revision 1 Deutsch, Revision 2 Englisch, unterschiedliche Antworten und dokumentierte
-Hashes. Skills danach deaktiviert. Ein Tabellenversuch wurde als artifact klassifiziert
-und vor Ausführung gestoppt; diese Klassifikation bleibt offen. Skillmutation und
-Vault-Abgleich erhalten getrennte PostgreSQL-Sperren; ein echter PG-Test hält die
-Vault-Sperre während einer Skill-Erstellung und prüft deren unabhängigen Abschluss.
+Jeder neue Lauf hält Skillinhalt, ID, Revision, Hash und Auswahlgrund fest.
+Die Laufhistorie zeigt diese Belege. Deaktivierung und neue Versionen beeinflussen
+neue Läufe, ohne alte Antworten nachträglich umzudeuten. Deaktivierte/geänderte
+manuell ausgewählte Skills verlangen eine neue Auswahl statt stiller Ersatzregeln.
 
-Offen im gesamten M3: aufgabenbezogene Skills und automatische Auswahl jenseits
-expliziter Stichwörter, TaskSpec/Task-Center, externe Adapter und deren Abnahmen.
+**Entfernen** archiviert nach Bestätigung; bestehende Revisionen und Laufbelege
+bleiben erhalten. Migration 0031 ergänzt den Archivzustand und schützt einen
+Downgrade bei archivierten Einträgen. Die grundlegende Skillmigration 0013 und ihre
+Vertrauens-/Scopesperren bleiben wirksam. API-, Parser-, Auswahl-, Revisions-,
+Cloud- und Browserprüfungen verwenden synthetische Dateien. Historische echte
+lokale Modelltests sowie neue releasegebundene Abnahmen sind in STATUS dokumentiert.

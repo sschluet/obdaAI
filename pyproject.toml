@@ -21,10 +21,16 @@ dependencies = [
   "python-multipart==0.0.32",
   "websockets==17.1",
   "smbprotocol==1.17.0",
+  "pyyaml==6.0.3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1", "ruff==0.16.10", "mypy==2.4.0"]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.10",
+    "mypy==2.4.0",
+    "types-pyyaml==6.0.12.20250915",
+]
 
 [build-system]
 requires = ["hatchling==1.29.0"]

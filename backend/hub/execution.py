@@ -541,6 +541,25 @@ async def execute_run(
                     update(routing_trace=json.dumps(trace, ensure_ascii=False))
                     yield ("status", {"message": "Datenschutzregel hält diese Antwort lokal"})
                 provider = c.cloud_provider if external else "local"
+                # Personal background never enters routing, titles or public queries.
+                # Select the explicitly shared subset only after the final route.
+                from hub.personal_profile import context_for_provider
+
+                profile_parts, profile_grants, profile_audit = context_for_provider(
+                    snapshot.get("personal_profile"), external=external, provider_id=provider
+                )
+                trace["personal_profile"] = profile_audit
+                update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                if profile_parts:
+                    parts.extend(profile_parts)
+                    roles.extend("user" for _ in profile_parts)
+                    grants.extend(profile_grants)
+                    if not external:
+                        label = Privacy.LOCAL_ONLY
+                    route.answer = None
+                    builtin_answer = False
+                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                        raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
                 if external and selected:
                     cloud = selected.get(c.cloud_provider)
                     if cloud is None:

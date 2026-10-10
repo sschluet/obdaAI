@@ -1,10 +1,13 @@
-"""Portable JSON frontmatter (a YAML subset), never executable policy or tools."""
+"""Bounded portable skill instructions; revision-bound review, never executable tools."""
 
 import hashlib
 import json
-from typing import Any
+import re
+import unicodedata
+from typing import Any, Literal
 from uuid import UUID
 
+import yaml
 from fastapi import FastAPI, HTTPException
 from pydantic import Field, ValidationError
 from sqlalchemy import select, text
@@ -13,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.action_api import StrictInput
 from hub.db import Conversation, Project, Run, Skill, SkillRevision
 from hub.knowledge_api import Auth
-from hub.policy import ContextPart
+from hub.policy import ContextPart, Privacy
 
 
 class Metadata(StrictInput):
@@ -21,11 +24,14 @@ class Metadata(StrictInput):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=500)
     keywords: list[str] = Field(default_factory=list, max_length=12)
+    usage: Literal["auto", "always", "mention"] = "auto"
+    cloud_allowed: bool = False
 
 
 class SkillInput(StrictInput):
     document: str = Field(min_length=1, max_length=12000)
     project_id: UUID | None = None
+    activate: bool = False
     expected_revision: int | None = Field(default=None, ge=1)
 
 
@@ -40,19 +46,80 @@ class SelectionInput(StrictInput):
     expected_selection: list[UUID] | None = Field(default=None, max_length=3)
 
 
+class ImportInput(StrictInput):
+    document: str = Field(min_length=1, max_length=12000)
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class ArchiveInput(StrictInput):
+    expected_revision: int = Field(ge=1)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+def slug(name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")[:100]
+
+
 def parse(document: str) -> tuple[Metadata, str]:
     try:
-        if not document.startswith("---\n"):
+        document = document.replace("\r\n", "\n")
+        if len(document) > 12000 or not document.startswith("---\n"):
             raise ValueError
         front, body = document[4:].split("\n---\n", 1)
-        meta = Metadata.model_validate(json.loads(front))
-        if not body.strip() or any(not k.strip() or len(k) > 80 for k in meta.keywords):
+        # Reject aliases, anchors and explicit tags before construction; safe_load
+        # never imports executable Python objects. One bounded mapping only.
+        tokens = list(yaml.scan(front))
+        if any(
+            isinstance(t, (yaml.tokens.AliasToken, yaml.tokens.AnchorToken, yaml.tokens.TagToken))
+            for t in tokens
+        ):
+            raise ValueError
+        depth = 0
+        starts = (
+            yaml.tokens.BlockMappingStartToken,
+            yaml.tokens.BlockSequenceStartToken,
+            yaml.tokens.FlowMappingStartToken,
+            yaml.tokens.FlowSequenceStartToken,
+        )
+        ends = (
+            yaml.tokens.BlockEndToken,
+            yaml.tokens.FlowMappingEndToken,
+            yaml.tokens.FlowSequenceEndToken,
+        )
+        for token in tokens:
+            if isinstance(token, starts):
+                depth += 1
+                if depth > 12:
+                    raise ValueError
+            elif isinstance(token, ends):
+                depth -= 1
+        data = yaml.safe_load(front)
+        if not isinstance(data, dict):
+            raise ValueError
+        if "format" not in data:
+            if not isinstance(data.get("description"), str) or not data["description"].strip():
+                raise ValueError
+            data = {"format": "obdaai-skill-1", **data}
+        meta = Metadata.model_validate(data)
+        if (
+            not meta.name.strip()
+            or not slug(meta.name)
+            or not body.strip()
+            or any(not k.strip() or len(k) > 80 for k in meta.keywords)
+        ):
             raise ValueError
         return meta, body.strip()
-    except (ValueError, ValidationError):
+    except (ValueError, ValidationError, yaml.YAMLError):
         raise HTTPException(
-            422, "Skill braucht gültiges JSON-Frontmatter und Markdown-Inhalt"
+            422,
+            "Skill braucht Name, gültiges YAML-/JSON-Frontmatter "
+            "und Markdown-Inhalt; Werkzeuge werden nicht importiert",
         ) from None
+
+
+def portable(meta: Metadata, body: str) -> str:
+    return "---\n" + json.dumps(meta.model_dump(), ensure_ascii=False, indent=2) + "\n---\n" + body
 
 
 def sha(document: str) -> str:
@@ -83,6 +150,8 @@ def info(s: Skill, r: SkillRevision) -> dict[str, Any]:
         "sha256": r.sha256,
         "document": r.document,
         "project_id": s.project_id,
+        "invocation": "/" + slug(parse(r.document)[0].name),
+        "archived": s.archived,
         "enabled": s.enabled,
         "trusted": s.trusted_sha256 == r.sha256,
         **parse(r.document)[0].model_dump(),
@@ -92,6 +161,7 @@ def info(s: Skill, r: SkillRevision) -> dict[str, Any]:
 def eligible(s: Skill, r: SkillRevision, project_id: str | None) -> bool:
     return (
         s.enabled
+        and not s.archived
         and s.trusted_sha256 == r.sha256
         and r.sha256 == sha(r.document)
         and s.project_id in (None, project_id)
@@ -105,6 +175,16 @@ def select_skills(
     rows = list(db.scalars(select(Skill).order_by(Skill.id)))
     parts: list[ContextPart] = []
     audit: list[dict[str, Any]] = []
+    invocation_names: dict[str, list[str]] = {}
+    for candidate in rows:
+        rev = db.get(SkillRevision, (candidate.id, candidate.revision))
+        if rev and eligible(candidate, rev, chat.project_id):
+            invocation_names.setdefault(slug(parse(rev.document)[0].name), []).append(candidate.id)
+    mentions = set(
+        re.findall(r"(?<![\w/@])[/@]([a-z0-9]+(?:-[a-z0-9]+)*)(?![\w/@-]|\.[\w])", query.casefold())
+    )
+    if selected is None and any(len(invocation_names.get(m, [])) > 1 for m in mentions):
+        raise HTTPException(409, "Skill-Aufruf mehrdeutig; Namen unterscheiden oder manuell wählen")
     for s in rows:
         if selected is not None and s.id not in selected:
             continue
@@ -117,8 +197,13 @@ def select_skills(
                 )
             continue
         meta, body = parse(r.document)
-        if selected is None and not any(k.casefold() in query.casefold() for k in meta.keywords):
+        mentioned = slug(meta.name) in mentions
+        keyword = meta.usage == "auto" and any(
+            k.casefold() in query.casefold() for k in meta.keywords
+        )
+        if selected is None and not (mentioned or meta.usage == "always" or keyword):
             continue
+        label = Privacy.CLOUD_ALLOWED if meta.cloud_allowed else Privacy.LOCAL_ONLY
         if len(parts) == 3:
             raise HTTPException(409, "Mehr als drei passende Skills; manuelle Auswahl nötig")
         parts.append(
@@ -126,6 +211,7 @@ def select_skills(
                 content="Vom Benutzer geprüfter Skill: " + meta.name + "\n" + body,
                 source_id="skill:" + s.id,
                 revision=r.revision,
+                label=label,
             )
         )
         audit.append(
@@ -134,8 +220,17 @@ def select_skills(
                 "name": meta.name,
                 "revision": r.revision,
                 "sha256": r.sha256,
-                "selection": "manual" if selected is not None else "keyword",
-                "label": "LOCAL_ONLY",
+                "selection": (
+                    "manual"
+                    if selected is not None
+                    else "mention"
+                    if mentioned
+                    else "always"
+                    if meta.usage == "always"
+                    else "keyword"
+                ),
+                "usage": meta.usage,
+                "label": label.value,
             }
         )
     if selected is not None and len(parts) != len(selected):
@@ -144,10 +239,33 @@ def select_skills(
 
 
 def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
+    @app.post("/api/skills/parse")
+    def import_document(body: ImportInput, auth: Auth) -> dict[str, Any]:
+        raw = body.document.replace("\r\n", "\n")
+        if not raw.startswith("---\n"):
+            if not body.name:
+                raise HTTPException(422, "Für Markdown ohne Frontmatter einen Namen angeben")
+            meta = Metadata(format="obdaai-skill-1", name=body.name, usage="mention")
+            raw = portable(meta, raw)
+        meta, content = parse(raw)
+        # An imported cloud flag never silently becomes outbound permission.
+        meta.cloud_allowed = False
+        return {
+            **meta.model_dump(),
+            "body": content,
+            "document": portable(meta, content),
+            "invocation": "/" + slug(meta.name),
+        }
+
     @app.get("/api/skills")
     def listing(auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:
-            return [info(*get(db, s.id)) for s in db.scalars(select(Skill).order_by(Skill.id))]
+            return [
+                info(*get(db, s.id))
+                for s in db.scalars(
+                    select(Skill).where(Skill.archived.is_(False)).order_by(Skill.id)
+                )
+            ]
 
     @app.post("/api/skills")
     def create(body: SkillInput, auth: Auth) -> dict[str, Any]:
@@ -156,7 +274,11 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
             lock(db)
             if body.project_id is not None and not db.get(Project, str(body.project_id)):
                 raise HTTPException(404, "Projekt fehlt")
-            s = Skill(project_id=str(body.project_id) if body.project_id else None)
+            s = Skill(
+                project_id=str(body.project_id) if body.project_id else None,
+                enabled=body.activate,
+                trusted_sha256=sha(body.document) if body.activate else None,
+            )
             db.add(s)
             db.flush()
             r = SkillRevision(
@@ -172,13 +294,15 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
         with factory() as db:
             lock(db)
             s, _ = get(db, skill_id)
+            if s.archived:
+                raise HTTPException(409, "Archivierter Skill kann nicht bearbeitet werden")
             if s.revision != body.expected_revision:
                 raise HTTPException(409, "Skill inzwischen geändert; Entwurf bleibt erhalten")
             if body.project_id is not None and not db.get(Project, str(body.project_id)):
                 raise HTTPException(404, "Projekt fehlt")
             s.revision += 1
-            s.enabled = False
-            s.trusted_sha256 = None
+            s.enabled = body.activate
+            s.trusted_sha256 = sha(body.document) if body.activate else None
             s.project_id = str(body.project_id) if body.project_id else None
             r = SkillRevision(
                 skill_id=s.id,
@@ -195,12 +319,25 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
         with factory() as db:
             lock(db)
             s, r = get(db, skill_id)
-            if s.revision != body.expected_revision or r.sha256 != body.sha256:
+            if s.archived or s.revision != body.expected_revision or r.sha256 != body.sha256:
                 raise HTTPException(
                     409, "Nur die genau geprüfte Skillrevision kann aktiviert werden"
                 )
             s.enabled = body.enabled
             s.trusted_sha256 = r.sha256 if body.enabled else None
+            db.commit()
+            return info(s, r)
+
+    @app.delete("/api/skills/{skill_id}")
+    def archive(skill_id: str, body: ArchiveInput, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            lock(db)
+            s, r = get(db, skill_id)
+            if s.revision != body.expected_revision or r.sha256 != body.sha256:
+                raise HTTPException(409, "Skill inzwischen geändert; vor Entfernen neu laden")
+            s.archived = True
+            s.enabled = False
+            s.trusted_sha256 = None
             db.commit()
             return info(s, r)
 

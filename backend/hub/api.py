@@ -49,6 +49,7 @@ from hub.knowledge_api import install_knowledge_api
 from hub.knowledge_connections import install_knowledge_connections
 from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
+from hub.personal_profile import freeze_profile, install_personal_profile_api
 from hub.policy import ContextPart, Privacy
 from hub.preference_api import install_preference_api
 from hub.preferences import resolve as resolve_preferences
@@ -151,6 +152,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_web_api(app, cfg, factory)
     install_web_settings_api(app, cfg, factory)
     install_routing_settings_api(app, cfg, factory)
+    install_personal_profile_api(app, factory)
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
     install_skill_api(app, factory)
@@ -658,9 +660,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             web_options = read_options(db)
             if web_search_allowed and not web_options["enabled"]:
                 raise HTTPException(409, "Webrecherche ist in den Einstellungen deaktiviert")
+            try:
+                personal_profile = freeze_profile(db)
+            except ValueError:
+                raise HTTPException(
+                    409, "Persönliche Informationen beschädigt; in Einstellungen prüfen"
+                ) from None
             snapshot: dict[str, Any] = {
                 "web_options": web_options,
                 "routing_options": read_routing_options(db),
+                "personal_profile": personal_profile,
                 "response_preferences": resolve_preferences(db, c),
                 **(
                     {"web_query": web_query or messages[-1].content.strip()[:500]}
