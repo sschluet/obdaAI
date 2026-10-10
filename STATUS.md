@@ -1,5 +1,21 @@
 # obdaAI — Status 10.10.2026
 
+## Antwortverarbeitung pro Nachricht — 10.10.2026
+
+Dezenter Fuß jeder KI-Antwort: Anbieter und angefragte Modellkennung aus dem
+eindeutig zugeordneten Lauf; weder Datenschutzlabel noch aktuelle Modellwahl
+werden als Verarbeitungshistorie verwendet. SSE und Reload liefern dieselben
+Daten. Systemantworten ohne eigenes Antwortmodell und unbekannte Belege sind
+sichtbar verschieden. Schema0027 ergänzt nullable Message.run_id und
+Run.answer_model_used. Legacy-Zuordnung ausschließlich bei eindeutig gleicher
+gespeicherter Delta-Ausgabe und genau einer Antwort im selben Gespräch;
+inaktive Zweige zählen, Mehrdeutigkeit bleibt unbekannt. Inhalte bleiben erhalten.
+Gezielter Browsercheck für Stream, Reload, Anbieter/Modell, Auswahlunabhängigkeit
+und Mobilansicht bestanden. Gesamtsuite: 595 lokale Tests bestanden, 14
+PostgreSQL-Fälle für CI ausgelassen; Ruff/Mypy64 und Frontendbuild bestanden.
+GitHub weiterhin HTTP401; noch kein VM-Rollout.
+Öffentliche Vorstellung lokal ergänzt; nur synthetische Screenshots.
+
 ## Passwortverwaltung lokal implementiert — 10.10.2026
 
 Einstellungen → Sicherheit: aktuelles Passwort, neues Passwort (12–256 Zeichen),

@@ -67,6 +67,9 @@ class Message(Base):
     __tablename__ = "messages"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    run_id: Mapped[str | None] = mapped_column(
+        ForeignKey("runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column(Text)
     label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
@@ -92,6 +95,7 @@ class Run(Base):
     router_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     first_content_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     model: Mapped[str] = mapped_column(String(240), default="", server_default="")
+    answer_model_used: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     provider_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     capabilities: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
     cost_estimate: Mapped[float | None] = mapped_column(Float, nullable=True)

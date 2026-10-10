@@ -157,3 +157,19 @@ installiert; gepinnte HTTPS-Assets und gezielter Live-Browsercheck (keine neuen
 Nachrichten oder Einstellungswrites) bestätigt. Backup/Off-VM-Hashes, Rollback,
 DB, acht Overlays und unveränderte Netzwerkregeln geprüft. Neue öffentliche
 Screenshots stammen ausschließlich aus der getrennten synthetischen Demo.
+
+
+## 10.10.2026: Verarbeitung direkt an der Antwort
+
+Kleiner Fuß je Assistentenantwort nennt den tatsächlich gespeicherten Anbieter
+und die Modellkennung des Modellaufrufs. Message.run_id verbindet die Antwort
+mit ihrem Lauf; weder Antwortreihenfolge, Datenschutzklasse noch aktuelle
+Auswahl dienen als Beleg. Streamereignisse liefern dieselben Werte. Interne
+Systemantworten ohne gesondertes Antwortmodell sind markiert. Nicht erfasste
+oder mehrdeutige ältere Zuordnungen bleiben ausdrücklich unbekannt.
+
+Migration0027 rekonstruiert Altzuordnungen nur aus exakt identischen, eindeutig
+gespeicherten Delta-Ereignissen innerhalb desselben Gesprächs. Anbieter-Aliase
+wie automatische Modellrouten werden als Anfragekennung angezeigt; ein vom
+Anbieter nicht gemeldetes aufgelöstes Modell wird nicht erfunden. Die öffentliche
+Demonstration ist synthetisch und belegt keine reale Cloudintegration.

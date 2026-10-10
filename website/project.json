@@ -40,6 +40,12 @@
       "title": "Dein Zugang bleibt in deiner Hand.",
       "description": "Passwort unter Einstellungen → Sicherheit ändern: aktuelles Passwort bestätigen, neues Passwort prüfen und anschließend neu anmelden. Synthetische Demo mit leeren Feldern.",
       "image": "assets/security.png"
+    },
+    {
+      "id": "processing",
+      "title": "Die Herkunft jeder Antwort.",
+      "description": "Kleiner Hinweis direkt unter der Antwort: lokale Verarbeitung oder Cloud-Anbieter und die erfasste Modellkennung. Hier eine isolierte synthetische Testantwort.",
+      "image": "assets/processing.png"
     }
   ],
   "groups": [
@@ -82,6 +88,11 @@
         {
           "title": "Integrierter Chat-Arbeitsbereich",
           "description": "Dateien, Quellen, Antwortvorgaben und Aufgaben neben dem Gespräch öffnen. Projektkontext bleibt erhalten; Desktop nebeneinander, mobile Bedienung über Tabs. Lokal mit synthetischen Daten geprüft; auf der Test-VM installiert und gezielt mit lokalem Modell geprüft.",
+          "status": "local"
+        },
+        {
+          "title": "Anbieter und Modell direkt unter der Antwort",
+          "description": "Dezenter Hinweis pro Antwort aus fest zugeordneten Laufdaten, bereits im Stream und nach Reload. Lokal, OpenRouter oder direkte Anbieter; Systemantworten und fehlende ältere Belege werden ausdrücklich unterschieden. Modellkennung ist die gespeicherte Anfragekennung, Anbieter-Aliase werden nicht geraten. Schema 0027 lokal geprüft.",
           "status": "local"
         }
       ]

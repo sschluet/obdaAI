@@ -79,6 +79,7 @@ jobs:
           node native-provider-check.mjs
           node workspace-check.mjs
           node composer-ux-check.mjs
+          node processing-check.mjs
           node pipeline-check.mjs
           node workbench-check.mjs
           node task-ux-check.mjs

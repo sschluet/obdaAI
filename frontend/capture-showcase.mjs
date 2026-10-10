@@ -65,6 +65,7 @@ try{
  await page.setViewportSize({width:390,height:844});
  await capture('mobile');
  await page.setViewportSize({width:1440,height:980});await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Sicherheit',exact:true}).click();await page.getByRole('heading',{name:'Passwort ändern',exact:true}).waitFor();await capture('security');
+ await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();await page.getByLabel('Nachricht',{exact:true}).fill('Ein rein synthetisches Beispiel: Zeige eine kurze Antwort mit Herkunftshinweis.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Lokal · synthetic-fixture'}).waitFor();await capture('processing');
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Seven real UI screenshots captured with synthetic data only.');
+ console.log('Eight real UI screenshots captured with synthetic data only.');
 }finally{await browser.close();}

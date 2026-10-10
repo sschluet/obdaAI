@@ -367,6 +367,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             runs = db.scalars(
                 select(Run).where(Run.conversation_id == chat_id).order_by(Run.started)
             ).all()
+            by_run = {run.id: run for run in runs}
             return {
                 "id": c.id,
                 "project_id": c.project_id,
@@ -401,6 +402,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         "content": m.content,
                         "label": m.label,
                         "revision": m.revision,
+                        "processing": (
+                            {
+                                "run_id": linked.id,
+                                "provider": linked.provider,
+                                "model": linked.model or None,
+                                "model_used": linked.answer_model_used,
+                                "status": linked.status,
+                            }
+                            if m.role == "assistant"
+                            and (linked := by_run.get(m.run_id or "")) is not None
+                            else None
+                        ),
                     }
                     for m in messages
                 ],
