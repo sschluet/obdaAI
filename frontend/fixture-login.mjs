@@ -1,9 +1,9 @@
 // UI authentication only for isolated synthetic fixtures; retain app rate limits.
-export async function loginFixture(page){
+export async function loginFixture(page,password='synthetic-ui-password'){
  const origin=new URL(page.url()).origin;
  if(!['http://127.0.0.1:18765','http://127.0.0.1:18767'].includes(origin))throw Error('Refusing login outside the isolated fixture');
  for(let attempt=0;attempt<3;attempt++){
-  await page.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-password');
+  await page.getByLabel('Passwort',{exact:true}).fill(password);
   const response=page.waitForResponse(r=>r.url()===origin+'/api/login'&&r.request().method()==='POST');
   await page.getByRole('button',{name:'Anmelden',exact:true}).click();
   const result=await response;

@@ -84,6 +84,7 @@ jobs:
           node task-ux-check.mjs
           node preference-ux-check.mjs
           node template-check.mjs
+          node password-check.mjs
           cd ..
           HUB_BROWSER_FIXTURE_DIR=.local/browser uv run python scripts/seed_showcase.py
           cd frontend

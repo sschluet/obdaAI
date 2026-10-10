@@ -64,6 +64,7 @@ try{
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.setViewportSize({width:390,height:844});
  await capture('mobile');
+ await page.setViewportSize({width:1440,height:980});await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Sicherheit',exact:true}).click();await page.getByRole('heading',{name:'Passwort ändern',exact:true}).waitFor();await capture('security');
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Six real UI screenshots captured with synthetic data only.');
+ console.log('Seven real UI screenshots captured with synthetic data only.');
 }finally{await browser.close();}

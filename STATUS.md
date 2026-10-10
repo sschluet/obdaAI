@@ -1,4 +1,23 @@
-# obdaAI — Status 09.10.2026
+# obdaAI — Status 10.10.2026
+
+## Passwortverwaltung lokal implementiert — 10.10.2026
+
+Einstellungen → Sicherheit: aktuelles Passwort, neues Passwort (12–256 Zeichen),
+Bestätigung und expliziter Prüfschritt. POST /api/account/password verlangt
+Session/CSRF/Origin und erneute Passwortprüfung. Scrypt-Hash in Singleton-DB-Zeile
+mit Revision/Zeit; vorhandener Environment-Hash gilt bis zur ersten Änderung.
+Getrennte dauerhafte Fehlversuchbegrenzung. Login/Sitzungsanlage und Änderung
+werden über dieselbe DB-Sperre serialisiert; erfolgreiche Änderung widerruft
+alle Sitzungen atomar. Oberfläche leert Felder/Entwürfe und fordert Neuanmeldung.
+Schema0026 ist additiv und verweigert Downgrade nach einer Passwortänderung.
+588 lokale Tests bestanden, 14 PG-Fälle für CI ausgelassen; Ruff/Mypy64 und
+Frontendbuild bestanden. Synthetischer Passwort-Browsercheck einschließlich
+Neuanmeldung, Login-Cooldown, Arbeitsbereich-Regression, Design und Websiteprüfung
+bestanden. VM-Passwort unverändert; CI/Installation noch offen. GitHub-Zugang
+am 10.10.2026 ungültig (HTTP401); Push, CI und Veröffentlichung warten auf
+erneute Benutzeranmeldung.
+Öffentliche Vorstellung ergänzt die Funktion und eine leere synthetische
+Sicherheitsansicht. Keine Klartextpasswörter in Datenbank, Git oder Logs.
 
 ## Direkte UX auf Test-VM bestätigt — 09.10.2026
 

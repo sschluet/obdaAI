@@ -38,6 +38,14 @@ class LoginThrottle(Base):
     attempts: Mapped[int] = mapped_column(Integer)
 
 
+class AccountCredential(Base):
+    __tablename__ = "account_credentials"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    password_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    changed: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
     skill_selection: Mapped[str | None] = mapped_column(Text, nullable=True)

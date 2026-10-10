@@ -117,3 +117,24 @@ Nach Schemaänderungen eine verschlüsselte Off-VM-Sicherung separat wiederherst
 inklusive verschlüsselter Verbindungsdaten und dauerhafter Ausführungsbelege.
 Rollbackinformationen des aktuellen Releases liegen geschützt auf der eigenen VM;
 keine ungeprüften Downgrades gegen nichtleere Auditdaten durchführen.
+
+
+## Anmeldepasswort ab Schema 0026
+
+Unter Einstellungen → Sicherheit kann der angemeldete Benutzer sein Passwort
+ändern. Aktuelles Passwort und übereinstimmende neue Eingaben (12–256 Zeichen)
+sind erforderlich; fünf Bestätigungsversuche pro Minute werden getrennt vom
+Login dauerhaft begrenzt. Alle bisherigen Sitzungen werden nach erfolgreicher
+Änderung widerrufen; das neue Passwort wird nur als gesalzener Scrypt-Hash in
+account_credentials gespeichert. Keine Speicherung im Browserentwurf.
+
+Bis zur ersten Änderung bleibt HUB_PASSWORD_HASH der Bootstrap-Zugang. Ein
+gesetzter DB-Hash hat danach auf allen API-Instanzen und nach Neustarts Vorrang.
+Der alte Environment-Hash stellt diesen Zugang nicht automatisch wieder her.
+Die verschlüsselte DB-Sicherung enthält auch die Zugangskonfiguration.
+
+Rollback auf Releases vor 0026 ist nur zulässig, solange die Credential-Zeile
+noch keinen Hash und Revision0 hat. Andernfalls würden ältere APIs wieder den
+Bootstrap-Hash akzeptieren. Migration-Downgrade ist in diesem Fall gesperrt;
+Recovery muss die gültige Zugangskonfiguration bewahren. Keine automatische
+DB-Rücksetzung oder Entfernung des Hashes.

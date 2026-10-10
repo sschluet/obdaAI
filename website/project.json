@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-09",
+  "updated": "2026-10-10",
   "applicationCommit": "80179bc",
   "schema": "0024",
   "tests": 577,
@@ -34,6 +34,12 @@
       "title": "Wissen mit einer Quelle.",
       "description": "Externe Wissensquellen frei konfigurieren, prüfen und lokal indexieren.",
       "image": "assets/knowledge.png"
+    },
+    {
+      "id": "security",
+      "title": "Dein Zugang bleibt in deiner Hand.",
+      "description": "Passwort unter Einstellungen → Sicherheit ändern: aktuelles Passwort bestätigen, neues Passwort prüfen und anschließend neu anmelden. Synthetische Demo mit leeren Feldern.",
+      "image": "assets/security.png"
     }
   ],
   "groups": [
@@ -347,6 +353,11 @@
         {
           "title": "Direkte Gesprächsaktionen statt Formularauswahl",
           "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, Websuche bewusst pro Nachricht und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten synthetisch geprüft. Auf der Test-VM installiert und gezielt im Browser geprüft.",
+          "status": "local"
+        },
+        {
+          "title": "Anmeldepasswort in den Einstellungen ändern",
+          "description": "Aktuelles Passwort bestätigen, neues Passwort mit mindestens 12 Zeichen doppelt eingeben und Änderung freigeben. Hash bleibt dauerhaft am Server; alle bestehenden Sitzungen werden widerrufen. Schema 0026, lokal geprüft.",
           "status": "local"
         }
       ]

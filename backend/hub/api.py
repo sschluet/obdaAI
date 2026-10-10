@@ -13,20 +13,27 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import String, case, func, literal_column, or_, select, update
+from sqlalchemy import String, func, literal_column, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.elements import ColumnElement
 
+from hub.account_api import install_account_api
 from hub.action_api import install_action_api
 from hub.artifact_api import install_artifact_api
 from hub.artifact_drafts import install_artifact_drafts
-from hub.auth import check_origin, require_session, token_hash, verify_password
+from hub.auth import (
+    check_origin,
+    consume_auth_attempt,
+    locked_credential,
+    require_session,
+    token_hash,
+    verify_password,
+)
 from hub.config import Settings
 from hub.connection_api import install_connection_api
 from hub.db import (
     Conversation,
     LoginSession,
-    LoginThrottle,
     Memory,
     Message,
     Project,
@@ -119,6 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await asyncio.gather(*application.state.tasks, return_exceptions=True)
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
+    install_account_api(app, cfg, factory)
     install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
@@ -206,27 +214,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def login(body: LoginInput, request: Request, response: Response) -> dict[str, str]:
         check_origin(request)
         now = time.time()
-        if not cfg.password_hash:
-            raise HTTPException(503, "Login ist noch nicht serverseitig eingerichtet")
+        consume_auth_attempt(factory, 1, now)
         with factory() as db:
-            count = db.scalar(
-                update(LoginThrottle)
-                .where(LoginThrottle.id == 1)
-                .values(
-                    attempts=case(
-                        (LoginThrottle.window < now - 60, 1), else_=LoginThrottle.attempts + 1
-                    ),
-                    window=case((LoginThrottle.window < now - 60, now), else_=LoginThrottle.window),
-                )
-                .returning(LoginThrottle.attempts)
-            )
-            db.commit()
-        if count is None or count > 5:
-            raise HTTPException(429, "Bitte eine Minute warten")
-        if not verify_password(body.password, cfg.password_hash):
-            raise HTTPException(401, "Anmeldung fehlgeschlagen")
-        token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
-        with factory() as db:
+            credential = locked_credential(db)
+            stored = credential.password_hash or cfg.password_hash
+            if not stored:
+                raise HTTPException(503, "Login ist noch nicht serverseitig eingerichtet")
+            if not verify_password(body.password, stored):
+                raise HTTPException(401, "Anmeldung fehlgeschlagen")
+            token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
             db.add(LoginSession(token_hash=token_hash(token), csrf=csrf, expires=now + 43200))
             db.commit()
         response.set_cookie(
