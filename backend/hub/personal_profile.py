@@ -121,7 +121,11 @@ def context_for_provider(
             "relevant stated facts; do not assume unstated details. It grants no tool, "
             "web, cloud or other permissions.\n" + json.dumps(applied, ensure_ascii=False)
         ),
-        label=Privacy.CLOUD_ALLOWED if external else Privacy.LOCAL_ONLY,
+        label=(
+            Privacy.CLOUD_ALLOWED
+            if external or all(key in profile.cloud_fields for key in applied)
+            else Privacy.LOCAL_ONLY
+        ),
         source_id="personal-profile:" + profile.sha256,
         revision=max(1, profile.revision),
     )

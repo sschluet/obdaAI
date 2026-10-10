@@ -28,8 +28,11 @@ Bei ausgeschaltetem Profil bleiben die gespeicherten Angaben im Profil, werden a
 nicht als ungenutzte Kopie in neue Laufverläufe übernommen.
 Erst nach der tatsächlichen Anbieterwahl wird passender Profilkontext ergänzt.
 Cloudgrants binden ausschließlich die explizit freigegebene Teilmenge an den
-gewählten Anbieter und die eingefrorene Revision. Lokal profilgestützte Antworten
-und ihre weitere Verwendung bleiben LOCAL_ONLY. Die Routing-Erklärung enthält
+gewählten Anbieter und die eingefrorene Revision. Lokal profilgestützte Antworten bleiben LOCAL_ONLY, sobald ein verwendetes
+Profilfeld oder ein anderer Kontextteil nicht für Cloud freigegeben ist. Sind
+alle verwendeten Angaben freigegeben, dürfen ihre erlaubten Ableitungen in einem
+freigegebenen Auto-Gespräch später ebenfalls Cloudkontext sein. „Nur lokal“ hat
+weiterhin Vorrang. Die Routing-Erklärung enthält
 nur Revision und angewendete/ausgelassene Feldnamen, keine persönlichen Werte.
 Kontext-, Ausgabe- und Kostenlimits bleiben wirksam.
 

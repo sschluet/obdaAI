@@ -296,3 +296,39 @@ def test_disabled_saved_facts_are_not_copied_into_new_run_history(setup):
     assert (
         client.get("/api/personal-profile").json()["fields"]["name"] == "SYNTHETIC_DISABLED_PRIVATE"
     )
+
+
+@pytest.mark.parametrize("local_only", [False, True])
+def test_fully_shared_profile_derivatives_allow_auto_cloud_but_local_override_stays_private(
+    setup, local_only
+):
+    app, client, headers, provider = setup
+    assert (
+        save(
+            client,
+            headers,
+            enabled=True,
+            fields={"name": "SYNTHETIC_SHARED"},
+            cloud_fields=["name"],
+        ).status_code
+        == 200
+    )
+    chat = client.post("/api/conversations", headers=headers, json={"cloud_allowed": True}).json()[
+        "id"
+    ]
+    response = client.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=headers,
+        json={"content": "Synthetic short greeting", "local_only": local_only},
+    )
+    assert response.status_code == 200
+    detail = client.get("/api/conversations/" + chat).json()
+    assert detail["messages"][-1]["label"] == ("LOCAL_ONLY" if local_only else "CLOUD_ALLOWED")
+    provider.decision = Route(capabilities=["chat"], model_class="cloud", reason="complex fixture")
+    response = client.post(
+        "/api/conversations/" + chat + "/messages",
+        headers=headers,
+        json={"content": "Synthetic next question", "cloud_allowed": True},
+    )
+    assert response.status_code == 200
+    assert provider.stream_calls == [False, not local_only]

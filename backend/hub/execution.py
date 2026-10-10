@@ -554,8 +554,11 @@ async def execute_run(
                     parts.extend(profile_parts)
                     roles.extend("user" for _ in profile_parts)
                     grants.extend(profile_grants)
-                    if not external:
-                        label = Privacy.LOCAL_ONLY
+                    label = (
+                        Privacy.LOCAL_ONLY
+                        if any(part.label == Privacy.LOCAL_ONLY for part in parts)
+                        else Privacy.CLOUD_ALLOWED
+                    )
                     route.answer = None
                     builtin_answer = False
                     if sum(len(p.content) for p in parts) > cfg.context_limit:

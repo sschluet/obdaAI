@@ -1,5 +1,14 @@
 # obdaAI — Status 10.10.2026
 
+## Browserkompatibilität und Profilfreigaben – 10.10.2026
+
+Erste CI fand einen alten allgemeinen Bedienschritt mit nicht mehr vorhandenen
+Skillbutton-Namen. Bestehender Test auf neuen Entwurf-/Prüfen-/Aktivieren-Ablauf
+angepasst. Zusätzlich gilt Freigabevererbung für vollständig freigegebenes Profil:
+lokale Auto-Antworten halten damit zulässige Folge-Cloudantworten nicht pauschal
+auf. Ein nicht freigegebenes Feld, private andere Quellen oder „Nur lokal“ bleiben
+schützend; zwei explizite Regressionsfälle prüfen beide Wege. Neue CI/VM-Abnahme folgt.
+
 ## Persönliches Profil und intuitive Skill-Dateien – implementiert, 10.10.2026
 
 Einstellungen → Über mich: acht freiwillige Felder, Aktivierung, gezielte Cloud-

@@ -182,7 +182,7 @@
         },
         {
           "title": "Persönliches Profil mit gezielter Feldfreigabe",
-          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt.",
+          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
           "status": "implemented"
         }
       ]
