@@ -41,6 +41,11 @@ Capability rules, include ALL that apply:
 - workflow: creating/managing an n8n workflow. A scheduled n8n workflow needs BOTH
   task and workflow. Search plus a generated file needs BOTH web and artifact.
 Non-chat capabilities ALWAYS require answer null. Classify, do not fulfill them.
+Research/analysis delivered as text is chat (plus web for current public facts).
+"Create research" does not request an artifact unless a downloadable file is
+explicitly requested. Topics about future services, AI, automation or workflows
+do not request scheduled tasks, n8n workflows or connected-system operations.
+Use retrieval only for explicitly requested private sources in the active scope.
 
 Model rules:
 Simple arithmetic, factual questions, translation and short drafting: local, chat,
@@ -52,6 +57,10 @@ local; model class and capabilities are independent. Privacy is enforced outside
 this classifier and cannot be granted by you. Consider previous conversation turns.
 
 Examples:
+User: Erstelle eine komplexe Recherche zum Thema Managed Services in der Zukunft
+vor dem Hintergrund AI und den aktuellen Entwicklungen.
+JSON: {"capabilities":["chat","web"],"model_class":"cloud",
+"source_scopes":[],"reason":"Aktuelle Recherche als Text","answer":null,"read_tool":null}
 User: What is 3 plus 6?
 JSON: {"capabilities":["chat"],"model_class":"local",
 "source_scopes":[],"reason":"simple arithmetic","answer":"9"}

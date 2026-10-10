@@ -52,6 +52,12 @@
       "title": "Finden. Öffnen. Weiterarbeiten.",
       "description": "Ein Suchfeld für den lokalen Arbeitsraum, mit klaren Objektfiltern und direkter Navigation. Ausschließlich synthetische Beispieldaten.",
       "image": "assets/search.png"
+    },
+    {
+      "id": "run-error",
+      "title": "Ein Fehler. Eine klare Rückmeldung.",
+      "description": "Ein fehlgeschlagener Recherchelauf zeigt eine einzige Meldung. Die Laufhistorie und der erneute Versuch bleiben erreichbar. Ausschließlich synthetische Antwortdaten zur Prüfung der Darstellung.",
+      "image": "assets/runerror.png"
     }
   ],
   "groups": [
@@ -105,6 +111,11 @@
           "title": "Durchgehende lokale Arbeitsraumsuche",
           "description": "Gespräche, Projekte, Dateititel, Quellen, Aufgaben und Wissensverbindungen über Suchknopf oder ⌘K/Strg+K finden. Inhaltsabgleich für Gespräche, Projektbeschreibungen und Aufgabenziele; direkte Objektöffnung, Filter und Tastaturbedienung. Keine Modellaufrufe, keine Zugangsdaten oder Konfigurationen in Suchtreffern. Auf der Test-VM installiert und an eigenem synthetischen Gespräch direkt geprüft.",
           "status": "local"
+        },
+        {
+          "title": "Nachvollziehbare Recherche und Fehler",
+          "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Webfreigaben bleiben erforderlich. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar.",
+          "status": "implemented"
         }
       ]
     },

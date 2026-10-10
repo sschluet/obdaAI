@@ -25,7 +25,7 @@ from hub.memory import write as write_memory
 from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 from hub.provider_settings import fresh_cloud_prices, runtime_provider
 from hub.providers import Providers
-from hub.routing import Capability, Route
+from hub.routing import Capability, Route, conversational_research
 from hub.titles import execute_title, reserve_title
 
 
@@ -278,6 +278,10 @@ async def execute_run(
                 if cancelled():
                     raise asyncio.CancelledError
                 route = await providers.route(parts, roles)
+                if latest:
+                    route = conversational_research(
+                        route, latest.content, private_context=bool(c.project_id or c.memory_scope)
+                    )
                 # A definite authenticated request for public research cannot
                 # become an unsourced file because the model omitted one skill.
                 if Capability.ARTIFACT in route.capabilities and latest:

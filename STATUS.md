@@ -1,5 +1,18 @@
 # obdaAI — Status 10.10.2026
 
+## Rechercheeinordnung und Fehleranzeige – implementiert, 10.10.2026
+
+Ein echter fehlgeschlagener Lauf auf der Test-VM wurde als web/retrieval/artifact/
+task/workflow klassifiziert und deshalb durch die Schutzprüfung für gemischte
+Dateiaufträge abgewiesen. Klare Recherchewünsche ohne Datei- oder Aktionsauftrag
+werden gezielt auf Recherche/Antwort begrenzt; Web-, Cloud- und Werkzeugfreigaben
+bleiben erforderlich. Die doppelte Anzeige desselben Lauffehlers wird bereinigt.
+605 bestehende Tests plus 23 neue Routingtests bestanden; 15 PostgreSQLfälle
+lokal ausgelassen. TypeScript/Build, Ruff und Mypy bestanden.
+Neue Browserprüfung für Fehler/Retry/Reload sowie Composer, Antwortherkunft,
+Arbeitsbereich und öffentliche Galerie bestanden; synthetischer Fehlerscreenshot
+ergänzt. Keine Migration. GitHub-CI und VM-Abnahme dieser Korrektur ausstehend.
+
 ## Arbeitsraumsuche auf Test-VM bestätigt — 10.10.2026
 
 Releasea698d72 / unverändertes Schema0027 auf allen neun App-/Runnercontainern.
