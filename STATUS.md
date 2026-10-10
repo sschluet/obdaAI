@@ -1,5 +1,12 @@
 # obdaAI — Status 10.10.2026
 
+## Löschaktionen im vollständigen Browserlauf –10.10.2026
+
+Erste CI fand einen veralteten Projektgesprächs-Selektor: Der neue Löschbutton wurde
+als weiteres Gespräch gezählt. Prüfung zählt jetzt die Öffnen-Aktion je Gesprächs-
+zeile, weiterhin mit strikter Projektraum-Isolation. Betroffener Arbeitsraum- und
+integrierter Workflowcheck lokal bestanden. Backend und vollständige neue CI folgen.
+
 ## Endgültige Projekt-/Chatlöschung – implementiert, 10.10.2026
 
 Projektlöschung entfernt App-Dateien, Quellen, Projektskills und zugehörige Chats.

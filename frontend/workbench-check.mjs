@@ -31,7 +31,7 @@ try{
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('button',{name:project,exact:true}).click();
  await page.getByRole('tab',{name:/Gespräche ·/}).click();
- await page.locator('.conversation-list button').first().click();
+ await page.locator('.conversation-list > .conversation-row > button:first-child').first().click();
  if(await page.getByLabel('Nachricht',{exact:true}).inputValue()!=='Noch nicht gesendeter Entwurf')throw Error('Navigation lost chat input');
  await page.getByLabel('Nachricht',{exact:true}).fill('Fasse die Arbeitsgrundlage zusammen.');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();

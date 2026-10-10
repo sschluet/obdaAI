@@ -38,7 +38,7 @@ try{
  await page.getByText('SYNTHETIC_SOURCE_REPLY:',{exact:false}).waitFor();
  await page.getByRole('button',{name:projectName+' · Projektraum öffnen',exact:true}).click();
  await page.getByRole('heading',{name:'Gespräche in diesem Projekt',exact:true}).waitFor();
- if(await page.locator('.conversation-list button').count()!==1)throw Error('Project chat listing leaked another conversation');
+ if(await page.locator('.conversation-list > .conversation-row > button:first-child').count()!==1)throw Error('Project chat listing leaked another conversation');
  await page.screenshot({path:output+'/workspace-project-room.png',fullPage:true});
  await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
  if(await page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true}).count())throw Error('Task overview opens editor on entry');
