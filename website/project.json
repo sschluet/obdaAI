@@ -425,14 +425,14 @@
   "development": {
     "mode": "local",
     "schema": "0027",
-    "browserChecks": 16,
+    "browserChecks": 17,
     "serverDeployment": true,
-    "commit": "a0eef3b",
-    "ciTests": 643,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38054014847",
-    "deployedCommit": "a0eef3b",
+    "commit": "ed911e9",
+    "ciTests": 648,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38056148463",
+    "deployedCommit": "ed911e9",
     "deployedSchema": "0027",
-    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, echte lokale QA-Antwort, Arbeitsraumsuche und konkrete Rechercheeinordnung mit einzelnem Freigabefehler nach Reload. Keine echte Web-/Cloudrecherche dieser Abnahme; Passwort unverändert. Breite Geräteabnahme offen.",
+    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, echte Webrecherche und Wiederholung nach Reload ohne Bestätigungsdialog: jeweils acht gespeicherte Quellen und lokale Modellantwort. Dauerhafter Webschalter, Nur-lokal-Ausnahme und Mobilansicht geprüft. Passwort unverändert; breite Cloud-/Geräteabnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }

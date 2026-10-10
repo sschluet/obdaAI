@@ -1,5 +1,19 @@
 # obdaAI — Status 10.10.2026
 
+## Webrecherche ohne Dialog auf Test-VM bestätigt – 10.10.2026
+
+Release ed911e9 / unverändertes Schema 0027 auf neun App-/Runnercontainern.
+CI 38056148463: sechs erfolgreiche Jobs, 648 Tests und 17 Browserprüfungen.
+Gepinnte HTTPS-Assets und echte Chat-Webrecherche ohne Bestätigungsdialog geprüft;
+nach Reload erneut erzeugt, beide Läufe erfolgreich mit je acht gespeicherten
+Webquellen und lokaler Modellantwort. Query exakt die aktuelle Frage, Auswahl
+bleibt erhalten. Nur-lokal-Override und mobile Ansicht bestätigt. Eigene QA-Chats
+archiviert, Testsitzungen abgemeldet und temporäre Cookie-Datei entfernt.
+Verschlüsselte Off-VM-Sicherung hashgeprüft; Originalnachrichten, Datenbank,
+Netzwerkregeln und acht Compose-Erweiterungen bewahrt. Kein Passwortwechsel.
+Öffentliche Vorstellung aktualisiert: 54 Funktionen, zehn synthetische Bilder;
+Veröffentlichungsbeleg wird getrennt unter .local/web-access-publication.json geführt.
+
 ## Dauerhafte Webrecherche ohne Bestätigungsdialog – implementiert, 10.10.2026
 
 Auf ausdrücklichen Benutzerwunsch standardmäßig aktiver, im Browser gespeicherter

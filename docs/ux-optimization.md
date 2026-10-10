@@ -231,4 +231,7 @@ Die Backend-Grenze prüft weiterhin konkrete Query, Laufkennung und Sucherlaubni
 Private Historie, Dokumente, Vault und Memory werden nicht automatisch als Suchtext
 übertragen. Lokale Modellwahl und öffentliche Websuche sind getrennte Entscheidungen;
 die Sucherlaubnis genehmigt weder Cloud-Modelltransfer noch andere Werkzeugaktionen.
-Echte Abnahme, genaue Release- und CI-Evidenz werden nach Prüfung ergänzt.
+Abnahme: Release ed911e9 / Schema0027, CI38056148463 mit 648 Tests und
+17 Browserprüfungen. Echte UI-Webrecherche und Retry nach Reload ohne Dialog
+mit je acht gespeicherten Quellen und lokaler Modellantwort bestätigt.
+QA-Chats archiviert, Sitzungen beendet; Backup und vorhandene Plattform bewahrt.
