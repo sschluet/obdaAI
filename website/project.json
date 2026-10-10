@@ -410,7 +410,7 @@
         },
         {
           "title": "Skills direkt im Chat einsetzen",
-          "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Synthetisch geprüft; releasegebundene VM-Abnahme folgt.",
+          "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Synthetisch geprüft; releasegebundene VM-Abnahme folgt. Führende aktivierte Skillaufrufe bleiben mit reiner Textrecherche kompatibel; die Fokusrückgabe wartet auf das Schließen des Dialogs.",
           "status": "implemented"
         }
       ]

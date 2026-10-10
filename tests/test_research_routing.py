@@ -150,3 +150,20 @@ def test_text_research_does_not_invent_web_or_cloud_permission(setup, cloud):
         assert db.scalar(select(func.count()).select_from(Artifact)) == 0
         assert db.scalar(select(func.count()).select_from(Task)) == 0
         assert db.scalar(select(func.count()).select_from(Research)) == 0
+
+
+def test_selected_skill_prefix_does_not_turn_research_into_actions():
+    from hub.skill_api import request_without_skill_prefix
+
+    audit = [{"name": "Gründlich recherchieren"}, {"name": "Kurz schreiben"}]
+    request = "/grundlich-recherchieren @kurz-schreiben " + GOAL
+    cleaned = request_without_skill_prefix(request, audit)
+    route = conversational_research(incorrect_route(), cleaned, private_context=False)
+    assert cleaned == GOAL
+    assert set(route.capabilities) == {Capability.CHAT, Capability.WEB}
+    assert route.read_tool is None and route.answer is None
+    assert request.startswith("/grundlich-recherchieren")  # The stored input is unchanged.
+    assert request_without_skill_prefix("/unknown " + GOAL, audit) == "/unknown " + GOAL
+    assert request_without_skill_prefix("/kurz-schreiben-extra " + GOAL, audit).startswith(
+        "/kurz-schreiben-extra "
+    )

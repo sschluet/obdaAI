@@ -1,5 +1,15 @@
 # obdaAI — Status 10.10.2026
 
+## Fokus und Recherche mit Skillaufruf – 10.10.2026
+
+CI prüfte die asynchrone Fokusrückgabe nach dem Chatpicker zu früh. Fokus wird jetzt
+nach dem React-Commit wiederhergestellt und der Test wartet auf dieses Ereignis.
+Ausgewählte führende /Skill- oder @Skill-Aufrufe werden ausschließlich für die
+Recherche-Intentprüfung erkannt; gespeicherte Nachrichten und bestätigte öffentliche
+Suchtexte werden nicht verändert. Unbekannte Aufrufe bleiben unverändert.
+65 fokussierte Backendtests, Ruff/Mypy68 und TS/Build bestanden. Vollständiger
+lokaler Browserlauf mit frischer Datenbank und neue GitHub-CI folgen.
+
 ## Browserkompatibilität und Profilfreigaben – 10.10.2026
 
 Erste CI fand einen alten allgemeinen Bedienschritt mit nicht mehr vorhandenen

@@ -298,8 +298,12 @@ async def execute_run(
                 classifier = route.model_class
                 classifier_reason = route.reason
                 if latest:
+                    from hub.skill_api import request_without_skill_prefix
+
                     route = conversational_research(
-                        route, latest.content, private_context=bool(c.project_id or c.memory_scope)
+                        route,
+                        request_without_skill_prefix(latest.content, snapshot.get("skills", [])),
+                        private_context=bool(c.project_id or c.memory_scope),
                     )
                 if (route.reason == "Textrecherche; keine Datei oder Systemaktion angefordert"
                     and snapshot.get("web_search_allowed")

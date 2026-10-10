@@ -61,6 +61,21 @@ def slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")[:100]
 
 
+def request_without_skill_prefix(query: str, audit: list[dict[str, Any]]) -> str:
+    """Interpret the user's request after exact, already-selected invocations.
+
+    This is only intent normalization. Stored messages and authorized public
+    queries remain unchanged; arbitrary slash commands are never removed.
+    """
+    names = [slug(item["name"]) for item in audit if isinstance(item.get("name"), str)]
+    if not names:
+        return query
+    pattern = r"^\s*[/@](?:" + "|".join(re.escape(name) for name in names) + r")(?:\s+|$)"
+    while match := re.match(pattern, query, re.I):
+        query = query[match.end():]
+    return query
+
+
 def parse(document: str) -> tuple[Metadata, str]:
     try:
         document = document.replace("\r\n", "\n")
