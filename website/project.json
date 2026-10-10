@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-10",
-  "applicationCommit": "bc8f3a9",
+  "updated": "2026-10-11",
+  "applicationCommit": "d4e0154",
   "schema": "0033",
-  "tests": 779,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38087025082",
+  "tests": 794,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
   "screenshots": [
     {
       "id": "chat",
@@ -147,7 +147,7 @@
         {
           "title": "Auto, Nur lokal oder Cloud",
           "description": "Drei klare Antwortmodi im bestehenden Gespräch: Auto wählt lokal oder Cloud nach den Routingregeln, Nur lokal schließt Cloud und Websuche aus, Cloud fordert den konfigurierten Cloudanbieter direkt an. Private Projekt- und Wissenskontexte bleiben lokal; die Cloudoption erklärt ihre Sperre. Anbieter werden in den Einstellungen verwaltet. Die bisherige doppelte Auswahl „Auto + OpenRouter“ entfällt. Implementiert; reale Abnahme dieser neuen Auswahl steht noch aus.",
-          "status": "implemented"
+          "status": "live"
         },
         {
           "title": "Titel, Suche und Verlauf",
@@ -539,12 +539,12 @@
     "schema": "0033",
     "browserChecks": 25,
     "serverDeployment": true,
-    "commit": "bc8f3a9",
-    "ciTests": 779,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38087025082",
-    "deployedCommit": "bc8f3a9",
+    "commit": "d4e0154",
+    "ciTests": 794,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
+    "deployedCommit": "d4e0154",
     "deployedSchema": "0033",
-    "liveScope": "Konfigurierbare Projektlogos auf der Test-VM bestätigt: 32 lokal eingebundene Icons, Suche, Abbrechen, Speichern und Neuladen, Projektkarte und Projektkopf sowie Mobilansicht bei320px. Logo im bestehenden Projektchat und stabile Projektwahl bei verspäteten Antworten durch gezielte Browserprüfungen abgedeckt. Lizenzdatei tatsächlich ausgeliefert und geprüft. 62 Funktionen und21 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
+    "liveScope": "Drei Modellmodi auf der Test-VM bestätigt: Auto, Nur lokal und Cloud ohne Anbieter- oder Neugesprächsdialog. Kurze synthetische Anfrage tatsächlich über den eingerichteten Cloudanbieter beantwortet; Routingbeleg ohne lokalen Klassifikator. Lokale Websperre, private Projekt-Cloudsperre und Mobilansicht320px geprüft. Einstellungen und Grenzen erhalten. 62 Funktionen und22 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true
   }

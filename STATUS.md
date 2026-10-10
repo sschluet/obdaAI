@@ -1,4 +1,21 @@
-# obdaAI — Status 10.10.2026
+# obdaAI — Status 11.10.2026
+
+## Drei Modellmodi auf Test-VM bestätigt – 11.10.2026
+
+Release `d4e0154`, Schema0033 unverändert: [CI38088914401](https://github.com/sschluet/obdaAI/actions/runs/38088914401),
+alle sechs Jobs erfolgreich, 794 Python-/PostgreSQLtests und25 UI-Browsersuiten
+plus Fixture-Anmeldung. Gepinnte HTTPS-/Asset-/API-/Loginprüfung erfolgreich.
+Echte Browserabnahme mit ausschließlich eigenen synthetischen Objekten: genau drei
+Einträge Auto/Nur lokal/Cloud, bestehendes Gespräch ohne Anbieter-/Neugesprächsdialog,
+Web in Nur lokal aus, Cloud im Projekt gesperrt, 320px ohne Überlauf. Kurze reale
+Cloudantwort über den konfigurierten Anbieter erfolgreich; Routingbeleg requested_mode
+cloud und kein lokaler Klassifikator. Eigene Skillsauswahl leer, keine geteilten
+Profilfelder; keine private Historie übermittelt. Testchat/-projekt samt Projektchat
+entfernt, QA-Sitzung beendet. Kostenbuch bleibt korrekt erhalten.
+Sicherung, vorhandene Nachrichten beim Rollout, Einstellungen, acht Overlays und
+Netzregeln erhalten. Website62 Features/22 ausschließlich synthetische Bilder,
+Galerie/Tastatur/Mobil und Bilder geprüft; Veröffentlichung separat verifiziert.
+Vollständige V1 und breite Fakten-/Safari-/Geräteabnahme bleiben offen.
 
 ## Drei eindeutige Modellmodi – implementiert, 10.10.2026
 
