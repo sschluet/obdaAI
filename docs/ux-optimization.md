@@ -173,3 +173,12 @@ gespeicherten Delta-Ereignissen innerhalb desselben Gesprächs. Anbieter-Aliase
 wie automatische Modellrouten werden als Anfragekennung angezeigt; ein vom
 Anbieter nicht gemeldetes aufgelöstes Modell wird nicht erfunden. Die öffentliche
 Demonstration ist synthetisch und belegt keine reale Cloudintegration.
+
+
+Abnahme 10.10.2026: Release77b9d98 / Schema0027 auf Test-VM installiert.
+CI38047407010 mit 610 Tests/13 Browserprüfungen erfolgreich. Bestehende Anmeldung
+und Passwortformular ohne echten Passwortwechsel bestätigt. Echte lokale
+Modellantwort plus Herkunftshinweis nach Reload geprüft, QA-Chat archiviert.
+Vorheriges Backup off-VM hashgeprüft, Originalnachrichten per strukturiertem
+Digest bewahrt; Overlays und Netzwerkregeln unverändert. Cloudtests bleiben
+synthetisch. Wiederhergestellte Teilantworten behalten ihre echten Laufdaten.

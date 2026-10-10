@@ -92,7 +92,7 @@
         },
         {
           "title": "Anbieter und Modell direkt unter der Antwort",
-          "description": "Dezenter Hinweis pro Antwort aus fest zugeordneten Laufdaten, bereits im Stream und nach Reload. Lokal, OpenRouter oder direkte Anbieter; Systemantworten und fehlende ältere Belege werden ausdrücklich unterschieden. Modellkennung ist die gespeicherte Anfragekennung, Anbieter-Aliase werden nicht geraten. Schema 0027 lokal geprüft.",
+          "description": "Dezenter Hinweis pro Antwort aus fest zugeordneten Laufdaten, bereits im Stream und nach Reload. Lokal, OpenRouter oder direkte Anbieter; Systemantworten und fehlende ältere Belege werden ausdrücklich unterschieden. Modellkennung ist die gespeicherte Anfragekennung, Anbieter-Aliase werden nicht geraten. Schema 0027 installiert; echte lokale Antwort und Reload auf der Test-VM geprüft. Cloudbelege weiterhin synthetisch.",
           "status": "local"
         }
       ]
@@ -368,7 +368,7 @@
         },
         {
           "title": "Anmeldepasswort in den Einstellungen ändern",
-          "description": "Aktuelles Passwort bestätigen, neues Passwort mit mindestens 12 Zeichen doppelt eingeben und Änderung freigeben. Hash bleibt dauerhaft am Server; alle bestehenden Sitzungen werden widerrufen. Schema 0026, lokal geprüft.",
+          "description": "Aktuelles Passwort bestätigen, neues Passwort mit mindestens 12 Zeichen doppelt eingeben und Änderung freigeben. Hash bleibt dauerhaft am Server; alle bestehenden Sitzungen werden widerrufen. Auf der Test-VM installiert; Formular und bestehender Login bestätigt. Echter Passwortwechsel wurde dem Benutzer überlassen.",
           "status": "local"
         }
       ]
@@ -402,17 +402,15 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0025",
-    "pythonPassed": 577,
-    "pythonSkipped": 13,
-    "browserChecks": 11,
+    "schema": "0027",
+    "browserChecks": 13,
     "serverDeployment": true,
-    "commit": "854e587",
-    "ciTests": 590,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37921380828",
-    "deployedCommit": "854e587",
-    "deployedSchema": "0025",
-    "liveScope": "Gezielte Browser-/HTTPS-Abnahme der neuen Oberfläche auf der Test-VM; kein neuer Modell- oder echter Gerätenachweis.",
+    "commit": "77b9d98",
+    "ciTests": 610,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38047407010",
+    "deployedCommit": "77b9d98",
+    "deployedSchema": "0027",
+    "liveScope": "Gepinnte HTTPS-/UI-Abnahme und echte lokale Antwort mit dauerhaftem Herkunftshinweis. Passwortwechsel synthetisch getestet; echtes Passwort unverändert. Cloud- und breite Geräteabnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true
   }

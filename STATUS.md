@@ -1,5 +1,25 @@
 # obdaAI — Status 10.10.2026
 
+## Passwort und Antwortherkunft auf Test-VM installiert — 10.10.2026
+
+Release77b9d98 / Schema0027 auf neun App-/Runnercontainern. CI38047407010:
+sechs Jobs erfolgreich, 610 Python-/PostgreSQL-Tests und 13 Browserprüfungen.
+Gepinnte HTTPS-/Assetabnahme, bisheriger Login, leeres Passwortformular,
+Mobillayout und echte lokale Antwort mit dauerhaftem Modellhinweis nach Reload
+bestanden. QA-Chat archiviert, Testsitzung abgemeldet; echtes Passwort unverändert.
+Vor Cutover verschlüsselte Off-VM-Sicherung hashgeprüft. Nachrichteninhalte,
+Labels, Revisionen, Aktivzustand und Zeitstempel vor/nach Migration per
+strukturiertem Gesamtdigest verglichen: unverändert. DB, acht Overlays und
+normalisierte IPv4-/IPv6-Regeln bewahrt. Credentialabhängiger Rollback
+verhindert Reaktivierung eines alten Bootstrap-Passworts nach Benutzeränderung.
+Erste CI fand den korrekt verweigerten Test-Downgrade; disposable Fixture
+räumt jetzt ihre Belege ausdrücklich auf. Recoveryteilantworten sind ebenfalls
+mit ihrem echten Lauf verbunden. GitHub-Anmeldung wieder verfügbar.
+Öffentliche Vorstellung: 52 Funktionen, acht rein synthetische Screenshots.
+Cloudabläufe und Passwortrotation synthetisch geprüft; keine breite Cloud-/
+Geräte-/V1-Liveabnahme behauptet.
+
+
 ## Antwortverarbeitung pro Nachricht — 10.10.2026
 
 Dezenter Fuß jeder KI-Antwort: Anbieter und angefragte Modellkennung aus dem
