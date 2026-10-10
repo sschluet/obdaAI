@@ -11,7 +11,7 @@ const page=await browser.newPage({viewport:{width:1440,height:980},deviceScaleFa
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 // Synthetic endpoint only: the public screenshot never displays internal addresses.
 await page.route('**/api/web-settings',async route=>{if(route.request().method()!=='GET'){await route.continue();return;}const response=await route.fetch();const settings=await response.json();await route.fulfill({response,json:{...settings,endpoint:'https://search.example.org/search'}});});
-const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:name==='websettings'});};
+const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:['websettings','routing'].includes(name)});};
 try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
@@ -68,7 +68,8 @@ try{
  await capture('mobile');
  await page.setViewportSize({width:1440,height:980});await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Sicherheit',exact:true}).click();await page.getByRole('heading',{name:'Passwort ändern',exact:true}).waitFor();await capture('security');
  await page.setViewportSize({width:1440,height:1520});await page.getByRole('button',{name:'Webrecherche',exact:true}).click();await page.getByRole('heading',{name:'Suchdienst und Ergebnisse',exact:true}).waitFor();await page.getByRole('radio',{name:'Alle Sprachen',exact:true}).waitFor();await capture('websettings');await page.setViewportSize({width:1440,height:980});
- await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();await page.getByLabel('Nachricht',{exact:true}).fill('Ein rein synthetisches Beispiel: Zeige eine kurze Antwort mit Herkunftshinweis.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Lokal · synthetic-fixture'}).waitFor();await capture('processing');
+ await page.setViewportSize({width:1440,height:1900});await page.getByRole('button',{name:'Routing',exact:true}).click();await page.getByRole('region',{name:'Routing-Einstellungen',exact:true}).waitFor();await page.getByLabel('Routing-Testprompt',{exact:true}).fill('Erstelle eine komplexe Recherche zu neuen Ideen für unser fiktives Projekt Aurora. Vergleiche Perspektiven und begründe die nächsten Schritte.');await page.getByRole('button',{name:'Routing prüfen',exact:true}).click();await page.getByText('Voraussichtliches Routing:',{exact:false}).waitFor();await capture('routing');await page.setViewportSize({width:1440,height:980});
+ await page.getByRole('button',{name:'Neues Gespräch',exact:true}).first().click();await page.getByLabel('Nachricht',{exact:true}).fill('Ein rein synthetisches Beispiel: Zeige eine kurze Antwort mit Herkunftshinweis.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Lokal · synthetic-fixture'}).waitFor();await capture('processing');
  await page.getByRole('button',{name:'Arbeitsraum durchsuchen',exact:true}).click();const search=page.getByRole('dialog',{name:'Suchen und weiterarbeiten',exact:true});await search.getByRole('combobox').fill('Projekt');await search.getByRole('option').first().waitFor();await capture('search');await search.getByRole('button',{name:'Suche schließen',exact:true}).click();
  if(errors.length)throw Error(errors.join('\n'));
  // A stored synthetic long answer illustrates detached reading; never open real chats.
@@ -102,5 +103,5 @@ try{
  await page.locator('.chat-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight;});
  await capture('partial');
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Twelve gallery screenshots plus mobile captured with synthetic data only.');
+ console.log('Thirteen gallery screenshots plus mobile captured with synthetic data only.');
 }finally{await browser.close();}

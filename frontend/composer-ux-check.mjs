@@ -8,6 +8,8 @@ const errors=[];page.on('pageerror',error=>errors.push(error.message));
 try {
  // Isolated UI configuration exposes a cloud choice; no real provider is contacted.
  await page.route('**/api/settings',async route=>{const response=await route.fetch();const body=await response.json();await route.fulfill({response,json:{...body,cloud_enabled:true,external_provider_kinds:['openrouter']}})});
+ // The isolated server intentionally denies real cloud grants; only browser choice is enabled.
+ await page.route('**/api/conversations',async route=>{if(route.request().method()==='POST'){const body=route.request().postDataJSON();await route.fulfill({response:await route.fetch({postData:JSON.stringify({...body,cloud_allowed:false})})})}else await route.continue()});
  await page.goto('http://127.0.0.1:18765');await loginFixture(page);
  const composer=page.locator('form.composer'),model=composer.getByRole('button',{name:'Modellwahl',exact:true}),plus=composer.getByRole('button',{name:'Aktionen und Anhänge',exact:true});
  if(await composer.locator('select').count())throw Error('Native composer selects remain');

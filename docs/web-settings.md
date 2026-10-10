@@ -20,7 +20,9 @@ private chat question, history, files, Vault or Memory.
 The personal browser default under General still determines whether the chat's
 Websuche switch starts enabled. An enabled server setting makes research
 available; it does not override the visible Nur lokal mode or add permission to
-transfer a conversation to a cloud model. Each permitted run binds its actual
+transfer private context to a cloud model. Ordinary Auto now separately permits
+the current ordinary input and run-bound public results, as documented in
+[provider and routing settings](providers.md). Each permitted run binds its actual
 public query at the API boundary. No per-query confirmation dialog is needed.
 
 Release 8337ebf / schema0028: CI38058159977 passed 667 tests and 18 browser

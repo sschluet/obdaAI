@@ -54,6 +54,8 @@ from hub.preference_api import install_preference_api
 from hub.preferences import resolve as resolve_preferences
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
+from hub.routing_settings import install_routing_settings_api
+from hub.routing_settings import read_options as read_routing_options
 from hub.schedule_api import install_schedule_api
 from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
@@ -78,6 +80,8 @@ class LoginInput(Input):
 
 
 class ChatInput(Input):
+    cloud_allowed: bool | None = None
+    cloud_provider: Literal["openrouter", "openai", "anthropic"] | None = None
     local_only: bool = False
     model_local_only: bool = False
     web_search_allowed: bool = False
@@ -99,6 +103,8 @@ class ConversationEdit(Input):
 
 
 class RetryInput(Input):
+    cloud_allowed: bool | None = None
+    cloud_provider: Literal["openrouter", "openai", "anthropic"] | None = None
     local_only: bool = False
     model_local_only: bool = False
     web_search_allowed: bool = False
@@ -144,6 +150,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
     install_web_settings_api(app, cfg, factory)
+    install_routing_settings_api(app, cfg, factory)
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
     install_skill_api(app, factory)
@@ -421,6 +428,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 "model": linked.model or None,
                                 "model_used": linked.answer_model_used,
                                 "status": linked.status,
+                                **(
+                                    {"routing": json.loads(linked.routing_trace)}
+                                    if linked.routing_trace and linked.routing_trace != "{}"
+                                    else {}
+                                ),
                             }
                             if m.role == "assistant"
                             and (linked := by_run.get(m.run_id or "")) is not None
@@ -436,6 +448,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         "status": x.status,
                         "provider": x.provider,
                         "reason": x.reason,
+                        "routing": json.loads(x.routing_trace or "{}"),
                         "error": x.error,
                         "cost": x.cost,
                         "cost_basis": x.cost_basis,
@@ -509,6 +522,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chat_id,
             body.request_id,
             content=body.content,
+            cloud_allowed=body.cloud_allowed,
+            cloud_provider=body.cloud_provider,
             web_search_allowed=body.web_search_allowed,
             web_query=body.web_query,
             local_only=body.local_only,
@@ -522,12 +537,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request_id: str | None,
         *,
         content: str | None = None,
+        cloud_allowed: bool | None = None,
+        cloud_provider: str | None = None,
         web_search_allowed: bool = False,
         web_query: str | None = None,
         local_only: bool = False,
         model_local_only: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
+        model_local_only = model_local_only or cloud_allowed is False
         if local_only and web_search_allowed:
             raise HTTPException(422, "Nur lokal erlaubt keine externe Websuche")
         if web_query is not None and (not web_search_allowed or not web_query.strip()):
@@ -547,6 +565,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
         if web_query is not None:
             action["web_query"] = web_query
+        if cloud_allowed is not None:
+            action["cloud_allowed"] = cloud_allowed
+        if cloud_provider is not None:
+            action["cloud_provider"] = cloud_provider
         digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
         with factory() as db:
             if request_id:
@@ -558,6 +580,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
             if not c or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
+            if cloud_allowed and not (local_only or model_local_only):
+                provider = cloud_provider or c.cloud_provider
+                if not cfg.cloud_enabled or provider not in cfg.external_provider_kinds:
+                    raise HTTPException(409, "Cloud ist serverseitig noch nicht freigegeben")
+                if c.project_id or c.memory_scope:
+                    raise HTTPException(409, "Projekt- und Wissensquellen bleiben LOCAL_ONLY")
+                if provider != c.cloud_provider and db.scalar(
+                    select(Message.id)
+                    .where(Message.conversation_id == chat_id, Message.active.is_(True))
+                    .limit(1)
+                ):
+                    raise HTTPException(
+                        409, "Für einen anderen Cloudanbieter ein neues Gespräch starten"
+                    )
+                # Grant only this input/revision. Existing LOCAL_ONLY history
+                # retains its label and can still block the final egress boundary.
+                c.cloud_allowed, c.cloud_provider = True, provider
             if db.scalar(
                 select(Run.id).where(
                     Run.conversation_id == chat_id, Run.status.in_(ACTIVE_STATUSES)
@@ -608,6 +647,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 target = next((m for m in reversed(messages) if m.role == "user"), None)
                 if target is None:
                     raise HTTPException(409, "Keine Nachricht zum Wiederholen vorhanden")
+                if cloud_allowed and not (local_only or model_local_only):
+                    target.label = Privacy.CLOUD_ALLOWED
                 cut = messages.index(target)
                 for old in messages[cut + 1 :]:
                     old.active = False
@@ -619,6 +660,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise HTTPException(409, "Webrecherche ist in den Einstellungen deaktiviert")
             snapshot: dict[str, Any] = {
                 "web_options": web_options,
+                "routing_options": read_routing_options(db),
                 "response_preferences": resolve_preferences(db, c),
                 **(
                     {"web_query": web_query or messages[-1].content.strip()[:500]}
@@ -713,6 +755,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chat_id,
             body.request_id,
             local_only=body.local_only,
+            cloud_allowed=body.cloud_allowed,
+            cloud_provider=body.cloud_provider,
             model_local_only=body.model_local_only,
             web_search_allowed=body.web_search_allowed,
             web_query=body.web_query,
@@ -734,6 +778,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chat_id,
             body.request_id,
             edit=(message_id, body),
+            cloud_allowed=body.cloud_allowed,
+            cloud_provider=body.cloud_provider,
             web_search_allowed=body.web_search_allowed,
             web_query=body.web_query,
             local_only=body.local_only,
@@ -770,6 +816,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "model": run.model,
                 "provider_revision": run.provider_revision,
                 "capabilities": json.loads(run.capabilities),
+                "routing": json.loads(run.routing_trace) if run.routing_trace != "{}" else None,
             }
 
     async def watch(run_id: str, request: Request, after: int = 0) -> AsyncIterator[str]:

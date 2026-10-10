@@ -293,3 +293,28 @@ Darstellung. Abnahme: Release f68ea06 / Schema 0028, CI 38065130872 mit 677 Test
 und 19 Browserprüfungen. Tatsächliche lokale Antwort mit 5.749 Zeichen und
 Schlussmarker nach 138,43 Sekunden erfolgreich; Reload ohne Fehler oder falsche
 Teilantwortkennzeichnung bestätigt. Eigener QA-Chat archiviert, Sitzung abgemeldet.
+
+
+## 10.10.2026: Auto mit Cloud und erklärbarem Routing
+
+Auf ausdrücklichen Benutzerwunsch startet der gewöhnliche Chat mit „Auto · Lokal +
+Cloud“ und aktivierter Websuche. „Nur lokal“ bleibt direkt erreichbar und verhindert
+auch externe Suche für diesen Lauf. Bestehende LOCAL_ONLY-Nachrichten, private
+Projekte und Wissenskontexte behalten ihre Grenzen. Vorhandene ausgeschaltete
+persönliche Webvorgaben bleiben eine bewusste Benutzerauswahl.
+
+Einstellungen → Routing bietet Auswahlkarten für „Ausgewogen“, „Lokal bevorzugen“
+und „Cloud bevorzugen“. Die separate Option für komplexe Recherche steuert den
+Komplexitätsaufschlag im ausgewogenen Modus. Änderungen werden revisioniert auf
+dem Server gespeichert und gelten für neue Läufe. „Lokal bevorzugen“ bedeutet
+lokale Einordnung ohne Aufschlag, nicht die strikte Sperre des Modus „Nur lokal“.
+
+Ein Testprompt erklärt die gespeicherten Regeln ohne Modell- oder Cloudaufruf.
+Die Vorschau zeigt Präferenz, effektive Route und begrenzende Regeln; die echte
+Einordnung kann abweichen. Neue Antworten speichern ihren Regelstand und die
+wirkliche Routingentscheidung in der Laufhistorie. Modellherkunft unter der
+Antwort bleibt an tatsächliche Laufdaten gebunden.
+
+Die öffentliche UI-Illustration verwendet einen ausschließlich synthetischen
+Prompt zum Beispielprojekt Aurora. Implementiert; CI und Liveabnahme werden
+releasegebunden in STATUS nachgeführt.

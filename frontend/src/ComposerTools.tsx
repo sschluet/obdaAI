@@ -26,7 +26,7 @@ export function ComposerTools({choice,providers,cloudEnabled,cloudBlocked,disabl
  const id=useId();
  const isLocal=choice==='local';
  const provider=providers.find(p=>'cloud:'+p.id===choice);
- const modelLabel=isLocal?'Nur lokal':provider?'Auto + '+provider.label:'Auto';
+ const modelLabel=isLocal?'Nur lokal':provider?'Auto + '+provider.label:cloudEnabled&&!cloudBlocked?'Auto · Lokal + Cloud':'Auto · Lokal';
  const webDisabled=disabled||isLocal||!webConfigured;
  const webHint=isLocal?'Im Modus Nur lokal bleibt die Websuche ausgeschaltet.':!webConfigured?'Websuche ist noch nicht eingerichtet.':webAllowed?'Automatische Webrecherche ausschalten.':'Automatische Webrecherche einschalten.';
  function close(restore=false){const trigger=menu==='actions'?actions.current:models.current;setMenu(null);if(restore)trigger?.focus()}
@@ -60,9 +60,9 @@ export function ComposerTools({choice,providers,cloudEnabled,cloudBlocked,disabl
     <button type="button" role="menuitem" onClick={()=>action('task')}><ListChecks size={19}/><span><strong>Aufgabe planen</strong><small>Aus einer Idee einen kontrollierten Ablauf machen</small></span></button>
     <button type="button" role="menuitem" onClick={()=>action('preferences')}><SlidersHorizontal size={19}/><span><strong>Antwortstil einstellen</strong><small>Sprache, Länge und Darstellung einstellen</small></span></button>
    </>:<>
-    <button type="button" role="menuitemradio" aria-label="Auto" aria-checked={choice==='auto'} onClick={()=>choose('auto')}><Sparkles size={19}/><span><strong>Auto</strong><small>Passendes lokales Modell automatisch wählen</small></span>{choice==='auto'&&<Check size={17}/>}</button>
+    <button type="button" role="menuitemradio" aria-label="Auto" aria-checked={choice==='auto'} onClick={()=>choose('auto')}><Sparkles size={19}/><span><strong>Auto</strong><small>{cloudBlocked?'Private Quellen bleiben lokal':cloudEnabled?'Lokal oder Cloud nach deinen Routingregeln':'Lokales Modell · Cloud am Server ausgeschaltet'}</small></span>{choice==='auto'&&<Check size={17}/>}</button>
     <button type="button" role="menuitemradio" aria-label="Nur lokal" aria-checked={isLocal} onClick={()=>choose('local')}><LockKeyhole size={19}/><span><strong>Nur lokal</strong><small>Lokales Modell, ohne Cloud und Websuche</small></span>{isLocal&&<Check size={17}/>}</button>
-    {cloudEnabled&&providers.length>0&&<div className="composer-menu-divider">Cloud nur mit deiner Freigabe</div>}
+    {cloudEnabled&&providers.length>0&&<div className="composer-menu-divider">Weitere Cloudanbieter</div>}
     {cloudEnabled&&providers.map(item=><button key={item.id} type="button" role="menuitemradio" aria-label={'Auto + '+item.label} aria-checked={choice==='cloud:'+item.id} disabled={cloudBlocked} onClick={()=>choose('cloud:'+item.id)}><ArrowUpRight size={19}/><span><strong>Auto + {item.label}</strong><small>{cloudBlocked?'Für Projekt- und Wissensgespräche nicht verfügbar':'Neues Gespräch · Anbieter und Übertragung bestätigen'}</small></span>{choice==='cloud:'+item.id&&<Check size={17}/>}</button>)}
    </>}
   </div>}

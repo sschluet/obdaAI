@@ -26,6 +26,8 @@ from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 from hub.provider_settings import fresh_cloud_prices, runtime_provider
 from hub.providers import Providers
 from hub.routing import Capability, Route, conversational_research
+from hub.routing_settings import decision
+from hub.routing_settings import read_options as read_routing_options
 from hub.titles import execute_title, reserve_title
 
 
@@ -149,6 +151,8 @@ async def execute_run(
             ) from None
         if not results:
             raise ExecutionLimitError("Websuche abgeschlossen, keine belegten Ergebnisse")
+        public_cloud = (c.cloud_allowed and not snapshot.get("model_local_only")
+                        and not c.project_id and not c.memory_scope)
         web_parts = [
             ContextPart(
                 content=f"WEBQUELLE {item['url']} · Abruf {item['retrieved_at']}\n"
@@ -156,10 +160,13 @@ async def execute_run(
                 + item["content"][:1000],
                 source_id=run_id + ":web:" + str(index),
                 revision=1,
-                label=Privacy.LOCAL_ONLY,
+                label=Privacy.CLOUD_ALLOWED if public_cloud else Privacy.LOCAL_ONLY,
             )
             for index, item in enumerate(results[:8])
         ]
+        if public_cloud:
+            grants.extend(CloudGrant(source_id=p.source_id, revision=p.revision,
+                                     provider_id=c.cloud_provider) for p in web_parts)
         parts.extend(web_parts)
         roles.extend("user" for _ in web_parts)
         with factory() as db:
@@ -288,10 +295,16 @@ async def execute_run(
                 if cancelled():
                     raise asyncio.CancelledError
                 route = await providers.route(parts, roles)
+                classifier = route.model_class
+                classifier_reason = route.reason
                 if latest:
                     route = conversational_research(
                         route, latest.content, private_context=bool(c.project_id or c.memory_scope)
                     )
+                if (route.reason == "Textrecherche; keine Datei oder Systemaktion angefordert"
+                    and snapshot.get("web_search_allowed")
+                    and Capability.WEB not in route.capabilities):
+                    route.capabilities.append(Capability.WEB)
                 # A definite authenticated request for public research cannot
                 # become an unsourced file because the model omitted one skill.
                 if Capability.ARTIFACT in route.capabilities and latest:
@@ -464,7 +477,8 @@ async def execute_run(
                         )
                 if Capability.WEB in route.capabilities:
                     await research(latest)
-                    label = Privacy.LOCAL_ONLY
+                    label = (Privacy.LOCAL_ONLY if any(p.label == Privacy.LOCAL_ONLY for p in parts)
+                             else Privacy.CLOUD_ALLOWED)
                     route.answer = None
                     yield ("status", {"message": "Webquellen mit URL und Abrufzeit gespeichert"})
                     if sum(len(p.content) for p in parts) > cfg.context_limit:
@@ -496,7 +510,21 @@ async def execute_run(
                     # A router's short answer has not seen these presentation preferences.
                     route.answer = None
                     builtin_answer = False
-                external = route.model_class == "cloud"
+                with factory() as db:
+                    routing_options = snapshot.get("routing_options") or read_routing_options(db)
+                trace = decision(
+                    latest.content if latest else "", routing_options,
+                    classifier=classifier, classifier_reason=classifier_reason,
+                    cloud_enabled=cfg.cloud_enabled, cloud_allowed=c.cloud_allowed,
+                    model_local_only=bool(snapshot.get("model_local_only")),
+                    private_context=bool(c.project_id or c.memory_scope),
+                    private_parts=any(p.label == Privacy.LOCAL_ONLY for p in parts),
+                    builtin=builtin_answer,
+                )
+                update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                external = trace["effective_model_class"] == "cloud"
+                if external:
+                    route.answer = None
                 if external and (
                     snapshot.get("model_local_only")
                     or not cfg.cloud_enabled
@@ -506,11 +534,20 @@ async def execute_run(
                     # Complex requests can still be answered locally. This is a
                     # policy choice, not an external provider outage fallback.
                     external = False
+                    trace["effective_model_class"] = "local"
+                    trace["blockers"].append(
+                        "Keine vollständige Cloud-Freigabe am Providerübergang"
+                    )
+                    update(routing_trace=json.dumps(trace, ensure_ascii=False))
                     yield ("status", {"message": "Datenschutzregel hält diese Antwort lokal"})
                 provider = c.cloud_provider if external else "local"
                 if external and selected:
                     cloud = selected.get(c.cloud_provider)
                     if cloud is None:
+                        trace["blockers"].append(
+                            "Cloud-Provider ist nicht eingerichtet oder deaktiviert"
+                        )
+                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
                         raise ValueError("Cloud provider not configured")
                     check_egress(parts, external=True, provider_id=c.cloud_provider, grants=grants)
                     assert isinstance(providers, Providers)
@@ -539,7 +576,9 @@ async def execute_run(
                 model = (
                     (cfg.openrouter_model if external else cfg.local_model) if model_used else ""
                 )
+                trace.update(actual_provider=provider, actual_model=model or None)
                 update(
+                    routing_trace=json.dumps(trace, ensure_ascii=False),
                     status="streaming",
                     provider=provider,
                     model=model,

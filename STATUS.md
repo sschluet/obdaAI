@@ -1,5 +1,25 @@
 # obdaAI — Status 10.10.2026
 
+## Auto mit Cloud und nachvollziehbarem Routing – implementiert, 10.10.2026
+
+Gewöhnliche neue Auto-Gespräche und aktuelle Eingaben/Revisionen/Wiederholungen
+nutzen die ausdrücklich autorisierte Cloudfreigabe; Websuche bleibt standardmäßig
+aktiv. Ältere LOCAL_ONLY-Inhalte und Projekt-/Wissenskontexte bleiben geschützt.
+Komplexe reine Textrecherche wird bei ausgewogenem Routing für Cloud bevorzugt;
+explizite öffentliche Recherche erhält bei aktivem Webschalter Webquellen auch
+bei lokalem CHAT-Vorschlag. Öffentliche Treffer erhalten eng gebundene Cloudgrants.
+Neue revisionierte Routing-Einstellungen (ausgewogen/lokal bevorzugt/Cloud bevorzugt),
+Komplexitätsschalter, lokale Vorschau ohne Anbieteraufruf und tatsächliche Entscheidung
+in der Laufhistorie. Modell-/Antwort-/Budgetgrenzen sichtbar und verlinkt.
+Migration0029 bewahrt bestehende Nachrichten/Läufe; Downgrade mit geänderten Regeln
+gesperrt. Routingregel je Lauf eingefroren, Rohklassifikation getrennt von Regeln
+und finalen Freigaben. Keine automatische Cloudübertragung bei lokalem Fehler.
+Gesamtlauf lokal676 bestanden/17PostgreSQLfälle ausgelassen, zwei historische
+Schema-/Leertracefälle korrigiert und betroffene30Tests bestanden; Ruff/Mypy67,
+TS/Build und fünf betroffene Browsersuiten bestanden. CI umfasst jetzt20Browsersuiten.
+Öffentliche Vorstellung vorbereitet:58Funktionen/14synthetischePNG. GitHub-CI,
+Migration und echte WEB+Cloud-Abnahme auf der VM sowie Veröffentlichung ausstehend.
+
 ## Lange lokale Antwort auf Test-VM bestätigt – 10.10.2026
 
 Release f68ea06 / unverändertes Schema 0028 auf neun App-/Runnercontainern.

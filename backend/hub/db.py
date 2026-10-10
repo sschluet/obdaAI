@@ -89,6 +89,7 @@ class Run(Base):
     context_snapshot: Mapped[str] = mapped_column(Text, default="", server_default="")
     provider: Mapped[str] = mapped_column(String(40), default="local")
     reason: Mapped[str] = mapped_column(String(240), default="")
+    routing_trace: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
     error: Mapped[str | None] = mapped_column(String(240), nullable=True)
     cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     started: Mapped[float] = mapped_column(Float, default=time.time)
@@ -616,3 +617,16 @@ class WebSettings(Base):
     safe_search: Mapped[int] = mapped_column(Integer, default=1)
     max_results: Mapped[int] = mapped_column(Integer, default=8)
     timeout: Mapped[int] = mapped_column(Integer, default=15)
+
+
+class RoutingSettings(Base):
+    __tablename__ = "routing_settings"
+    __table_args__ = (
+        CheckConstraint("id = 1 AND revision >= 0", name="routing_settings_singleton"),
+        CheckConstraint("strategy IN ('balanced', 'local_first', 'cloud_first')",
+                        name="routing_settings_strategy"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    strategy: Mapped[str] = mapped_column(String(16), default="balanced")
+    complex_research_cloud: Mapped[bool] = mapped_column(Boolean, default=True)

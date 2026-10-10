@@ -83,6 +83,7 @@ jobs:
           node composer-ux-check.mjs
           node web-preference-check.mjs
           node web-settings-check.mjs
+          node routing-check.mjs
           node processing-check.mjs
           node run-error-check.mjs
           node chat-scroll-check.mjs

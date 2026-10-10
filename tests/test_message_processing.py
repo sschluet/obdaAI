@@ -261,6 +261,9 @@ def test_migration_backfills_only_unique_exact_event_proof_and_preserves_every_m
         linked = [m for m in migrated if m.run_id]
         assert len(linked) == 1 and linked[0].run_id == identifiers[0]
         assert linked[0].content == "Unique answer!"
+    # The current application reads the current schema, after checking the
+    # isolated historical backfill at its original migration revision.
+    command.upgrade(Config("alembic.ini"), "head")
     proof = client.get("/api/conversations/" + chat).json()["messages"][0]["processing"]
     assert proof["model"] == "demo/historical" and proof["model_used"] is None
 

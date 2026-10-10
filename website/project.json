@@ -76,6 +76,12 @@
       "title": "Auch bei Abbruch bleibt dein Text.",
       "description": "Eine erhaltene Teilantwort mit Modellherkunft, sichtbarem Hinweis auf Unvollständigkeit und einer einzelnen konkreten Fehlermeldung. Ausschließlich synthetischer Beispieltext und simulierter Fehler.",
       "image": "assets/partial.png"
+    },
+    {
+      "id": "routing",
+      "title": "Verstehen, welches Modell übernimmt.",
+      "description": "Routingstrategie wählen und einen synthetischen Aurora-Testprompt lokal prüfen. Die Vorschau erklärt Regeln und Grenzen ohne Cloud- oder Modellaufruf. Ausschließlich isolierte Beispieldaten.",
+      "image": "assets/routing.png"
     }
   ],
   "groups": [
@@ -91,9 +97,9 @@
           "status": "live"
         },
         {
-          "title": "AUTO und lokale Modelle",
-          "description": "Automatische Fähigkeitswahl mit sichtbarem Anbieter- und Fehlerstatus. Lokale Verarbeitung ist der Standard; bei einem Fehler erfolgt kein heimlicher Cloudwechsel.",
-          "status": "live"
+          "title": "Auto mit lokalen Modellen und Cloud",
+          "description": "Gewöhnlicher Chat startet mit Auto einschließlich konfigurierter Cloudmodelle und aktivierter Websuche. Ausgewogene Regeln bevorzugen komplexe Recherche in der Cloud; private Kontexte und „Nur lokal“ bleiben geschützt. Neue Regeln implementiert; echte releasegebundene Abnahme folgt.",
+          "status": "implemented"
         },
         {
           "title": "Titel, Suche und Verlauf",
@@ -102,7 +108,7 @@
         },
         {
           "title": "OpenRouter",
-          "description": "Echte Anbieter- und Chatabnahme dokumentiert. Externe Verarbeitung benötigt passende Betreiberfreigaben und Zustimmung für den Gesprächskontext.",
+          "description": "Echte Anbieter- und Chatabnahme dokumentiert. Gewöhnlicher Auto-Chat darf aktuelle Eingaben und laufgebundene öffentliche Treffer über konfigurierte Cloudmodelle verarbeiten. Server-, Kosten- und Datenschutzgrenzen bleiben verbindlich.",
           "status": "live"
         },
         {
@@ -144,6 +150,11 @@
           "title": "Lange Antworten und erhaltene Teilantworten",
           "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte.",
           "status": "live"
+        },
+        {
+          "title": "Routing verstehen und beeinflussen",
+          "description": "Einstellungen → Routing: Auswahlkarten für Ausgewogen, Lokal bevorzugen und Cloud bevorzugen, mit eigener Komplexitätsoption. Sichtbare Cloudmodelle, Antwort-/Kostenlimits und Testprompt-Vorschau ohne Provideraufruf, revisionierte Regeln und tatsächliche Entscheidung in der Laufhistorie. Implementiert; VM-Abnahme folgt.",
+          "status": "implemented"
         }
       ]
     },
@@ -377,9 +388,9 @@
       "intro": "Lokale Kontrolle als Grundlage der Architektur.",
       "features": [
         {
-          "title": "LOCAL_ONLY als Standard",
-          "description": "Eingaben, Ausgaben und Ableitungen behalten ihre Datenschutzgrenzen. Cloudübertragung benötigt eine passende explizite Freigabe und eine Prüfung am finalen Ausgang.",
-          "status": "live"
+          "title": "Private Kontexte behalten LOCAL_ONLY",
+          "description": "Private Quellen, ältere lokale Nachrichten und ihre Ableitungen werden durch den neuen Auto-Standard nicht nachträglich für Cloud freigegeben. „Nur lokal“ sperrt Cloud und Websuche für den gewählten Lauf; finale Ausgangsprüfungen bleiben erhalten.",
+          "status": "implemented"
         },
         {
           "title": "Login und verschlüsselte Secrets",
