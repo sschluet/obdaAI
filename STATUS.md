@@ -1,5 +1,15 @@
 # obdaAI — Status 10.10.2026
 
+## Router wartet auf vollständige JSON-Antwort – 10.10.2026
+
+Eine lokale synthetische Analyse wurde vor der ersten Ausgabe nach30,5s durch
+HTTP-Timeout abgebrochen. Authentifizierter Modellkatalog erreichbar; diagnostische
+Routeranfrage mit längerem temporären Warten erhielt nach30,0s gültiges CHAT-JSON.
+Router-HTTP-Leselimit folgt nun der äußeren Vorbereitung (90s); Verbindung/Schreiben/
+Pool und Antwortstream behalten30s. Keine gespeicherte Provideroption verändert.
+Zwei neue Transporttests und24 fokussierte Prüfungen bestanden; CI/VM-Abnahme dieser
+Folgekorrektur steht aus. Generation600s ist bereits auf der VM aktiv.
+
 ## Lange Generierungen: getrennte Zeitbudgets – implementiert, 10.10.2026
 
 Zwei reale lokale Läufe nach90,4s mit1475/1488 Textdeltas und6111/5832Zeichen

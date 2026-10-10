@@ -8,6 +8,56 @@ from hub.policy import ContextPart
 from hub.providers import Providers
 
 
+@pytest.mark.parametrize("outer_deadline", [False, True])
+def test_router_full_json_has_preparation_read_budget(monkeypatch, outer_deadline):
+    original = httpx.AsyncClient
+    seen = []
+
+    async def handler(request):
+        limits = request.extensions["timeout"]
+        seen.append(limits)
+        assert limits == {"connect": 1, "write": 1, "pool": 1, "read": 9}
+        # Compress the configured seconds for an isolated transport test. The
+        # JSON arrives beyond the old idle limit, within the new read budget.
+        try:
+            await asyncio.wait_for(asyncio.sleep(0.06), timeout=limits["read"] / 100)
+        except TimeoutError:
+            raise httpx.ReadTimeout("Synthetic idle timeout") from None
+        value = json.dumps(
+            {
+                "capabilities": ["chat"],
+                "model_class": "local",
+                "reason": "Synthetic preparation",
+                "answer": "Synthetic answer",
+            }
+        )
+        return httpx.Response(200, json={"choices": [{"message": {"content": value}}]})
+
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    provider = Providers(Settings(local_model="synthetic-model", local_timeout=1, run_timeout=9))
+    monkeypatch.setattr(
+        provider, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
+    )
+
+    async def route():
+        async with asyncio.timeout(0.03 if outer_deadline else 0.2):
+            return await provider.route(
+                [ContextPart(content="Synthetic question", source_id="fixture", revision=1)],
+                ["user"],
+            )
+
+    if outer_deadline:
+        with pytest.raises(TimeoutError):
+            asyncio.run(route())
+    else:
+        assert asyncio.run(route()).answer == "Synthetic answer"
+    assert len(seen) == 1 and provider.route_calls == 1
+
+
 @pytest.mark.parametrize(
     "prefix", ["QUELLE [file]", "VAULT file", "WEBQUELLE https://example.org/"]
 )

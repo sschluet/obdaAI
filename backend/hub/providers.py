@@ -241,7 +241,15 @@ class Providers:
         async with (
             self.local_slot,
             httpx.AsyncClient(
-                timeout=self.settings.local_timeout, trust_env=False, follow_redirects=False
+                # The router returns one complete JSON response: unlike an
+                # answer stream, it may produce no HTTP data during generation.
+                # Its read wait uses the preparation budget; connection, write
+                # and pool waits retain the configured provider inactivity limit.
+                timeout=httpx.Timeout(
+                    self.settings.local_timeout, read=self.settings.run_timeout
+                ),
+                trust_env=False,
+                follow_redirects=False,
             ) as client,
         ):
             for attempt in range(2):

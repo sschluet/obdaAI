@@ -70,3 +70,9 @@ bestehenden Stubresolver und HTTPS zu den aktuell aufgelösten öffentlichen IPv
 von OpenRouter. Die CDN-Adressen können geteilt sein; Host-, TLS- und Payloadprüfung
 im Adapter bilden die zusätzliche Grenze. Bei Adresswechsel Filter gezielt neu laden;
 IPv6 bleibt gesperrt. Kein allgemeiner Internetzugang und kein Cloud-Fallback.
+
+Die Routerantwort ist vollständiges JSON ohne Zwischenstücke. Ihr HTTP-Leselimit
+folgt deshalb dem Vorbereitungsbudget (`HUB_RUN_TIMEOUT`), während Verbindung,
+Schreiben, Pool-Warten und der Antwortstream das Provider-Inaktivitätslimit behalten.
+Eine gültige lokale Routerantwort benötigte in der VM-Diagnose rund30Sekunden;
+die bisherige30-Sekunden-Lesegrenze konnte bereits davor abbrechen.
