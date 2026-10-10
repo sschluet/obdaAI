@@ -26,6 +26,12 @@ Vault-Dateien, heruntergeladene Exporte und bestehende Sicherungen werden nicht
 entfernt. Das inhaltsfreie Kostenbuch bleibt erhalten, damit eine Chatlöschung
 verbrauchtes Cloudbudget nicht zurücksetzt.
 
+Ein laufender Vault-Abgleich blockiert weder Anmeldung noch die Bereinigung von
+App-Dateien. Bei projektbezogenen Erinnerungen prüft die Löschung den laufenden
+Abgleich ohne zu warten und zeigt gegebenenfalls einen erneuten Versuch an.
+Bereits gelöschte Erinnerungen bleiben historisch ihrem alten Projekt zugeordnet
+und werden durch den Abgleich nicht als globale Erinnerungen reaktiviert.
+
 ## Dateibereinigung und Betriebszustand
 
 Die API löscht Datensätze in einer Transaktion und legt bei Projektdateien zugleich

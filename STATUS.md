@@ -1,5 +1,23 @@
 # obdaAI — Status 10.10.2026
 
+## Endgültige Löschung auf Test-VM bestätigt – 10.10.2026
+
+Release `45f93c8`, Schema0032: [CI38085032750](https://github.com/sschluet/obdaAI/actions/runs/38085032750),
+alle sechs Jobs erfolgreich, 767 Python-/PostgreSQLtests und 24 UI-Browsersuiten
+plus separate Fixture-Anmeldung. Gepinnte HTTPS-/Asset-/Loginprüfung erfolgreich,
+auch während Hintergrund-Vault-Abgleich; globale Besitzblockade behoben.
+Echte Browserabnahme mit ausschließlich eigenen synthetischen Objekten: aktiven
+und archivierten Chat über Menü gelöscht; Abbrechen erhält Inhalte, Neuladen zeigt
+keine gelöschten Objekte. Testprojekt mit real geparster Quelle, lokalem Chatlauf und
+real erzeugter Offline-Word-Datei über Projekt-Dialog gelöscht. Bereinigungsauftrag
+abgeschlossen: Originalkopie, Parser-JSON, Artefaktauftrag/-ausgabe und simulierte
+unterbrochene Eingabekopie physisch entfernt. API bleibt auf Ergebnissen nur lesend.
+Keine Renderfehler, eigene QA-Sitzung beendet, Testobjekte entfernt. Verschlüsselte
+Off-VM-Sicherung, Nachrichten beim Rollout, acht Overlays und Netzregeln erhalten.
+Website: 61 Funktionen, 20 ausschließlich synthetische Bilder; beide Löschdialoge
+auf neuestem Stand visuell geprüft. Veröffentlichung wird separat verifiziert.
+Breite reale Geräte-/Safari-/V1-Abnahme bleibt offen.
+
 ## Begrenzte Sperren nach realer VM-Abnahme – 10.10.2026
 
 CI für `e5fbd79` bestand alle sechs Jobs mit 765 Tests. Der reale Rollout zeigte

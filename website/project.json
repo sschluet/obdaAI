@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-10",
-  "applicationCommit": "80179bc",
-  "schema": "0024",
-  "tests": 577,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/37517517426",
+  "applicationCommit": "45f93c8",
+  "schema": "0032",
+  "tests": 767,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38085032750",
   "screenshots": [
     {
       "id": "chat",
@@ -485,8 +485,8 @@
         },
         {
           "title": "Projekte und Chats endgültig löschen",
-          "description": "Projekte inklusive ihrer App-Dateien, Quellen, Chats und Projektskills dauerhaft entfernen. Chats direkt über Gesprächsaktionen auch im Archiv löschen. Bestätigung mit Inhaltsübersicht und Zustandsnachweis; Abbrechen, laufende Vorgänge und aktuelle Abhängigkeiten berücksichtigt. Dauerhafte Dateibereinigung über vorhandene isolierte Verarbeiter, sichtbarer Fortschritt, Aufgabenhistorie und Kostenbuch erhalten. Implementiert und lokal geprüft; VM-Abnahme folgt.",
-          "status": "implemented"
+          "description": "Projekte inklusive ihrer App-Dateien, Quellen, Chats und Projektskills dauerhaft entfernen. Chats direkt über Gesprächsaktionen auch im Archiv löschen. Bestätigung mit Inhaltsübersicht und Zustandsnachweis; Abbrechen, laufende Vorgänge und aktuelle Abhängigkeiten berücksichtigt. Dauerhafte Dateibereinigung über vorhandene isolierte Verarbeiter, sichtbarer Fortschritt, Aufgabenhistorie und Kostenbuch erhalten. Auf der Test-VM mit synthetischen Chats, Quelle und tatsächlich erzeugter Word-Datei geprüft; Inhalte und App-Dateien nach Neuladen entfernt.",
+          "status": "live"
         }
       ]
     }
@@ -519,15 +519,15 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0031",
-    "browserChecks": 23,
+    "schema": "0032",
+    "browserChecks": 24,
     "serverDeployment": true,
-    "commit": "4b7ee47",
-    "ciTests": 729,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38079964003",
-    "deployedCommit": "4b7ee47",
-    "deployedSchema": "0031",
-    "liveScope": "Neutrales Weiß-/Grau-/Indigodesign auf der Test-VM bestätigt: helle Navigation, Anthrazit-Dunkelmodus mit passendem Markenkontrast, Profil- und Skill-Dialoge, mobile Navigation und Breiten320/390/768/1440px. Keine gespeicherten Einstellungen oder Chats verändert. Lokale Kontrast-/Designprüfung320–1440px, öffentliche Galerie und alle18synthetischen Bilder aktualisiert. Schema0031 unverändert; breite reale Geräte-/Safari-/V1-Abnahme offen.",
+    "commit": "45f93c8",
+    "ciTests": 767,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38085032750",
+    "deployedCommit": "45f93c8",
+    "deployedSchema": "0032",
+    "liveScope": "Endgültige Projekt- und Chatlöschung auf der Test-VM mit eigenen synthetischen Daten bestätigt: aktive und archivierte Chats, Abbrechen und Neuladen sowie Projekt inklusive Quelle, lokalem Chat und erzeugter Word-Datei. Originalkopie, Parserergebnis, Dateiauftrag, Ausgabe und unterbrochene Eingabekopie tatsächlich entfernt; vorhandene Isolation erhalten. Neutrales Design und 20 synthetische Screenshots. Breite Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true
   }
