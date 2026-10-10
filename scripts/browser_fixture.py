@@ -19,6 +19,8 @@ import hub.knowledge_connections as fixture_knowledge_connections
 import hub.websearch as fixture_web_pages
 from alembic import command
 from alembic.config import Config
+from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
 from hub.api import create_app
 from hub.auth import password_hash
 from hub.config import Settings
@@ -359,15 +361,31 @@ def fixture_models() -> dict[str, object]:
     return {"data": [{"id": "synthetic-fixture"}]}
 
 
-@app.post("/v1/chat/completions")
-def fixture_completion(body: dict[str, object]) -> dict[str, object]:
+@app.post("/v1/chat/completions", response_model=None)
+def fixture_completion(body: dict[str, object]) -> dict[str, object] | StreamingResponse:
+    if body.get("stream"):
+        messages = body.get("messages")
+        if not isinstance(messages, list) or not any(
+            isinstance(message, dict)
+            and message.get("role") == "user"
+            and message.get("content") == "What is 2 plus 2? Answer with the number only."
+            for message in messages
+        ):
+            raise HTTPException(400, "Synthetic endpoint only supports the bounded model probe")
+        return StreamingResponse(
+            iter([
+                'data: {"choices":[{"delta":{"content":"4"}}]}\n\n',
+                "data: [DONE]\n\n",
+            ]),
+            media_type="text/event-stream",
+        )
     return {
         "choices": [
             {
                 "message": {
                     "content": (
                         '{"capabilities":["chat"],"model_class":"local",'
-                        '"reason":"fixture","answer":"4"}'
+                        '"reason":"fixture","answer":null}'
                     )
                 }
             }
