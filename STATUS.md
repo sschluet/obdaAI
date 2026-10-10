@@ -1,5 +1,22 @@
 # obdaAI — Status 10.10.2026
 
+## Profil und Skill-Bibliothek auf Test-VM bestätigt – 10.10.2026
+
+Release `2a47caa`, Schema `0031`: [CI38077119295](https://github.com/sschluet/obdaAI/actions/runs/38077119295)
+mit sechs erfolgreichen Jobs, 727 Python-/PostgreSQLtests, 23 UI-Browsersuiten und
+separater Fixture-Anmeldeprüfung. Ruff/Mypy68, TS/Build und Secretsprüfung bestanden.
+Test-VM installiert; verschlüsselte Off-VM-Sicherung, unveränderter Nachrichtendigest,
+Compose-Overlays und normalisierte Netzwerkregeln bestätigt. Gepinnter HTTPS-Zugang
+und Assets geprüft. Profilformular lädt den gespeicherten Stand; keine Profilwerte
+geändert oder protokolliert. Profilverarbeitung und Cloudfeldgrenzen synthetisch getestet.
+Eigener Skill über den strukturierten Editor geprüft/aktiviert, bei Erwähnung ohne
+Cloudfreigabe per Chatpicker eingesetzt und mit „Nur lokal“ tatsächlich ausgeführt:
+66 Zeichen, erwarteter SKILLPROBE-Marker, 9,62s, passende Skillrevision/Hash,
+Laufhistorie und fehlerfreier Reload. Eigener Chat/Skill archiviert, QA-Sitzung beendet.
+Öffentliche Vorstellung: 60 Funktionen und 18 synthetische Bilder; Veröffentlichung
+wird an den nachfolgenden Dokumentationscommit gebunden und separat verifiziert.
+Breite Cloudmodell-/Geräte-/V1-Abnahme bleibt offen.
+
 ## Importbereitschaft im vollständigen Browserlauf – 10.10.2026
 
 Alle lokalen Bedienprüfungen und Designcheck mit vorgesehener Demo-Belegung

@@ -182,7 +182,7 @@
         },
         {
           "title": "Persönliches Profil mit gezielter Feldfreigabe",
-          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
+          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
           "status": "implemented"
         }
       ]
@@ -385,8 +385,8 @@
       "features": [
         {
           "title": "Versionierte Skills",
-          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt. Import wartet auf abgeschlossene Speichervorgänge.",
-          "status": "implemented"
+          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche auf der Test-VM geprüft: Skill erstellt, geprüft und aktiviert, per Chatpicker aufgerufen und vom echten lokalen Modell befolgt. Revision, Verlauf und Reload bestätigt. Import wartet auf abgeschlossene Speichervorgänge.",
+          "status": "live"
         },
         {
           "title": "Home Assistant lesen",
@@ -502,15 +502,15 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0029",
-    "browserChecks": 20,
+    "schema": "0031",
+    "browserChecks": 23,
     "serverDeployment": true,
-    "commit": "db3f8a0",
-    "ciTests": 695,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38070872371",
-    "deployedCommit": "db3f8a0",
-    "deployedSchema": "0029",
-    "liveScope": "Auto-Cloudfreigabe und aktive Websuche auf der Test-VM bestätigt. Tatsächliche kurze Recherche mit ausdrücklich gewähltem öffentlichen QA-Suchtext: acht Webquellen und OpenRouter-Antwort, passende Routingentscheidung, Vorschau und Reload. Verzögertes Settingsladen, Revisionkonflikt, lokale/private Grenzen synthetisch geprüft. Schema0029; bestehende Modell-, Antwort- und Kostenlimits erhalten. Breite Qualitäts-/Cloudmodell-/Geräteabnahme offen.",
+    "commit": "2a47caa",
+    "ciTests": 727,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38077119295",
+    "deployedCommit": "2a47caa",
+    "deployedSchema": "0031",
+    "liveScope": "Persönliches Profil und neue Skill-Bibliothek auf der Test-VM installiert. Profilformular lädt den tatsächlichen Stand ohne Änderung persönlicher Angaben. Eigener synthetischer Skill über den Editor geprüft und aktiviert, über den Chatpicker aufgerufen und vom echten lokalen Modell befolgt; Revision, Reload und Laufhistorie bestätigt, Testobjekte archiviert. Profil-/Cloudfeldgrenzen, Import, Auswahlregeln und Entwurfschutz synthetisch geprüft. Breite Cloudmodell-/Geräte-/V1-Abnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }
