@@ -316,5 +316,8 @@ wirkliche Routingentscheidung in der Laufhistorie. Modellherkunft unter der
 Antwort bleibt an tatsächliche Laufdaten gebunden.
 
 Die öffentliche UI-Illustration verwendet einen ausschließlich synthetischen
-Prompt zum Beispielprojekt Aurora. Implementiert; CI und Liveabnahme werden
-releasegebunden in STATUS nachgeführt.
+Prompt zum Beispielprojekt Aurora. Release db3f8a0 / Schema0029 ist auf der
+Test-VM bestätigt: CI38070872371 mit695Tests und20Browsersuiten; tatsächliche
+kurze öffentliche Recherche mit acht Webquellen und OpenRouter-Antwort erfolgreich,
+Routingvorschau und Reload geprüft. Der QA-Suchtext war ausdrücklich für den
+synthetischen Test gewählt; detaillierter Umfang und Grenzen stehen in STATUS.

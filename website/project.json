@@ -98,8 +98,8 @@
         },
         {
           "title": "Auto mit lokalen Modellen und Cloud",
-          "description": "Gewöhnlicher Chat startet mit Auto einschließlich konfigurierter Cloudmodelle und aktivierter Websuche. Ausgewogene Regeln bevorzugen komplexe Recherche in der Cloud; private Kontexte und „Nur lokal“ bleiben geschützt. Neue Regeln implementiert; echte releasegebundene Abnahme folgt. Neue Eingaben warten auf geladene Modell- und Webeinstellungen.",
-          "status": "implemented"
+          "description": "Gewöhnlicher Chat startet mit Auto einschließlich konfigurierter Cloudmodelle und aktivierter Websuche. Ausgewogene Regeln bevorzugen komplexe Recherche in der Cloud; private Kontexte und „Nur lokal“ bleiben geschützt. Auto-Freigabe, tatsächliche kurze Web-/Cloud-Antwort und Reload auf der Test-VM geprüft. Neue Eingaben warten auf geladene Modell- und Webeinstellungen.",
+          "status": "live"
         },
         {
           "title": "Titel, Suche und Verlauf",
@@ -153,8 +153,8 @@
         },
         {
           "title": "Routing verstehen und beeinflussen",
-          "description": "Einstellungen → Routing: Auswahlkarten für Ausgewogen, Lokal bevorzugen und Cloud bevorzugen, mit eigener Komplexitätsoption. Sichtbare Cloudmodelle, Antwort-/Kostenlimits und Testprompt-Vorschau ohne Provideraufruf, revisionierte Regeln und tatsächliche Entscheidung in der Laufhistorie. Implementiert; VM-Abnahme folgt.",
-          "status": "implemented"
+          "description": "Einstellungen → Routing: Auswahlkarten für Ausgewogen, Lokal bevorzugen und Cloud bevorzugen, mit eigener Komplexitätsoption. Sichtbare Cloudmodelle, Antwort-/Kostenlimits und Testprompt-Vorschau ohne Provideraufruf, revisionierte Regeln und tatsächliche Entscheidung in der Laufhistorie. Einstellungen, lokale Vorschau und tatsächliche Cloudentscheidung auf der Test-VM geprüft.",
+          "status": "live"
         }
       ]
     },
@@ -468,15 +468,15 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0028",
-    "browserChecks": 19,
+    "schema": "0029",
+    "browserChecks": 20,
     "serverDeployment": true,
-    "commit": "f68ea06",
-    "ciTests": 677,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38065130872",
-    "deployedCommit": "f68ea06",
-    "deployedSchema": "0028",
-    "liveScope": "Gepinnte HTTPS-/Assetabnahme und tatsächliche lange lokale Antwort: 5.749 Zeichen, Schlussmarker und erfolgreicher Abschluss nach 138,43 Sekunden; nach Reload ohne Fehler oder falsche Teilantwortkennzeichnung. Vorbereitung und Generation getrennt; Schema0028 und gespeicherte Einstellungen unverändert. Breite Cloud-/Geräteabnahme offen.",
+    "commit": "db3f8a0",
+    "ciTests": 695,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38070872371",
+    "deployedCommit": "db3f8a0",
+    "deployedSchema": "0029",
+    "liveScope": "Auto-Cloudfreigabe und aktive Websuche auf der Test-VM bestätigt. Tatsächliche kurze Recherche mit ausdrücklich gewähltem öffentlichen QA-Suchtext: acht Webquellen und OpenRouter-Antwort, passende Routingentscheidung, Vorschau und Reload. Verzögertes Settingsladen, Revisionkonflikt, lokale/private Grenzen synthetisch geprüft. Schema0029; bestehende Modell-, Antwort- und Kostenlimits erhalten. Breite Qualitäts-/Cloudmodell-/Geräteabnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }

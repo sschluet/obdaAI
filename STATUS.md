@@ -1,5 +1,25 @@
 # obdaAI — Status 10.10.2026
 
+## Auto-/Routing-Release auf Test-VM bestätigt – 10.10.2026
+
+Release db3f8a0 / Schema0029 auf neun App-/Runnercontainern, beide APIs gesund.
+CI38070872371: sechs erfolgreiche Jobs,695Tests und20Browsersuiten einschließlich
+PostgreSQL-Migration und verzögertem Settingsladen. Normales Auto startet mit
+Cloudfreigabe und aktivierter Websuche. Tatsächliche begrenzte Rechercheantwort
+über OpenRouter/openai/gpt-4.1-mini erfolgreich, acht reale Webquellen,
+11,62Sekunden, Schlussmarker, passende Routingentscheidung und Reload ohne Fehler.
+Für die synthetische Abnahme eigener öffentlicher Suchtext „Managed Services KI
+Zukunft“ statt der zusätzlichen Testanweisungen gewählt; keine Vollrecherche-/
+Qualitätsabnahme behauptet. Routing-Einstellungen und Cloudvorschau direkt geprüft;
+keine echten Vorgaben gespeichert. Eigene QA-Chats archiviert, Sitzungen abgemeldet,
+temporäre Authdatei entfernt. Der konfigurierte Cloud-Ausgaberahmen256Tokens bleibt
+bewusst erhalten und ist jetzt im Routingbereich sichtbar; ausführliche Recherche
+benötigt passende Antwort- und Kostenlimits unter Modelle.
+Migration bewahrt Originalnachrichten; Schema0029, bestehende Web-/Modellvorgaben,
+acht Compose-Erweiterungen und Netzwerkregeln erhalten. Verschlüsselte Off-VM-
+Sicherung hashgeprüft. Öffentlich58Funktionen/14synthetischeBilder;
+Veröffentlichungsbeleg separat in .local/routing-publication.json.
+
 ## Auto wartet auf Serverkonfiguration – implementiert, 10.10.2026
 
 Liveprüfung erkannte unmittelbares Neues-Gespräch-Klicken vor geladener Konfiguration:
@@ -7,7 +27,7 @@ fehlende Cloudfreigabe trotz freigegebenem Server. Bedienelemente und Submit-Han
 warten jetzt auf Modell-/Webkonfiguration; Logout verwirft diese und verspätete
 Antworten werden ignoriert. Deterministisch verzögerte Settingsantwort prüft auch
 Enter ohne Conversation-POST vor Freigabe. TS/Build und Routing-Browsercheck grün.
-Schema0029 und Backend017469b unverändert; Folge-CI und VM-Rollout ausstehend.
+Schema0029 und Backend017469b unverändert; Folge-CI und VM-Rollout mitdb3f8a0 oben bestätigt.
 
 ## Auto mit Cloud und nachvollziehbarem Routing – implementiert, 10.10.2026
 

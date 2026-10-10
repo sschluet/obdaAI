@@ -49,7 +49,10 @@ dedicated VM. M3 starts with fixed local actions, persisted proposals, explicit 
 ([contract](docs/actions.md)); [trusted revisioned chat skills](docs/skills.md) are implemented; [manual local Task-Center](docs/tasks.md) is implemented. A fixed local analysis step applies bound sources and trusted skills. Local title drafts and [once/daily/weekly schedules](docs/schedules.md) are implemented. The approved n8n clock bridge is installed; external action adapters remain in development.
 M4 delivers tested local file workflows and revisions; M5 has deployment, CI, mobile
 fixture and isolated restore evidence. Both remain partially accepted. Cloud remains disabled in generic defaults and needs an
-explicit operator authorization plus conversation opt-in. Migrations must run before
+explicit operator authorization. In the authorized ordinary Auto chat, the browser
+provides the standing current-input cloud permission; private sources and old
+LOCAL_ONLY history retain their boundary. Routing is configurable and explained
+under Settings → Routing. Migrations must run before
 startup. SQLite is for local contract tests/development; durable jobs use PostgreSQL.
 
 A temporary synthetic browser fixture can be started with
