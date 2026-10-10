@@ -249,5 +249,8 @@ dem Dialog übernommen. Revisionierte Speicherung verhindert verlorene Änderung
 Die serverweiten Vorgaben ergänzen den unter Allgemein gespeicherten persönlichen
 Browserstandard. Die Websuche braucht keine zusätzliche Bestätigung je Anfrage;
 „Nur lokal“ verhindert weiterhin externe Recherche für den gewählten Lauf.
-Implementiert; aktuelle CI, Migration 0028 und Test-VM-Abnahme stehen noch aus.
+Abnahme: Release8337ebf / Schema0028, CI38058159977: 667 Tests und
+18 Browserprüfungen. Auf der Test-VM wurden Einstellungen, echter Verbindungstest,
+Reload und Mobilansicht geprüft; reale Konfiguration unverändert. Migration,
+Originalnachrichten-Digest und Off-VM-Sicherung bestätigt.
 Details: [Webrecherche-Einstellungen](web-settings.md).

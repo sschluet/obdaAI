@@ -23,5 +23,8 @@ available; it does not override the visible Nur lokal mode or add permission to
 transfer a conversation to a cloud model. Each permitted run binds its actual
 public query at the API boundary. No per-query confirmation dialog is needed.
 
-Implementation is complete; exact CI, migration and live acceptance evidence
-will be recorded in STATUS after this delivery has been checked.
+Release 8337ebf / schema0028: CI38058159977 passed 667 tests and 18 browser
+checks. The dedicated test VM verified the actual settings panel, real search
+connection check, reload and mobile layout. Real settings remained unchanged.
+Save, conflict, disabled-provider and frozen-run controls use isolated API/browser
+and PostgreSQL tests. See STATUS for backup and preserved-data evidence.

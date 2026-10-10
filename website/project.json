@@ -267,8 +267,8 @@
         },
         {
           "title": "Webrecherche zentral konfigurieren",
-          "description": "Unter Einstellungen → Webrecherche die serverseitige Verfügbarkeit, Suchsprache, SafeSearch, Trefferanzahl (1–8) und Zeitlimit (5–30 Sekunden) festlegen. Revisionierte Speicherung und feste Verbindungstest-Suche; Suchdienstadresse bleibt durch den Betreiber gebunden. Persönlicher Webstandard im Browser und „Nur lokal“ bleiben eigenständige Entscheidungen. Implementiert; aktuelle CI- und Liveabnahme stehen noch aus.",
-          "status": "implemented"
+          "description": "Unter Einstellungen → Webrecherche die serverseitige Verfügbarkeit, Suchsprache, SafeSearch, Trefferanzahl (1–8) und Zeitlimit (5–30 Sekunden) festlegen. Revisionierte Speicherung und feste Verbindungstest-Suche; Suchdienstadresse bleibt durch den Betreiber gebunden. Persönlicher Webstandard im Browser und „Nur lokal“ bleiben eigenständige Entscheidungen. Auf der Test-VM mit echtem Verbindungstest, Reload und Mobilansicht geprüft; tatsächliche Konfiguration bewahrt.",
+          "status": "live"
         }
       ]
     },
@@ -435,15 +435,15 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0027",
-    "browserChecks": 17,
+    "schema": "0028",
+    "browserChecks": 18,
     "serverDeployment": true,
-    "commit": "ed911e9",
-    "ciTests": 648,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38056148463",
-    "deployedCommit": "ed911e9",
-    "deployedSchema": "0027",
-    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, echte Webrecherche und Wiederholung nach Reload ohne Bestätigungsdialog: jeweils acht gespeicherte Quellen und lokale Modellantwort. Dauerhafter Webschalter, Nur-lokal-Ausnahme und Mobilansicht geprüft. Passwort unverändert; breite Cloud-/Geräteabnahme offen.",
+    "commit": "8337ebf",
+    "ciTests": 667,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38058159977",
+    "deployedCommit": "8337ebf",
+    "deployedSchema": "0028",
+    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, Webrecherche-Einstellungen und echter Suchdienst-Verbindungstest. Werte nach Reload korrekt und mobil geprüft; tatsächliche Einstellungen unverändert. Migration0028 und Originalnachrichten-/Backupvergleich bestätigt. Breite Cloud-/Geräteabnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }

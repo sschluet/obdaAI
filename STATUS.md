@@ -1,5 +1,20 @@
 # obdaAI — Status 10.10.2026
 
+## Webrecherche-Einstellungen auf Test-VM bestätigt – 10.10.2026
+
+Release8337ebf / Schema0028 auf neun App-/Runnercontainern. CI38058159977:
+sechs Jobs erfolgreich, 667 Tests und 18 Browserprüfungen einschließlich echter
+PostgreSQL-Migration. Gepinnte HTTPS-Assets, Einstellungsbereich, korrekt geladene
+Standardwerte, realer Suchdienst-Verbindungstest, Reload und Mobilansicht bestätigt.
+Tatsächliche Einstellungen unverändert (Revision0/aktiv), Testsitzung abgemeldet,
+temporäre Authdatei entfernt. Speicher-/Konflikt-/Pauseabläufe mit isolierten
+synthetischen API-/Browserdaten geprüft. Nachrichten-Digest vor/nach Migration
+identisch, verschlüsselte Off-VM-Sicherung hashgeprüft; Datenbank, Netzwerkregeln,
+acht Compose-Erweiterungen und Zugangsdaten bewahrt. Rollback auf ältere Version
+nach benutzerseitiger Änderung der neuen Webvorgaben ausdrücklich gesperrt.
+Öffentliche Darstellung: 55 Funktionen, elf synthetische Screenshots; vollständige
+Galerienavigation. Veröffentlichungsbeleg separat in .local/web-settings-publication.json.
+
 ## Webrecherche unter Einstellungen konfigurierbar – implementiert, 10.10.2026
 
 Eigener Bereich mit serverweiter Aktivierung, Suchsprache, SafeSearch, Quellenlimit
