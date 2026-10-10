@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
 from hub.db import Project, Research
+from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
 from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 
@@ -258,6 +259,10 @@ def install_web_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session])
                 409, "Keine aktuelle Recherche: Suchzugang nicht verfügbar"
             ) from None
         with factory() as db:
+            ownership_lock(db)
+            project = db.get(Project, project_id)
+            if not project or project.archived:
+                raise HTTPException(404, "Aktives Projekt nicht gefunden")
             row = Research(
                 id=body.request_id,
                 project_id=project_id,
@@ -290,8 +295,10 @@ def install_web_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session])
             ) from None
         item.update(fetched_text=text, fetched_at=time.time())
         with factory() as db:
+            ownership_lock(db)
             row = db.scalar(select(Research).where(Research.id == research_id).with_for_update())
-            assert row is not None
+            if row is None or row.project_id != project_id:
+                raise HTTPException(404, "Recherche im Projekt nicht mehr verfügbar")
             current = json.loads(row.results)
             if current[body.result_index]["url"] != item["url"]:
                 raise HTTPException(409, "Recherche inzwischen geändert")

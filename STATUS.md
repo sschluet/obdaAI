@@ -1,5 +1,27 @@
 # obdaAI — Status 10.10.2026
 
+## Endgültige Projekt-/Chatlöschung – implementiert, 10.10.2026
+
+Projektlöschung entfernt App-Dateien, Quellen, Projektskills und zugehörige Chats.
+Chataktionen bieten endgültiges Löschen auch im Archiv. Ein gemeinsamer Dialog
+zeigt Umfang und Zustandsnachweis; Fokus, Escape, Mobilansicht, Fehler und der
+Bereinigungsstatus nach Datenbanklöschung sind geprüft. Aktuelle Abhängigkeiten und
+aktive Vorgänge bleiben geschützt; alte Aufgabenfassungen dürfen nach Umbindung
+bestehen. Quellenereignishistorie wird mit einem Beleg entkoppelt und bleibt sichtbar.
+Das inhaltsfreie Kostenbuch bleibt erhalten; Chatlöschung erstattet kein Cloudbudget.
+Dateien werden durch dauerhafte Bereinigung in bestehenden Verarbeitern entfernt;
+die API bleibt auf Parser-/Artefaktergebnissen schreibgeschützt. Inhaltsfreie
+Markierungen und Quittungen verhindern eine Wiederherstellung durch verspätete
+Worker. Migration0032 sperrt Downgrade bei ausstehender Bereinigung oder entkoppelter
+Historie. Externe Originale, Vault, Exporte und Sicherungen bleiben erhalten.
+Lokale Gesamttests: 738 bestanden, 23 PostgreSQLfälle übersprungen; ein Titel-Löschfall
+fand eine unnötige Sperre. Sie ist entfernt: 35 fokussierte Titel-/Lösch-/Bereinigungs-/
+Migrationstests bestanden. Ruff/Mypy70 und TypeScript/Build erfolgreich. Finaler
+allgemeiner und neuer Lösch-Browsercheck in frischer Fixture bestanden.
+Öffentliche Vorstellung:61 Funktionen/20 synthetische Bilder, sämtliche Ansichten
+visuell geprüft; Galerie/Suche/Tastatur/Mobilprüfung bestanden. GitHub-CI, VM-Rollout,
+echte Dateilöschung über die vorhandenen Mountgrenzen und Veröffentlichung folgen.
+
 ## Neutrales Design auf Test-VM bestätigt – 10.10.2026
 
 Release `4b7ee47`, Schema0031 unverändert: [CI38079964003](https://github.com/sschluet/obdaAI/actions/runs/38079964003)

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.action_api import StrictInput
 from hub.db import Conversation, Project, ResponsePreference, ResponsePreferenceRevision
+from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
 from hub.preferences import Overrides, digest, resolve, stored
 from hub.skill_api import lock
@@ -46,6 +47,7 @@ def install_preference_api(app: FastAPI, factory: sessionmaker[Session]) -> None
         return {"revision": revision, "overrides": values, **resolved}
 
     def save(db: Session, kind: str, identifier: str, body: PreferenceInput) -> dict[str, Any]:
+        ownership_lock(db)
         lock(db)
         current = view(db, kind, identifier, writing=True)
         if current["revision"] != body.expected_revision:

@@ -28,6 +28,7 @@ from hub.db import (
     Source,
     TaskActionLink,
 )
+from hub.db_locks import ownership_lock
 from hub.ha_backups import inspect as inspect_ha_backups
 from hub.ha_maintenance import inspect as inspect_ha_maintenance
 from hub.home_assistant import inspect as inspect_ha
@@ -365,6 +366,8 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             raise HTTPException(422, "Werkzeug nicht im freigegebenen Katalog")
         params = encode(parameters(body.tool_id, body.parameters))
         with factory() as db:
+            if body.tool_id == "project.archive":
+                ownership_lock(db)
             policy = lock(db)
             previous = db.scalar(
                 select(ActionIntent).where(ActionIntent.request_key == str(body.request_id))
@@ -407,6 +410,11 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
     @app.post("/api/actions/{action_id}/grant")
     def approve(action_id: str, body: GrantInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            if (
+                db.scalar(select(ActionIntent.tool_id).where(ActionIntent.id == action_id))
+                == "project.archive"
+            ):
+                ownership_lock(db)
             policy = lock(db)
             row = get_action(db, action_id)
             if db.get(TaskActionLink, row.id):
@@ -438,6 +446,11 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
     @app.post("/api/actions/{action_id}/revoke")
     def revoke(action_id: str, body: StrictInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            if (
+                db.scalar(select(ActionIntent.tool_id).where(ActionIntent.id == action_id))
+                == "project.archive"
+            ):
+                ownership_lock(db)
             lock(db)
             row = get_action(db, action_id)
             grant = db.get(ActionGrant, row.id)
@@ -458,6 +471,11 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
 
             return execute_workflow_action(factory, cfg, action_id)
         with factory() as db:
+            if (
+                db.scalar(select(ActionIntent.tool_id).where(ActionIntent.id == action_id))
+                == "project.archive"
+            ):
+                ownership_lock(db)
             policy = lock(db)
             row = get_action(db, action_id)
             if db.get(TaskActionLink, row.id):

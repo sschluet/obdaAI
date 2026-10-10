@@ -248,9 +248,27 @@ async def requeue_stalled(queue: procrastinate.App) -> None:
             await queue.job_manager.retry_job(job)
 
 
+async def cleanup_loop(cfg: Settings, role: str) -> None:
+    from hub.deletion_cleanup import process_pending
+
+    factory = session_factory(cfg.database_url)
+    while True:
+        try:
+            await asyncio.to_thread(process_pending, factory, cfg, role)
+        except Exception:
+            pass  # Durable pending rows retry after transient DB/storage interruptions.
+        await asyncio.sleep(2)
+
+
 async def main() -> None:
+    cfg = Settings.from_env()
+    cleanup = (
+        asyncio.create_task(cleanup_loop(cfg, "source" if "--sources" in sys.argv else "artifact"))
+        if any(flag in sys.argv for flag in ("--sources", "--artifacts"))
+        else None
+    )
     queue = worker_app(
-        Settings.from_env(),
+        cfg,
         include_maintenance=not any(flag in sys.argv for flag in ("--artifacts", "--sources")),
     )
     async with queue.open_async():
@@ -267,6 +285,10 @@ async def main() -> None:
             concurrency=1,
             shutdown_graceful_timeout=95,
         )
+
+    if cleanup:
+        cleanup.cancel()
+        await asyncio.gather(cleanup, return_exceptions=True)
 
 
 if __name__ == "__main__":

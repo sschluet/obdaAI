@@ -69,3 +69,5 @@ explicit field sharing and an immutable per-run profile snapshot. The revised
 activation, always/keyword/explicit-invocation modes and a chat picker. Private
 profile fields and skill revisions need their own explicit cloud sharing. See
 [personal profile](docs/personal-profile.md) and STATUS for acceptance evidence.
+
+Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.

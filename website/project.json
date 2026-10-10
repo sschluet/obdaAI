@@ -106,6 +106,18 @@
       "title": "Skills direkt im Chat aufrufen",
       "description": "Eine aktivierte Anleitung auswählen und ihren Aufruf in die Nachricht übernehmen. Ausschließlich synthetische Beispielskills.",
       "image": "assets/skillchat.png"
+    },
+    {
+      "id": "deleteproject",
+      "title": "Projekte bewusst endgültig entfernen.",
+      "description": "Bestätigung mit Inhaltsübersicht und klarer Abgrenzung zu Archivieren. Ausschließlich fiktiver Projektraum Atlas.",
+      "image": "assets/deleteproject.png"
+    },
+    {
+      "id": "deletechat",
+      "title": "Chats löschen, auch aus dem Archiv.",
+      "description": "Direkte Gesprächsaktionen und ein gemeinsamer Bestätigungsdialog. Ausschließlich synthetische Gesprächsdaten.",
+      "image": "assets/deletechat.png"
     }
   ],
   "groups": [
@@ -458,7 +470,7 @@
         },
         {
           "title": "Modernes Design mit Hell- und Dunkelmodus",
-          "description": "Neutrale Weiß-/Grauoberfläche mit klarer Sans-Serif-Typografie, heller Navigation und zurückhaltenden Indigo-Akzenten. Dunkelmodus in Anthrazit, gemeinsame Farb-/Fokusregeln für Chat, Skills, Profil und Dialoge. Textkontrast und Layouts von320 bis1440Pixeln lokal geprüft; alle18öffentlichen Beispielbilder neu erfasst. Auf der Test-VM bestätigt: Hell-/Dunkelmodus, Profil-/Skill-Dialoge und mobile Navigation; bestehende Einstellungen unverändert.",
+          "description": "Neutrale Weiß-/Grauoberfläche mit klarer Sans-Serif-Typografie, heller Navigation und zurückhaltenden Indigo-Akzenten. Dunkelmodus in Anthrazit, gemeinsame Farb-/Fokusregeln für Chat, Skills, Profil und Dialoge. Textkontrast und Layouts von320 bis1440Pixeln lokal geprüft; alle20öffentlichen Beispielbilder neu erfasst. Auf der Test-VM bestätigt: Hell-/Dunkelmodus, Profil-/Skill-Dialoge und mobile Navigation; bestehende Einstellungen unverändert.",
           "status": "local"
         },
         {
@@ -470,6 +482,11 @@
           "title": "Anmeldepasswort in den Einstellungen ändern",
           "description": "Aktuelles Passwort bestätigen, neues Passwort mit mindestens 12 Zeichen doppelt eingeben und Änderung freigeben. Hash bleibt dauerhaft am Server; alle bestehenden Sitzungen werden widerrufen. Auf der Test-VM installiert; Formular und bestehender Login bestätigt. Echter Passwortwechsel wurde dem Benutzer überlassen.",
           "status": "local"
+        },
+        {
+          "title": "Projekte und Chats endgültig löschen",
+          "description": "Projekte inklusive ihrer App-Dateien, Quellen, Chats und Projektskills dauerhaft entfernen. Chats direkt über Gesprächsaktionen auch im Archiv löschen. Bestätigung mit Inhaltsübersicht und Zustandsnachweis; Abbrechen, laufende Vorgänge und aktuelle Abhängigkeiten berücksichtigt. Dauerhafte Dateibereinigung über vorhandene isolierte Verarbeiter, sichtbarer Fortschritt, Aufgabenhistorie und Kostenbuch erhalten. Implementiert und lokal geprüft; VM-Abnahme folgt.",
+          "status": "implemented"
         }
       ]
     }

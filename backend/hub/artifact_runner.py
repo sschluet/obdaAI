@@ -15,6 +15,7 @@ from typing import Any
 from hub.artifact_preview import previews
 from hub.artifact_render import render
 from hub.artifact_specs import ArtifactSpec
+from hub.deletion_cleanup import blocked, consume_markers, remove
 from hub.parser_sandbox import restrict
 
 
@@ -60,6 +61,8 @@ def process(request: Path, results: Path) -> bool:
     try:
         identifier, revision = request.name.rsplit("-", 1)
         if str(uuid.UUID(identifier)) != identifier or not 1 <= int(revision) <= 100000:
+            return False
+        if blocked(request.parent, "artifact", identifier, int(revision)):
             return False
         spec_path = request / "spec.json"
         if spec_path.is_symlink() or not 0 < spec_path.stat().st_size <= 800_000:
@@ -125,6 +128,9 @@ def process(request: Path, results: Path) -> bool:
                 }
             )
         )
+    if blocked(request.parent, "artifact", identifier, int(revision)):
+        remove(results, temporary.name)
+        return False
     os.rename(temporary, target)
     return True
 
@@ -137,6 +143,10 @@ def main() -> None:
         raise ValueError("Ungültige Runner-Argumente")
     requests, results = Path("/requests"), Path("/results")
     while True:
+        try:
+            consume_markers(requests, results, "artifact")
+        except (ValueError, OSError, KeyError, TypeError):
+            pass  # Durable DB owner reports a missing cleanup acknowledgement.
         for request in sorted(requests.iterdir())[:10000]:
             process(request, results)
         time.sleep(1)

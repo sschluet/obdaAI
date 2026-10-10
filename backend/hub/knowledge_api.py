@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.auth import require_session
 from hub.config import Settings
 from hub.db import LoginSession, Project, Source
+from hub.db_locks import ownership_lock
+from hub.deletion import DeletionInput, permanently_delete, preview
 from hub.extract import EXTENSIONS, MAX_BYTES
 from hub.knowledge import calculate, extract_source, original, retrieve, store
 
@@ -87,6 +89,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
     @app.post("/api/projects")
     def create(body: ProjectInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             project = Project(
                 name=body.name, description=body.description, instructions=body.instructions
             )
@@ -97,6 +100,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
     @app.patch("/api/projects/{project_id}")
     def edit(project_id: str, body: ProjectInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
             if not project:
                 raise HTTPException(404, "Projekt nicht gefunden")
@@ -107,6 +111,22 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
             project.revision += 1
             db.commit()
             return project_info(project)
+
+    @app.get("/api/projects/{project_id}/deletion")
+    def deletion_preview(project_id: str, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            return preview(db, "project", project_id, cfg)
+
+    @app.delete("/api/projects/{project_id}")
+    def delete_project(project_id: str, body: DeletionInput, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            ownership_lock(db)
+            result = permanently_delete(db, cfg, "project", project_id, body)
+        if cfg.database_url.startswith("sqlite") and result["cleanup_id"]:
+            from hub.deletion_cleanup import inline_cleanup
+
+            inline_cleanup(factory, cfg)
+        return result
 
     @app.get("/api/projects/{project_id}/sources")
     def sources(project_id: str, auth: Auth) -> list[dict[str, Any]]:
@@ -146,6 +166,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
         if not content:
             raise HTTPException(422, "Leere Datei")
         with factory() as db:
+            ownership_lock(db)
             project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
             if not project or project.archived:
                 raise HTTPException(404, "Aktives Projekt nicht gefunden")
@@ -193,6 +214,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
         if not body.public_url_approved:
             raise HTTPException(403, "Die konkrete öffentliche Webseite zuerst zum Abruf auswählen")
         with factory() as db:
+            ownership_lock(db)
             p = db.get(Project, project_id)
             if not p or p.archived or p.kind != "project":
                 raise HTTPException(404, "Aktiver Projektraum nicht gefunden")
@@ -218,6 +240,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
             "Öffentliche Webseite: " + body.url + "\nAbruf: " + str(time.time()) + "\n\n" + content
         ).encode()
         with factory() as db:
+            ownership_lock(db)
             if db.bind is not None and db.bind.dialect.name == "postgresql":
                 db.execute(text("SELECT pg_advisory_xact_lock(791103042)"))
             p = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
@@ -303,6 +326,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
         project_id: str, source_id: str, request: Request, auth: Auth
     ) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             source = db.scalar(select(Source).where(Source.id == source_id).with_for_update())
             if not source or source.project_id != project_id:
                 raise HTTPException(404, "Quelle im Projekt nicht gefunden")

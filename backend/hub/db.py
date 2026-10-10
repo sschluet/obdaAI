@@ -486,7 +486,10 @@ class TaskEventOccurrence(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
     schedule_revision: Mapped[int] = mapped_column(Integer)
-    event_id: Mapped[int] = mapped_column(ForeignKey("source_ready_events.id"))
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_ready_events.id", ondelete="SET NULL"), nullable=True
+    )
+    deleted_event_snapshot: Mapped[str] = mapped_column(Text, default="", server_default="")
     status: Mapped[str] = mapped_column(String(20))
     run_id: Mapped[str | None] = mapped_column(ForeignKey("task_runs.id"), unique=True)
     reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
@@ -636,10 +639,24 @@ class RoutingSettings(Base):
     __tablename__ = "routing_settings"
     __table_args__ = (
         CheckConstraint("id = 1 AND revision >= 0", name="routing_settings_singleton"),
-        CheckConstraint("strategy IN ('balanced', 'local_first', 'cloud_first')",
-                        name="routing_settings_strategy"),
+        CheckConstraint(
+            "strategy IN ('balanced', 'local_first', 'cloud_first')",
+            name="routing_settings_strategy",
+        ),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     revision: Mapped[int] = mapped_column(Integer, default=0)
     strategy: Mapped[str] = mapped_column(String(16), default="balanced")
     complex_research_cloud: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class DeletionCleanup(Base):
+    __tablename__ = "deletion_cleanup"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    manifest: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    error: Mapped[str] = mapped_column(String(160), default="")
+    source_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    artifact_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+    finished: Mapped[float | None] = mapped_column(Float, nullable=True)

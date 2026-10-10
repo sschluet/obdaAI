@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.action_api import StrictInput
 from hub.db import Conversation, Project, Run, Skill, SkillRevision
+from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
 from hub.policy import ContextPart, Privacy
 
@@ -72,7 +73,7 @@ def request_without_skill_prefix(query: str, audit: list[dict[str, Any]]) -> str
         return query
     pattern = r"^\s*[/@](?:" + "|".join(re.escape(name) for name in names) + r")(?:\s+|$)"
     while match := re.match(pattern, query, re.I):
-        query = query[match.end():]
+        query = query[match.end() :]
     return query
 
 
@@ -142,6 +143,7 @@ def sha(document: str) -> str:
 
 
 def lock(db: Session) -> None:
+    ownership_lock(db)
     if db.bind is not None and db.bind.dialect.name == "sqlite":
         db.execute(text("BEGIN IMMEDIATE"))
     else:

@@ -81,7 +81,7 @@ await page.screenshot({path:output+'/mobile.png',fullPage:true,animations:'disab
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Chat',exact:true}).click();
 await page.getByRole('button',{name:'Gespräch löschen',exact:true}).click();
-await page.getByRole('button',{name:'Löschen',exact:true}).click();
+await page.getByRole('button',{name:'Endgültig löschen',exact:true}).click();
 await page.getByRole('heading',{name:'Womit möchtest du beginnen?'}).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Projekte',exact:true}).click();

@@ -29,6 +29,7 @@ from hub.db import (
     TaskStep,
     TaskWriteGrant,
 )
+from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
 from hub.n8n_drafts import connection_draft
 from hub.skill_api import eligible, sha
@@ -408,6 +409,10 @@ def check_schedule(db: Session, run: TaskRun) -> None:
 
         _, _, spec = current(db, run.task_id)
         validate_subscription(spec)
+        if event_occurrence.event_id is None:
+            raise HTTPException(
+                409, "Historisches Dokumentereignis wurde gelöscht; neuen Auslöser wählen"
+            )
         event = db.get(SourceReadyEvent, event_occurrence.event_id)
         if event is None or json.loads(plan.definition)["kind"] != "source_ready":
             raise HTTPException(409, "Dokumentereignis fehlt oder Auslöser geändert")
@@ -534,6 +539,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
         ]
         ids = []
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             for key, spec, definition in definitions:
                 tid = str(uuid.uuid5(uuid.NAMESPACE_URL, "obdaai-task-example-v1:" + key))
@@ -570,6 +576,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
     @app.post("/api/tasks")
     def create(spec: TaskSpec, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             check_bindings(db, spec)
             task = Task()
@@ -585,6 +592,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
     @app.patch("/api/tasks/{task_id}")
     def edit(task_id: str, body: EditInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             task, _, _ = current(db, task_id)
             if (
@@ -610,6 +618,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
     @app.patch("/api/tasks/{task_id}/control")
     def control(task_id: str, body: ControlInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             task, _, spec = current(db, task_id)
             if (
@@ -630,6 +639,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
     @app.post("/api/tasks/{task_id}/runs")
     async def start(task_id: str, body: RunInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             request_digest = digest(encode({"task_id": task_id, **body.model_dump(mode="json")}))
             previous = db.scalar(select(TaskRun).where(TaskRun.request_key == str(body.request_id)))
@@ -698,6 +708,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
     @app.post("/api/task-runs/{run_id}/cancel")
     def cancel(run_id: str, body: StrictInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             run = db.get(TaskRun, run_id)
             if run is None:

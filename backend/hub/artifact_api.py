@@ -33,7 +33,7 @@ from hub.artifacts import (
 from hub.auth import require_session
 from hub.config import Settings
 from hub.db import Artifact, ArtifactRevision, Conversation, LoginSession, Message, Project
-from hub.db_locks import ARTIFACT_STORAGE
+from hub.db_locks import ARTIFACT_STORAGE, ownership_lock
 
 Auth = Annotated[LoginSession, Depends(require_session)]
 
@@ -78,6 +78,7 @@ def artifact_service(
     def create_row(
         db: Session, project_id: str, artifact_id: str | None, body: CreateArtifact
     ) -> tuple[ArtifactRevision, bool]:
+        ownership_lock(db)
         if guard:
             guard(db)
         document = canonical(body.spec)
@@ -235,6 +236,7 @@ def artifact_service(
 
         def transaction() -> tuple[dict[str, Any], bool]:
             with factory() as db:
+                ownership_lock(db)
                 try:
                     row, created = create_row(db, project_id, artifact_id, body)
                     if created and on_created:
@@ -306,6 +308,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
     @app.get("/api/projects/{project_id}/artifacts")
     def listing(project_id: str, auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:
+            ownership_lock(db)
             if not db.scalar(select(Project).where(Project.id == project_id).with_for_update()):
                 raise HTTPException(404, "Projekt nicht gefunden")
             rows = db.scalars(
@@ -333,6 +336,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
     ) -> dict[str, Any]:
         enabled()
         with factory() as db:
+            ownership_lock(db)
             row = row_for(db, project_id, artifact_id, revision)
             reconcile(db, cfg, row)
             if row.status not in {"needs_review", "published"} or not row.manifest:
@@ -356,6 +360,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
     @app.post("/api/projects/{project_id}/artifacts/{artifact_id}/versions/{revision}/cancel")
     def cancel(project_id: str, artifact_id: str, revision: int, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             row = row_for(db, project_id, artifact_id, revision)
             if row.status == "published":
                 raise HTTPException(409, "Freigegebene Dateiversion bleibt erhalten")
@@ -371,6 +376,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
     ) -> FileResponse:
         enabled()
         with factory() as db:
+            ownership_lock(db)
             row = row_for(db, project_id, artifact_id, revision)
             if row.status not in {"needs_review", "published"} or not row.manifest:
                 raise HTTPException(409, "Vorschau ist noch nicht bereit")
@@ -395,6 +401,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
     ) -> FileResponse:
         enabled()
         with factory() as db:
+            ownership_lock(db)
             row = row_for(db, project_id, artifact_id, revision)
             if row.status != "published" or not row.manifest:
                 raise HTTPException(409, "Vorschau erst prüfen und Dateiversion freigeben")

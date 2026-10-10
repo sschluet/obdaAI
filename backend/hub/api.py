@@ -42,6 +42,8 @@ from hub.db import (
     Source,
     session_factory,
 )
+from hub.db_locks import ownership_lock
+from hub.deletion import DeletionInput
 from hub.execution import execute_run
 from hub.jobs import enqueue
 from hub.knowledge import context as project_context
@@ -129,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             yield
             return
         with factory() as db:
+            ownership_lock(db)
             for run in db.scalars(select(Run).where(Run.status.in_(ACTIVE_STATUSES))):
                 run.status = "interrupted"
                 run.error = "Serverneustart; Antwort unterbrochen"
@@ -145,6 +148,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
+    from hub.deletion_cleanup import install_cleanup_api
+
+    install_cleanup_api(app, factory)
     install_knowledge_connections(app, cfg, factory)
     install_artifact_api(app, cfg, factory)
     install_artifact_drafts(app, cfg, factory)
@@ -234,6 +240,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         now = time.time()
         consume_auth_attempt(factory, 1, now)
         with factory() as db:
+            ownership_lock(db)
             credential = locked_credential(db)
             stored = credential.password_hash or cfg.password_hash
             if not stored:
@@ -260,6 +267,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/logout")
     def logout(session: SessionDependency, response: Response) -> dict[str, bool]:
         with factory() as db:
+            ownership_lock(db)
             db.delete(db.get(LoginSession, session.token_hash))
             db.commit()
         response.delete_cookie("hub_session", secure=cfg.secure_cookie, samesite="strict")
@@ -289,6 +297,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project_id: str | None = None,
     ) -> list[dict[str, object]]:
         with factory() as db:
+            ownership_lock(db)
             statement = select(Conversation).where(Conversation.archived == archived)
             if project_id:
                 if not db.get(Project, project_id):
@@ -341,6 +350,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ):
             raise HTTPException(409, "Cloud ist serverseitig noch nicht freigegeben")
         with factory() as db:
+            ownership_lock(db)
             if body.project_id:
                 project = db.get(Project, body.project_id)
                 if not project or project.archived:
@@ -471,6 +481,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         chat_id: str, body: ConversationEdit, session: SessionDependency
     ) -> dict[str, bool]:
         with factory() as db:
+            ownership_lock(db)
             c = db.get(Conversation, chat_id)
             if not c:
                 raise HTTPException(404, "Gespräch nicht gefunden")
@@ -481,30 +492,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             db.commit()
         return {"ok": True}
 
-    @app.delete("/api/conversations/{chat_id}")
-    def delete_chat(chat_id: str, session: SessionDependency) -> dict[str, bool]:
+    @app.get("/api/conversations/{chat_id}/deletion")
+    def chat_deletion_preview(chat_id: str, session: SessionDependency) -> dict[str, Any]:
+        from hub.deletion import preview
+
         with factory() as db:
-            c = db.get(Conversation, chat_id)
-            if not c:
-                raise HTTPException(404, "Gespräch nicht gefunden")
-            if db.scalar(
-                select(Run).where(Run.conversation_id == chat_id, Run.status.in_(ACTIVE_STATUSES))
-            ):
-                raise HTTPException(409, "Lauf zuerst abbrechen")
-            for run in db.scalars(select(Run).where(Run.conversation_id == chat_id)):
-                for entry in db.scalars(select(RunEvent).where(RunEvent.run_id == run.id)):
-                    db.delete(entry)
-            db.flush()
-            for model in (Message, Run):
-                for row in db.scalars(select(model).where(model.conversation_id == chat_id)):
-                    db.delete(row)
-            db.delete(c)
-            db.commit()
-        return {"ok": True}
+            return preview(db, "conversation", chat_id, cfg)
+
+    @app.delete("/api/conversations/{chat_id}")
+    def delete_chat(
+        chat_id: str, session: SessionDependency, body: DeletionInput | None = None
+    ) -> dict[str, Any]:
+        from hub.deletion import permanently_delete
+
+        with factory() as db:
+            ownership_lock(db)
+            return permanently_delete(db, cfg, "conversation", chat_id, body)
 
     @app.post("/api/runs/{run_id}/cancel")
     def cancel_run(run_id: str, session: SessionDependency) -> dict[str, bool]:
         with factory() as db:
+            ownership_lock(db)
             run = db.get(Run, run_id)
             if not run:
                 raise HTTPException(404, "Lauf nicht gefunden")
@@ -573,6 +581,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             action["cloud_provider"] = cloud_provider
         digest = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
         with factory() as db:
+            ownership_lock(db)
             if request_id:
                 previous = db.scalar(select(Run).where(Run.request_key == request_id))
                 if previous:

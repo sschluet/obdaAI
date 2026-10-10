@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
 from hub.db import Memory, MemoryRevision, Project
+from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
 from hub.memory import (
     digest,
@@ -109,6 +110,7 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
             raise HTTPException(409, "Memory-Schreibbereich noch nicht freigegeben")
         target = root()
         with factory() as db:
+            ownership_lock(db)
             serialize(db)
             previous = db.get(Memory, body.id)
             text = "# " + body.title + "\n\n" + body.content

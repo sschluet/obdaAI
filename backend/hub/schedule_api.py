@@ -378,25 +378,41 @@ def install_schedule_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                     .limit(100)
                 )
             ]
-            events: list[dict[str, Any]] = [
-                {
-                    "id": o.id,
-                    "revision": o.schedule_revision,
-                    "due": event.created,
-                    "status": run_status or o.status,
-                    "run_id": o.run_id,
-                    "reason": o.reason,
-                    "event": event_detail(event),
-                }
-                for o, event, run_status in db.execute(
-                    select(TaskEventOccurrence, SourceReadyEvent, TaskRun.status)
-                    .join(SourceReadyEvent, SourceReadyEvent.id == TaskEventOccurrence.event_id)
-                    .outerjoin(TaskRun, TaskRun.id == TaskEventOccurrence.run_id)
-                    .where(TaskEventOccurrence.task_id == task_id)
-                    .order_by(TaskEventOccurrence.created.desc())
-                    .limit(100)
+            events: list[dict[str, Any]] = []
+            for occurrence, event, run_status in db.execute(
+                select(TaskEventOccurrence, SourceReadyEvent, TaskRun.status)
+                .outerjoin(SourceReadyEvent, SourceReadyEvent.id == TaskEventOccurrence.event_id)
+                .outerjoin(TaskRun, TaskRun.id == TaskEventOccurrence.run_id)
+                .where(TaskEventOccurrence.task_id == task_id)
+                .order_by(TaskEventOccurrence.created.desc())
+                .limit(100)
+            ):
+                if event is not None:
+                    detail = event_detail(event)
+                else:
+                    saved = json.loads(occurrence.deleted_event_snapshot or "{}")
+                    detail = {
+                        "kind": "source_ready",
+                        "id": saved.get("id"),
+                        "project_id": saved.get("project_id"),
+                        "source_id": saved.get("source_id"),
+                        "revision": saved.get("source_revision"),
+                        "sha256": saved.get("source_sha256"),
+                        "created": saved.get("created", occurrence.created),
+                        "baseline": saved.get("baseline", False),
+                        "event_deleted": True,
+                    }
+                events.append(
+                    {
+                        "id": occurrence.id,
+                        "revision": occurrence.schedule_revision,
+                        "due": detail["created"],
+                        "status": run_status or occurrence.status,
+                        "run_id": occurrence.run_id,
+                        "reason": occurrence.reason,
+                        "event": detail,
+                    }
                 )
-            ]
             return sorted(timed + events, key=lambda row: row["due"], reverse=True)[:100]
 
     @app.post("/api/scheduler/tick")
