@@ -1,5 +1,15 @@
 # obdaAI — Status 10.10.2026
 
+## Projektwahl und Logo bei verspäteten Antworten erhalten – 10.10.2026
+
+Zusätzlicher CI-Lauf des vorherigen Dokumentationsstands fand einen echten
+Navigationskonflikt: Nach Erstellung überschrieb eine verspätete Projektliste
+den bereits geöffneten Quellenbereich. Projektladung berücksichtigt jetzt aktuelle
+Auswahl und neuere Bedienung. Deterministisch verzögerter Browsercheck bestätigt,
+dass Quellen geöffnet bleiben. Rückkehr zum gleichen Projektchat lädt außerdem
+aktuelle Projektmetadaten und das geänderte Logo ohne Reload. Allgemeiner und
+erweiterter Icon-Browsercheck bestanden, Build487,22KB. Endgültige CI folgt.
+
 ## Konfigurierbare Projektlogos – implementiert, 10.10.2026
 
 32 lokal eingebundene, frei verwendbare Lucide-Symbole mit Suche, Vorschau,
