@@ -36,7 +36,7 @@ def prepare(setup, monkeypatch, effect=None):
     monkeypatch.setattr("hub.api.execute_run", execute)
     queries = []
 
-    async def search(settings, request):
+    async def search(settings, request, *, options=None):
         assert request.public_query_approved
         queries.append(request.query)
         return [
@@ -140,7 +140,7 @@ def test_research_receipt_drift_during_model_never_saves_file(setup, monkeypatch
 def test_research_failure_does_not_invent_document_source(setup, monkeypatch):
     app, c, h, cfg, pid, chat, queries, provider = prepare(setup, monkeypatch)
 
-    async def missing(*args):
+    async def missing(*args, **kwargs):
         return []
 
     monkeypatch.setattr("hub.websearch.search", missing)

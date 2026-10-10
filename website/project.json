@@ -58,6 +58,12 @@
       "title": "Ein Fehler. Eine klare Rückmeldung.",
       "description": "Ein fehlgeschlagener Recherchelauf zeigt eine einzige Meldung. Die Laufhistorie und der erneute Versuch bleiben erreichbar. Ausschließlich synthetische Antwortdaten zur Prüfung der Darstellung.",
       "image": "assets/runerror.png"
+    },
+    {
+      "id": "websettings",
+      "title": "Recherche nach deinen Vorgaben.",
+      "description": "Eigener Einstellungsbereich für Webrecherche: zentrale Aktivierung, Suchsprache, SafeSearch, Trefferanzahl und Zeitlimit. Die Verbindung lässt sich mit einer festen öffentlichen Beispielsuche prüfen. Synthetische Demo.",
+      "image": "assets/websettings.png"
     }
   ],
   "groups": [
@@ -114,7 +120,7 @@
         },
         {
           "title": "Nachvollziehbare Recherche und Fehler",
-          "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Webfreigaben bleiben erforderlich. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar. Die Rechercheeinordnung und einzelne Fehleranzeige sind auf der Test-VM geprüft; freigegebene Suchtreffer wurden synthetisch getestet.",
+          "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Der dauerhafte Webschalter bestimmt die Sucherlaubnis ohne erneute Bestätigungsdialoge. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar. Die Rechercheeinordnung und einzelne Fehleranzeige sind auf der Test-VM geprüft; freigegebene Suchtreffer wurden synthetisch getestet.",
           "status": "live"
         }
       ]
@@ -258,6 +264,11 @@
           "title": "Domain-Grenzen und Belege",
           "description": "Explizite site:-Grenzen filtern fremde Treffer. Quellen enthalten URLs und Abrufzeiten; Suchauszüge sind als solche gekennzeichnet. Keine Behauptung vollständig gelesener Webseiten.",
           "status": "live"
+        },
+        {
+          "title": "Webrecherche zentral konfigurieren",
+          "description": "Unter Einstellungen → Webrecherche die serverseitige Verfügbarkeit, Suchsprache, SafeSearch, Trefferanzahl (1–8) und Zeitlimit (5–30 Sekunden) festlegen. Revisionierte Speicherung und feste Verbindungstest-Suche; Suchdienstadresse bleibt durch den Betreiber gebunden. Persönlicher Webstandard im Browser und „Nur lokal“ bleiben eigenständige Entscheidungen. Implementiert; aktuelle CI- und Liveabnahme stehen noch aus.",
+          "status": "implemented"
         }
       ]
     },

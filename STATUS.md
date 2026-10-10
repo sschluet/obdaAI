@@ -1,5 +1,20 @@
 # obdaAI — Status 10.10.2026
 
+## Webrecherche unter Einstellungen konfigurierbar – implementiert, 10.10.2026
+
+Eigener Bereich mit serverweiter Aktivierung, Suchsprache, SafeSearch, Quellenlimit
+und Suchzeitlimit; Browserfreigabe separat weiterhin ohne Einzelbestätigungen.
+Revisionsgeschützte Speicherung, Entwürfe bei Konflikten erhalten, öffentlicher
+Verbindungstest ohne Einstellungsänderung. Suchdienstadresse serverseitig gebunden
+und gegen versehentliche Geheimnisse in ungültigen URLs abgeschirmt. Einstellungen
+je Lauf eingefroren; globale Deaktivierung prüft auch die letzte Suchgrenze.
+Migration0028: separate Tabelle mit unveränderten Standardwerten, Downgrade-Schutz.
+650 lokale Tests bestanden plus korrigierter alter Such-Testdouble separat bestanden;
+16 PostgreSQLfälle lokal ausgelassen. Ruff, Mypy66, TypeScript/Build sowie neue
+Einstellungs- und vorhandene Webvorgaben-/Websiteprüfungen bestanden. Öffentliches
+Material: 55 Funktionen und elf synthetische Bilder; vollständige Galerienavigation.
+GitHub-CI, Migration/VM-Abnahme und Veröffentlichung dieser Auslieferung ausstehend.
+
 ## Webrecherche ohne Dialog auf Test-VM bestätigt – 10.10.2026
 
 Release ed911e9 / unverändertes Schema 0027 auf neun App-/Runnercontainern.

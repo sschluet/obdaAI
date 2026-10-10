@@ -505,7 +505,7 @@ def test_chat_web_requires_exact_user_query_grant_and_never_sends_private_contex
     monkeypatch.setattr(api_module, "execute_run", configured_execute)
     sent = []
 
-    async def web_fixture(settings, body):
+    async def web_fixture(settings, body, *, options=None):
         assert body.public_query_approved
         sent.append(body.query)
         return [

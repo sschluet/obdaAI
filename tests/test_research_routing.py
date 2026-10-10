@@ -90,7 +90,7 @@ def test_misclassified_research_streams_text_only_after_explicit_web_approval(
     monkeypatch.setattr("hub.api.execute_run", execute)
     queries = []
 
-    async def search(cfg, request):
+    async def search(cfg, request, *, options=None):
         assert request.public_query_approved
         queries.append(request.query)
         return [

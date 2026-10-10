@@ -58,6 +58,8 @@ from hub.schedule_api import install_schedule_api
 from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
 from hub.task_drafts import install_task_drafts
+from hub.web_settings import endpoint as web_endpoint
+from hub.web_settings import install_web_settings_api, read_options
 from hub.websearch import install_web_api
 from hub.workflow_api import install_workflow_api
 from hub.workspace_search import install_workspace_search
@@ -141,6 +143,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_artifact_drafts(app, cfg, factory)
     install_memory_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
+    install_web_settings_api(app, cfg, factory)
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
     install_skill_api(app, factory)
@@ -255,13 +258,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/settings")
     def settings_info(session: SessionDependency) -> dict[str, object]:
+        with factory() as db:
+            web = read_options(db)
         return {
             "local_configured": bool(cfg.local_base_url and cfg.local_model),
             "cloud_enabled": cfg.cloud_enabled,
             "privacy_default": "LOCAL_ONLY",
             "providers": ["local", "openrouter", "openai", "anthropic"],
             "external_provider_kinds": list(cfg.external_provider_kinds),
-            "web_search_configured": bool(cfg.search_url),
+            "web_search_configured": bool(web_endpoint(cfg)) and web["enabled"],
+            "web_search_endpoint_configured": bool(web_endpoint(cfg)),
             "version": "0.1.0-dev",
             "autonomous_changes": "paused",
         }
@@ -608,7 +614,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 messages = messages[: cut + 1]
             if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
+            web_options = read_options(db)
+            if web_search_allowed and not web_options["enabled"]:
+                raise HTTPException(409, "Webrecherche ist in den Einstellungen deaktiviert")
             snapshot: dict[str, Any] = {
+                "web_options": web_options,
                 "response_preferences": resolve_preferences(db, c),
                 **(
                     {"web_query": web_query or messages[-1].content.strip()[:500]}

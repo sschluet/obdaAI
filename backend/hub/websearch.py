@@ -6,7 +6,10 @@ import re
 import socket
 import time
 from html.parser import HTMLParser
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from hub.web_settings import WebOptions
 from urllib.parse import urlsplit
 
 import httpx
@@ -53,7 +56,14 @@ def target(cfg: Settings) -> tuple[str, dict[str, str], dict[str, str]]:
     return f"{u.scheme}://{host}{port}/search", {"Host": u.netloc}, {"sni_hostname": u.hostname}
 
 
-async def search(cfg: Settings, request: SearchInput) -> list[dict[str, Any]]:
+async def search(
+    cfg: Settings, request: SearchInput, *, options: "WebOptions | None" = None
+) -> list[dict[str, Any]]:
+    from hub.web_settings import WebOptions
+
+    options = options or WebOptions()
+    if not options.enabled:
+        raise ValueError("Webrecherche ist in den Einstellungen deaktiviert")
     query = ContextPart(
         content=request.query,
         source_id=request.request_id,
@@ -69,13 +79,20 @@ async def search(cfg: Settings, request: SearchInput) -> list[dict[str, Any]]:
         else [],
     )
     url, headers, extensions = target(cfg)
-    async with httpx.AsyncClient(timeout=15, follow_redirects=False, trust_env=False) as client:
+    async with httpx.AsyncClient(
+        timeout=options.timeout, follow_redirects=False, trust_env=False
+    ) as client:
         async with client.stream(
             "GET",
             url,
             headers=headers,
             extensions=extensions,
-            params={"q": query.content, "format": "json"},
+            params={
+                "q": query.content,
+                "format": "json",
+                "language": options.language,
+                "safesearch": options.safe_search,
+            },
         ) as response:
             response.raise_for_status()
             data = bytearray()
@@ -88,7 +105,7 @@ async def search(cfg: Settings, request: SearchInput) -> list[dict[str, Any]]:
     sites = {
         host.casefold() for host in re.findall(r"(?:^|\s)site:([a-z0-9.-]+)", request.query, re.I)
     }
-    for item in parsed.get("results", [])[:10]:
+    for item in parsed.get("results", [])[:100]:
         u = urlsplit(item.get("url", ""))
         if u.scheme != "https" or not u.hostname or u.username or u.password:
             continue
@@ -106,6 +123,8 @@ async def search(cfg: Settings, request: SearchInput) -> list[dict[str, Any]]:
                 "provider": "searxng",
             }
         )
+        if len(result) >= options.max_results:
+            break
     return result
 
 
@@ -183,8 +202,13 @@ async def fetch_page(
 def install_web_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
     @app.get("/api/websearch/status")
     def status(auth: Auth) -> dict[str, Any]:
+        from hub.web_settings import endpoint, read_options
+
+        with factory() as db:
+            enabled = read_options(db)["enabled"]
         return {
-            "configured": bool(cfg.search_url),
+            "configured": bool(endpoint(cfg)) and enabled,
+            "enabled": enabled,
             "provider": "searxng",
             "privacy": "Nur ausdrücklich freigegebene öffentliche Suchtexte",
         }
@@ -218,8 +242,15 @@ def install_web_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session])
                 if old.project_id != project_id or old.query != body.query:
                     raise HTTPException(409, "Recherche-ID anders verwendet")
                 return {"id": old.id, "query": old.query, "results": json.loads(old.results)}
+        from hub.web_settings import WebOptions, read_options
+
+        with factory() as db:
+            options = read_options(db)
+        options.pop("revision")
+        if not options["enabled"]:
+            raise HTTPException(409, "Webrecherche ist in den Einstellungen deaktiviert")
         try:
-            result = await search(cfg, body)
+            result = await search(cfg, body, options=WebOptions.model_validate(options))
         except PermissionError:
             raise HTTPException(403, "Suchtext nicht für externe Websuche freigegeben") from None
         except (ValueError, OSError, httpx.HTTPError):

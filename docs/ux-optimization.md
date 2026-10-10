@@ -235,3 +235,19 @@ Abnahme: Release ed911e9 / Schema0027, CI38056148463 mit 648 Tests und
 17 Browserprüfungen. Echte UI-Webrecherche und Retry nach Reload ohne Dialog
 mit je acht gespeicherten Quellen und lokaler Modellantwort bestätigt.
 QA-Chats archiviert, Sitzungen beendet; Backup und vorhandene Plattform bewahrt.
+
+
+## 10.10.2026: Eigener Einstellungsbereich für Webrecherche
+
+Unter Einstellungen → Webrecherche werden die Suchvorgaben direkt konfiguriert:
+serverseitige Aktivierung, Suchsprache (alle, Deutsch, Englisch), SafeSearch,
+Trefferanzahl (1–8) und Zeitlimit (5–30 Sekunden). Eine feste öffentliche
+Beispielsuche prüft die bestehende Verbindung. Die Suchdienstadresse ist weiterhin
+betreiberseitig gebunden; keine freien URLs oder internen Adressen werden aus
+dem Dialog übernommen. Revisionierte Speicherung verhindert verlorene Änderungen.
+
+Die serverweiten Vorgaben ergänzen den unter Allgemein gespeicherten persönlichen
+Browserstandard. Die Websuche braucht keine zusätzliche Bestätigung je Anfrage;
+„Nur lokal“ verhindert weiterhin externe Recherche für den gewählten Lauf.
+Implementiert; aktuelle CI, Migration 0028 und Test-VM-Abnahme stehen noch aus.
+Details: [Webrecherche-Einstellungen](web-settings.md).

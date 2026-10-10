@@ -126,13 +126,22 @@ async def execute_run(
             or not cfg.search_url
         ):
             raise ExecutionLimitError("Keine Webrecherche: Suchzugang oder Textlimit prüfen")
+        from hub.web_settings import WebOptions, read_options
         from hub.websearch import SearchInput
         from hub.websearch import search as search_web
 
+        options = WebOptions.model_validate(
+            {k: v for k, v in snapshot.get("web_options", {}).items() if k != "revision"}
+        )
+        with factory() as db:
+            globally_enabled = read_options(db)["enabled"]
+        if not options.enabled or not globally_enabled:
+            raise ExecutionLimitError("Webrecherche ist in den Einstellungen deaktiviert")
         try:
             results = await search_web(
                 cfg,
                 SearchInput(request_id=run_id, query=public_query, public_query_approved=True),
+                options=options,
             )
         except (ValueError, OSError, PermissionError, httpx.HTTPError):
             raise ExecutionLimitError(

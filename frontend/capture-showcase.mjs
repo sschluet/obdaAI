@@ -9,7 +9,9 @@ const output=fileURLToPath(new URL('../website/assets/',import.meta.url));await 
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:980},deviceScaleFactor:1});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
-const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled'});};
+// Synthetic endpoint only: the public screenshot never displays internal addresses.
+await page.route('**/api/web-settings',async route=>{if(route.request().method()!=='GET'){await route.continue();return;}const response=await route.fetch();const settings=await response.json();await route.fulfill({response,json:{...settings,endpoint:'https://search.example.org/search'}});});
+const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:name==='websettings'});};
 try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
@@ -27,7 +29,7 @@ try{
   {name:'Projektueberblick.md',mimeType:'text/markdown',buffer:Buffer.from('# Projekt Aurora\nEin synthetisches Beispiel für eine lokale Wissensbasis.\nZiel: Ideen aus Quellen in überprüfbare Ergebnisse verwandeln.')},
   {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
  ]);
- await page.getByText('Bereit',{exact:true}).first().waitFor();
+ await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
  await capture('projects');
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
@@ -46,7 +48,7 @@ try{
  await task.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Fasse den aktuellen Projektstand zusammen und nenne die nächsten Schritte.');
  await capture('tasks');
  await task.getByRole('button',{name:'Schließen',exact:true}).click();
- await page.getByRole('button',{name:'Wissen',exact:true}).click();
+ await Promise.all([page.waitForResponse(response=>response.url().endsWith('/api/knowledge-sources')&&response.request().method()==='GET'&&response.status()===200),page.getByRole('button',{name:'Wissen',exact:true}).click()]);
  await page.getByRole('heading',{name:'Deine Wissensquellen',exact:true}).waitFor();
  if(!await page.getByRole('heading',{name:'Demo · Dokumentenarchiv',exact:true}).count()){
   await page.getByRole('button',{name:'Wissensquelle hinzufügen',exact:true}).click();
@@ -56,7 +58,7 @@ try{
   await source.getByLabel('Freigabename',{exact:true}).fill('Beispieldokumente');
   await source.getByLabel('Benutzername',{exact:true}).fill('demo');
   await source.getByLabel('Passwort',{exact:true}).fill('synthetic-ui-source-password');
-  await source.getByRole('button',{name:'Quelle speichern',exact:true}).click();
+  await source.getByRole('button',{name:'Quelle speichern',exact:true}).click();await source.waitFor({state:'hidden'});
  }
  await page.getByRole('heading',{name:'Demo · Dokumentenarchiv',exact:true}).waitFor();
  await capture('knowledge');
@@ -65,8 +67,9 @@ try{
  await page.setViewportSize({width:390,height:844});
  await capture('mobile');
  await page.setViewportSize({width:1440,height:980});await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Sicherheit',exact:true}).click();await page.getByRole('heading',{name:'Passwort ändern',exact:true}).waitFor();await capture('security');
+ await page.setViewportSize({width:1440,height:1520});await page.getByRole('button',{name:'Webrecherche',exact:true}).click();await page.getByRole('heading',{name:'Suchdienst und Ergebnisse',exact:true}).waitFor();await page.getByRole('radio',{name:'Alle Sprachen',exact:true}).waitFor();await capture('websettings');await page.setViewportSize({width:1440,height:980});
  await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();await page.getByLabel('Nachricht',{exact:true}).fill('Ein rein synthetisches Beispiel: Zeige eine kurze Antwort mit Herkunftshinweis.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Lokal · synthetic-fixture'}).waitFor();await capture('processing');
  await page.getByRole('button',{name:'Arbeitsraum durchsuchen',exact:true}).click();const search=page.getByRole('dialog',{name:'Suchen und weiterarbeiten',exact:true});await search.getByRole('combobox').fill('Projekt');await search.getByRole('option').first().waitFor();await capture('search');await search.getByRole('button',{name:'Suche schließen',exact:true}).click();
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Nine real UI screenshots captured with synthetic data only.');
+ console.log('Ten real UI screenshots captured with synthetic data only.');
 }finally{await browser.close();}

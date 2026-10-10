@@ -3,6 +3,7 @@ import uuid
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Float,
     ForeignKey,
     Index,
@@ -595,3 +596,23 @@ class ResponsePreferenceRevision(Base):
     overrides: Mapped[str] = mapped_column(Text)
     sha256: Mapped[str] = mapped_column(String(64))
     created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class WebSettings(Base):
+    __tablename__ = "web_settings"
+    __table_args__ = (
+        CheckConstraint("id = 1 AND revision >= 0", name="web_settings_singleton"),
+        CheckConstraint("language IN ('all', 'de', 'en')", name="web_settings_language"),
+        CheckConstraint(
+            "safe_search BETWEEN 0 AND 2 AND max_results BETWEEN 1 AND 8 "
+            "AND timeout BETWEEN 5 AND 30",
+            name="web_settings_limits",
+        ),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    language: Mapped[str] = mapped_column(String(8), default="all")
+    safe_search: Mapped[int] = mapped_column(Integer, default=1)
+    max_results: Mapped[int] = mapped_column(Integer, default=8)
+    timeout: Mapped[int] = mapped_column(Integer, default=15)

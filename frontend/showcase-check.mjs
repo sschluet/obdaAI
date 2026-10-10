@@ -23,8 +23,10 @@ try{
  await page.getByLabel('Features durchsuchen').fill('no-such-feature');
  await page.getByText('Keine passende Funktion gefunden.',{exact:false}).waitFor();
  await page.getByLabel('Features durchsuchen').fill('');
- for(const name of ['Chat','Projekte','Dateien','Aufgaben','Wissen']){
-  await page.getByRole('tab',{name,exact:true}).click();
+ const galleryTabs=page.getByRole('tab');if(await galleryTabs.count()!==catalog.screenshots.length)throw Error('Screenshot gallery incomplete');
+ for(let i=0;i<catalog.screenshots.length;i++){
+  await galleryTabs.nth(i).click();
+  if(await galleryTabs.nth(i).textContent()==='undefined'||!await galleryTabs.nth(i).textContent())throw Error('Screenshot tab missing label');
   await page.waitForFunction(()=>document.querySelector('#gallery-image').complete&&document.querySelector('#gallery-image').naturalWidth>0);
  }
  await page.getByRole('button',{name:'Screenshot vergrößern',exact:false}).click();

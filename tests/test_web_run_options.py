@@ -29,7 +29,7 @@ def prepare(setup, monkeypatch, *, cloud=True):
     provider.decision = Route(capabilities=["chat", "web"], model_class="cloud", reason="Test")
     queries = []
 
-    async def search(settings, request):
+    async def search(settings, request, *, options=None):
         assert request.public_query_approved
         queries.append(request.query)
         return [

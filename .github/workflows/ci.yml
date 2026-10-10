@@ -82,6 +82,7 @@ jobs:
           node search-navigation-check.mjs
           node composer-ux-check.mjs
           node web-preference-check.mjs
+          node web-settings-check.mjs
           node processing-check.mjs
           node run-error-check.mjs
           node pipeline-check.mjs

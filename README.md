@@ -29,6 +29,7 @@ separately from local SQLite contract checks.
 - [Public project website and update workflow](docs/project-website.md)
 - [Integrated workspace and local UX delivery](docs/ux-optimization.md)
 - [Provider configuration, encrypted secrets and budgets](docs/providers.md)
+- [Web research settings and connection check](docs/web-settings.md)
 - [Versions and sources](docs/dependencies.md)
 - [Operator n8n connection check](docs/n8n-connection-check.md)
 
