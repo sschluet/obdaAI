@@ -1,9 +1,9 @@
 import json
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import TypeAdapter
+from pydantic import Field, TypeAdapter
 from pydantic.dataclasses import dataclass
 
 
@@ -32,6 +32,7 @@ class Settings:
     local_max_tokens: int = 2048
     openrouter_max_tokens: int = 2048
     run_timeout: int = 90
+    generation_timeout: Annotated[int, Field(ge=30, le=900)] = 600
     context_limit: int = 24000
     source_dir: str = ".local/sources"
     parser_result_dir: str = ""

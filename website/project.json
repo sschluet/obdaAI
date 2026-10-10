@@ -70,6 +70,12 @@
       "title": "Lange Antworten in deinem Tempo.",
       "description": "Beim Hochscrollen bleibt die Leseposition erhalten. Über „Zum Ende“ wieder an die neueste Antwort springen; der Chat bleibt per Tastatur und mobil bedienbar. Ausschließlich synthetischer langer Beispieltext.",
       "image": "assets/chatreading.png"
+    },
+    {
+      "id": "partial",
+      "title": "Auch bei Abbruch bleibt dein Text.",
+      "description": "Eine erhaltene Teilantwort mit Modellherkunft, sichtbarem Hinweis auf Unvollständigkeit und einer einzelnen konkreten Fehlermeldung. Ausschließlich synthetischer Beispieltext und simulierter Fehler.",
+      "image": "assets/partial.png"
     }
   ],
   "groups": [
@@ -133,6 +139,11 @@
           "title": "Leseposition bei langen Streaming-Antworten",
           "description": "Neue Antwortteile folgen am Gesprächsende automatisch. Eigenes Hochscrollen unterbricht das Folgen und bewahrt die Leseposition; „Zum Ende“ setzt es fort. Der Gesprächsbereich ist per Tastatur erreichbar und bleibt auch mobil lesbar. Mit zeitversetzter synthetischer Ausgabe und tatsächlicher lokaler Antwort auf der Test-VM geprüft.",
           "status": "live"
+        },
+        {
+          "title": "Lange Antworten und erhaltene Teilantworten",
+          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Synthetische UI-Illustration; reale Abnahme wird gesondert dokumentiert.",
+          "status": "implemented"
         }
       ]
     },

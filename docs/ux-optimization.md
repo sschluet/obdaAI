@@ -272,3 +272,22 @@ längeren isolierten synthetischen Text. Release7cd5e2f / Schema0028: CI38060571
 mit 667 Tests und 19 Browserprüfungen. Echte lokale VM-Antwort mit bewahrter
 Leseposition bis Abschluss, Sprung ans Ende und Mobilansicht bestätigt; QA-Chat
 archiviert. Langsamer SSE-/Touch-/Tastatur-/Retry-Korpus ist synthetisch geprüft.
+
+
+## 10.10.2026: Zeitbudget und erhaltene Teilantworten
+
+Lange Antworten erhalten nach Einordnung und Vorbereitung ein separates
+Generierungsbudget. Die bisherige gemeinsame 90-Sekunden-Grenze konnte eine
+fortlaufende Ausgabe mitten im Text abbrechen. `HUB_RUN_TIMEOUT` bleibt für die
+Vorbereitung erhalten; `HUB_GENERATION_TIMEOUT` erlaubt standardmäßig zehn Minuten
+für die eigentliche Antwort (Betreiberbereich 30–900 Sekunden). Die vorhandenen
+Inaktivitäts- und Ausgabegrenzen bleiben wirksam.
+
+Bei tatsächlichem Abbruch bleibt der bereits erzeugte Text erhalten, einschließlich
+Modellbeleg und zugeordneter Quellen. Direkt unter dem Text steht „Teilantwort ·
+unvollständig“; Benutzerabbruch erhält „Teilantwort · abgebrochen“. Eine einzelne
+Fehlermeldung erläutert Zeitlimit, unterbrochene Providerdaten oder Ausgabegrenze.
+Der erneute Versuch bleibt erreichbar, ohne den abgebrochenen Lauf zu einem Erfolg
+umzudeuten. Eine ausschließlich synthetische öffentliche Illustration zeigt diese
+Darstellung. Implementierung und synthetische Prüfung sind getrennt von der
+anschließenden tatsächlichen VM-Abnahme zu dokumentieren.

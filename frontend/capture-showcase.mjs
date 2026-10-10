@@ -90,5 +90,17 @@ try{
  await page.getByRole('button',{name:'Zum Ende',exact:true}).waitFor();
  await capture('chatreading');
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Eleven gallery screenshots plus mobile captured with synthetic data only.');
+ // Preserved partial output is an isolated synthetic illustration, never a failed live chat.
+ const partialResult=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':csrf,Origin:base},data:{cloud_allowed:false}});
+ if(!partialResult.ok())throw Error('Synthetic partial conversation could not be created');
+ const partial=await partialResult.json();
+ const partialText='## Projekt Aurora: Eine klare Perspektive\n\n*Synthetische Illustration einer erhaltenen Teilantwort.*\n\n### 1. Den Überblick gewinnen\n\nWir sammeln die wichtigsten Fragen und ordnen die vorhandenen Quellen. Ein gemeinsames Ziel hilft, die Recherche auf die Informationen zu konzentrieren, die eine Entscheidung wirklich unterstützen.\n\n### 2. Ergebnisse nachvollziehbar machen\n\nJede wichtige Aussage soll auf eine Quelle oder eine sichtbar gekennzeichnete Annahme zurückgehen. So lässt sich später prüfen, wie ein Ergebnis zustande gekommen ist.\n\n### 3. Die nächsten Schritte\n\nFür die nächste Projektphase empfehlen wir';
+ await page.route('**/api/conversations/'+partial.id,async route=>{if(route.request().method()!=='GET'){await route.continue();return;}await route.fulfill({json:{...partial,title:'Projekt Aurora · Erhaltene Teilantwort',title_status:'succeeded',messages:[{id:'synthetic-partial-user',role:'user',content:'Erstelle eine ausführliche Übersicht zu unserem Beispielprojekt Aurora.',label:'LOCAL_ONLY'},{id:'synthetic-partial-answer',role:'assistant',content:partialText,label:'LOCAL_ONLY',processing:{run_id:'synthetic-partial-run',provider:'local',model:'synthetic-fixture',model_used:true,status:'failed'}}],runs:[{id:'synthetic-partial-run',status:'failed',error:'Die Antwort hat das Zeitlimit erreicht. Die bisher erzeugte Teilantwort bleibt erhalten.',user_message_id:'synthetic-partial-user',assistant_message_id:'synthetic-partial-answer',events:[]}]}});});
+ await page.goto(base+'/?view=Chat&chat='+partial.id);
+ await page.getByRole('heading',{name:'Projekt Aurora: Eine klare Perspektive',exact:true}).waitFor();
+ await page.locator('.answer-partial').filter({hasText:'Teilantwort · unvollständig'}).waitFor();
+ await page.locator('.chat-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+ await capture('partial');
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('Twelve gallery screenshots plus mobile captured with synthetic data only.');
 }finally{await browser.close();}

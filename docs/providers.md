@@ -39,9 +39,22 @@ OpenRouter meldet Usage einschließlich Kosten im letzten SSE-Chunk; zusätzlich
 Preise und Kontextgröße kommen aus dem
 [offiziellen Modellkatalog](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties).
 
-Grenzen: konfigurierte Kontextzeichen/Tokens, HTTP-Timeout, maximal 90 Sekunden pro
-Gesamtlauf, begrenzte Ausgabe und höchstens eine Router-Schemareparatur. Tokenlimit oder
-Content-Filter werden als Fehler sichtbar, Teilantwort und Laufhistorie bleiben erhalten.
+Grenzen: konfigurierte Kontextzeichen/Tokens, begrenzte Ausgabe und höchstens eine
+Router-Schemareparatur. `HUB_RUN_TIMEOUT` begrenzt Einordnung und Vorbereitung
+(standardmäßig 90 Sekunden). Die anschließende Antwortgenerierung erhält ein eigenes
+Gesamtzeitbudget über `HUB_GENERATION_TIMEOUT` (standardmäßig 600 Sekunden,
+zulässig 30–900 Sekunden). Bereits laufende Antwortausgabe wird damit nicht durch
+die ursprüngliche Vorbereitungsfrist abgebrochen. Die vorhandenen HTTP-Zeitlimits
+begrenzen zusätzlich ausbleibende Providerdaten; regelmäßige Streamteile allein
+heben das Gesamtzeitbudget nicht auf.
+
+Zeitüberschreitung, unterbrochene Ausgabe, Token-/Ausgabegrenze oder Content-Filter
+bleiben fehlgeschlagene Läufe. Bereits empfangene Antwortteile, erfasstes Modell,
+Quellen und Laufhistorie werden erhalten. Die Antwort trägt den sichtbaren Hinweis
+„Teilantwort · unvollständig“ beziehungsweise bei Benutzerabbruch „Teilantwort ·
+abgebrochen“. Spezifische Fehlermeldungen unterscheiden die Zeitgrenze, ausbleibende
+Providerdaten und überschrittene Ausgabegrenzen; Wiederholen erzeugt einen neuen
+Lauf. Ein Stream ohne ordentlichen Abschluss wird nicht als fertige Antwort gewertet.
 `/api/metrics` ist authentifiziert und zeigt aggregierte Laufzustände, Routerzeit, erste
 Antwort, Dauer und bekannte Kosten der letzten 30 Tage ohne Texte oder Secrets.
 Loginversuche sind datenbankgestützt begrenzt und gelten gemeinsam für beide API-Prozesse.

@@ -188,6 +188,7 @@ async def execute_run(
         status = "failed"
         reserved = False
         builtin_answer = False
+        generation_started = False
         started = time.monotonic()
         yield ("run", {"id": run_id})
         yield ("status", {"message": "Anfrage wird lokal eingeordnet"})
@@ -283,7 +284,7 @@ async def execute_run(
                     raise ExecutionLimitError("Kontextgrenze des lokalen Modells erreicht")
                 if any(p.label not in limits["allowed_labels"] for p in parts):
                     raise PermissionError("Local model privacy class not allowed")
-            async with asyncio.timeout(cfg.run_timeout):
+            async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
                     raise asyncio.CancelledError
                 route = await providers.route(parts, roles)
@@ -559,6 +560,11 @@ async def execute_run(
                     update(first_content_seconds=time.monotonic() - started)
                     yield ("delta", {"text": output})
                 else:
+                    # Routing and tool preparation have their own bounded budget.
+                    # A progressing long answer gets a fresh total deadline,
+                    # including waiting for the provider slot and prefill.
+                    generation_started = True
+                    deadline.reschedule(asyncio.get_running_loop().time() + cfg.generation_timeout)
                     async for chunk in providers.stream(
                         parts, roles, external=external, grants=grants
                     ):
@@ -566,9 +572,13 @@ async def execute_run(
                             raise asyncio.CancelledError
                         if not output:
                             update(first_content_seconds=time.monotonic() - started)
+                        if len(output) + len(chunk) > 32000:
+                            raise ExecutionLimitError(
+                                "Antwort hat die Längengrenze von 32.000 Zeichen erreicht. "
+                                "Der bisherige Text bleibt erhalten; "
+                                "bitte in Abschnitten fortsetzen."
+                            )
                         output += chunk
-                        if len(output) > 32000:
-                            raise ValueError("Output limit exceeded")
                         yield ("delta", {"text": chunk})
                 if not output:
                     raise ValueError("Empty provider response")
@@ -602,6 +612,21 @@ async def execute_run(
             # The persisted error column is 240 characters in PostgreSQL. A
             # verbose schema error must not prevent recording a failed run.
             update(error=message[:240])
+            yield ("error", {"message": message})
+        except (TimeoutError, httpx.TimeoutException) as error:
+            if isinstance(error, httpx.TimeoutException):
+                message = (
+                    "Provider hat zu lange keine Daten geliefert. "
+                    "Der bisherige Text bleibt erhalten; bitte erneut versuchen."
+                )
+            elif generation_started:
+                message = (
+                    "Zeitlimit der Antworterzeugung erreicht. "
+                    "Der bisherige Text bleibt erhalten; bitte in Abschnitten fortsetzen."
+                )
+            else:
+                message = "Zeitlimit der Vorbereitung erreicht. Bitte erneut versuchen."
+            update(error=message)
             yield ("error", {"message": message})
         except Exception as error:
             # Class only: never emit prompts, SQL parameters, response bodies or

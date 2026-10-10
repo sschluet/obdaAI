@@ -1,5 +1,19 @@
 # obdaAI — Status 10.10.2026
 
+## Lange Generierungen: getrennte Zeitbudgets – implementiert, 10.10.2026
+
+Zwei reale lokale Läufe nach90,4s mit1475/1488 Textdeltas und6111/5832Zeichen
+abgebrochen; erste Ausgabe nach16,9/16,5s, Router nach9,0/8,8s. Die bisherige
+Gesamtgrenze90s umfasste auch jeden Antworttoken. Vorbereitung bleibt90s; unmittelbar
+vor Modellstream eigene Generationgrenze600s (validierter Bereich30–900) mit
+separatem Inaktivitätslimit. Timeout, ausbleibende HTTP-Daten und32.000-Zeichenlimit
+haben konkrete gespeicherte/SSE-Meldungen. Teilantworten bleiben erhalten und sind
+sichtbar als unvollständig/abgebrochen/unterbrochen markiert. Kein stiller Erfolg
+bei fehlendem Abschlussmarker, keine Cloudfreigabe oder Rückfall geändert.
+659 lokale Tests bestanden,16PostgreSQLfälle fürCI ausgelassen; Ruff/Mypy66,
+TS/Build, Fehler-/Verarbeitungs-/Websiteprüfungen bestanden. Keine Migration;
+Schema0028 bleibt. GitHub-CI, echte langeVM-Antwort und Veröffentlichung ausstehend.
+
 ## Leseposition auf Test-VM bestätigt – 10.10.2026
 
 Release7cd5e2f / unverändertes Schema0028 auf neun App-/Runnercontainern.
