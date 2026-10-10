@@ -1,5 +1,14 @@
 # obdaAI — Status 10.10.2026
 
+## Importbereitschaft im vollständigen Browserlauf – 10.10.2026
+
+Alle lokalen Bedienprüfungen und Designcheck mit vorgesehener Demo-Belegung
+bestanden. CI-Importtest übergab die Datei während des abschließenden Refreshs
+unmittelbar an das verborgene Dateifeld. Dieses ist jetzt während laufender
+Operationen wie der sichtbare Importbutton gesperrt; der Test nutzt die echte
+Dateiauswahl über den aktiven Button. Bibliotheks- und Designprüfung erneut grün.
+Backend der Vorrevision bereits in CI erfolgreich; finales Folge-Release steht aus.
+
 ## Fokus und Recherche mit Skillaufruf – 10.10.2026
 
 CI prüfte die asynchrone Fokusrückgabe nach dem Chatpicker zu früh. Fokus wird jetzt

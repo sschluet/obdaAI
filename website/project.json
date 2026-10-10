@@ -385,7 +385,7 @@
       "features": [
         {
           "title": "Versionierte Skills",
-          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt.",
+          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche implementiert und synthetisch geprüft; releasegebundene VM-Abnahme folgt. Import wartet auf abgeschlossene Speichervorgänge.",
           "status": "implemented"
         },
         {
