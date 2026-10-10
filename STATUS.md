@@ -1,5 +1,20 @@
 # obdaAI — Status 10.10.2026
 
+## Projektlogos auf Test-VM bestätigt – 10.10.2026
+
+Release `bc8f3a9`, Schema0033: [CI38087025082](https://github.com/sschluet/obdaAI/actions/runs/38087025082),
+alle sechs Jobs erfolgreich, 779 Python-/PostgreSQLtests und25 UI-Browsersuiten
+plus Fixture-Anmeldung. Gepinnte HTTPS-/Asset-/Icon-API-/Loginprüfung erfolgreich;
+ausgelieferte vollständige Lucide-Lizenzdatei gegen Quellhash verifiziert.
+Echte Browserabnahme mit eigenem synthetischen Projekt:32 Icons, Ordner-Voreinstellung,
+Suche/Abbrechen, Speichern und Reload, Projektkarte/-kopf, 320px und Escape. Keine
+Renderfehler; Testprojekt endgültig entfernt, QA-Sitzung beendet. Bestehende Inhalte
+und Einstellungen, verschlüsselte Sicherung, acht Overlays und Netzregeln erhalten.
+Geänderter bestehender Chatkontext und verspätete Projektliste zusätzlich durch
+gezielte Browserregressionen geprüft. Website62 Funktionen/21 synthetische Bilder,
+Galerie/Tastatur/Mobil geprüft; Veröffentlichung wird separat verifiziert.
+Vollständige V1 und breite Geräte-/Safari-/Faktenabnahme bleiben offen.
+
 ## Projektwahl und Logo bei verspäteten Antworten erhalten – 10.10.2026
 
 Zusätzlicher CI-Lauf des vorherigen Dokumentationsstands fand einen echten

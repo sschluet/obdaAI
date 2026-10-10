@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-10",
-  "applicationCommit": "45f93c8",
-  "schema": "0032",
-  "tests": 767,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38085032750",
+  "applicationCommit": "bc8f3a9",
+  "schema": "0033",
+  "tests": 779,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38087025082",
   "screenshots": [
     {
       "id": "chat",
@@ -219,7 +219,7 @@
         {
           "title": "Konfigurierbare Projektsymbole",
           "description": "Projekte mit einem eigenen Symbol schneller wiedererkennen. Suchbare Auswahl aus 32 lokal eingebundenen, frei verwendbaren Lucide-Icons; die Wahl bleibt gespeichert und erscheint in Projektübersicht und Projektchat.",
-          "status": "implemented"
+          "status": "live"
         },
         {
           "title": "Dokumentuploads",
@@ -530,15 +530,15 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0032",
-    "browserChecks": 24,
+    "schema": "0033",
+    "browserChecks": 25,
     "serverDeployment": true,
-    "commit": "45f93c8",
-    "ciTests": 767,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38085032750",
-    "deployedCommit": "45f93c8",
-    "deployedSchema": "0032",
-    "liveScope": "Endgültige Projekt- und Chatlöschung auf der Test-VM mit eigenen synthetischen Daten bestätigt: aktive und archivierte Chats, Abbrechen und Neuladen sowie Projekt inklusive Quelle, lokalem Chat und erzeugter Word-Datei. Originalkopie, Parserergebnis, Dateiauftrag, Ausgabe und unterbrochene Eingabekopie tatsächlich entfernt; vorhandene Isolation erhalten. Neutrales Design und 20 synthetische Screenshots. Breite Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
+    "commit": "bc8f3a9",
+    "ciTests": 779,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38087025082",
+    "deployedCommit": "bc8f3a9",
+    "deployedSchema": "0033",
+    "liveScope": "Konfigurierbare Projektlogos auf der Test-VM bestätigt: 32 lokal eingebundene Icons, Suche, Abbrechen, Speichern und Neuladen, Projektkarte und Projektkopf sowie Mobilansicht bei320px. Logo im bestehenden Projektchat und stabile Projektwahl bei verspäteten Antworten durch gezielte Browserprüfungen abgedeckt. Lizenzdatei tatsächlich ausgeliefert und geprüft. 62 Funktionen und21 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true
   }
