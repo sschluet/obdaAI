@@ -213,3 +213,22 @@ Abnahme der Suche: Releasea698d72 / Schema0027, CI38050170365: 620 Tests und
 Antwort, deren Suchtreffer und direkte Gesprächsöffnung über HTTPS bestätigt.
 Sicherung off-VM geprüft, Originalnachrichten/Overlays/Netzregeln erhalten,
 QA-Chat archiviert. Kein Passwortwechsel, keine globale Vorgabenänderung.
+
+
+## 10.10.2026: Webrecherche ohne wiederholte Bestätigung
+
+Auf ausdrücklichen Benutzerwunsch ist Websuche standardmäßig aktiv. Der Webknopf
+schaltet sie unmittelbar; in den Einstellungen lässt sich der im Browser gespeicherte
+Standard ändern. Der zusätzliche Suchtextdialog entfällt. Senden, Bearbeiten und
+erneut Antworten verwenden jeweils die aktuelle Frage als gebundene öffentliche
+Query (getrimmt, maximal die ersten 500 Zeichen). Die aktivierte Option erlaubt
+Recherche bei Bedarf; sie erzwingt keinen Suchaufruf für jede Nachricht.
+Ein neuer Lauf bewahrt diese Entscheidung; ein wiederholter Versuch fordert
+keine zusätzliche Zustimmung an. „Nur lokal“ schaltet Websuche für den Lauf aus,
+ohne den gespeicherten Standard zu ändern.
+
+Die Backend-Grenze prüft weiterhin konkrete Query, Laufkennung und Sucherlaubnis.
+Private Historie, Dokumente, Vault und Memory werden nicht automatisch als Suchtext
+übertragen. Lokale Modellwahl und öffentliche Websuche sind getrennte Entscheidungen;
+die Sucherlaubnis genehmigt weder Cloud-Modelltransfer noch andere Werkzeugaktionen.
+Echte Abnahme, genaue Release- und CI-Evidenz werden nach Prüfung ergänzt.

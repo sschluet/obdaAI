@@ -7,6 +7,12 @@ Quellregel. Das gilt für Historie, Auszüge, Zusammenfassungen, Titel, Embeddin
 Suchanfragen, Logs, Screenshots und Workflowausführungen. Kein automatischer
 Sensitivitätsdetektor kann Labels lockern. Ein Routervorschlag ist keine Freigabe.
 
+Die auf Benutzerwunsch standardmäßig eingeschaltete Websuche ist eine dauerhafte,
+im Browser abschaltbare Erlaubnis für den aktuellen eingegebenen öffentlichen Suchtext.
+Jeder Lauf bindet die konkrete Query und Sucherlaubnis; private Historie, Dokumente,
+Vault und Memory werden nicht automatisch einbezogen. „Nur lokal“ sperrt die Suche
+für diesen Lauf. Diese Erlaubnis erweitert keine Cloud-Modell-, URL- oder Aktionsrechte.
+
 Der Provider-Gateway prüft direkt vor HTTP-Ausgabe den gesamten tatsächlich
 ausgehenden Payload und alle Quelldeklarationen. Lokaler Ausfall endet mit Fehler,
 niemals Cloud-Fallback. Unbekannte Preise bleiben null/unbekannt. Quellen-/Tooltexte

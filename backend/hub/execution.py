@@ -488,7 +488,8 @@ async def execute_run(
                     builtin_answer = False
                 external = route.model_class == "cloud"
                 if external and (
-                    not cfg.cloud_enabled
+                    snapshot.get("model_local_only")
+                    or not cfg.cloud_enabled
                     or not grants
                     or any(p.label == Privacy.LOCAL_ONLY for p in parts)
                 ):

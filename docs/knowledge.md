@@ -39,9 +39,11 @@ Diese Prüfung ersetzt keine Fachprüfung komplexer Tabellen oder Rechnungen.
 ## Web
 
 Der austauschbare JSON-Adapter nutzt den dokumentierten SearXNG-Suchendpunkt.
-Nur ein eigens eingegebener und ausdrücklich freigegebener öffentlicher Suchtext wird
-übertragen; niemals automatisch aus privaten Dateien, Memory oder Historie abgeleitete
-Suchtexte. Quell-URL, Titel, Ergebnistext, Anbieter und Abrufzeit bleiben projektbezogen.
+Die dauerhaft gewählte Websuche erlaubt die aktuelle eingegebene Frage als öffentlichen
+Suchtext, ohne erneuten Bestätigungsdialog. Sie ist im Browser standardmäßig aktiv und
+in Chateingabe und Einstellungen abschaltbar. Es werden keine Suchtexte automatisch
+aus privaten Dateien, Memory oder Historie ergänzt. Quell-URL, Titel, Ergebnistext,
+Anbieter und Abrufzeit bleiben projektbezogen.
 Ohne konfigurierten/erreichbaren Anbieter wird sichtbar keine aktuelle Recherche behauptet.
 
 Gezielter HTML-Abruf benötigt zusätzlich eine konkrete URL-Freigabe und operatorseitige
@@ -80,12 +82,14 @@ Revision ergeben eine stabile Idempotenz-ID. Quellen, Modellantworten und Webtex
 können diesen Write nicht auslösen. Automatische Memory-Vorschläge/Übernahme bleiben
 deaktiviert. Allgemeiner Vault bleibt readonly; Cloudfreigaben vererben sich nicht.
 
-Webfähige Chatläufe benötigen eine Freigabe für den exakten aktuellen Nachrichtentext
-(maximal 500 Zeichen). Chatverlauf, Vault, Dateiquellen und abgeleitete Routerqueries
-werden nicht als Suchanfrage übertragen. Bearbeitung, Gesprächswechsel und Retry
-widerrufen die Freigabe. Rechercheergebnisse mit URL und Zeitpunkt werden als lokale,
-untrusted Quellen im Lauf gespeichert; der finale Antwortkontext wird erneut gegen
-Modellgrenzen geprüft. Ohne angebundenen Suchdienst bleibt die Funktion gesperrt.
+Webfähige Chatläufe binden `web_search_allowed` und den konkreten öffentlichen
+`web_query` an die aktuelle Anfrage (getrimmt, maximal die ersten 500 Zeichen).
+Die gewählte Websuche gilt auch für Bearbeitung und Retry; jeder neue Lauf erhält seine eigene aktuelle Query. Chatverlauf, Vault,
+Dateiquellen und abgeleitete Routerqueries werden nicht als Suchanfrage übertragen.
+„Nur lokal“ setzt Websuche für den Lauf aus. Rechercheergebnisse mit URL und Zeitpunkt
+werden als lokale, untrusted Quellen im Lauf gespeichert; der finale Antwortkontext
+wird erneut gegen Modellgrenzen geprüft. Ohne angebundenen Suchdienst bleibt die
+Funktion gesperrt. Diese Sucherlaubnis erteilt keine Cloud-Modellfreigabe.
 Schema 0010 ergänzt explizite globale Vault-Wissenschats, 0011 globale Rechercheläufe.
 
 Bei produktiver SSHFS-Anbindung erzwingt HUB_VAULT_FS_TYPE=fuse.sshfs den tatsächlichen

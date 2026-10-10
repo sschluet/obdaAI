@@ -32,3 +32,4 @@
  .composer-popover button{gap:8px;padding:10px 8px}
  .composer-popover-heading{padding:8px}
 }
+.web-preference{display:flex!important;align-items:center;gap:12px;margin-top:20px}.web-preference input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;accent-color:var(--accent)}

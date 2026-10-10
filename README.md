@@ -40,8 +40,9 @@ PostgreSQL dispatch uses Procrastinate; start the separate process with
 `uv run python -m hub.jobs`. Reopening a conversation follows stored events, and stalled
 worker jobs reconcile partial output without repeating inference. See [STATUS](STATUS.md)
 for exact CI and real-integration evidence and remaining acceptance limits.
-M2 adds project sources/uploads, extraction/OCR, scoped knowledge chat, explicitly
-approved public web research and canonical Vault Memory with revision comparison.
+M2 adds project sources/uploads, extraction/OCR, scoped knowledge chat, public web
+research with a persistent user-controlled switch and canonical Vault Memory with
+revision comparison.
 The authorized limited Vault/search integration is installed and live-tested on the
 dedicated VM. M3 starts with fixed local actions, persisted proposals, explicit grants and receipts
 ([contract](docs/actions.md)); [trusted revisioned chat skills](docs/skills.md) are implemented; [manual local Task-Center](docs/tasks.md) is implemented. A fixed local analysis step applies bound sources and trusted skills. Local title drafts and [once/daily/weekly schedules](docs/schedules.md) are implemented. The approved n8n clock bridge is installed; external action adapters remain in development.

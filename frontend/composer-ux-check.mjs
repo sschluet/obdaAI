@@ -26,9 +26,12 @@ try {
  const tall=await input.evaluate(e=>e.getBoundingClientRect().height);if(tall<=short||tall>181)throw Error('Composer auto height failed');
  if(await input.evaluate(e=>getComputedStyle(e).resize)!=='none')throw Error('Native resize handle remains');
  await input.fill('Synthetischer langer Entwurf '.repeat(12));await page.setViewportSize({width:320,height:640});await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Nachricht"]').getBoundingClientRect().height>=150);await page.setViewportSize({width:1440,height:900});
- await input.fill('Öffentliche synthetische Frage');await composer.getByRole('button',{name:'Websuche',exact:true}).click();
- const consent=page.getByRole('dialog',{name:'Websuche für diese Nachricht',exact:true});await consent.waitFor();if(!await consent.getByRole('textbox',{name:'Öffentlicher Suchtext',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Search dialog did not focus query');await page.keyboard.press('Shift+Tab');if(!await consent.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Search consent focus escaped');await page.keyboard.press('Escape');
- if(await composer.getByRole('button',{name:'Websuche aktiviert',exact:true}).count())throw Error('Cancelled search granted web');
+ await input.fill('Öffentliche synthetische Frage');
+ await composer.getByRole('button',{name:'Websuche aktiviert',exact:true}).click();
+ if(await page.getByRole('dialog',{name:'Websuche für diese Nachricht',exact:true}).count())throw Error('Web toggle requires a dialog');
+ await input.fill('Geänderter synthetischer Entwurf');
+ await composer.getByRole('button',{name:'Websuche',exact:true}).click();
+ if(await composer.getByRole('button',{name:'Websuche aktiviert',exact:true}).count()!==1)throw Error('Direct web toggle failed');
  await plus.click();await page.keyboard.press('End');if(!await page.getByRole('menuitem',{name:/Antwortstil einstellen/}).evaluate(e=>e===document.activeElement))throw Error('End navigation failed');await page.keyboard.press('Home');await page.keyboard.press('Escape');
  await plus.click();await input.click();if(await page.getByRole('menu',{name:'Aktionen und Anhänge',exact:true}).count())throw Error('Outside click did not close menu');
  await plus.click();await page.getByRole('menuitem',{name:/Antwortstil einstellen/}).click();await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).waitFor();
@@ -45,5 +48,5 @@ try {
  await page.route('**/api/conversations/*',async route=>{if(route.request().method()==='GET')await new Promise(resolve=>setTimeout(resolve,800));await route.continue()});
  await page.reload();const navigation=page.getByRole('button',{name:'Navigation öffnen',exact:true});await navigation.click();await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
  if(await page.locator('.sidebar.open').count())throw Error('Mobile navigation did not close after restored page selection');
- if(errors.length)throw Error(errors.join('\n'));console.log('Composer UX passed: actions, keyboard/focus, opt-in boundary, local mode, auto height and mobile/short viewport. Synthetic only.');
+ if(errors.length)throw Error(errors.join('\n'));console.log('Composer UX passed: actions, keyboard/focus, persistent direct web toggle, local mode, auto height and mobile/short viewport. Synthetic only.');
 }finally{await browser.close();}

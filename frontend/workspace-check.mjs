@@ -11,7 +11,7 @@ try{
  await page.getByRole('heading',{name:'Womit möchtest du beginnen?',exact:true}).waitFor();
  if(await page.locator('.chat-top select').count())throw Error('Duplicate model selector above conversation');
  const composer=page.locator('form.composer');
- if(await composer.getByLabel('Modellwahl',{exact:true}).count()!==1||await composer.getByRole('button',{name:'Websuche',exact:true}).count()!==1)throw Error('Composer tools missing');
+ if(await composer.getByLabel('Modellwahl',{exact:true}).count()!==1||await composer.getByRole('button',{name:'Websuche aktiviert',exact:true}).count()!==1)throw Error('Composer tools missing');
  if(await page.locator('.composer-note input[type=checkbox]').count())throw Error('Legacy composer checkboxes remain');
  await composer.getByLabel('Modellwahl',{exact:true}).click();
  await page.getByRole('menuitemradio',{name:/Nur lokal/}).click();

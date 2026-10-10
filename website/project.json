@@ -8,7 +8,7 @@
     {
       "id": "chat",
       "title": "Ein Gespräch. Viele Möglichkeiten.",
-      "description": "Direkte Gesprächsleiste mit Plus-Aktionen, bewusster Websuche und kompakter Modellwahl. Antwortstil als sichtbare Auswahl neben dem Chat.",
+      "description": "Direkte Gesprächsleiste mit Plus-Aktionen, sofort umschaltbarer Websuche und kompakter Modellwahl. Antwortstil als sichtbare Auswahl neben dem Chat.",
       "image": "assets/chat.png"
     },
     {
@@ -242,16 +242,16 @@
       "id": "research",
       "name": "Recherche",
       "symbol": "⌕",
-      "intro": "Öffentliche Suche mit einem bewusst bestätigten Thema.",
+      "intro": "Öffentlich recherchieren, direkt aus dem Gespräch.",
       "features": [
         {
-          "title": "Bestätigter öffentlicher Suchtext",
-          "description": "Die Suchanfrage ist getrennt editierbar. Gesprächshistorie und Dokumente werden nicht automatisch als Suchtext übertragen.",
+          "title": "Websuche ohne Bestätigungsdialog",
+          "description": "Standardmäßig aktiv, direkt im Chat umschaltbar und als Browserstandard einstellbar. Aktuelle Frage als Suchtext; Gesprächshistorie und Dokumente werden nicht automatisch übertragen. „Nur lokal“ schaltet die Suche aus.",
           "status": "live"
         },
         {
           "title": "Recherche zu lokalen Dateien",
-          "description": "Bestätigte Suche kann einen lokalen Word-, PowerPoint- oder Inhalts-PDF-Entwurf unterstützen. Query, Treffer und Quellenreferenzen sind am Lauf gebunden.",
+          "description": "Aktive Websuche kann einen lokalen Word-, PowerPoint- oder Inhalts-PDF-Entwurf unterstützen. Query, Treffer und Quellenreferenzen sind am Lauf gebunden.",
           "status": "live"
         },
         {
@@ -385,7 +385,7 @@
         },
         {
           "title": "Direkte Gesprächsaktionen statt Formularauswahl",
-          "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, Websuche bewusst pro Nachricht und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten synthetisch geprüft. Auf der Test-VM installiert und gezielt im Browser geprüft.",
+          "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, direkter Webschalter mit gespeichertem Standard und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten werden gezielt geprüft.",
           "status": "local"
         },
         {

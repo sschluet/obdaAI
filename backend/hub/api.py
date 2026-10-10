@@ -77,6 +77,7 @@ class LoginInput(Input):
 
 class ChatInput(Input):
     local_only: bool = False
+    model_local_only: bool = False
     web_search_allowed: bool = False
     web_query: str | None = Field(default=None, min_length=1, max_length=500)
     content: str = Field(min_length=1, max_length=16000)
@@ -97,6 +98,9 @@ class ConversationEdit(Input):
 
 class RetryInput(Input):
     local_only: bool = False
+    model_local_only: bool = False
+    web_search_allowed: bool = False
+    web_query: str | None = Field(default=None, min_length=1, max_length=500)
     request_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
 
 
@@ -502,6 +506,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             web_search_allowed=body.web_search_allowed,
             web_query=body.web_query,
             local_only=body.local_only,
+            model_local_only=body.model_local_only,
         )
         start_development_run(run_id)
         return response_for(run_id, request)
@@ -514,6 +519,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         web_search_allowed: bool = False,
         web_query: str | None = None,
         local_only: bool = False,
+        model_local_only: bool = False,
         edit: tuple[str, MessageEdit] | None = None,
     ) -> str:
         if local_only and web_search_allowed:
@@ -525,6 +531,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "content": content,
             "web_search_allowed": web_search_allowed,
             "local_only": local_only,
+            "model_local_only": model_local_only,
             "edit": [
                 edit[0],
                 edit[1].model_dump(exclude={"web_query"} if edit[1].web_query is None else set()),
@@ -576,7 +583,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 target.content, target.revision = change.content, target.revision + 1
                 target.label = (
                     Privacy.CLOUD_ALLOWED
-                    if change.cloud_allowed and not local_only
+                    if change.cloud_allowed and not (local_only or model_local_only)
                     else Privacy.LOCAL_ONLY
                 )
             elif content is not None:
@@ -585,7 +592,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     role="user",
                     content=content,
                     label=Privacy.CLOUD_ALLOWED
-                    if c.cloud_allowed and not local_only
+                    if c.cloud_allowed and not (local_only or model_local_only)
                     else Privacy.LOCAL_ONLY,
                 )
                 db.add(new)
@@ -603,8 +610,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
             snapshot: dict[str, Any] = {
                 "response_preferences": resolve_preferences(db, c),
-                **({"web_query": web_query} if web_query is not None else {}),
+                **(
+                    {"web_query": web_query or messages[-1].content.strip()[:500]}
+                    if web_search_allowed
+                    else {}
+                ),
                 "web_search_allowed": web_search_allowed,
+                "model_local_only": model_local_only,
                 "parts": [
                     ContextPart(
                         content=m.content,
@@ -639,6 +651,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             snapshot["skills"] = skill_audit
             snapshot["parts"].extend(p.model_dump(mode="json") for p in skill_parts)
             snapshot["roles"].extend("user" for _ in skill_parts)
+            if local_only or model_local_only:
+                for part in snapshot["parts"]:
+                    part["label"] = Privacy.LOCAL_ONLY.value
             if sum(len(p["content"]) for p in snapshot["parts"]) > cfg.context_limit:
                 raise HTTPException(413, "Projektkontext zu groß; Quellen gezielter durchsuchen")
             run = Run(
@@ -684,7 +699,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def retry(
         chat_id: str, body: RetryInput, request: Request, session: SessionDependency
     ) -> StreamingResponse:
-        run_id = create_run(chat_id, body.request_id, local_only=body.local_only)
+        run_id = create_run(
+            chat_id,
+            body.request_id,
+            local_only=body.local_only,
+            model_local_only=body.model_local_only,
+            web_search_allowed=body.web_search_allowed,
+            web_query=body.web_query,
+        )
         start_development_run(run_id)
         return response_for(run_id, request)
 
@@ -705,6 +727,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             web_search_allowed=body.web_search_allowed,
             web_query=body.web_query,
             local_only=body.local_only,
+            model_local_only=body.model_local_only,
         )
         start_development_run(run_id)
         return response_for(run_id, request)

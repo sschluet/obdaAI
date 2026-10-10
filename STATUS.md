@@ -1,5 +1,20 @@
 # obdaAI — Status 10.10.2026
 
+## Dauerhafte Webrecherche ohne Bestätigungsdialog – implementiert, 10.10.2026
+
+Auf ausdrücklichen Benutzerwunsch standardmäßig aktiver, im Browser gespeicherter
+Webschalter. Direkter Wechsel ohne Dialog; Schreiben, Gesprächswechsel und Reload
+bewahren die Auswahl. Einstellungen enthalten die entsprechende Webvorgabe.
+Send, Retry und bearbeitete Nachrichten binden die aktuelle Frage (getrimmt,
+maximal 500 Zeichen) als Query. Keine automatisch ergänzte Historie oder Dokumente.
+Nur lokal sperrt Webzugriff; model_local_only erlaubt einen lokalen Modelllauf mit
+Websuche ohne neue Cloudrechte. API-Clients ohne Freigabeflag bleiben geschlossen.
+633 lokale Tests bestanden, 15 PostgreSQLfälle für CI ausgelassen; Ruff und Mypy
+bestanden. TypeScript/Build sowie Browser-, Datei-, Arbeitsraum-, Composer-,
+Webvorgaben-, Fehleranzeige- und Websiteprüfungen bestanden. Keine Migration.
+GitHub-CI, VM-Live-Websuche und Veröffentlichung dieser
+Auslieferung noch ausstehend.
+
 ## Recherchefehler auf Test-VM korrigiert – 10.10.2026
 
 Release a0eef3b / unverändertes Schema 0027 auf allen neun App-/Runnercontainern.

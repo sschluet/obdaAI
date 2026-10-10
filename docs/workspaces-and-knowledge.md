@@ -21,8 +21,12 @@ Modellwahl und Quellenoptionen sitzen direkt in der Chateingabe. Auto/lokal und
 freigegebene Cloudanbieter ersetzen die verstreuten Auswahlen. Ein Anbieterwechsel
 öffnet nach konkreter Zustimmung ein neues Gespräch; private Altinhalte werden
 nicht implizit neu freigegeben. Projekt-/Wissensquellen bleiben lokal. Öffentliche
-Websuche bestätigt den exakten aktuellen Nachrichtentext; Bearbeitung invalidiert
-die Freigabe. Die Quellenoption ist im strikt lokalen Modus deaktiviert.
+Websuche ist standardmäßig eingeschaltet und direkt in der Chateingabe umschaltbar.
+Unter Einstellungen lässt sich der im Browser gespeicherte Standard ändern. Es gibt
+keine erneute Suchtextbestätigung je Nachricht: Senden, Bearbeiten und erneut Antworten
+binden jeweils die aktuelle Frage als öffentlichen Suchtext an den Lauf. Im Modus
+„Nur lokal“ ist Websuche für diesen Lauf ausgeschaltet. Private Historie, Dokumente,
+Vault und Memory werden nicht automatisch zum Suchtext hinzugefügt.
 
 Wissen startet mit Quellenkarten. Der vorhandene Obsidian-Vault bleibt erhalten;
 die gezielte Merkliste ist ein eigener Reiter. Zusätzliche SMB-/Obsidian-, NFS- und

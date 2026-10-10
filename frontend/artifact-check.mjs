@@ -205,9 +205,7 @@ try{
  await page.getByRole('tab',{name:/Gespräche ·/}).click();
  await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Recherchiere und erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST SYNTHETIC_WEB_QUERY');
- await page.getByRole('button',{name:'Websuche',exact:true}).click();
- await page.getByLabel('Öffentlicher Suchtext',{exact:true}).fill('Synthetic public Python documentation');
- await page.getByRole('button',{name:'Websuche für diese Nachricht verwenden',exact:true}).click();
+ await page.getByRole('button',{name:'Websuche aktiviert',exact:true}).waitFor();
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
