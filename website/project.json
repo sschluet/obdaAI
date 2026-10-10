@@ -103,7 +103,7 @@
         },
         {
           "title": "Durchgehende lokale Arbeitsraumsuche",
-          "description": "Gespräche, Projekte, Dateititel, Quellen, Aufgaben und Wissensverbindungen über Suchknopf oder ⌘K/Strg+K finden. Inhaltsabgleich für Gespräche, Projektbeschreibungen und Aufgabenziele; direkte Objektöffnung, Filter und Tastaturbedienung. Keine Modellaufrufe, keine Zugangsdaten oder Konfigurationen in Suchtreffern. Lokal geprüft.",
+          "description": "Gespräche, Projekte, Dateititel, Quellen, Aufgaben und Wissensverbindungen über Suchknopf oder ⌘K/Strg+K finden. Inhaltsabgleich für Gespräche, Projektbeschreibungen und Aufgabenziele; direkte Objektöffnung, Filter und Tastaturbedienung. Keine Modellaufrufe, keine Zugangsdaten oder Konfigurationen in Suchtreffern. Auf der Test-VM installiert und an eigenem synthetischen Gespräch direkt geprüft.",
           "status": "local"
         }
       ]
@@ -414,14 +414,14 @@
   "development": {
     "mode": "local",
     "schema": "0027",
-    "browserChecks": 13,
+    "browserChecks": 15,
     "serverDeployment": true,
-    "commit": "77b9d98",
-    "ciTests": 610,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38047407010",
-    "deployedCommit": "77b9d98",
+    "commit": "a698d72",
+    "ciTests": 620,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38050170365",
+    "deployedCommit": "a698d72",
     "deployedSchema": "0027",
-    "liveScope": "Gepinnte HTTPS-/UI-Abnahme und echte lokale Antwort mit dauerhaftem Herkunftshinweis. Passwortwechsel synthetisch getestet; echtes Passwort unverändert. Cloud- und breite Geräteabnahme bleiben offen.",
+    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, echte lokale QA-Antwort und Arbeitsraumsuche mit direkter Gesprächsöffnung. Passwort unverändert; breite Cloud-/Geräteabnahme bleibt offen.",
     "designModernized": true,
     "interactionModernized": true
   }

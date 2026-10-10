@@ -58,7 +58,9 @@ Test bestätigt den erfolgreichen CSRF-Wert nach einer abgewiesenen Anmeldung.
 
 ## Noch offen aus dem Gesamtplan
 
-- Durchgehende Suche über alle Objekttypen und umfangreichere Startübersicht.
+- Umfangreichere Startübersicht und zusätzliche Suchtypen (z. B. Skills/Werkzeuge)
+  sowie Dokumentvolltexte. Die sechs Kernobjekttypen sind nun über die
+  durchgehende Arbeitsraumsuche abgedeckt.
 - Vollständige Vorlagenbibliothek und direktes visuelles Bearbeiten aller nativen
   Officeformate, selektive Text-KI-Änderungen sowie Versionsvergleich.
 - Zusätzliche Dateilayout-/Antwortprofile, unabhängige Vorgaben pro Einzelauftrag,
@@ -202,5 +204,12 @@ Aktionen aus. Vorschauprüfung bleibt ausdrücklich unbestätigt. Wiederholtes
 Ungespeicherte Änderungen bestehender Aufgaben verlangen beim Trefferwechsel
 Bestätigung; dies ersetzt noch keine geräteübergreifende Entwurfssynchronisierung.
 
-Startübersicht, Dokumentvolltextsuche/Versionsvergleich, zusätzliche Profile
+Startübersicht, zusätzliche Suchtypen, Dokumentvolltextsuche/Versionsvergleich, zusätzliche Profile
 und breitere Geräte-/Modellabnahme bleiben offene nächste Bausteine.
+
+
+Abnahme der Suche: Releasea698d72 / Schema0027, CI38050170365: 620 Tests und
+15 Browserprüfungen bestanden. Bestehende Test-VM installiert; echte lokale
+Antwort, deren Suchtreffer und direkte Gesprächsöffnung über HTTPS bestätigt.
+Sicherung off-VM geprüft, Originalnachrichten/Overlays/Netzregeln erhalten,
+QA-Chat archiviert. Kein Passwortwechsel, keine globale Vorgabenänderung.

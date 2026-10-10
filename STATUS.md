@@ -1,5 +1,19 @@
 # obdaAI — Status 10.10.2026
 
+## Arbeitsraumsuche auf Test-VM bestätigt — 10.10.2026
+
+Releasea698d72 / unverändertes Schema0027 auf allen neun App-/Runnercontainern.
+CI38050170365 mit sechs erfolgreichen Jobs, 620 Tests und 15 Browserprüfungen.
+Gepinnte HTTPS-Assets, geschützte Such-API, Palette und direkte Trefferöffnung
+an eigenem synthetischen Gespräch mit echter lokaler Antwort geprüft. QA-Chat
+archiviert und Testsitzung abgemeldet; Passwort und globale Vorgaben unverändert.
+Verschlüsseltes Off-VM-Backup hashgeprüft; Originalnachrichten-Digest vor/nach
+Cutover identisch. Datenbank, acht Overlays und Netzwerkregeln bewahrt.
+Öffentliche Vorstellung aktualisiert: 53 Funktionen, neun synthetische Screenshots.
+Nächste Planbausteine: Startübersicht, zusätzliche Objekt-/Dokumentvolltextsuche,
+Versionsvergleich und Profile. Keine vollständige V1 oder Geräteabnahme behauptet.
+
+
 ## Lokale Arbeitsraumsuche implementiert — 10.10.2026
 
 Sechs Objektarten, klare Filter, ⌘K/Strg+K, gecancelte/stale Antworten, direkte
