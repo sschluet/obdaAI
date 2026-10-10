@@ -1,5 +1,21 @@
 # obdaAI — Status 10.10.2026
 
+## Neutrales Design auf Test-VM bestätigt – 10.10.2026
+
+Release `4b7ee47`, Schema0031 unverändert: [CI38079964003](https://github.com/sschluet/obdaAI/actions/runs/38079964003)
+mit sechs erfolgreichen Jobs, 729 Python-/PostgreSQLtests und23UI-Browsersuiten
+plus Fixture-Anmeldung. TypeScript/Build, Hell-/Dunkel-Textkontraste, Dialogentwürfe,
+Mobilbreiten320–1440px und Websitegalerie/Suche/Tastatur lokal geprüft. Alle18
+synthetischen Bilder inklusive Fehleransicht aktualisiert und visuell geprüft.
+VM installiert; gepinnte HTTPS-/Assetprüfung und echte Browserabnahme erfolgreich:
+neutrale helle Seitenleiste, Anthrazit-Dunkelmodus, Markenkontrast, Profilformular,
+Skill-Editor ohne Speichern, mobile Navigation und Breiten320/390/768/1440px.
+Keine Settings-/Skill-/Chatwrites, keine Renderfehler; QA-Sitzung beendet.
+Verschlüsselte Sicherung, Nachrichteninhalt, Overlays und normalisierte Netzwerk-
+regeln erhalten. Projektseite mit neutraler Sans-Serif-Gestaltung und passendem Logo;
+öffentliche Auslieferung wird separat an den Dokumentationscommit gebunden verifiziert.
+Reale Safari-/Mobilgeräteabnahme und vollständige V1 bleiben offen.
+
 ## Neutrale Gestaltung statt Grün – implementiert, 10.10.2026
 
 Gemeinsame Oberfläche auf kühles Weiß/Grau, Graphitschrift und sparsame Indigo-
