@@ -8,7 +8,10 @@ den bereits geöffneten Quellenbereich. Projektladung berücksichtigt jetzt aktu
 Auswahl und neuere Bedienung. Deterministisch verzögerter Browsercheck bestätigt,
 dass Quellen geöffnet bleiben. Rückkehr zum gleichen Projektchat lädt außerdem
 aktuelle Projektmetadaten und das geänderte Logo ohne Reload. Allgemeiner und
-erweiterter Icon-Browsercheck bestanden, Build487,22KB. Endgültige CI folgt.
+erweiterter Icon-Browsercheck bestanden, Build487,22KB. Die CI-Fokusprüfung
+wartet nun auf den tatsächlich zurückgegebenen Fokus im nächsten Frame statt
+ihm zuvorzukommen; unveränderter Timeout, keine feste Pause. Frischer kompletter
+Icon-Browsercheck erfolgreich; endgültige CI folgt.
 
 ## Konfigurierbare Projektlogos – implementiert, 10.10.2026
 
