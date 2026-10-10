@@ -7,12 +7,12 @@ from typing import Any, Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from hub import db as models
 from hub.config import Settings
-from hub.db_locks import ownership_lock
+from hub.db_locks import MEMORY_INDEX, ownership_lock
 
 
 class DeletionInput(BaseModel):
@@ -199,7 +199,11 @@ def plan(
             "Aktuelle Aufgabenbezüge ändern beziehungsweise Freigaben widerrufen."
         )
     if kind == "project":
-        if db.scalar(select(models.Memory).where(models.Memory.project_id == identifier)):
+        if db.scalar(
+            select(models.Memory).where(
+                models.Memory.project_id == identifier, models.Memory.deleted.is_(False)
+            )
+        ):
             blockers.append(
                 "Vault-Erinnerungen sind mit diesem Projekt verknüpft. Zuordnung im Vault zuerst "
                 "entfernen."
@@ -336,6 +340,7 @@ def plan(
             else "Gespeicherte Projektdateien bleiben erhalten.",
             "Historische Aufgabenfassungen und abgeschlossene Aufgabenläufe bleiben erhalten.",
             "Bereits heruntergeladene Exporte und bestehende Sicherungen bleiben erhalten.",
+            "Bereits gelöschte Vault-Erinnerungen bleiben als historische Daten erhalten.",
         ],
         _chats=chats,
         _runs=runs,
@@ -370,6 +375,14 @@ def permanently_delete(
     from hub.task_api import lock
 
     ownership_lock(db)
+    if kind == "project" and db.scalar(
+        select(models.Memory.id).where(models.Memory.project_id == identifier).limit(1)
+    ):
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            if not db.scalar(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": MEMORY_INDEX}):
+                raise HTTPException(
+                    409, "Vault-Abgleich läuft. Projektlöschung nach Abschluss erneut versuchen."
+                )
     lock(db)
     p = plan(db, kind, identifier, cfg)
     if p["blockers"]:

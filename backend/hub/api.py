@@ -240,7 +240,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         now = time.time()
         consume_auth_attempt(factory, 1, now)
         with factory() as db:
-            ownership_lock(db)
             credential = locked_credential(db)
             stored = credential.password_hash or cfg.password_hash
             if not stored:
@@ -267,7 +266,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/logout")
     def logout(session: SessionDependency, response: Response) -> dict[str, bool]:
         with factory() as db:
-            ownership_lock(db)
             db.delete(db.get(LoginSession, session.token_hash))
             db.commit()
         response.delete_cookie("hub_session", secure=cfg.secure_cookie, samesite="strict")

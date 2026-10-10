@@ -18,8 +18,8 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from hub.db import Memory, MemoryRevision
-from hub.db_locks import MEMORY_INDEX, ownership_lock
+from hub.db import Memory, MemoryRevision, Project
+from hub.db_locks import MEMORY_INDEX
 
 MARKER = re.compile(r"^<!-- obdaai-memory: (\{[^\n]+\}) -->\n")
 MAX_NOTE = 200_000
@@ -144,7 +144,6 @@ def encoded(row: Memory) -> str:
 
 
 def serialize(db: Session) -> None:
-    ownership_lock(db)
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         db.execute(text(f"SELECT pg_advisory_xact_lock({MEMORY_INDEX})"))
 
@@ -275,6 +274,9 @@ def _reconcile(
                     db.add(row)
                     db.flush()
                 found.add(row.id)
+                if row.project_id and db.get(Project, row.project_id) is None:
+                    row.deleted = True
+                    continue  # Preserve historical scope/content; never promote into global memory.
                 # Arbitrary vault files can never self-grant scope, privacy or writes.
                 if not relative.startswith("AI/Memory/"):
                     row.writable = False

@@ -1,5 +1,17 @@
 # obdaAI — Status 10.10.2026
 
+## Begrenzte Sperren nach realer VM-Abnahme – 10.10.2026
+
+CI für `e5fbd79` bestand alle sechs Jobs mit 765 Tests. Der reale Rollout zeigte
+eine zu weit gefasste Besitzsperre beim laufenden Vault-Abgleich: Anmeldung wartete
+auf dessen Dateiscan. App sicher auf `4b7ee47` zurückgesetzt; kompatibles Schema0032
+und sämtliche Daten erhalten, keine Löschaufträge oder entkoppelte Historie vorhanden.
+Login/Logout und globale Vault-Scans halten jetzt keine Besitzsperre. Projektlöschung
+prüft die Memory-Sperre nur bei projektbezogenen Einträgen und wartet dort niemals.
+Ein neuer echter PostgreSQL-Test hält die Vault-Sperre während Login, Chat-Erstellung
+und Projektlöschung. Historisches Memory wird nicht globalisiert oder reaktiviert.
+72 fokussierte Tests, Ruff und Mypy70 bestanden; erneute CI und Live-Abnahme folgen.
+
 ## Unterbrochene Dateiaufträge vollständig bereinigen –10.10.2026
 
 Dateibereinigung berücksichtigt auch temporäre Eingabeverzeichnisse unterbrochener

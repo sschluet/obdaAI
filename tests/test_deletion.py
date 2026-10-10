@@ -558,3 +558,36 @@ def test_background_title_does_not_block_permanent_deletion(context, status):
     with factory() as db:
         permanently_delete(db, cfg, "conversation", ids["chat"], None)
         assert db.get(models.Conversation, ids["chat"]) is None
+
+
+def test_deleted_project_memory_is_not_resurrected_or_promoted_by_vault_scan(context, tmp_path):
+    from hub.memory import digest, encoded, reconcile
+
+    factory, cfg = context
+    ids = populate(factory, cfg)
+    root = tmp_path / "vault"
+    folder = root / "AI" / "Memory"
+    folder.mkdir(parents=True)
+    with factory() as db:
+        note = models.Memory(
+            path="AI/Memory/retained.md",
+            project_id=ids["project"],
+            sha256=digest("saved"),
+            content="saved",
+            base_content="saved",
+            deleted=True,
+        )
+        db.add(note)
+        db.commit()
+        (folder / "retained.md").write_text(encoded(note))
+        state = preview(db, "project", ids["project"])
+        assert not state["blockers"]
+    with factory() as db:
+        permanently_delete(db, cfg, "project", ids["project"], None)
+    with factory() as db:
+        reconcile(db, root, allow_memory_writes=False)
+        db.commit()
+        retained = db.get(models.Memory, note.id)
+        assert retained.deleted is True
+        assert retained.project_id == ids["project"]
+        assert retained.content == "saved"
