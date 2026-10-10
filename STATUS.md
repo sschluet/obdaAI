@@ -1,5 +1,23 @@
 # obdaAI — Status 10.10.2026
 
+## Vorbereitungskorrektur auf Test-VM bestätigt – 10.10.2026
+
+Release `0c16523`, Schema0031 unverändert: [CI38078593167](https://github.com/sschluet/obdaAI/actions/runs/38078593167)
+mit sechs erfolgreichen Jobs, 729 Python-/PostgreSQLtests, 23 UI-Browsersuiten plus
+Fixture-Anmeldeprüfung. Lokale Provider-/Zeitbudgettests und allgemeiner Browserlauf
+bestanden. Test-VM aktualisiert; verschlüsselte Sicherung, Originalnachrichtendigest,
+Compose-Overlays und normalisierte Netzwerkregeln unverändert. Gepinnter HTTPS-
+Zugang/Assets geprüft. Echte lokale Folgefrage in eigenem synthetischen Chat nach
+11.081Zeichen historischer Assistentenantwort:676Zeichen Antwort nach27,31s,
+Kennzeichen aus der Mitte des ungekürzten Kontextes korrekt genannt, kein Fehler
+oder Teilantwortlabel nach Reload. Eigener QA-Chat archiviert und Sitzung beendet.
+Der Router sieht nur Anfang/Ende dieser langen Vorantwort; endgültiger Antwort-
+kontext bleibt vollständig. Reale Benutzerfehler waren vor abgeschlossener
+Routingentscheidung/Websuche bei90s; keine Änderung der 90s-Grenze oder bestehenden
+Antwort-/Modell-/Web-/Cloudvorgaben. Lokaler Modelltest nutzt jetzt Einordnung und
+separate echte gestreamte Rechenantwort; synthetische HTTPfixture entsprechend
+angepasst. Websiteweitergabe60Funktionen/18Bilder wird separat verifiziert.
+
 ## Vorbereitung bei langen Gesprächen – Korrektur implementiert, 10.10.2026
 
 Reale Fehlversuche endeten nach90,24–90,32s ohne ersten Antworttext; Ereignisse

@@ -172,7 +172,7 @@
         },
         {
           "title": "Lange Antworten und erhaltene Teilantworten",
-          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte. Vorbereitung optimiert: reine lokale Einordnung mit kompakter älterer Antwortdarstellung; die eigentliche Antwort behält den vollständigen Kontext. Schrittbezogene Timeoutmeldungen. Neue Korrektur implementiert; Live-Abnahme folgt.",
+          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte. Vorbereitung optimiert: reine lokale Einordnung mit kompakter älterer Antwortdarstellung; die eigentliche Antwort behält den vollständigen Kontext. Schrittbezogene Timeoutmeldungen. Auf der Test-VM bestätigt: Folgefrage nach 11.081 Zeichen früherer Antwort in27,31s erfolgreich, vollständiger Antwortkontext und Reload geprüft.",
           "status": "live"
         },
         {
@@ -505,12 +505,12 @@
     "schema": "0031",
     "browserChecks": 23,
     "serverDeployment": true,
-    "commit": "2a47caa",
-    "ciTests": 727,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38077119295",
-    "deployedCommit": "2a47caa",
+    "commit": "0c16523",
+    "ciTests": 729,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38078593167",
+    "deployedCommit": "0c16523",
     "deployedSchema": "0031",
-    "liveScope": "Persönliches Profil und neue Skill-Bibliothek auf der Test-VM installiert. Profilformular lädt den tatsächlichen Stand ohne Änderung persönlicher Angaben. Eigener synthetischer Skill über den Editor geprüft und aktiviert, über den Chatpicker aufgerufen und vom echten lokalen Modell befolgt; Revision, Reload und Laufhistorie bestätigt, Testobjekte archiviert. Profil-/Cloudfeldgrenzen, Import, Auswahlregeln und Entwurfschutz synthetisch geprüft. Breite Cloudmodell-/Geräte-/V1-Abnahme offen.",
+    "liveScope": "Vorbereitung bei langen Gesprächen optimiert und auf der Test-VM geprüft: echte lokale Folgefrage nach 11.081 Zeichen synthetischem Assistentenkontext in27,31s erfolgreich, Kennzeichen aus der Textmitte erhalten und fehlerfreier Reload. Profil- und Skill-Bibliothek bleiben installiert; vorherige reale Skillprobe und synthetische Profil-/Cloudfeldprüfungen dokumentiert. Schema0031, bestehende Konfiguration erhalten. Breite Geräte-/Cloudmodell-/V1-Abnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }
