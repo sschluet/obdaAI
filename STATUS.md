@@ -1,5 +1,20 @@
 # obdaAI — Status 10.10.2026
 
+## Leseposition auf Test-VM bestätigt – 10.10.2026
+
+Release7cd5e2f / unverändertes Schema0028 auf neun App-/Runnercontainern.
+CI38060571213: sechs Jobs erfolgreich, 667 Tests und 19 Browserprüfungen.
+Langsame synthetische SSE-Ausgabe prüft Hochscrollen während neuer Absätze,
+Status/Abschluss und gespeicherter Antwort, manuelles Wiederfolgen, Tastaturfokus
+nach „Zum Ende“, mobile Touchgesten sowie ausschließlich den Chatcontainer.
+Gepinnte HTTPS-/Assetabnahme und eigene tatsächliche lokale Antwort auf der VM:
+Hochscrollen bewahrt Position bis Abschluss, Sprung ans Ende und Mobilansicht
+bestätigt. QA-Chat archiviert, Testsitzung abgemeldet/Authdatei entfernt.
+Keine Backend- oder Schemaänderung. Bestehende Originalnachrichten, Datenbank,
+Web-/Modell-/Zugangsvorgaben, acht Overlays und Netzwerkregeln erhalten; verschlüsselte
+Off-VM-Sicherung hashgeprüft. Öffentlich: 56 Funktionen und zwölf synthetische Bilder.
+Veröffentlichungsbeleg separat in .local/chat-scroll-publication.json.
+
 ## Ruhiges Lesen während der Chatgenerierung – implementiert, 10.10.2026
 
 Erzwungene scrollIntoView-Sprünge bei Tokens/Status entfernt. Der Chatcontainer

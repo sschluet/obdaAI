@@ -268,5 +268,7 @@ bleiben per Tastatur erreichbar und berücksichtigen reduzierte Bewegung.
 Die Änderung betrifft die Gesprächsansicht, keine Modell- oder Webeinstellungen.
 Eine neue Unterhaltung darf ihren eigenen Startzustand erhalten; Entwürfe bleiben
 von der Scrollposition unabhängig. Die öffentliche Illustration verwendet einen
-längeren isolierten synthetischen Text. Lokale Browserabnahme und reale
-Test-VM-Prüfung werden erst nach ihrer Ausführung dokumentiert.
+längeren isolierten synthetischen Text. Release7cd5e2f / Schema0028: CI38060571213
+mit 667 Tests und 19 Browserprüfungen. Echte lokale VM-Antwort mit bewahrter
+Leseposition bis Abschluss, Sprung ans Ende und Mobilansicht bestätigt; QA-Chat
+archiviert. Langsamer SSE-/Touch-/Tastatur-/Retry-Korpus ist synthetisch geprüft.

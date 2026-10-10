@@ -131,8 +131,8 @@
         },
         {
           "title": "Leseposition bei langen Streaming-Antworten",
-          "description": "Neue Antwortteile folgen am Gesprächsende automatisch. Eigenes Hochscrollen unterbricht das Folgen und bewahrt die Leseposition; „Zum Ende“ setzt es fort. Der Gesprächsbereich ist per Tastatur erreichbar und bleibt auch mobil lesbar. Lokale Browserabnahme und Test-VM-Prüfung stehen für diese Lieferung noch aus.",
-          "status": "implemented"
+          "description": "Neue Antwortteile folgen am Gesprächsende automatisch. Eigenes Hochscrollen unterbricht das Folgen und bewahrt die Leseposition; „Zum Ende“ setzt es fort. Der Gesprächsbereich ist per Tastatur erreichbar und bleibt auch mobil lesbar. Mit zeitversetzter synthetischer Ausgabe und tatsächlicher lokaler Antwort auf der Test-VM geprüft.",
+          "status": "live"
         }
       ]
     },
@@ -447,14 +447,14 @@
   "development": {
     "mode": "local",
     "schema": "0028",
-    "browserChecks": 18,
+    "browserChecks": 19,
     "serverDeployment": true,
-    "commit": "8337ebf",
+    "commit": "7cd5e2f",
     "ciTests": 667,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38058159977",
-    "deployedCommit": "8337ebf",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38060571213",
+    "deployedCommit": "7cd5e2f",
     "deployedSchema": "0028",
-    "liveScope": "Gepinnte HTTPS-/UI-Abnahme, Webrecherche-Einstellungen und echter Suchdienst-Verbindungstest. Werte nach Reload korrekt und mobil geprüft; tatsächliche Einstellungen unverändert. Migration0028 und Originalnachrichten-/Backupvergleich bestätigt. Breite Cloud-/Geräteabnahme offen.",
+    "liveScope": "Gepinnte HTTPS-/UI-Abnahme und tatsächliche lokale Antwort mit bewahrter Leseposition bis Abschluss, Sprung ans Ende und Mobilansicht. Langsame SSE-Ausgabe, Tastaturfokus, Touch und Wiederholung synthetisch geprüft. Schema0028 und bestehende Einstellungen unverändert; breite Cloud-/Geräteabnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }
