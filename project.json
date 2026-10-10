@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-10",
-  "applicationCommit": "bc8f3a9",
+  "updated": "2026-10-11",
+  "applicationCommit": "d4e0154",
   "schema": "0033",
-  "tests": 779,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38087025082",
+  "tests": 794,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
   "screenshots": [
     {
       "id": "chat",
@@ -22,6 +22,12 @@
       "title": "Ein Zeichen für jedes Projekt.",
       "description": "Ein persönliches Projektsymbol aus 32 frei nutzbaren Lucide-Icons suchen und als eigenes Projektlogo wählen. Ausschließlich fiktives Projekt Aurora.",
       "image": "assets/projecticons.png"
+    },
+    {
+      "id": "answermodes",
+      "title": "Du entscheidest, wer antwortet.",
+      "description": "Auto, Nur lokal oder Cloud direkt im Gespräch wählen. Auto berücksichtigt deine Routingregeln; Cloud fordert den konfigurierten Anbieter an. Ausschließlich synthetisches gewöhnliches Gespräch.",
+      "image": "assets/answermodes.png"
     },
     {
       "id": "files",
@@ -139,8 +145,8 @@
           "status": "live"
         },
         {
-          "title": "Auto mit lokalen Modellen und Cloud",
-          "description": "Gewöhnlicher Chat startet mit Auto einschließlich konfigurierter Cloudmodelle und aktivierter Websuche. Ausgewogene Regeln bevorzugen komplexe Recherche in der Cloud; private Kontexte und „Nur lokal“ bleiben geschützt. Auto-Freigabe, tatsächliche kurze Web-/Cloud-Antwort und Reload auf der Test-VM geprüft. Neue Eingaben warten auf geladene Modell- und Webeinstellungen.",
+          "title": "Auto, Nur lokal oder Cloud",
+          "description": "Drei klare Antwortmodi im bestehenden Gespräch: Auto wählt lokal oder Cloud nach den Routingregeln, Nur lokal schließt Cloud und Websuche aus, Cloud fordert den konfigurierten Cloudanbieter direkt an. Private Projekt- und Wissenskontexte bleiben lokal; die Cloudoption erklärt ihre Sperre. Anbieter werden in den Einstellungen verwaltet. Die bisherige doppelte Auswahl „Auto + OpenRouter“ entfällt. Implementiert; reale Abnahme dieser neuen Auswahl steht noch aus.",
           "status": "live"
         },
         {
@@ -533,12 +539,12 @@
     "schema": "0033",
     "browserChecks": 25,
     "serverDeployment": true,
-    "commit": "bc8f3a9",
-    "ciTests": 779,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38087025082",
-    "deployedCommit": "bc8f3a9",
+    "commit": "d4e0154",
+    "ciTests": 794,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
+    "deployedCommit": "d4e0154",
     "deployedSchema": "0033",
-    "liveScope": "Konfigurierbare Projektlogos auf der Test-VM bestätigt: 32 lokal eingebundene Icons, Suche, Abbrechen, Speichern und Neuladen, Projektkarte und Projektkopf sowie Mobilansicht bei320px. Logo im bestehenden Projektchat und stabile Projektwahl bei verspäteten Antworten durch gezielte Browserprüfungen abgedeckt. Lizenzdatei tatsächlich ausgeliefert und geprüft. 62 Funktionen und21 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
+    "liveScope": "Drei Modellmodi auf der Test-VM bestätigt: Auto, Nur lokal und Cloud ohne Anbieter- oder Neugesprächsdialog. Kurze synthetische Anfrage tatsächlich über den eingerichteten Cloudanbieter beantwortet; Routingbeleg ohne lokalen Klassifikator. Lokale Websperre, private Projekt-Cloudsperre und Mobilansicht320px geprüft. Einstellungen und Grenzen erhalten. 62 Funktionen und22 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true
   }
