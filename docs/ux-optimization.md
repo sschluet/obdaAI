@@ -182,3 +182,25 @@ Modellantwort plus Herkunftshinweis nach Reload geprüft, QA-Chat archiviert.
 Vorheriges Backup off-VM hashgeprüft, Originalnachrichten per strukturiertem
 Digest bewahrt; Overlays und Netzwerkregeln unverändert. Cloudtests bleiben
 synthetisch. Wiederhergestellte Teilantworten behalten ihre echten Laufdaten.
+
+
+## 10.10.2026: Durchgehende Arbeitsraumsuche
+
+Nächster offener Planbaustein umgesetzt: Suchknopf im Header und ⌘K/Strg+K,
+lokale Suchpalette mit sechs Objektfiltern, Tastatur/Fokus, Loading/Fehler/Leerzustand
+und direkter Objektöffnung. Gespräche (aktive Nachrichtentexte), Projekte
+(Beschreibung), aktuelle Aufgaben (Ziel), Dateititel, Quellnamen und
+Wissensverbindungen (Name/Typ) sind auffindbar. Native Dokumentvolltexte,
+Einstellungen und Zugangsdaten werden nicht durchsucht. Suchtexte werden nicht
+in Navigations-URLs, Browserentwürfen oder serverseitiger Historie gespeichert.
+
+API liefert ausschließlich begrenzte Navigationsmetadaten, maximal 30 Treffer,
+keine Inhaltsauszüge. Literalzeichen/Unicode, Archiv-/Versionsgrenzen und
+pausierte Wissensverbindungen sind geprüft. Die Suche führt weder Modelle noch
+Aktionen aus. Vorschauprüfung bleibt ausdrücklich unbestätigt. Wiederholtes
+Öffnen und Reload funktionieren; vorhandene Chatentwürfe bleiben erhalten.
+Ungespeicherte Änderungen bestehender Aufgaben verlangen beim Trefferwechsel
+Bestätigung; dies ersetzt noch keine geräteübergreifende Entwurfssynchronisierung.
+
+Startübersicht, Dokumentvolltextsuche/Versionsvergleich, zusätzliche Profile
+und breitere Geräte-/Modellabnahme bleiben offene nächste Bausteine.

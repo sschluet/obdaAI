@@ -1,5 +1,19 @@
 # obdaAI — Status 10.10.2026
 
+## Lokale Arbeitsraumsuche implementiert — 10.10.2026
+
+Sechs Objektarten, klare Filter, ⌘K/Strg+K, gecancelte/stale Antworten, direkte
+read-only Trefferöffnung und mobile Palette. Archivierte Inhalte/ersetzte Quellen
+und alte Dateiversionen ausgeschlossen; pausierte Wissensverbindungen bleiben
+als Metadaten auffindbar. Keine Konfigurationen/Zugangsdaten, keine Textauszüge,
+keine Modelle oder Schreibaktionen. SQL/Unicode/Literalzeichen geprüft.
+Vorschaufreigabe wird nie übernommen, ungesendete Chattexte bleiben erhalten.
+Bestehende Aufgabenänderungen verlangen explizite Verwerfungsentscheidung.
+605 lokale Tests bestanden, 15 PG-Fälle für CI ausgelassen; TS/Build und
+Suchpaletten-/Objektnavigations-/Arbeitsbereichchecks bestanden. Keine Migration;
+Schema0027 bleibt. CI/VM-/Website-Veröffentlichung dieser Runde noch ausstehend.
+
+
 ## Passwort und Antwortherkunft auf Test-VM installiert — 10.10.2026
 
 Release77b9d98 / Schema0027 auf neun App-/Runnercontainern. CI38047407010:

@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {FileText,Presentation,Files,Image,Check} from 'lucide-react';
 import './artifacts.css';
@@ -29,8 +29,11 @@ const fileFormats=[
 const status:Record<string,string> = {queued:'In Warteschlange', rendering:'Datei und Vorschau werden erstellt',
   needs_review:'Vorschau prüfen', published:'Freigegeben', failed:'Fehlgeschlagen', cancelled:'Abgebrochen'};
 
-export function ArtifactsPanel({api, project, sources, seed, embedded=false, contextLabel}:{api:API;seed?:ArtifactSeed|null;embedded?:boolean;contextLabel?:string;
+export function ArtifactsPanel({api, project, sources, seed, embedded=false, contextLabel, initialArtifactId}:{api:API;initialArtifactId?:string|null;seed?:ArtifactSeed|null;embedded?:boolean;contextLabel?:string;
   project:{id:string; archived:boolean}; sources:Source[]}) {
+  const appliedTarget=useRef<string|null>(null);
+  const targetRow=useRef<HTMLElement|null>(null);
+  const [highlighted,setHighlighted]=useState<string|null>(null);
   const storageKey='hub-ui-draft:artifact:'+project.id;
   const [savedDraft,setSavedDraft] = useState<any|null>(null);
   const [resumeNotice,setResumeNotice] = useState('');
@@ -69,6 +72,14 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     const timer=setInterval(()=>void refresh().catch(()=>{}),3000);
     return()=>{alive=false;clearInterval(timer)};
   },[project.id]);
+  useEffect(()=>{
+    if(!initialArtifactId||appliedTarget.current===initialArtifactId||editing)return;
+    const latest=rows.filter(r=>r.artifact_id===initialArtifactId).sort((a,b)=>b.revision-a.revision)[0];
+    if(!latest)return;
+    appliedTarget.current=initialArtifactId;setHighlighted(latest.artifact_id+'-'+latest.revision);setReviewed(false);setError('');
+    if(['needs_review','published'].includes(latest.status))setPreview(latest);
+  },[initialArtifactId,rows,editing]);
+  useEffect(()=>{if(!highlighted)return;targetRow.current?.scrollIntoView({block:'center'});targetRow.current?.focus({preventScroll:true})},[highlighted]);
   useEffect(()=>{
     try { const raw=sessionStorage.getItem(storageKey);const value=raw?JSON.parse(raw):null;
       setSavedDraft(value?.schema===1&&value.projectId===project.id?value:null);
@@ -204,8 +215,8 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     {seed&&(!seed.project_id||seed.project_id===project.id)&&<button disabled={!configured||project.archived} onClick={()=>{start();setMode('manual');setContentOpen(true);setTitle('Antwort als Dokument');setSections([{heading:'Antwort',paragraphs:seed.content.match(/[\s\S]{1,4000}/g)?.join('\n\n')||seed.content,table:[]}]);setChatSource({conversation_id:seed.conversation_id,message_id:seed.message_id,revision:seed.revision})}}>Chatantwort als Word übernehmen</button>}
     {savedDraft&&!editing&&<div className="artifact-context" role="status"><b>Gespeicherter Dateientwurf</b><p>{savedDraft.title||savedDraft.goal||'Noch ohne Titel'} · nur in dieser Browsersitzung</p><button disabled={busy||project.archived} onClick={()=>void resumeDraft()}>Entwurf fortsetzen</button><button disabled={busy} onClick={discardDraft}>Entwurf verwerfen</button></div>}
     {!rows.length&&<p className="muted">Noch keine erzeugten Dateien in diesem Projektraum.</p>}
-    {rows.map(row=><article key={row.artifact_id+'-'+row.revision} className="citation">
-      <b>{row.title} · Version {row.revision}</b>{row.chat&&<p className="hint">Aus Chatantwort · Revision {row.chat.revision} · lokal gespeichert</p>}{row.draft&&<details><summary>Modell und verwendete Quellen</summary><p>{row.draft.provider.model} · lokales Modell · {row.draft.user_edited?'Entwurf anschließend bearbeitet':'Entwurf übernommen'}</p>{row.draft.inherited_from&&<p>Ursprünglicher Modellentwurf: Version {row.draft.inherited_from.revision} · diese Folgeversion wurde manuell bearbeitet.</p>}{row.draft.citations.map((c:any,i:number)=><p key={i}>{c.reference} · Revision {c.revision}</p>)}{row.draft.web_research&&<><p>Verwendete Websuchauszüge · lokal verarbeitet</p>{row.draft.web_research.citations.map((c:any,i:number)=><p key={'web-'+i}>{c.reference}</p>)}</>}<p className="hint">Quellenbelege zeigen verwendete Auszüge. Die sachliche Richtigkeit wurde nicht automatisch bestätigt.</p></details>}<p>{status[row.status]||row.status} · {row.kind==='image'?'Bild':row.kind.toUpperCase()} · Lokal</p>
+    {rows.map(row=><article key={row.artifact_id+'-'+row.revision} className="citation" tabIndex={-1} ref={highlighted===row.artifact_id+'-'+row.revision?targetRow:undefined} data-search-target={highlighted===row.artifact_id+'-'+row.revision||undefined}>
+      {highlighted===row.artifact_id+'-'+row.revision&&<small className="status-chip">Suchergebnis</small>}<b>{row.title} · Version {row.revision}</b>{row.chat&&<p className="hint">Aus Chatantwort · Revision {row.chat.revision} · lokal gespeichert</p>}{row.draft&&<details><summary>Modell und verwendete Quellen</summary><p>{row.draft.provider.model} · lokales Modell · {row.draft.user_edited?'Entwurf anschließend bearbeitet':'Entwurf übernommen'}</p>{row.draft.inherited_from&&<p>Ursprünglicher Modellentwurf: Version {row.draft.inherited_from.revision} · diese Folgeversion wurde manuell bearbeitet.</p>}{row.draft.citations.map((c:any,i:number)=><p key={i}>{c.reference} · Revision {c.revision}</p>)}{row.draft.web_research&&<><p>Verwendete Websuchauszüge · lokal verarbeitet</p>{row.draft.web_research.citations.map((c:any,i:number)=><p key={'web-'+i}>{c.reference}</p>)}</>}<p className="hint">Quellenbelege zeigen verwendete Auszüge. Die sachliche Richtigkeit wurde nicht automatisch bestätigt.</p></details>}<p>{status[row.status]||row.status} · {row.kind==='image'?'Bild':row.kind.toUpperCase()} · Lokal</p>
       {row.error&&<p className="error">{row.error}</p>}
       {['needs_review','published'].includes(row.status)&&<button onClick={()=>{setError('');setReviewed(false);setPreview(row)}}>Vorschau öffnen</button>}
       {row.status==='published'&&<><a href={'/api'+base(row)+'/download'} download>{row.output?.parts?.length?'Alle PDF-Teile als ZIP herunterladen':'Datei herunterladen'}</a>{row.output?.parts?.map((part:any,i:number)=><a key={part.filename} href={'/api'+base(row)+'/download?part='+(i+1)} download>PDF-Teil {i+1} herunterladen · {part.pages} Seiten</a>)}{row.output?.pdf_export&&<a href={'/api'+base(row)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}

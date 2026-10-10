@@ -78,6 +78,8 @@ jobs:
           node artifact-check.mjs
           node native-provider-check.mjs
           node workspace-check.mjs
+          node search-check.mjs
+          node search-navigation-check.mjs
           node composer-ux-check.mjs
           node processing-check.mjs
           node pipeline-check.mjs

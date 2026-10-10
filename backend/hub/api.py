@@ -60,6 +60,7 @@ from hub.task_api import install_task_api
 from hub.task_drafts import install_task_drafts
 from hub.websearch import install_web_api
 from hub.workflow_api import install_workflow_api
+from hub.workspace_search import install_workspace_search
 
 ACTIVE_STATUSES = ["queued", "routing", "streaming"]
 
@@ -127,6 +128,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     install_account_api(app, cfg, factory)
+    install_workspace_search(app, factory)
     install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
