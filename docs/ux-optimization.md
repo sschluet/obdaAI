@@ -289,5 +289,7 @@ unvollständig“; Benutzerabbruch erhält „Teilantwort · abgebrochen“. Ein
 Fehlermeldung erläutert Zeitlimit, unterbrochene Providerdaten oder Ausgabegrenze.
 Der erneute Versuch bleibt erreichbar, ohne den abgebrochenen Lauf zu einem Erfolg
 umzudeuten. Eine ausschließlich synthetische öffentliche Illustration zeigt diese
-Darstellung. Implementierung und synthetische Prüfung sind getrennt von der
-anschließenden tatsächlichen VM-Abnahme zu dokumentieren.
+Darstellung. Abnahme: Release f68ea06 / Schema 0028, CI 38065130872 mit 677 Tests
+und 19 Browserprüfungen. Tatsächliche lokale Antwort mit 5.749 Zeichen und
+Schlussmarker nach 138,43 Sekunden erfolgreich; Reload ohne Fehler oder falsche
+Teilantwortkennzeichnung bestätigt. Eigener QA-Chat archiviert, Sitzung abgemeldet.

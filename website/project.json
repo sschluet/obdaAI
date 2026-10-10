@@ -142,8 +142,8 @@
         },
         {
           "title": "Lange Antworten und erhaltene Teilantworten",
-          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Synthetische UI-Illustration; reale Abnahme wird gesondert dokumentiert.",
-          "status": "implemented"
+          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte.",
+          "status": "live"
         }
       ]
     },
@@ -460,12 +460,12 @@
     "schema": "0028",
     "browserChecks": 19,
     "serverDeployment": true,
-    "commit": "7cd5e2f",
-    "ciTests": 667,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38060571213",
-    "deployedCommit": "7cd5e2f",
+    "commit": "f68ea06",
+    "ciTests": 677,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38065130872",
+    "deployedCommit": "f68ea06",
     "deployedSchema": "0028",
-    "liveScope": "Gepinnte HTTPS-/UI-Abnahme und tatsächliche lokale Antwort mit bewahrter Leseposition bis Abschluss, Sprung ans Ende und Mobilansicht. Langsame SSE-Ausgabe, Tastaturfokus, Touch und Wiederholung synthetisch geprüft. Schema0028 und bestehende Einstellungen unverändert; breite Cloud-/Geräteabnahme offen.",
+    "liveScope": "Gepinnte HTTPS-/Assetabnahme und tatsächliche lange lokale Antwort: 5.749 Zeichen, Schlussmarker und erfolgreicher Abschluss nach 138,43 Sekunden; nach Reload ohne Fehler oder falsche Teilantwortkennzeichnung. Vorbereitung und Generation getrennt; Schema0028 und gespeicherte Einstellungen unverändert. Breite Cloud-/Geräteabnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }

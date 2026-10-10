@@ -1,5 +1,22 @@
 # obdaAI — Status 10.10.2026
 
+## Lange lokale Antwort auf Test-VM bestätigt – 10.10.2026
+
+Release f68ea06 / unverändertes Schema 0028 auf neun App-/Runnercontainern.
+CI 38065130872: sechs erfolgreiche Jobs, 677 Tests und 19 Browserprüfungen.
+Tatsächliche lokale synthetische Analyse vollständig abgeschlossen: 5.749 Zeichen,
+138,43 Sekunden und ausdrücklicher Schlussmarker. Erfolgsstatus, Modellbeleg,
+keine Fehler-/Teilantwortanzeige und erneutes Laden direkt bestätigt. Damit ist
+auch die bisherige 90-Sekunden-Grenze real überschritten. Eigener QA-Chat archiviert,
+Testsitzung abgemeldet und temporäre Authdatei entfernt.
+Vorbereitung 90s, Router-HTTP-Lesen innerhalb dieser Vorbereitung ebenfalls 90s;
+Generierung separat 600s. Provider-Inaktivität und gespeicherte Ausgabegrenzen
+bleiben wirksam. Tatsächliche Abbrüche behalten Text und konkrete Fehlermeldung.
+Bestehende Nachrichten, Zugangsdaten, Einstellungen, acht Compose-Erweiterungen
+und Netzwerkregeln erhalten; verschlüsselte Off-VM-Sicherung hashgeprüft.
+Öffentliche Darstellung: 57 Funktionen und 13 ausschließlich synthetische Bilder;
+Veröffentlichungsbeleg separat in .local/generation-publication.json.
+
 ## Router wartet auf vollständige JSON-Antwort – 10.10.2026
 
 Eine lokale synthetische Analyse wurde vor der ersten Ausgabe nach30,5s durch
@@ -7,8 +24,8 @@ HTTP-Timeout abgebrochen. Authentifizierter Modellkatalog erreichbar; diagnostis
 Routeranfrage mit längerem temporären Warten erhielt nach30,0s gültiges CHAT-JSON.
 Router-HTTP-Leselimit folgt nun der äußeren Vorbereitung (90s); Verbindung/Schreiben/
 Pool und Antwortstream behalten30s. Keine gespeicherte Provideroption verändert.
-Zwei neue Transporttests und24 fokussierte Prüfungen bestanden; CI/VM-Abnahme dieser
-Folgekorrektur steht aus. Generation600s ist bereits auf der VM aktiv.
+Zwei neue Transporttests und 24 fokussierte Prüfungen bestanden; CI und tatsächliche
+VM-Abnahme mit Release f68ea06 sind oben dokumentiert.
 
 ## Lange Generierungen: getrennte Zeitbudgets – implementiert, 10.10.2026
 
@@ -22,7 +39,7 @@ sichtbar als unvollständig/abgebrochen/unterbrochen markiert. Kein stiller Erfo
 bei fehlendem Abschlussmarker, keine Cloudfreigabe oder Rückfall geändert.
 659 lokale Tests bestanden,16PostgreSQLfälle fürCI ausgelassen; Ruff/Mypy66,
 TS/Build, Fehler-/Verarbeitungs-/Websiteprüfungen bestanden. Keine Migration;
-Schema0028 bleibt. GitHub-CI, echte langeVM-Antwort und Veröffentlichung ausstehend.
+Schema0028 bleibt. Nachfolgende CI-/VM-Abnahme ist oben dokumentiert.
 
 ## Leseposition auf Test-VM bestätigt – 10.10.2026
 
