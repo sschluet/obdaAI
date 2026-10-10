@@ -1,5 +1,13 @@
 # obdaAI — Status 10.10.2026
 
+## Unterbrochene Dateiaufträge vollständig bereinigen –10.10.2026
+
+Dateibereinigung berücksichtigt auch temporäre Eingabeverzeichnisse unterbrochener
+Artefaktaufträge. Nur der exakte Artefakt-/Versionspräfix mit kanonischer UUID-Nonce
+wird entfernt; andere Versionen/Namen bleiben unverändert. Symlinks verhindern einen
+falschen Abschluss und ihr externes Ziel bleibt erhalten.31fokussierte Lösch-/
+Bereinigungs-/Migrationstests bestanden; endgültige GitHub-CI folgt.
+
 ## PostgreSQL-Sperrprüfung an neue Besitzprüfung angepasst –10.10.2026
 
 CI bestand762Tests; ein bestehender Vault-Paralleltest suchte ausschließlich die

@@ -94,6 +94,25 @@ def remove(root: Path, child: str) -> None:
         path.unlink(missing_ok=True)
 
 
+def remove_request_temporaries(root: Path, identifier: str, revision: int) -> None:
+    """Remove only the exact temporary input names emitted by artifacts.spool."""
+    safe_root(root)
+    prefix = "." + checked_id(identifier) + "-" + str(revision) + "-"
+    count = 0
+    for path in root.iterdir():
+        count += 1
+        if count > 30000:
+            raise ValueError("Request cleanup entry limit")
+        if not path.name.startswith(prefix):
+            continue
+        nonce = path.name[len(prefix) :]
+        try:
+            checked_id(nonce)
+        except (ValueError, TypeError, AttributeError):
+            continue  # Not a temporary input name emitted by this application.
+        remove(root, path.name)
+
+
 def publish(root: Path, name: str, value: Any) -> None:
     safe_root(root)
     namespace = root / NAMESPACE
@@ -285,6 +304,7 @@ def process_pending(factory: Any, cfg: Settings, role: str, *, inline: bool = Fa
                         remove(requests, "inbox/." + str(item["id"]) + ".tmp")
                     else:
                         remove(requests, item["id"] + "-" + str(item["revision"]))
+                        remove_request_temporaries(requests, item["id"], item["revision"])
                 setattr(job, role + "_done", True)
                 if job.source_done and job.artifact_done:
                     job.status, job.finished, job.error = "completed", time.time(), ""

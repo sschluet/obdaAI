@@ -150,3 +150,41 @@ def test_artifact_tombstone_prevents_replayed_render(cleanup):
     request = Path(cfg.artifact_request_dir) / (items[1]["id"] + "-3")
     assert not process(request, Path(cfg.artifact_result_dir))
     assert blocked(Path(cfg.artifact_request_dir), "artifact", items[1]["id"], 3)
+
+
+def test_hidden_request_inputs_are_purged_by_exact_nonce_only(cleanup):
+    factory, cfg, ident, items = cleanup
+    requests = Path(cfg.artifact_request_dir)
+    stem = "." + items[1]["id"] + "-3-"
+    temporary = requests / (stem + str(uuid4()))
+    temporary.mkdir()
+    private_copy = temporary / "source-0"
+    private_copy.write_text("private source copy")
+    private_copy.chmod(0o400)
+    unrelated = requests / (stem + "not-an-app-uuid")
+    unrelated.mkdir()
+    (unrelated / "preserved").write_text("independent")
+    other_revision = requests / ("." + items[1]["id"] + "-30-" + str(uuid4()))
+    other_revision.mkdir()
+    process_pending(factory, cfg, "source", inline=True)
+    process_pending(factory, cfg, "artifact", inline=True)
+    with factory() as db:
+        assert db.get(DeletionCleanup, ident).status == "completed"
+    assert not temporary.exists()
+    assert (unrelated / "preserved").read_text() == "independent"
+    assert other_revision.exists()
+
+
+def test_hidden_request_nonce_symlink_blocks_completion(cleanup, tmp_path):
+    factory, cfg, ident, items = cleanup
+    outside = tmp_path / "original-external"
+    outside.mkdir()
+    (outside / "original").write_text("preserved")
+    temporary = Path(cfg.artifact_request_dir) / ("." + items[1]["id"] + "-3-" + str(uuid4()))
+    temporary.symlink_to(outside, target_is_directory=True)
+    process_pending(factory, cfg, "source", inline=True)
+    process_pending(factory, cfg, "artifact", inline=True)
+    with factory() as db:
+        row = db.get(DeletionCleanup, ident)
+        assert row.status == "pending" and row.error and not row.artifact_done
+    assert temporary.is_symlink() and (outside / "original").read_text() == "preserved"
