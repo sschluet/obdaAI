@@ -196,6 +196,7 @@ async def execute_run(
         reserved = False
         builtin_answer = False
         generation_started = False
+        preparation_step = "lokale Einordnung"
         started = time.monotonic()
         yield ("run", {"id": run_id})
         yield ("status", {"message": "Anfrage wird lokal eingeordnet"})
@@ -295,6 +296,7 @@ async def execute_run(
                 if cancelled():
                     raise asyncio.CancelledError
                 route = await providers.route(parts, roles)
+                preparation_step = "Antwortvorbereitung"
                 classifier = route.model_class
                 classifier_reason = route.reason
                 if latest:
@@ -341,7 +343,9 @@ async def execute_run(
                         )
                     if Capability.WEB in route.capabilities:
                         yield ("status", {"message": "Freigegebene Webrecherche wird ausgeführt"})
+                        preparation_step = "Webrecherche"
                         await research(latest)
+                        preparation_step = "Antwortvorbereitung"
                         if cancelled():
                             raise asyncio.CancelledError
                     from hub.chat_artifacts import create_from_chat
@@ -480,7 +484,9 @@ async def execute_run(
                             "Werkzeugbeleg gespeichert; Antwortkontext zu groß"
                         )
                 if Capability.WEB in route.capabilities:
+                    preparation_step = "Webrecherche"
                     await research(latest)
+                    preparation_step = "Antwortvorbereitung"
                     label = (Privacy.LOCAL_ONLY if any(p.label == Privacy.LOCAL_ONLY for p in parts)
                              else Privacy.CLOUD_ALLOWED)
                     route.answer = None
@@ -690,7 +696,10 @@ async def execute_run(
                     "Der bisherige Text bleibt erhalten; bitte in Abschnitten fortsetzen."
                 )
             else:
-                message = "Zeitlimit der Vorbereitung erreicht. Bitte erneut versuchen."
+                message = (
+                    "Zeitlimit der Vorbereitung erreicht (" + preparation_step + "). "
+                    "Bitte erneut versuchen."
+                )
             update(error=message)
             yield ("error", {"message": message})
         except Exception as error:

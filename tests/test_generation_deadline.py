@@ -115,6 +115,7 @@ def test_preparation_remains_bounded_without_stream_call(setup):
     detail = client.get("/api/conversations/" + chat_id).json()
     assert detail["runs"][0]["status"] == "failed"
     assert "Zeitlimit der Vorbereitung" in detail["runs"][0]["error"]
+    assert "lokale Einordnung" in detail["runs"][0]["error"]
     assert provider.stream_calls == []
     assert len(detail["messages"]) == 1
 

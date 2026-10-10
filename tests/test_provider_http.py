@@ -54,7 +54,7 @@ def test_router_full_json_has_preparation_read_budget(monkeypatch, outer_deadlin
         with pytest.raises(TimeoutError):
             asyncio.run(route())
     else:
-        assert asyncio.run(route()).answer == "Synthetic answer"
+        assert asyncio.run(route()).answer is None
     assert len(seen) == 1 and provider.route_calls == 1
 
 
@@ -144,11 +144,9 @@ def test_json_router_one_call_and_bounded_repair(
         p, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
     )
     part = ContextPart(content="2+2", source_id="fixture", revision=1)
-    assert asyncio.run(p.route([part], ["user"])).answer == "4"
-    if disable_thinking:
-        assert all(r["enable_thinking"] is False for r in requests)
-    else:
-        assert all("enable_thinking" not in r for r in requests)
+    assert asyncio.run(p.route([part], ["user"])).answer is None
+    assert all(r["enable_thinking"] is False for r in requests)
+    assert all(r["max_tokens"] == 512 for r in requests)
     assert len(requests) == 2 and p.route_calls == 2
     assert len(requests[1]["messages"]) == len(requests[0]["messages"]) + 2
 
@@ -258,3 +256,68 @@ def test_stream_truncation_is_explicit_failure(monkeypatch, reason):
                 pass
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("disable_answer_thinking", [False, True])
+def test_router_compacts_only_old_answers_and_stream_keeps_full_context(
+    monkeypatch, disable_answer_thinking
+):
+    original = httpx.AsyncClient
+    calls = []
+    old_answer = "Historical start. " + "middle evidence " * 700 + " Historical conclusion."
+    latest_request = "Explain " + "current request " * 60 + "and create a downloadable PDF file."
+
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append(body)
+        if not body.get("stream"):
+            route = json.dumps({
+                "capabilities": ["chat", "artifact"],
+                "model_class": "local",
+                "reason": "file requested",
+                "answer": None,
+            })
+            return httpx.Response(200, json={"choices": [{"message": {"content": route}}]})
+        return httpx.Response(
+            200,
+            text='data: {"choices":[{"delta":{"content":"answer"}}]}\n\ndata: [DONE]\n\n',
+        )
+
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: original(transport=httpx.MockTransport(handler), **kw)
+    )
+    provider = Providers(
+        Settings(local_model="fixture", local_disable_thinking=disable_answer_thinking)
+    )
+    monkeypatch.setattr(
+        provider, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
+    )
+    parts = [
+        ContextPart(content="Prior user question", source_id="prior", revision=1),
+        ContextPart(content=old_answer, source_id="answer", revision=1),
+        ContextPart(content=latest_request, source_id="current", revision=1),
+    ]
+    roles = ["user", "assistant", "user"]
+
+    async def run():
+        route = await provider.route(parts, roles)
+        assert route.capabilities == ["chat", "artifact"] and route.answer is None
+        assert "".join([chunk async for chunk in provider.stream(
+            parts, roles, external=False, grants=[]
+        )]) == "answer"
+
+    asyncio.run(run())
+    router, answer = calls
+    assert router["messages"][1]["content"] == parts[0].content
+    compact = router["messages"][2]["content"]
+    assert len(compact) < 900
+    assert compact.startswith(old_answer[:384]) and compact.endswith(old_answer[-384:])
+    assert "[Earlier assistant answer shortened for classification]" in compact
+    assert router["messages"][3]["content"] == latest_request
+    assert router["enable_thinking"] is False and router["max_tokens"] == 512
+    assert [message["content"] for message in answer["messages"]] == [p.content for p in parts]
+    assert parts[1].content == old_answer and parts[2].content == latest_request
+    if disable_answer_thinking:
+        assert answer["enable_thinking"] is False
+    else:
+        assert "enable_thinking" not in answer

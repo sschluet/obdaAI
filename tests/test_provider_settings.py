@@ -169,6 +169,12 @@ def test_connection_and_queued_local_model_test(managed, monkeypatch):
         calls.append(request.url.path)
         if request.method == "GET":
             return httpx.Response(200, json={"data": [{"id": "local-fixture"}]})
+        if json.loads(request.content).get("stream"):
+            return httpx.Response(
+                200,
+                text='data: {"choices":[{"delta":{"content":"4"}}]}\n\n'
+                'data: [DONE]\n\n',
+            )
         return httpx.Response(
             200,
             json={

@@ -140,8 +140,17 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
                 )
                 measured = p.measured_cost
             else:
-                decision = await p.route([part], ["user"])
-                text = decision.answer or ""
+                # Exercise both structured routing and actual answer generation.
+                # The classifier intentionally never answers the arithmetic prompt.
+                await p.route([part], ["user"])
+                text = "".join(
+                    [
+                        chunk
+                        async for chunk in p.stream(
+                            [part], ["user"], external=False, grants=[]
+                        )
+                    ]
+                )
             if text.strip() != "4":
                 raise ValueError("Synthetic model check failed")
             result, state = (

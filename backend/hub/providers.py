@@ -28,7 +28,7 @@ Never infer permission to update or repair HA from a read request.
 capabilities is a nonempty array using ONLY: chat, web, retrieval, tool, artifact,
 task, workflow. model_class is ONLY local or cloud. source_scopes is an array of
 strings (empty if no specific source scope). reason is a brief classification.
-answer is null EXCEPT for simple chat-only local questions.
+answer is ALWAYS null. Classify only; never generate the requested answer.
 
 Capability rules, include ALL that apply:
 - chat: explanation, reasoning, translation, drafting text.
@@ -49,7 +49,7 @@ Use retrieval only for explicitly requested private sources in the active scope.
 
 Model rules:
 Simple arithmetic, factual questions, translation and short drafting: local, chat,
-with a complete short answer inside JSON (at most 100 words).
+answer null. The answer model will fulfill the request separately.
 Proof checking, multi-step algorithms, distributed-system guarantees, comparison
 of complex trade-offs or failure scenarios: cloud, chat, answer null. This rule
 applies EVEN when the user asks for a short answer. Other tool/file tasks may stay
@@ -63,7 +63,7 @@ JSON: {"capabilities":["chat","web"],"model_class":"cloud",
 "source_scopes":[],"reason":"Aktuelle Recherche als Text","answer":null,"read_tool":null}
 User: What is 3 plus 6?
 JSON: {"capabilities":["chat"],"model_class":"local",
-"source_scopes":[],"reason":"simple arithmetic","answer":"9"}
+"source_scopes":[],"reason":"simple arithmetic","answer":null}
 User: Find today's weather online.
 JSON: {"capabilities":["web"],"model_class":"local",
 "source_scopes":[],"reason":"current public information","answer":null}
@@ -234,7 +234,12 @@ class Providers:
                 "role": role,
                 "content": json.dumps({"attached_local_source": True, "revision": p.revision})
                 if is_source
-                else p.content,
+                else (
+                    p.content[:384] + "\n[Earlier assistant answer shortened for classification]\n"
+                    + p.content[-384:]
+                    if role == "assistant" and len(p.content) > 768
+                    else p.content
+                ),
             }
             for role, p, is_source in zip(roles, parts, source_flags, strict=True)
         ]
@@ -261,21 +266,21 @@ class Providers:
                     json={
                         "model": self.settings.local_model,
                         "messages": messages,
-                        "max_tokens": min(1024, self.settings.local_max_tokens),
+                        "max_tokens": min(512, self.settings.local_max_tokens),
                         "temperature": 0,
-                        **(
-                            {"enable_thinking": False}
-                            if self.settings.local_disable_thinking
-                            else {}
-                        ),
+                        # Classification has a short preparation budget. Answer-model
+                        # thinking preferences remain independent.
+                        "enable_thinking": False,
                     },
                 )
                 response.raise_for_status()
                 content = response.json()["choices"][0]["message"]["content"]
                 try:
                     route = Route.model_validate_json(content)
+                    # Defensively ignore an old-model answer shortcut: classification
+                    # never substitutes for the answer model or its full context.
+                    route.answer = None
                     if has_sources:
-                        route.answer = None
                         if Capability.RETRIEVAL not in route.capabilities:
                             route.capabilities.append(Capability.RETRIEVAL)
                     return route
@@ -288,8 +293,7 @@ class Providers:
                             "role": "user",
                             "content": (
                                 "Invalid schema. Return only the specified JSON object. "
-                                "answer MUST be null when model_class is cloud or "
-                                "capabilities contain anything except chat. "
+                                "answer MUST always be null. "
                                 "Do not fulfill tool or file requests."
                             ),
                         },

@@ -1,5 +1,17 @@
 # obdaAI — Status 10.10.2026
 
+## Vorbereitung bei langen Gesprächen – Korrektur implementiert, 10.10.2026
+
+Reale Fehlversuche endeten nach90,24–90,32s ohne ersten Antworttext; Ereignisse
+zeigen ausschließlich lokale Einordnung vor dem Vorbereitungstimeout. Router
+verarbeitete lange frühere Antworten ungekürzt und konnte selbst eine Antwort bzw.
+Thinking erzeugen. Jetzt reine Klassifikation mit answer:null/512Tokens/Thinkingaus;
+nur ältere Assistentenantworten werden dort mit Anfang/Ende gekürzt. Vollständige
+Benutzernachrichten und endgültiger Antwortkontext bleiben unverändert. Kein
+Cloudfallback, keine Änderung bestehender Datenschutz- oder Modellvorgaben.
+Vorbereitungsfehler nennen den aktuellen Schritt. Payload-/Kontextregressionen und
+Zeitbudgettests ergänzt. CI und echte VM-Langkontextabnahme dieser Korrektur folgen.
+
 ## Profil und Skill-Bibliothek auf Test-VM bestätigt – 10.10.2026
 
 Release `2a47caa`, Schema `0031`: [CI38077119295](https://github.com/sschluet/obdaAI/actions/runs/38077119295)

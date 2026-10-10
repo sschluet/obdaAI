@@ -56,7 +56,12 @@ stehen in STATUS.md. Vorhandene fremde Dienste sind keine impliziten Deploymentz
 Lokale Backends können nach Liveprüfung `HUB_LOCAL_DISABLE_THINKING=true` verwenden.
 Dies ergänzt ausschließlich beim lokalen Adapter das nachgewiesen unterstützte
 `enable_thinking:false`; standardmäßig wird kein vendorbezogenes Feld gesendet.
-Der Router hat 1.024 Outputtokens und maximal einen Schema-Reparaturversuch.
+Der Router klassifiziert ausschließlich (answer:null), mit höchstens 512 Outputtokens
+und maximal einem Schema-Reparaturversuch. Seine Einordnung deaktiviert Thinking
+unabhängig von der Antwortmodell-Einstellung. Frühere Assistentenantworten über
+768 Zeichen werden nur für diesen Schritt mit Anfang/Ende und Kürzungsmarkierung
+komprimiert. Benutzernachrichten bleiben vollständig; die eigentliche Antwort erhält
+weiter den unveränderten Kontext. Vorbereitungsfehler benennen den betroffenen Schritt.
 
 ## M1 Queue und Wiederaufnahme
 `uv run alembic upgrade head` legt unter PostgreSQL zusätzlich das dedizierte Schema
