@@ -12,6 +12,9 @@ verfügbar, in Nur lokal aus. Abgelehnte Eingaben/Bearbeitungen bleiben als Entw
 Schema0033 unverändert. 96 gezielte Backendtests, Ruff/Mypy71, TypeScript/Build
 und Composer-/Routing-/Webpräferenz-Browserprüfungen bestanden. Website62 Features
 und22 synthetische Bilder, alle visuell sowie Galerie/Tastatur/Mobil geprüft.
+Routingbeleg zeigt bei direkter Cloudwahl ausdrücklich keine lokale Einordnung
+und bei gesperrtem Cloudmodus „Cloud gesperrt“; unveränderte Auto-Vorschau.
+Erweiterter Routing-Browsercheck und Build für diese Anzeige erfolgreich.
 Breite GitHub-CI, reale VM-Abnahme und öffentliche Veröffentlichung folgen.
 
 ## Projektlogos auf Test-VM bestätigt – 10.10.2026
