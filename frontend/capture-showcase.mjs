@@ -112,6 +112,12 @@ try{
  await page.locator('.answer-partial').filter({hasText:'Teilantwort · unvollständig'}).waitFor();
  await page.locator('.chat-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight;});
  await capture('partial');
+ // Capture the failed-run illustration too so all gallery views match the active design.
+ const errorResult=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':csrf,Origin:base},data:{cloud_allowed:false}});
+ if(!errorResult.ok())throw Error('Synthetic error conversation could not be created');
+ const errorChat=await errorResult.json();
+ await page.route('**/api/conversations/'+errorChat.id,async route=>{if(route.request().method()!=='GET'){await route.continue();return}await route.fulfill({json:{...errorChat,title:'Synthetische Recherche',title_status:'succeeded',messages:[{id:'synthetic-error-user',role:'user',content:'Erstelle eine Recherche zum fiktiven Projekt Aurora.',label:'LOCAL_ONLY'}],runs:[{id:'synthetic-error-run',status:'failed',provider:'local',error:'Synthetischer Recherchefehler: keine Webquellen verfügbar.',user_message_id:'synthetic-error-user',events:[]}]}})});
+ await page.goto(base+'/?view=Chat&chat='+errorChat.id);await page.getByRole('alert').filter({hasText:'Synthetischer Recherchefehler'}).waitFor();await capture('runerror');
  if(errors.length)throw Error(errors.join('\n'));
  console.log((JSON.parse(await readFile(new URL('../website/project.json',import.meta.url),'utf8')).screenshots.length)+' gallery screenshots plus mobile captured with synthetic data only.');
 }finally{await browser.close();}

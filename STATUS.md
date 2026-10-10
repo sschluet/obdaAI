@@ -1,5 +1,19 @@
 # obdaAI — Status 10.10.2026
 
+## Neutrale Gestaltung statt Grün – implementiert, 10.10.2026
+
+Gemeinsame Oberfläche auf kühles Weiß/Grau, Graphitschrift und sparsame Indigo-
+Akzente umgestellt. Helle Navigation statt dunkler grüner Fläche; Sans-Serif-
+Startansicht, neutrale Nutzerblasen/Karten, ruhiges Eingabefeld mit einem Fokusrahmen.
+Dunkelmodus in Anthrazit mit passenden Text-/Akzentkontrasten. Komponentendialoge,
+Profil/Skills/Routing/Uploads verwenden gemeinsame Tokens. Funktionsabläufe und
+gespeicherte Einstellungen unverändert. Starttext beschreibt Auto inklusive Cloud
+korrekt. Lokale TypeScript/Build-, Kontrast-/Design-/Mobilprüfungen320–1440px und
+öffentliche Galerie-/Such-/Tastaturprüfung bestanden. Alle18synthetischen Bilder
+neu erfasst und visuell geprüft; Capture umfasst jetzt auch Fehleransicht.
+Projektseite mit gleicher neutraler Typografie/Farbwelt und angepasstem Logo.
+GitHub-CI, VM-Rollout und Veröffentlichung dieses Designs folgen.
+
 ## Vorbereitungskorrektur auf Test-VM bestätigt – 10.10.2026
 
 Release `0c16523`, Schema0031 unverändert: [CI38078593167](https://github.com/sschluet/obdaAI/actions/runs/38078593167)

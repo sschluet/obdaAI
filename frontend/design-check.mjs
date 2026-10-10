@@ -7,20 +7,29 @@ const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const base=process.env.HUB_DESIGN_ORIGIN||'http://127.0.0.1:18767';
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
+async function checkContrast(){
+ for(const selector of ['body','.sidebar .new']){
+  const ratio=await page.locator(selector).evaluate(e=>{
+   const st=getComputedStyle(e),rgb=x=>x.match(/[\d.]+/g).slice(0,3).map(Number),lum=x=>rgb(x).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0);
+   const a=lum(st.color),b=lum(st.backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+  });
+  if(ratio<4.5)throw Error('Insufficient text contrast for '+selector+': '+ratio);
+ }
+}
 try{
  await page.emulateMedia({reducedMotion:'reduce'});await page.goto(base);await page.screenshot({path:output+'/login.png'});
  await loginFixture(page);
  await page.getByRole('heading',{name:'Womit möchtest du beginnen?',exact:true}).waitFor();
- await page.screenshot({path:output+'/welcome-light.png'});
+ await checkContrast();await page.screenshot({path:output+'/welcome-light.png'});
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();
  await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).waitFor();await page.screenshot({path:output+'/chat-light.png'});
  const ink=await page.locator('body').evaluate(e=>getComputedStyle(e).color);
- if(ink!=='rgb(32, 55, 44)')throw Error('Design tokens not applied: '+ink);
+ if(ink!=='rgb(32, 36, 49)')throw Error('Design tokens not applied: '+ink);
  await page.getByRole('button',{name:'Dunkles Design',exact:true}).click();
  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');await page.screenshot({path:output+'/chat-dark.png'});
- const darkInk=await page.locator('body').evaluate(e=>getComputedStyle(e).color);
- if(darkInk!=='rgb(237, 242, 232)')throw Error('Dark foreground not applied: '+darkInk);
+ await checkContrast();const darkInk=await page.locator('body').evaluate(e=>getComputedStyle(e).color);
+ if(darkInk!=='rgb(240, 241, 246)')throw Error('Dark foreground not applied: '+darkInk);
  await page.getByRole('button',{name:'Helles Design',exact:true}).click();
  for(const width of [320,390,768,1024,1440]){await page.setViewportSize({width,height:900});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow at '+width);if(width===390){if(await page.locator('.sidebar:not(.open)').evaluate(e=>e.getBoundingClientRect().right)>1)throw Error('Reduced motion exposed closed mobile navigation');await page.screenshot({path:output+'/mobile.png'});}}
  await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();

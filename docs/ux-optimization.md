@@ -346,3 +346,14 @@ Synthetische Browser-/API-Abnahme und echte releasegebundene VM-Belege werden
 in STATUS getrennt dokumentiert. Eine vollständige Unterstützung ausführbarer
 Claude-Skillpakete oder eine automatische Verarbeitung privater Quellen wird
 nicht behauptet.
+
+
+## Neutrale visuelle Überarbeitung –10.10.2026
+
+Weiß/Grau und Graphit ersetzen die grüne Grundgestaltung. Indigo markiert nur
+Auswahl, Fokus und wichtige Aktionen; Nutzertext bleibt auf neutraler Fläche.
+Seitenleiste ist im Hellmodus hell, im Dunkelmodus anthrazit. Gemeinsame Tokens
+verbinden Chat, Karten, Profile, Skills und Dialoge. Sans-Serif-Starttypografie,
+ruhiger Composerfokus und konsistente Textkontraste begleiten die bestehenden
+Bedienabläufe. Die öffentliche Vorstellung und sämtliche18synthetischen Bilder
+werden mit derselben Lieferung aktualisiert. Releasebelege stehen in STATUS.

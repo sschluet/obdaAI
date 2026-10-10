@@ -5,7 +5,7 @@
   border:1px solid var(--border);
   background:var(--panel);
   border-radius:24px;
-  box-shadow:0 28px 90px rgb(15 33 28 / 18%);
+  box-shadow:0 28px 90px rgb(24 28 44 / 18%);
   scrollbar-width:thin;
   scrollbar-color:var(--border) transparent;
 }
@@ -37,7 +37,7 @@
 /* Primary working mode is a real segmented control; both buttons retain labels. */
 .artifact-editor .artifact-mode { padding:5px;gap:5px;border:1px solid var(--border);background:var(--soft);border-radius:14px;margin:20px 0 12px; }
 .artifact-editor .artifact-mode button { padding:11px 14px;border:1px solid transparent;border-radius:10px;font-size:13px;font-weight:500; }
-.artifact-editor .artifact-mode button[aria-pressed=true] { background:var(--panel);color:var(--accent);border-color:var(--border);box-shadow:0 2px 6px rgb(18 40 33 / 6%);font-weight:650; }
+.artifact-editor .artifact-mode button[aria-pressed=true] { background:var(--panel);color:var(--accent);border-color:var(--border);box-shadow:0 2px 6px rgb(24 28 44 / 6%);font-weight:650; }
 .artifact-editor .artifact-mode button[aria-pressed=false]:hover { background:var(--active); }
 .artifact-editor :is(.artifact-draft,.artifact-content,.artifact-source-selection) {
   padding:18px;border-radius:16px;border-color:var(--border);background:var(--panel);margin:16px 0;
@@ -69,7 +69,7 @@
 .artifacts-panel .artifact-context,.artifact-editor .artifact-feedback { border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:13px 15px;line-height:1.6;font-size:12px;background:var(--soft); }
 .artifact-eyebrow { font-size:10px;font-weight:650;letter-spacing:.14em; }
 .artifact-count { background:var(--soft);padding:6px 10px;font-size:11px;font-weight:600; }
-.artifacts-panel .citation { border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 3px 14px rgb(18 40 33 / 3%); }
+.artifacts-panel .citation { border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 3px 14px rgb(24 28 44 / 3%); }
 .artifacts-panel .citation>b { display:block;font-size:14px;line-height:1.5;letter-spacing:-.15px; }
 .artifacts-panel .citation>p { font-size:12px;color:var(--muted);line-height:1.6; }
 .artifacts-panel .citation button { border-radius:9px;padding:8px 10px;min-height:36px;font-size:12px; }
