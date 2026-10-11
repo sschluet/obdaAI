@@ -1,3 +1,4 @@
+import {captureCloudBalances} from './capture-cloud-balances.mjs';
 import {captureUseCaseStages} from './capture-use-case-stages.mjs';
 import {capturePaperless} from './capture-paperless.mjs';
 import {captureAIUseCases} from './capture-use-case-ai.mjs';
@@ -60,7 +61,11 @@ try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
  await loginFixture(page);
- if(process.env.SHOWCASE_CAPTURE_ONLY==='answerlimit'){
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='cloud-balances'){
+  await captureCloudBalances(page,base,capture);
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Synthetic cloud balances screenshot captured.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='answerlimit'){
   await captureAnswerLimit();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Answer-limit screenshot captured with synthetic data only.');

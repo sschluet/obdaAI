@@ -202,6 +202,12 @@
       "title": "Ein Ergebnis. Ein bewusster Versand.",
       "description": "Synthetische Mailvorschau mit sichtbarer Verbindung, Absender, Empfänger, Betreff und Ergebnis. Der ausdrückliche Senden-Schritt ist separat; keine echten Mails oder Kontakte.",
       "image": "assets/usecasemail.png"
+    },
+    {
+      "id": "cloudbalances",
+      "title": "Cloudguthaben direkt am Profil.",
+      "description": "Dauerhafte kompakte Provideranzeige neben dem Profil mit klar getrenntem Kontoguthaben, Schlüsselverbrauch und App-Nutzung. Alle Werte und Verbindungen dieser Darstellung sind synthetisch.",
+      "image": "assets/cloudbalances.png"
     }
   ],
   "groups": [
@@ -285,6 +291,11 @@
           "title": "Persönliches Profil mit gezielter Feldfreigabe",
           "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
           "status": "implemented"
+        },
+        {
+          "title": "Dauerhafter Cloudstatus neben dem Profil",
+          "status": "local",
+          "description": "Guthaben pro aktivierter Verbindung sichtbar, erklärbare fehlende Management-Berechtigung, bounded sichtbare Aktualisierung und gekennzeichnete veraltete Werte. Weitere Anbieter ohne Guthabenadapter bleiben ausdrücklich erkennbar; keine Kontosalden addieren."
         }
       ]
     },

@@ -414,3 +414,113 @@ def test_downgrade_preserves_configured_management_secret(tmp_path, monkeypatch)
             )
             == "synthetic-sealed-marker"
         )
+
+
+def test_missing_management_key_explained_before_refresh(account, monkeypatch):
+    _, client, _ = account
+
+    async def forbidden(*args):
+        raise AssertionError("No network from cached status")
+
+    monkeypatch.setattr("hub.provider_account.fetch_metadata", forbidden)
+    response = client.get("/api/providers/openrouter-default/account-status")
+    assert response.status_code == 200
+    assert response.json()["account_reason"] == "management_key_missing"
+    assert "Management Key" in response.json()["account_error"]
+    assert response.json()["account"] is None
+
+
+@pytest.mark.parametrize("kind", ["openai", "anthropic"])
+def test_other_cloud_provider_status_is_truthful_and_local(account, monkeypatch, kind):
+    app, client, headers = account
+
+    async def forbidden(*args):
+        raise AssertionError("Unsupported adapter must not make external calls")
+
+    monkeypatch.setattr("hub.provider_account.fetch_metadata", forbidden)
+    with app.state.sessions() as db:
+        db.add(
+            ProviderConfig(
+                id=kind + "-default",
+                name="Synthetic provider",
+                kind=kind,
+                enabled=True,
+                config=json.dumps({"monthly_budget": 10, "max_run_cost": 1}),
+            )
+        )
+        db.commit()
+    from dataclasses import replace
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from hub.auth import require_session
+    from hub.provider_account import install_account_api
+
+    isolated = FastAPI()
+    isolated.dependency_overrides[require_session] = lambda: None
+    install_account_api(
+        isolated,
+        replace(app.state.settings, external_provider_kinds=("openrouter", "openai", "anthropic")),
+        app.state.sessions,
+    )
+    client = TestClient(isolated)
+    response = client.get("/api/providers/" + kind + "-default/account-status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provider_kind"] == kind and data["state"] == "unsupported"
+    assert data["account_reason"] == "adapter_unavailable" and data["account"] is None
+    assert data["local"]["month_measured"] == "0"
+    assert (
+        client.post("/api/providers/" + kind + "-default/account-status/refresh").status_code == 422
+    )
+
+
+@pytest.mark.parametrize("marker", [True, False, "true"])
+def test_reuse_only_explicitly_identified_management_key(account, monkeypatch, marker):
+    app, client, headers = account
+    allow_key(app, monkeypatch)
+    calls = []
+
+    async def fetch(key, path):
+        calls.append(path)
+        if path == "/key":
+            return {"limit": None, "limit_remaining": None, "is_management_key": marker, "usage": 1}
+        return {"total_credits": 10, "total_usage": 2.5}
+
+    monkeypatch.setattr("hub.provider_account.fetch_metadata", fetch)
+    data = client.post(
+        "/api/providers/openrouter-default/account-status/refresh", headers=headers
+    ).json()
+    if marker is True:
+        assert calls == ["/key", "/credits"] and data["account"]["balance"] == "7.5"
+        assert data["account_reason"] is None
+    else:
+        assert calls == ["/key"] and data["account"] is None
+        assert data["account_reason"] == "management_key_missing"
+
+
+def test_disabling_provider_clears_visible_balances(account, monkeypatch):
+    app, client, headers = account
+    allow_key(app, monkeypatch)
+
+    async def fetch(key, path):
+        return (
+            {"limit": None, "limit_remaining": None, "is_management_key": True}
+            if path == "/key"
+            else {"total_credits": 10, "total_usage": 2}
+        )
+
+    monkeypatch.setattr("hub.provider_account.fetch_metadata", fetch)
+    assert (
+        client.post(
+            "/api/providers/openrouter-default/account-status/refresh", headers=headers
+        ).json()["account"]["balance"]
+        == "8"
+    )
+    with app.state.sessions() as db:
+        row = db.get(ProviderConfig, "openrouter-default")
+        row.enabled = False
+        row.revision += 1
+        db.commit()
+    data = client.get("/api/providers/openrouter-default/account-status").json()
+    assert data["state"] == "blocked" and data["account"] is None and data["key"] is None

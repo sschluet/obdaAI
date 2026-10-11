@@ -29,15 +29,22 @@ class FakeGitHub:
 
     def __init__(self):
         self.artifact = {
-            "name": "app-check-proof", "id": 7, "expired": False,
+            "name": "app-check-proof",
+            "id": 7,
+            "expired": False,
             "workflow_run": {"id": 10, "head_repository_id": 20},
         }
         self.document = {
-            "format": 1, "repository": self.repository, "run_id": 10,
-            "fingerprint": "current-tree", "tested_sha": "a" * 40,
+            "format": 1,
+            "repository": self.repository,
+            "run_id": 10,
+            "fingerprint": "current-tree",
+            "tested_sha": "a" * 40,
         }
         self.run = {
-            "status": "completed", "conclusion": "success", "path": ".github/workflows/ci.yml",
+            "status": "completed",
+            "conclusion": "success",
+            "path": ".github/workflows/ci.yml",
             "head_repository": {"full_name": self.repository},
         }
         self.jobs = [{"name": name, "conclusion": "success"} for name in FULL_JOBS]
@@ -57,17 +64,35 @@ class FakeGitHub:
 
 class CIProofTests(unittest.TestCase):
     def test_known_documents_and_website_only_but_runtime_markdown_is_code(self):
-        for path in ["README.md", "STATUS.md", "AGENTS.md", "docs/routing.md",
-                     "website/assets/chat.png", "scripts/publish_showcase.py",
-                     "frontend/capture-use-case-ai.mjs", "frontend/capture-paperless.mjs",
-                     "frontend/capture-use-case-stages.mjs",
-                     ".github/workflows/pages.yml", "frontend/showcase-check.mjs"]:
+        for path in [
+            "README.md",
+            "STATUS.md",
+            "AGENTS.md",
+            "docs/routing.md",
+            "website/assets/chat.png",
+            "scripts/publish_showcase.py",
+            "frontend/capture-use-case-ai.mjs",
+            "frontend/capture-paperless.mjs",
+            "frontend/capture-use-case-stages.mjs",
+            "frontend/capture-cloud-balances.mjs",
+            ".github/workflows/pages.yml",
+            "frontend/showcase-check.mjs",
+        ]:
             with self.subTest(path=path):
                 self.assertFalse(app_relevant(path))
-        for path in ["backend/hub/auth.py", "frontend/src/main.tsx", "uv.lock",
-                     "frontend/pnpm-lock.yaml", "Dockerfile", "deploy/compose.yaml",
-                     "skills/SKILL.md", "unknown-root-file", "scripts/ci_changes.py",
-                     ".github/workflows/ci.yml", "tests/test_ci_changes.py"]:
+        for path in [
+            "backend/hub/auth.py",
+            "frontend/src/main.tsx",
+            "uv.lock",
+            "frontend/pnpm-lock.yaml",
+            "Dockerfile",
+            "deploy/compose.yaml",
+            "skills/SKILL.md",
+            "unknown-root-file",
+            "scripts/ci_changes.py",
+            ".github/workflows/ci.yml",
+            "tests/test_ci_changes.py",
+        ]:
             with self.subTest(path=path):
                 self.assertTrue(app_relevant(path))
 
@@ -78,8 +103,11 @@ class CIProofTests(unittest.TestCase):
         self.assertIsNone(matching_proof(client, "changed-tree"))
 
     def test_canceled_unfinished_or_failed_code_run_requires_full_successor(self):
-        for status, conclusion in [("in_progress", None), ("completed", "cancelled"),
-                                   ("completed", "failure")]:
+        for status, conclusion in [
+            ("in_progress", None),
+            ("completed", "cancelled"),
+            ("completed", "failure"),
+        ]:
             with self.subTest(status=status, conclusion=conclusion):
                 client = FakeGitHub()
                 client.run.update(status=status, conclusion=conclusion)
@@ -122,9 +150,10 @@ class CIProofTests(unittest.TestCase):
         opener.open.side_effect = urllib.error.HTTPError(
             "", 302, "found", {"Location": "https://storage.example/proof"}, None
         )
-        with patch("urllib.request.build_opener", return_value=opener), patch(
-            "urllib.request.urlopen", return_value=io.BytesIO(archive.getvalue())
-        ) as storage:
+        with (
+            patch("urllib.request.build_opener", return_value=opener),
+            patch("urllib.request.urlopen", return_value=io.BytesIO(archive.getvalue())) as storage,
+        ):
             self.assertEqual(GitHub("synthetic", "sschluet/obdaAI").proof(7), {"format": 1})
             storage.assert_called_once_with("https://storage.example/proof", timeout=15)
 
@@ -133,8 +162,12 @@ class CIProofTests(unittest.TestCase):
             root = Path(folder)
 
             def git(*args):
-                subprocess.run(["git", "-C", folder, *args], check=True,
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(
+                    ["git", "-C", folder, *args],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
 
             def commit():
                 git("add", ".")

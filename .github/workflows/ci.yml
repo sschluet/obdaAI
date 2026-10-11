@@ -119,6 +119,7 @@ jobs:
           node use-cases-check.mjs
           node appearance-check.mjs
           node openrouter-status-check.mjs
+          CLOUD_BALANCE_FIXTURE_URL=http://127.0.0.1:18765 node cloud-balances-check.mjs
           node deletion-check.mjs
           node project-icons-check.mjs
           node artifact-check.mjs

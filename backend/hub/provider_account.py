@@ -90,13 +90,17 @@ def install_account_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessi
     cache: dict[str, tuple[str, float, dict[str, object]]] = {}
     locks: dict[str, asyncio.Lock] = {}
 
-    def provider(provider_id: str) -> ProviderConfig:
+    def provider(provider_id: str, *, account_only: bool = True) -> ProviderConfig:
         with factory() as db:
             row = db.get(ProviderConfig, provider_id)
             if not row:
                 raise HTTPException(404, "Provider nicht gefunden")
-            if row.kind != "openrouter":
-                raise HTTPException(422, "Kontostatus ist nur für OpenRouter verfügbar")
+            if (
+                row.kind not in {"openrouter", "openai", "anthropic"}
+                or account_only
+                and row.kind != "openrouter"
+            ):
+                raise HTTPException(422, "Kontostatus ist für diese Verbindung nicht verfügbar")
             return row
 
     def credential(row: ProviderConfig) -> str:
@@ -181,7 +185,43 @@ def install_account_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessi
             account = db.get(ProviderAccountCredential, row.id)
             configured = bool(account and account.encrypted_secret)
             credentials_revision = account.revision if account else 0
+        allowed = row.enabled and cfg.cloud_enabled and row.kind in cfg.external_provider_kinds
+        reason = None
+        if not allowed:
+            result.update(
+                state="blocked",
+                account=None,
+                key=None,
+                account_error=None,
+                error="Cloudzugriff ist deaktiviert oder serverseitig gesperrt.",
+            )
+            reason = "cloud_blocked"
+        elif row.kind != "openrouter":
+            result.update(
+                state="unsupported",
+                account=None,
+                key=None,
+                account_error="Für diese Verbindung ist noch kein Guthabenadapter eingerichtet.",
+            )
+            reason = "adapter_unavailable"
+        elif (
+            not result["account"]
+            and not configured
+            and not (
+                isinstance(result["key"], dict) and result["key"].get("is_management_key") is True
+            )
+        ):
+            reason = "management_key_missing"
+            result["account_error"] = (
+                "OpenRouter-Kontoguthaben benötigt einen Management Key. "
+                "Unter Einstellungen → Modelle → Kontoguthaben verbinden einrichten; "
+                "der Modellschlüssel zeigt nur seine Nutzung."
+            )
+        elif result["account_error"]:
+            reason = "account_access_unavailable"
         return {
+            "provider_kind": row.kind,
+            "account_reason": reason,
             "account_key_configured": configured,
             "credentials_revision": credentials_revision,
             **result,
@@ -230,7 +270,7 @@ def install_account_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessi
 
     @app.get("/api/providers/{provider_id}/account-status")
     def get_status(provider_id: str, session: Authenticated) -> dict[str, object]:
-        return status(provider(provider_id))
+        return status(provider(provider_id, account_only=False))
 
     @app.post("/api/providers/{provider_id}/account-status/refresh")
     async def refresh(provider_id: str, session: Authenticated) -> dict[str, object]:
@@ -270,6 +310,10 @@ def install_account_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessi
                         "limit_remaining",
                     )
                 }
+                if isinstance(info.get("is_management_key"), bool):
+                    key_info = result["key"]
+                    assert isinstance(key_info, dict)
+                    key_info["is_management_key"] = info["is_management_key"]
                 if isinstance(info.get("is_free_tier"), bool):
                     key_info = result["key"]
                     assert isinstance(key_info, dict)
@@ -280,6 +324,8 @@ def install_account_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessi
                         account_key = (
                             decrypt(cfg, "account-status:" + row.id, account.encrypted_secret)
                             if account and account.encrypted_secret
+                            else key
+                            if info.get("is_management_key") is True
                             else None
                         )
                     if account_key is None:

@@ -1,5 +1,27 @@
 # obdaAI — Status 11.10.2026
 
+## Cloudguthaben am Profil – lokal geprüft, 11.10.2026
+
+Live-Diagnose vorhandener OpenRouter-Verbindung: Modellschlüssel liefert Nutzung,
+kein zusätzlicher Kontostatus-Schlüssel eingerichtet; Kontoguthaben fehlt daher.
+Offizielle Credits-API benötigt Management Key. Keine Zugangsdaten verändert,
+kein Schlüssel ausgegeben und keine Modellanfrage im Diagnosetest.
+
+Dauerhafte kompakte Anzeige unten links neben Profil für aktivierte Cloudprofile,
+Detailansicht mit Kontoguthaben, Schlüsselverbrauch, lokal erfasster Nutzung und
+Reservierungen getrennt. Keine Addition möglicherweise identischer Konten.
+Management-Einrichtungshinweis direkt erkennbar. Authentifizierte sichtbare
+Aktualisierung initial und alle5 Minuten, Servercache60s; keine externe Abfrage
+bei ausgeschalteter Cloud oder für fehlende Adapter. Fehler erhalten bekannte Werte
+mit Kennzeichnung. OpenAI/Anthropic liefern hier nur lokalen Nutzungsstatus;
+Guthabenadapter fehlen ausdrücklich. Explizit als Management identifizierter
+bestehender Schlüssel kann Credits lesen; normale Modellschlüssel werden nicht
+für Management verwendet. Zusätzlicher Schlüssel bleibt verschlüsselt separat.
+
+Gezielte Backend-/Frontendprüfungen, TypeScript/Build und synthetische Galerie
+geprüft. Vollständige CI/VM-Auslieferung und abschließende Veröffentlichung folgen;
+aktiver VM-Code bleibt bis zur geprüften Lieferung b7ab319/Schema0040.
+
 ## SMTP-Drahtformat und abschließender Release – Test-VM geprüft, 11.10.2026
 
 Aktiver App-Code `b7ab319`, Schema `0040`. Vollständige CI38163734841 erfolgreich:

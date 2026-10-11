@@ -18,7 +18,7 @@ WEBSITE_FILES = {
     "scripts/build_showcase.py", "scripts/publish_showcase.py",
     "frontend/showcase-check.mjs", "frontend/capture-showcase.mjs",
     "frontend/capture-use-case-ai.mjs", "frontend/capture-paperless.mjs",
-    "frontend/capture-use-case-stages.mjs",
+    "frontend/capture-use-case-stages.mjs", "frontend/capture-cloud-balances.mjs",
     ".github/workflows/pages.yml",
 }
 FULL_JOBS = {"python", "secrets", "frontend", "container", "browser-runner", "artifact-runner"}
