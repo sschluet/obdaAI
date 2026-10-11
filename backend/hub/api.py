@@ -53,6 +53,8 @@ from hub.knowledge_api import install_knowledge_api
 from hub.knowledge_connections import install_knowledge_connections
 from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
+from hub.paperless_api import install_paperless_api
+from hub.paperless_import_api import install_paperless_import_api
 from hub.personal_profile import freeze_profile, install_personal_profile_api
 from hub.policy import Privacy
 from hub.preference_api import install_preference_api
@@ -168,6 +170,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
     install_integration_api(app, cfg, factory)
+    install_paperless_api(app, cfg, factory)
+    install_paperless_import_api(app, cfg, factory)
     install_use_case_api(app, cfg, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
@@ -731,6 +735,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             skill_parts, skill_audit = select_skills(db, c, messages[-1].content)
             snapshot["skills"] = skill_audit
             snapshot["integration_selection"] = freeze_bindings(db, "conversation", c.id)
+            snapshot["integration_scope"] = {"scope": "conversation", "owner_id": c.id}
+            if model_cloud_only and any(
+                item.get("kind") == "paperless"
+                for item in snapshot["integration_selection"].get("bindings", [])
+            ):
+                raise HTTPException(
+                    409, "Paperless-Archiv bleibt lokal; Auto oder Nur lokal wählen"
+                )
             snapshot["parts"].extend(p.model_dump(mode="json") for p in skill_parts)
             snapshot["roles"].extend("user" for _ in skill_parts)
             if local_only or model_local_only:
@@ -740,8 +752,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 p["label"] == Privacy.LOCAL_ONLY.value for p in snapshot["parts"]
             ):
                 raise HTTPException(
-                    409, "Cloud nicht möglich: geschützte Historie oder Skills bleiben lokal. "
-                    "Neues Gespräch beginnen oder Auto/Nur lokal wählen."
+                    409,
+                    "Cloud nicht möglich: geschützte Historie oder Skills bleiben lokal. "
+                    "Neues Gespräch beginnen oder Auto/Nur lokal wählen.",
                 )
             if sum(len(p["content"]) for p in snapshot["parts"]) > cfg.context_limit:
                 raise HTTPException(413, "Projektkontext zu groß; Quellen gezielter durchsuchen")

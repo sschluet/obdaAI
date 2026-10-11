@@ -1,3 +1,4 @@
+import {capturePaperless} from './capture-paperless.mjs';
 import {captureAIUseCases} from './capture-use-case-ai.mjs';
 import {loginFixture} from './fixture-login.mjs';
 // Capture the real UI against an isolated synthetic fixture, never a live deployment.
@@ -62,6 +63,10 @@ try{
   await captureAnswerLimit();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Answer-limit screenshot captured with synthetic data only.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='paperless'){
+  await capturePaperless(page,base,capture);
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Paperless gallery captured with isolated synthetic data only.');
  }else if(process.env.SHOWCASE_CAPTURE_ONLY==='usecaseai'){
   await captureAIUseCases(page,base,capture);
   if(errors.length)throw Error(errors.join('\n'));

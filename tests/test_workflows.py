@@ -431,3 +431,20 @@ def test_completion_response_is_verified_against_bound_run_not_arbitrary_remote_
     result = c.post("/api/workflows/" + b["id"] + "/runs", headers=h, json=run_body(t))
     assert result.status_code == 200, result.text
     assert result.json()["dispatches"][0]["status"] == "completed"
+
+
+def test_workflow_enqueue_freezes_selected_paperless(workflows):
+    import json
+
+    from hub.db import TaskStep
+    from test_task_model import bind_paperless
+
+    app, c, h, _ = workflows
+    t, b, _, _, _ = ready(workflows)
+    identifier = bind_paperless(app, t["id"])
+    response = c.post("/api/workflows/" + b["id"] + "/runs", headers=h, json=run_body(t))
+    assert response.status_code == 200
+    run_id = response.json()["dispatches"][0]["run_id"]
+    with app.state.sessions() as db:
+        frozen = json.loads(db.get(TaskStep, (run_id, 0)).result)
+        assert frozen["selection"]["bindings"][0]["id"] == identifier

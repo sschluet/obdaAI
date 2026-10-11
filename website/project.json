@@ -62,8 +62,14 @@
     {
       "id": "generic-integrations",
       "title": "Deine Verbindungen. Ein klarer Überblick.",
-      "description": "Fünf fiktive Verbindungsprofile für Home Assistant, Paperless, MCP, UniFi und SSH. Suche, Aktiv-Schalter, Status und direkte Zuordnungen; nicht verfügbare Laufzeitadapter werden offen gekennzeichnet.",
+      "description": "Fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
       "image": "assets/genericintegrations.png"
+    },
+    {
+      "id": "paperless",
+      "title": "Dein Archiv. Direkt im Arbeitsraum.",
+      "description": "Synthetische Paperless-Ansicht: Dokumente suchen, OCR-Text lesen, Original herunterladen und eine private Kopie in ein Projekt übernehmen. Die Galerie simuliert Dienstantworten und enthält keine realen Dokumente.",
+      "image": "assets/paperless.png"
     },
     {
       "id": "use-cases-overview",
@@ -332,6 +338,11 @@
           "title": "Quellenbezogener Wissenschat",
           "description": "Ausgewählte, indexierte Verbindungen dienen als begrenzter lokaler Gesprächskontext; Quellenwahl ist sichtbar.",
           "status": "implemented"
+        },
+        {
+          "title": "Paperless-Dokumente als privater KI-Kontext",
+          "description": "Suche und Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Gewählte Archive werden in Chats, Aufgaben und projektbezogenen Use Cases lokal gelesen; Auswahl- und Profiländerungen stoppen den Zugriff. Gekürzte Auszüge bleiben gekennzeichnet. Paperless-Schreiboperationen sind nicht umgesetzt.",
+          "status": "implemented"
         }
       ]
     },
@@ -502,12 +513,12 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Suchbare Übersicht mit typgerechter Einrichtung für Home Assistant, Paperless, MCP, UniFi und SSH. Verschlüsselte Zugangsdaten, Aktiv-Schalter, Revisionen, direkte Zuordnungszahlen und ehrliche Prüfstati. Speichern kontaktiert kein neues Ziel. Zugangsprüfungen nutzen nur bereits freigegebene HA-/MCP-Ziele; Paperless-, UniFi- und SSH-Laufzeitadapter sind noch nicht verfügbar.",
+          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi und SSH mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüf-/Adapterzuständen. Aktivierte konfigurierte Ziele erhalten dynamische Serverfreigaben. HA/Paperless/MCP haben Zugangstests; UniFi-/SSH-Ausführungsadapter bleiben in Entwicklung.",
           "status": "implemented"
         },
         {
           "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
-          "description": "Dauerhafte Profilzuordnungen für Projekte und Aufgaben, Projektvererbung und manuelle Auswahl oder Abwahl im Chat. Bis zu acht Profile je Auswahl; deaktivierte Profile bleiben gesperrt. Auswahl und Revision werden nachvollziehbar gespeichert. Die dynamische automatische KI-Nutzung ist vorbereitet, aber noch nicht implementiert.",
+          "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Allgemeine KI-Aktionen anderer Profile bleiben offen.",
           "status": "limited"
         }
       ]

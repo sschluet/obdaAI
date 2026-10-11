@@ -212,8 +212,10 @@ def tick(db: Session, cfg: Settings, now: float) -> list[str]:
                 )
                 db.add(run)
                 db.flush()
+                from hub.task_api import freeze_task_integrations
                 from hub.task_writes import prepare_run
 
+                freeze_task_integrations(db, run, spec)
                 prepare_run(db, run, spec)
                 occurrence.run_id, occurrence.status = run.id, run.status
                 if run.status == "queued" and not cfg.database_url.startswith("sqlite"):

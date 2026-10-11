@@ -23,11 +23,21 @@ def text(value: Any, limit: int = 160) -> str | None:
     return value
 
 
-def assessment(client: httpx.Client, token: str, *, allowed_ip: str = "") -> dict[str, Any]:
+def assessment(
+    client: httpx.Client,
+    token: str,
+    *,
+    allowed_ip: str = "",
+    network_target: tuple[str, dict[str, str], dict[str, str]] | None = None,
+) -> dict[str, Any]:
     base = ORIGIN
     extensions: dict[str, str] = {}
     headers = {"Authorization": "Bearer " + token}
-    if allowed_ip:
+    if network_target is not None:
+        base, pinned_headers, extensions = network_target
+        base = base.rstrip("/")
+        headers.update(pinned_headers)
+    elif allowed_ip:
         ip = ipaddress.ip_address(allowed_ip)
         if not ip.is_global or ip.version != 4:
             raise ValueError("Unreviewed HA address")

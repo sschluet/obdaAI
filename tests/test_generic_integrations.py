@@ -77,7 +77,7 @@ def test_secret_never_public_and_target_drift_clears(registry):
         {"url": "https://user:secret@example.test"},
         {"url": "https://example.test/?token=secret"},
         {"url": "file:///etc/passwd"},
-        {"url": "http://192.168.1.2"},
+        {"url": "http://user:secret@192.168.1.2"},
         {"url": "https://example.test/#fragment"},
         {"auth": "password"},
         {"username": "user"},
@@ -387,3 +387,107 @@ def test_registry_and_binding_cas_postgres(monkeypatch):
                 db.execute(delete(Integration).where(Integration.id == iid))
             db.execute(delete(Project).where(Project.id == pid))
             db.commit()
+
+
+def test_canonical_target_preserves_secret_but_real_drift_clears(registry):
+    c, factory, _ = registry
+    row = create(c, secret="synthetic-key", url="https://EXAMPLE.test:443/")
+    assert row["config"]["url"] == "https://example.test"
+    # Existing rows created before canonicalization may retain a trailing slash.
+    with factory() as db:
+        stored = db.get(Integration, row["id"])
+        assert stored
+        config = json.loads(stored.config)
+        config["url"] = "https://EXAMPLE.test:443/"
+        stored.config = json.dumps(config)
+        db.commit()
+    same = c.put(
+        "/api/integrations/" + row["id"],
+        json=draft(
+            url="https://example.test/",
+            expected_revision=1,
+        ),
+    ).json()
+    assert same["secret_saved"] is True
+    changed = c.put(
+        "/api/integrations/" + row["id"],
+        json=draft(
+            url="https://example.test:8443",
+            expected_revision=2,
+        ),
+    ).json()
+    assert changed["secret_saved"] is False
+
+
+def test_profile_read_check_uses_own_url_key_and_pinned_address(registry, monkeypatch):
+    c, _, cfg = registry
+    object.__setattr__(cfg, "integration_targets_enabled", True)
+    monkeypatch.setattr(
+        "hub.integration_transport.socket.getaddrinfo",
+        lambda *a, **k: [(2, 1, 6, "", ("192.168.20.4", 8123))],
+    )
+    captured = []
+
+    def read_check(client, token, **kwargs):
+        captured.append((token, kwargs["network_target"]))
+        return {"version": "synthetic"}
+
+    monkeypatch.setattr("hub.integration_api.assessment", read_check)
+    row = create(
+        c,
+        kind="home_assistant",
+        auth="bearer",
+        secret="synthetic-key",
+        url="http://ha.example.test:8123/",
+    )
+    assert row["target_approved"] is True
+    assert row["availability_reason"] == "disabled"
+    path = "/api/integrations/" + row["id"]
+    disabled = c.post(path + "/check", json={"expected_revision": 1}).json()
+    assert disabled["last_check"]["status"] == "blocked" and not captured
+    enabled = c.patch(path + "/control", json={"enabled": True, "expected_revision": 1}).json()
+    assert enabled["check_available"] is True
+    checked = c.post(path + "/check", json={"expected_revision": 2}).json()
+    assert checked["status"] == "checked"
+    assert captured == [
+        (
+            "synthetic-key",
+            (
+                "http://192.168.20.4:8123",
+                {"Host": "ha.example.test:8123"},
+                {"sni_hostname": "ha.example.test"},
+            ),
+        )
+    ]
+    assert checked["execution_available"] is False
+
+
+def test_adapter_missing_is_separate_from_target_permission(registry):
+    c, _, cfg = registry
+    object.__setattr__(cfg, "integration_targets_enabled", True)
+    row = create(c, kind="unifi", secret="synthetic-key", url="https://unifi.example.test")
+    enabled = c.patch(
+        "/api/integrations/" + row["id"] + "/control",
+        json={"enabled": True, "expected_revision": 1},
+    ).json()
+    assert enabled["target_approved"] is True
+    assert enabled["availability_reason"] == "adapter_unavailable"
+    assert enabled["check_available"] is False
+
+
+def test_mcp_exact_endpoint_slash_is_saved_and_not_a_credential_alias(registry):
+    c, _, _ = registry
+    row = create(
+        c, kind="mcp", auth="bearer", url="https://mcp.test/mcp/", secret="synthetic-token"
+    )
+    assert row["config"]["url"] == "https://mcp.test/mcp/"
+    changed = c.put(
+        "/api/integrations/" + row["id"],
+        json=draft(
+            kind="mcp",
+            auth="bearer",
+            url="https://mcp.test/mcp",
+            expected_revision=1,
+        ),
+    ).json()
+    assert changed["secret_saved"] is False

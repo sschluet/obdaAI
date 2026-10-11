@@ -102,6 +102,26 @@ async def execute_run(
             else []
         )
 
+    def check_integration_context() -> None:
+        selection = snapshot.get("integration_selection", {})
+        if not any(item.get("kind") == "paperless" for item in selection.get("bindings", [])):
+            return
+        from hub.integration_api import freeze_bindings
+        from hub.paperless_api import validate_selection
+
+        with factory() as db:
+            scope = snapshot.get(
+                "integration_scope", {"scope": "conversation", "owner_id": chat_id}
+            )
+            if freeze_bindings(db, scope["scope"], scope["owner_id"]) != selection:
+                raise ExecutionLimitError("Integrationsauswahl geändert; Auftrag erneut starten")
+            try:
+                validate_selection(db, selection)
+            except HTTPException as error:
+                raise ExecutionLimitError(
+                    "Paperless-Verbindung geändert oder deaktiviert"
+                ) from error
+
     def update(**values: object) -> None:
         with factory() as db:
             current = db.get(Run, run_id)
@@ -217,6 +237,47 @@ async def execute_run(
             },
         )
         try:
+            selection = snapshot.get("integration_selection", {})
+            if any(item.get("kind") == "paperless" for item in selection.get("bindings", [])):
+                from hub.paperless_api import collect_context
+
+                check_integration_context()
+                yield ("status", {"message": "Ausgewähltes Paperless-Archiv wird lokal eingelesen"})
+                use_case = snapshot.get("use_case", {})
+                question = use_case.get("spec", {}).get("processing_prompt")
+                if question and use_case.get("values"):
+                    file_keys = {
+                        field["key"]
+                        for field in use_case["spec"]["fields"]
+                        if field["type"] == "file"
+                    }
+                    values = [
+                        str(value)[:500]
+                        for key, value in use_case["values"].items()
+                        if key not in file_keys and value is not None
+                    ]
+                    question = question + "\nAktuelle Eingaben: " + " · ".join(values)
+                if not question:
+                    latest_input = next((m for m in reversed(messages) if m.role == "user"), None)
+                    question = latest_input.content if latest_input else ""
+                try:
+                    archive_parts = await collect_context(factory, cfg, selection, question)
+                except HTTPException as error:
+                    raise ExecutionLimitError(str(error.detail)) from error
+                parts.extend(archive_parts)
+                roles.extend("user" for _ in archive_parts)
+                label = Privacy.LOCAL_ONLY
+                if sum(len(part.content) for part in parts) > cfg.context_limit:
+                    raise ExecutionLimitError(
+                        "Paperless und Gespräch überschreiten das Kontextlimit"
+                    )
+                snapshot["parts"] = [part.model_dump(mode="json") for part in parts]
+                snapshot["roles"] = roles
+                snapshot["sources"] = [
+                    *snapshot.get("sources", []),
+                    *[part.model_dump(mode="json") for part in archive_parts],
+                ]
+                update(context_snapshot=json.dumps(snapshot, ensure_ascii=False))
             # Only a direct authenticated user message can request this bounded write.
             # Source/Memory/Web content and model output are never parsed as commands.
             latest = next((m for m in reversed(messages) if m.role == "user"), None)
@@ -756,11 +817,13 @@ async def execute_run(
                     # including waiting for the provider slot and prefill.
                     generation_started = True
                     deadline.reschedule(asyncio.get_running_loop().time() + cfg.generation_timeout)
+                    check_integration_context()
                     async for chunk in providers.stream(
                         parts, roles, external=external, grants=grants
                     ):
                         if cancelled():
                             raise asyncio.CancelledError
+                        check_integration_context()
                         if not output:
                             update(first_content_seconds=time.monotonic() - started)
                         if len(output) + len(chunk) > 96000:
@@ -775,6 +838,7 @@ async def execute_run(
                             )
                         output += chunk
                         yield ("delta", {"text": chunk})
+                check_integration_context()
                 if not output:
                     raise ValueError("Empty provider response")
                 if snapshot.get("use_case"):

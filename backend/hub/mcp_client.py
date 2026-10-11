@@ -76,10 +76,18 @@ def discover(
     *,
     read_tool: str | None = None,
     expected_schema: str = "",
+    configured_profile: bool = False,
 ) -> dict[str, Any]:
     if version not in VERSIONS:
         raise ValueError("Unsupported configured MCP version")
-    pinned, headers, extensions = target(cfg, url)
+    if configured_profile:
+        if read_tool is not None:
+            raise ValueError("Profile catalog discovery does not grant execution")
+        from hub.integration_transport import pinned_target
+
+        pinned, headers, extensions = pinned_target(cfg, url)
+    else:
+        pinned, headers, extensions = target(cfg, url)
     if read_tool is not None:
         rules = json.loads(cfg.mcp_read_tools_json)
         if (

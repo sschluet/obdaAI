@@ -13,11 +13,19 @@ from sqlalchemy import select, text
 
 from hub.action_api import digest, encode
 from hub.db import ProviderConfig, SourceChunk, TaskRun, TaskStep
+from hub.paperless_api import collect_context
 from hub.policy import ContextPart
 from hub.provider_settings import runtime_provider
 from hub.providers import Providers
 from hub.skill_api import parse
-from hub.task_api import check_bindings, check_schedule, current, execute_task_read, lock
+from hub.task_api import (
+    check_bindings,
+    check_schedule,
+    current,
+    execute_task_read,
+    lock,
+    validate_task_integrations,
+)
 
 _fixture_locks: dict[str, threading.Lock] = {}
 
@@ -167,6 +175,14 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                 if not actual or not actual.enabled or actual.revision != row.revision:
                     raise ValueError("Provider drift before inference")
             parts, roles = context(db, spec, manifest)
+            integration_step = db.get(TaskStep, (run_id, 0))
+            integration_selection = (
+                json.loads(integration_step.result)["selection"]
+                if integration_step and integration_step.tool_id == "paperless.context"
+                else None
+            )
+            if integration_selection:
+                validate_task_integrations(db, run.task_id, spec, integration_selection)
             for i, step in enumerate(spec.steps, 1):
                 if step.tool_id == "hub.inspect" and not spec.include_system_reports:
                     from sqlalchemy import func
@@ -219,6 +235,43 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
             )
             run.status = "running"
             db.commit()  # Claim and frozen prompt are durable before inference I/O.
+        if integration_selection:
+            remaining = spec.timeout_seconds - (time.monotonic() - pipeline_started)
+            if remaining <= 0:
+                raise ValueError("Task time limit before Paperless")
+            async with asyncio.timeout(remaining):
+                integration_parts = await collect_context(
+                    factory, cfg, integration_selection, spec.goal
+                )
+            for part in integration_parts:
+                parts.insert(len(parts) - 1, part)
+                roles.insert(len(roles) - 1, "user")
+            if sum(len(p.content) for p in parts) > cfg.context_limit or (
+                sum(len(p.content.encode()) + 64 for p in parts) + 256 + cfg.local_max_tokens
+                > config.get("context_tokens", 32768)
+            ):
+                raise ValueError("Context limit after Paperless")
+            with factory() as db:
+                lock(db)
+                run = db.get(TaskRun, run_id)
+                task, _, actual_spec = current(db, run.task_id)
+                if run.status != "running" or run.error or task.paused or task.archived:
+                    raise ValueError("Task stopped during Paperless")
+                check_schedule(db, run)
+                check_bindings(db, actual_spec)
+                validate_task_integrations(db, run.task_id, actual_spec, integration_selection)
+                audit["input"] = [p.model_dump(mode="json") for p in parts]
+                audit["roles"] = roles
+                db.get(TaskStep, (run_id, sequence)).result = encode(audit)
+                db.get(TaskStep, (run_id, 0)).result = encode(
+                    {
+                        "selection": integration_selection,
+                        "label": "LOCAL_ONLY",
+                        "state": "read",
+                        "sources": [p.model_dump(mode="json") for p in integration_parts],
+                    }
+                )
+                db.commit()
         available_updates = False
         condition_checked, condition_uncertain = False, False
         for sequence_number, step in enumerate(spec.steps, 1):
@@ -367,6 +420,18 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
         remaining = spec.timeout_seconds - (time.monotonic() - pipeline_started)
         if remaining <= 0:
             raise ValueError("Task time limit before model")
+        if integration_selection:
+            with factory() as db:
+                run = db.get(TaskRun, run_id)
+                actual_task, _, actual_spec = current(db, run.task_id)
+                if (
+                    run.status != "running"
+                    or run.error
+                    or actual_task.paused
+                    or actual_task.archived
+                ):
+                    raise ValueError("Task stopped before Paperless provider boundary")
+                validate_task_integrations(db, run.task_id, actual_spec, integration_selection)
         async with asyncio.timeout(min(remaining, cfg.local_timeout)):
             async with aclosing(provider.stream(parts, roles, external=False, grants=[])) as stream:
                 async for chunk in stream:
@@ -388,6 +453,10 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                             raise ValueError("Cancelled or task drift")
                         check_schedule(db, run)
                         check_bindings(db, current_spec)
+                        if integration_selection:
+                            validate_task_integrations(
+                                db, run.task_id, current_spec, integration_selection
+                            )
                         if row:
                             actual = db.get(ProviderConfig, row.id)
                             if not actual or not actual.enabled or actual.revision != row.revision:
@@ -402,6 +471,8 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
             task, _, current_spec = current(db, run.task_id)
             check_schedule(db, run)
             check_bindings(db, current_spec)
+            if integration_selection:
+                validate_task_integrations(db, run.task_id, current_spec, integration_selection)
             if (
                 run.status != "running"
                 or run.error is not None

@@ -59,7 +59,7 @@ class CIProofTests(unittest.TestCase):
     def test_known_documents_and_website_only_but_runtime_markdown_is_code(self):
         for path in ["README.md", "STATUS.md", "AGENTS.md", "docs/routing.md",
                      "website/assets/chat.png", "scripts/publish_showcase.py",
-                     "frontend/capture-use-case-ai.mjs",
+                     "frontend/capture-use-case-ai.mjs", "frontend/capture-paperless.mjs",
                      ".github/workflows/pages.yml", "frontend/showcase-check.mjs"]:
             with self.subTest(path=path):
                 self.assertFalse(app_relevant(path))

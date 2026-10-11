@@ -198,6 +198,40 @@ def revision_spec(task: Task, revision: TaskRevision | None) -> TaskSpec:
     return spec
 
 
+def task_integrations(db: Session, task_id: str, spec: TaskSpec) -> dict[str, Any]:
+    from hub.integration_api import Scope, freeze_bindings
+    from hub.integrations import IntegrationBinding
+
+    scope: Scope = "task"
+    owner = task_id
+    if db.get(IntegrationBinding, (scope, owner)) is None and spec.project_id:
+        scope, owner = "project", str(spec.project_id)
+    return {"scope": scope, "owner_id": owner, **freeze_bindings(db, scope, owner)}
+
+
+def freeze_task_integrations(db: Session, run: TaskRun, spec: TaskSpec) -> None:
+    selection = task_integrations(db, run.task_id, spec)
+    if any(item["kind"] == "paperless" for item in selection["bindings"]):
+        db.add(
+            TaskStep(
+                run_id=run.id,
+                sequence=0,
+                tool_id="paperless.context",
+                result=encode({"selection": selection, "label": "LOCAL_ONLY", "state": "selected"}),
+            )
+        )
+
+
+def validate_task_integrations(
+    db: Session, task_id: str, spec: TaskSpec, selection: dict[str, Any]
+) -> None:
+    from hub.paperless_api import validate_selection
+
+    if encode(task_integrations(db, task_id, spec)) != encode(selection):
+        raise HTTPException(409, "Aufgabenintegrationen inzwischen geändert")
+    validate_selection(db, selection)
+
+
 def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
     project_id = str(spec.project_id) if spec.project_id else None
     if project_id:
@@ -674,6 +708,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
             )
             db.add(run)
             db.flush()
+            freeze_task_integrations(db, run, spec)
             from hub.task_writes import prepare_run
 
             prepare_run(db, run, spec)

@@ -114,6 +114,7 @@ jobs:
           node browser-check.mjs
           node integrations-check.mjs
           node generic-integrations-check.mjs
+          PAPERLESS_FIXTURE_URL=http://127.0.0.1:18765 node paperless-explorer-check.mjs
           node use-cases-check.mjs
           node appearance-check.mjs
           node openrouter-status-check.mjs

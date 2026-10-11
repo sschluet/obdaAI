@@ -343,6 +343,11 @@ def enqueue_execution(
         "web_search_allowed": False,
         "routing_options": routing_options(db),
     }
+    if case.project_id:
+        from hub.integration_api import freeze_bindings
+
+        snapshot["integration_selection"] = freeze_bindings(db, "project", case.project_id)
+        snapshot["integration_scope"] = {"scope": "project", "owner_id": case.project_id}
     execution = Run(
         conversation_id=conversation.id, status="queued", context_snapshot=encode(snapshot)
     )

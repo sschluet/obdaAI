@@ -21,32 +21,26 @@ umgedeutet oder mit neuen Rechten versehen.
 Projekte und Aufgaben speichern eine Auswahl. Projektchats können sie erben,
 selbst auswählen oder ausschalten. Die globale Deaktivierung entfernt ein Profil
 auch aus der wirksamen Auswahl bestehender Zuordnungen. Der Chat-Laufsnapshot
-protokolliert die Auswahl ohne Zugangsdaten. Gespeicherte Auswahl ist zunächst
-Metadaten; sie ruft noch kein Werkzeug auf und verspricht keine automatische
-Auswertung. Die Oberfläche benennt diese Grenze ausdrücklich.
+protokolliert die Auswahl ohne Zugangsdaten. Ausgewählte Paperless-Profile sind jetzt tatsächlicher lokaler KI-Kontext.
+Projekt-/Chat-/Aufgabenauswahl wird am Laufstart eingefroren, vor Dienst- und
+Modellzugriff erneut geprüft und deaktivierte/geänderte Profile werden abgewiesen.
+Der vorhandene Aufgabenmanifest bleibt unverändert; ein separater privater
+Integrationsbeleg bindet alle Startwege. Projektbezogene Use Cases übernehmen
+die Projektbindung. Andere Profile führen noch keine allgemeinen KI-Aktionen aus.
 
-## Weitere Ausführungsschritte
+## Netzwerk und Paperless
 
-Der aktuelle MCP-Katalogtest kann nur vorhandene serverseitig freigegebene Ziele
-verwenden. Neue Paperless-, UniFi- und SSH-Profile benötigen anschließend ihren
-Adapter und reale Abnahme. Arbiträre Shellbefehle oder unbekannte MCP-Schreibrechte
-werden nicht aus fremden Beschreibungen übernommen.
+Aktivierte, vom Benutzer konfigurierte Ziele werden mit der betreiberseitig
+aktivierten Integrationsrichtlinie automatisch erreichbar. Die eigene VM verwaltet
+nur numerisch geprüfte Adressen und Ports in einer separaten Egress-Kette. Keine
+Änderung von eingehenden Zugriffen, Fremdsystemen oder globaler Schreibpause.
+Home-Assistant-Adressen mit abschließendem Schrägstrich sind gleichwertig; echte
+MCP-Endpunktpfade bleiben exakt. HA, Paperless und MCP haben lesende Zugangstests.
+Für UniFi und SSH fehlen weiterhin die Ausführungsadapter.
 
-1. Gemeinsamer Zielvertrag: exakte Adresse/IP, TLS beziehungsweise SSH-Hostschlüssel,
-   begrenzte Antwortgrößen/Zeitbudgets und bestehende Netzwerkreichweite prüfen.
-2. Feste Lesefähigkeiten: HA-Entitäten/Status, Paperless-Dokumentensuche,
-   UniFi-Sites/Gerätestatus, freigegebene MCP-Schemas und feste SSH-Statusprofile.
-3. Auswahl am tatsächlichen Ausführungsrand erneut prüfen; deaktivierte/geänderte
-   Verbindungen stoppen den Zugriff. Ergebnisse bleiben LOCAL_ONLY.
-4. Projekt- und Aufgabenbindung um Capability/Revisionsdigest ergänzen; Chat
-   verwendet nur ausgewählte Fähigkeiten und protokolliert tatsächliche Aufrufe.
-5. Änderungen an Drittsystemen separat als konkrete freizugebende Aktionen.
-
-Die neuen Profile verändern keine Firewallregeln, bestehenden HA-/n8n-Dienste,
-Vault-/NAS-Freigaben oder globale Schreibpause. Reale Serveradressen werden vom
-Benutzer vor Verbindungstests benötigt; Zugangsdaten gehören nur ins lokale UI.
-
-## Eigener Bereich Use Cases
+Paperless: Suche, Seitennavigation, Metadaten/OCR, Originaldownload, private OCR-
+Quelle in Projekten und echte lokale Nutzung im KI-Kontext. Keine Paperless-
+Schreiboperationen. [Funktionsvertrag und Grenzen](paperless.md).
 
 Use Cases ist ein eigener Bereich in der Hauptnavigation zwischen Projekte und
 Aufgaben. Die Übersicht zeigt Anwendungsfälle projektübergreifend; Suche und

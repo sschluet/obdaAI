@@ -1,5 +1,29 @@
 # obdaAI — Status 11.10.2026
 
+## Dynamische Integrationsziele und Paperless – lokal geprüft, 11.10.2026
+
+Vom Nutzer freigegebene Netzwerk-Erweiterung für aktivierte Integrationsprofile:
+numerische Ziel-/Portfreigaben aus gespeicherten Profilen, private LAN-Ziele,
+gepinntes HTTPS/SNI, keine Weiterleitungen oder System-/Metadatenziele. Eigener
+Observer/Chain, keine neuen eingehenden Ports. Aktive VM bleibt bis zur geprüften
+Lieferung32cd893/Schema0039. Runtime-Flag/Marker/Observer-Rollout folgt; vorhandene
+zusätzliche Egress-/Backup-Pfade werden beim VM-Update ausdrücklich erhalten.
+
+HA nutzt Profilziel/-schlüssel, Root-Slash-Aliase erhalten Zugangsdaten; genaue
+MCP-Endpunktpfade bleiben erhalten. Paperless lesend: Zugangstest, Suche/Seiten,
+Metadaten/OCR, Originaldownload und private OCR-Projektquelle. Ausgewählte Archive
+werden echte lokale KI-Quellen in Chats, Aufgaben (alle vier Startwege) und
+projektbezogenen Use Cases. Bindungen/Revisionen eingefroren und final geprüft;
+private Derivate bleiben lokal, Cloudwunsch mit Archiv wird abgewiesen. Ändern/
+Hochladen/Löschen im Fremdarchiv sowie UniFi-/SSH-Ausführungsadapter bleiben offen.
+
+944 lokale Backendtests bestanden,29 PostgreSQL-Fälle lokal übersprungen;
+anschließend zusätzliche Auszugsmarkierung und gezielte Quellen-/Datenschutzchecks.
+Ruff/Mypy82, TypeScript/Build, Paperless- und generische Integrationsbrowserchecks
+sowie Workflowsyntax grün. Neue Galerie ausschließlich synthetisch. Vollständige
+CI, VM-Netzwerkaktivierung und echte HA-/Paperless-Abnahme folgen; keine neuen
+Live-Ergebnisse vorweggenommen.
+
 ## KI Use Cases mit Dateieingaben und echtem Dialog – Test-VM geprüft, 11.10.2026
 
 App-Code32cd893/Schema0039 installiert, vollständige CI38150177485 mit sechs

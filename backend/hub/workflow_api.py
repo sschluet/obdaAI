@@ -487,8 +487,10 @@ def install_workflow_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             )
             db.add(run)
             db.flush()
+            from hub.task_api import freeze_task_integrations
             from hub.task_writes import prepare_run
 
+            freeze_task_integrations(db, run, spec)
             prepare_run(db, run, spec)
             if run.status == "queued" and not cfg.database_url.startswith("sqlite"):
                 from hub.jobs import enqueue_task_read

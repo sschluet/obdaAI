@@ -373,3 +373,139 @@ def test_update_condition_is_local_bounded_and_does_not_guess_unknown_state(
     if expected_status == "succeeded" and not expected_calls:
         assert result["steps"][-1]["result"]["skipped"] is True
         assert result["steps"][-1]["result"]["partial"] is False
+
+
+def bind_paperless(app, task_id):
+    from hub.integrations import Integration, IntegrationBinding
+
+    with app.state.sessions() as db:
+        profile = Integration(
+            name="Synthetic archive",
+            kind="paperless",
+            enabled=True,
+            config=encode({"url": "https://archive.example.test", "auth": "api_key"}),
+        )
+        db.add(profile)
+        db.flush()
+        db.add(
+            IntegrationBinding(
+                scope="task",
+                owner_id=task_id,
+                integration_ids=encode([profile.id]),
+                selection_mode="manual",
+            )
+        )
+        identifier = profile.id
+        db.commit()
+    return identifier
+
+
+def test_task_selected_paperless_frozen_and_consumed_locally(setup, monkeypatch):
+    from hub.policy import ContextPart
+
+    app, c, h, _ = setup
+    provider = AnalysisProvider()
+    app.state.providers = provider
+    t = task(c, h)
+    identifier = bind_paperless(app, t["id"])
+
+    async def collect(factory, cfg, selection, question):
+        assert selection["bindings"][0]["id"] == identifier
+        assert question == t["spec"]["goal"]
+        return [
+            ContextPart(
+                content="Synthetic private archive evidence",
+                source_id="paperless:" + identifier + ":7",
+                revision=1,
+            )
+        ]
+
+    monkeypatch.setattr("hub.task_model.collect_context", collect)
+    response = c.post("/api/tasks/" + t["id"] + "/runs", headers=h, json=run_body(t))
+    assert response.status_code == 200
+    receipt = terminal(c, t)
+    assert receipt["status"] == "succeeded"
+    assert receipt["steps"][0]["tool_id"] == "paperless.context"
+    assert receipt["steps"][0]["result"]["state"] == "read"
+    assert any("Synthetic private archive" in p.content for p in provider.parts)
+    assert receipt["steps"][1]["result"]["input"][-1]["content"] == t["spec"]["goal"]
+    assert provider.stream_calls == [False]
+
+
+def test_task_paperless_disable_during_context_prevents_model(setup, monkeypatch):
+    from hub.integrations import Integration
+    from hub.policy import ContextPart
+
+    app, c, h, _ = setup
+    provider = AnalysisProvider()
+    app.state.providers = provider
+    t = task(c, h)
+    identifier = bind_paperless(app, t["id"])
+
+    async def collect(factory, cfg, selection, question):
+        with factory() as db:
+            db.get(Integration, identifier).enabled = False
+            db.commit()
+        return [
+            ContextPart(
+                content="Private evidence", source_id="paperless:" + identifier + ":7", revision=1
+            )
+        ]
+
+    monkeypatch.setattr("hub.task_model.collect_context", collect)
+    c.post("/api/tasks/" + t["id"] + "/runs", headers=h, json=run_body(t))
+    assert terminal(c, t)["status"] == "failed"
+    assert provider.stream_calls == []
+
+
+def test_task_project_inheritance_only_when_no_task_binding(setup):
+    from hub.db import Project
+    from hub.integrations import Integration, IntegrationBinding
+    from hub.task_api import TaskSpec, task_integrations
+
+    app, _, _, _ = setup
+    with app.state.sessions() as db:
+        project = Project(name="Synthetic inherited archive")
+        profile = Integration(name="Archive", kind="paperless", enabled=True, config="{}")
+        db.add_all([project, profile])
+        db.flush()
+        db.add(
+            IntegrationBinding(
+                scope="project", owner_id=project.id, integration_ids=encode([profile.id])
+            )
+        )
+        db.flush()
+        spec = TaskSpec(
+            title="Synthetic",
+            goal="Synthetic",
+            project_id=project.id,
+            steps=[{"tool_id": "ai.analyze"}],
+        )
+        assert task_integrations(db, "task-synthetic", spec)["bindings"][0]["id"] == profile.id
+        db.add(IntegrationBinding(scope="task", owner_id="task-synthetic", selection_mode="off"))
+        db.flush()
+        assert task_integrations(db, "task-synthetic", spec)["bindings"] == []
+
+
+def test_clock_and_source_event_enqueue_freeze_paperless(setup):
+    import time
+
+    import test_schedules
+    import test_source_events
+
+    app, c, h, _ = setup
+    now = time.time()
+    scheduled = test_schedules.armed(app, c, h, now - 10)
+    identifier = bind_paperless(app, scheduled["id"])
+    job = test_schedules.pulse(app, now)[0]
+    with app.state.sessions() as db:
+        frozen = json.loads(db.get(TaskStep, (job, 0)).result)
+        assert frozen["selection"]["bindings"][0]["id"] == identifier
+    pid = test_source_events.project(c, h)
+    event_task = test_source_events.armed(app, c, h, pid)
+    identifier = bind_paperless(app, event_task["id"])
+    test_source_events.ready(app, pid, now)
+    job = test_schedules.pulse(app, now + 1)[0]
+    with app.state.sessions() as db:
+        frozen = json.loads(db.get(TaskStep, (job, 0)).result)
+        assert frozen["selection"]["bindings"][0]["id"] == identifier

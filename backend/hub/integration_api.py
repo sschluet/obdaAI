@@ -1,4 +1,4 @@
-"""Human-managed generic integration registry; saving never grants network access."""
+"""Human-managed profiles with explicit checks and bounded adapter availability."""
 
 import json
 import re
@@ -19,9 +19,11 @@ from hub.config import Settings
 from hub.db import Conversation, Project, Run, Task, TaskRun
 from hub.db_locks import ownership_lock
 from hub.home_assistant import ORIGIN, assessment
+from hub.integration_transport import canonical_url, pinned_target, policy_allows
 from hub.integrations import Integration, IntegrationBinding
 from hub.knowledge_api import Auth
-from hub.mcp_client import discover, endpoint, target
+from hub.mcp_client import discover, target
+from hub.paperless_client import assessment as paperless_assessment
 from hub.provider_settings import decrypt, encrypt
 
 IntegrationKind = Literal["home_assistant", "paperless", "mcp", "unifi", "ssh"]
@@ -81,7 +83,7 @@ class IntegrationInput(StrictInput):
         else:
             u = urlsplit(self.url)
             if (
-                u.scheme != "https"
+                u.scheme not in {"https", "http"}
                 or not u.hostname
                 or u.username
                 or u.password
@@ -93,11 +95,10 @@ class IntegrationInput(StrictInput):
             ):
                 # Existing MCP loopback fixtures stay supported by its bounded adapter.
                 if self.kind != "mcp":
-                    raise ValueError("Integration requires a plain HTTPS endpoint")
-            if self.kind == "mcp":
-                endpoint(self.url)
-            else:
-                _ = u.port
+                    raise ValueError("Integration requires a plain HTTP(S) endpoint")
+            self.url = canonical_url(self.url)
+            if self.kind == "mcp" and not urlsplit(self.url).path:
+                raise ValueError("MCP requires its endpoint path")
             if self.username or self.host_key or self.certificate:
                 raise ValueError("SSH fields require an SSH connection")
         if self.secret and self.auth in {"api_key", "bearer"}:
@@ -128,8 +129,10 @@ class BindingInput(StrictInput):
 
 def approved(cfg: Settings, row: Integration) -> bool:
     config = json.loads(row.config)
+    if policy_allows(cfg, config["url"], ssh=row.kind == "ssh"):
+        return True
     if row.kind == "home_assistant":
-        return config["url"] == ORIGIN and bool(cfg.ha_allowed_ip)
+        return canonical_url(config["url"]) == ORIGIN and bool(cfg.ha_allowed_ip)
     if row.kind == "mcp":
         try:
             target(cfg, config["url"])
@@ -141,6 +144,25 @@ def approved(cfg: Settings, row: Integration) -> bool:
 
 def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
     checked = json.loads(row.last_check) if row.last_check else None
+    target_ok = approved(cfg, row)
+    adapter = row.kind in {"home_assistant", "paperless", "mcp"}
+    credentials = json.loads(row.config).get("auth") == "none" or bool(row.encrypted_secret)
+    reason = (
+        "disabled"
+        if not row.enabled
+        else "network_disabled"
+        if not target_ok and not cfg.integration_targets_enabled
+        else "target_blocked"
+        if not target_ok
+        else "adapter_unavailable"
+        if not adapter
+        else "credential_missing"
+        if not credentials
+        else "ready"
+    )
+    connected = bool(
+        checked and checked.get("revision") == row.revision and checked.get("status") == "succeeded"
+    )
     return {
         "id": row.id,
         "name": row.name,
@@ -149,9 +171,11 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
         "enabled": row.enabled,
         "config": json.loads(row.config),
         "secret_saved": bool(row.encrypted_secret),
-        "target_approved": approved(cfg, row),
+        "target_approved": target_ok,
+        "check_available": reason == "ready",
+        "availability_reason": reason,
         "last_check": checked,
-        "execution_available": False,
+        "execution_available": row.kind == "paperless" and reason == "ready" and connected,
         "status": (
             "disabled"
             if not row.enabled
@@ -159,6 +183,10 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
             if checked
             and checked.get("revision") == row.revision
             and checked.get("status") == "succeeded"
+            else "failed"
+            if checked
+            and checked.get("revision") == row.revision
+            and checked.get("status") == "failed"
             else "configured"
         ),
     }
@@ -174,6 +202,17 @@ def binding_owner(db: Session, scope: Scope, owner_id: str) -> None:
         owner = db.scalar(select(Conversation).where(Conversation.id == owner_id).with_for_update())
     if not owner or owner.archived or (isinstance(owner, Conversation) and owner.purpose != "chat"):
         raise HTTPException(404, "Bereich nicht vorhanden oder archiviert")
+
+
+def paperless_read_ready(row: Integration) -> bool:
+    check = json.loads(row.last_check) if row.last_check else {}
+    return bool(
+        row.kind == "paperless"
+        and row.enabled
+        and row.encrypted_secret
+        and check.get("revision") == row.revision
+        and check.get("status") == "succeeded"
+    )
 
 
 def binding_info(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
@@ -200,12 +239,15 @@ def binding_info(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
         "integration_ids": ids,
         "selection_mode": mode,
         "effective_integration_ids": [item for item in resolved_ids if item in effective],
-        "execution_available": False,
+        "execution_available": any(
+            paperless_read_ready(item)
+            for item in db.scalars(select(Integration).where(Integration.id.in_(effective)))
+        ),
     }
 
 
 def freeze_bindings(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
-    """Metadata only. Selection does not execute tools or expose credentials."""
+    """Freeze selected profile revisions and readiness without contacting services."""
     selection = binding_info(db, scope, owner_id)
     rows = {
         r.id: r
@@ -223,11 +265,11 @@ def freeze_bindings(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
                 "kind": rows[i].kind,
                 "name": rows[i].name,
                 "enabled": rows[i].enabled,
-                "execution_available": False,
+                "execution_available": paperless_read_ready(rows[i]),
             }
             for i in selection["effective_integration_ids"]
         ],
-        "execution_available": False,
+        "execution_available": selection["execution_available"],
     }
 
 
@@ -266,6 +308,9 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                 if row.revision != body.expected_revision:
                     raise HTTPException(409, "Integration geändert; neu laden")
                 previous = json.loads(row.config)
+                # Canonical-equivalent URL edits must not erase a working key.
+                if body.kind != "ssh":
+                    previous["url"] = canonical_url(previous["url"])
                 if any(
                     previous.get(k) != getattr(body, k)
                     for k in ("kind", "url", "auth", "username", "port", "host_key", "certificate")
@@ -353,7 +398,12 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                 "message": "Netzwerkziel und Adapter noch nicht freigegeben",
                 "execution_allowed": False,
             }
-            if approved(cfg, row):
+            available = integration_info(cfg, row)
+            if available["check_available"] or (
+                not cfg.integration_targets_enabled
+                and approved(cfg, row)
+                and row.kind in {"home_assistant", "mcp"}
+            ):
                 try:
                     secret = (
                         decrypt(cfg, "integration:" + row.id, row.encrypted_secret)
@@ -365,11 +415,26 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     with httpx.Client(
                         verify=True, trust_env=False, follow_redirects=False, timeout=8
                     ) as client:
-                        result = (
-                            discover(client, cfg, config["url"], config["protocol"], secret)
-                            if row.kind == "mcp"
-                            else assessment(client, secret, allowed_ip=cfg.ha_allowed_ip)
-                        )
+                        if row.kind == "paperless":
+                            result = paperless_assessment(client, cfg, config["url"], secret)
+                        elif row.kind == "mcp":
+                            result = discover(
+                                client,
+                                cfg,
+                                config["url"],
+                                config["protocol"],
+                                secret,
+                                configured_profile=policy_allows(cfg, config["url"]),
+                            )
+                        else:
+                            result = assessment(
+                                client,
+                                secret,
+                                allowed_ip=cfg.ha_allowed_ip,
+                                network_target=pinned_target(cfg, config["url"])
+                                if cfg.integration_targets_enabled
+                                else None,
+                            )
                     report.update(
                         status="succeeded", message="Lesende Verbindung geprüft", result=result
                     )
@@ -383,6 +448,17 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     RecursionError,
                 ):
                     report.update(status="failed", message="Verbindung oder Zugang prüfen")
+            else:
+                messages = {
+                    "disabled": "Integration zuerst einschalten",
+                    "network_disabled": "Integrationszugriff auf dem Server noch nicht aktiviert",
+                    "target_blocked": "Unsicheres Integrationsziel",
+                    "adapter_unavailable": "Adapter für diesen Typ noch nicht verfügbar",
+                    "credential_missing": "Zugangsdaten fehlen",
+                }
+                report["message"] = messages.get(
+                    available["availability_reason"], "Verbindung nicht verfügbar"
+                )
             lock(db)
             db.refresh(row)
             if row.revision != revision:
