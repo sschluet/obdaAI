@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "d4e0154",
+  "applicationCommit": "85a8581",
   "schema": "0033",
   "tests": 794,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
   "screenshots": [
     {
       "id": "chat",
@@ -52,6 +52,12 @@
       "title": "Dein Zugang bleibt in deiner Hand.",
       "description": "Passwort unter Einstellungen → Sicherheit ändern: aktuelles Passwort bestätigen, neues Passwort prüfen und anschließend neu anmelden. Synthetische Demo mit leeren Feldern.",
       "image": "assets/security.png"
+    },
+    {
+      "id": "integrations",
+      "title": "Verbindungen an einem Ort.",
+      "description": "Einstellungen → Integrationen bündelt verfügbare Funktionen nach System. Verständliche Aktionen, Verbindungsstatus und Ergebnisse direkt bei der passenden Integration. Ausschließlich synthetische Beispieldaten.",
+      "image": "assets/integrations.png"
     },
     {
       "id": "processing",
@@ -408,9 +414,9 @@
     },
     {
       "id": "tools",
-      "name": "Werkzeuge & Systeme",
+      "name": "Integrationen & Skills",
       "symbol": "⊞",
-      "intro": "Klare Ziele, feste Grenzen und dauerhafte Belege.",
+      "intro": "Anleitungen und verbundene Funktionen passend einsetzen.",
       "features": [
         {
           "title": "Versionierte Skills",
@@ -433,9 +439,9 @@
           "status": "limited"
         },
         {
-          "title": "Aktionsbelege und Wiederholungsschutz",
-          "description": "Parameter, Freigaben und Ergebnisse werden dauerhaft gebunden. Unklarer Ausgang wird sichtbar; Wiederholung soll keinen unkontrollierten zweiten Effekt erzeugen.",
-          "status": "limited"
+          "title": "Integrationen mit verständlichen Aktionen",
+          "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP. Direkte Prüfaktionen zeigen Ergebnisse beim jeweiligen System; Projektarchive führen vom Ziel über konkrete Freigabe zur Ausführung. Schreibpause und eingeklappte Ausführungsbelege bleiben erhalten. Auf der Test-VM mit echtem Hub-Lesebeleg, Navigation, Datenschutzstatus und Mobilansicht bestätigt. Vollständige Archivierung isoliert synthetisch geprüft; weitere Schreibadapter bleiben offen.",
+          "status": "live"
         },
         {
           "title": "Skills direkt im Chat einsetzen",
@@ -537,14 +543,14 @@
   "development": {
     "mode": "local",
     "schema": "0033",
-    "browserChecks": 25,
+    "browserChecks": 26,
     "serverDeployment": true,
-    "commit": "d4e0154",
+    "commit": "85a8581",
     "ciTests": 794,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
-    "deployedCommit": "d4e0154",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
+    "deployedCommit": "85a8581",
     "deployedSchema": "0033",
-    "liveScope": "Drei Modellmodi auf der Test-VM bestätigt: Auto, Nur lokal und Cloud ohne Anbieter- oder Neugesprächsdialog. Kurze synthetische Anfrage tatsächlich über den eingerichteten Cloudanbieter beantwortet; Routingbeleg ohne lokalen Klassifikator. Lokale Websperre, private Projekt-Cloudsperre und Mobilansicht320px geprüft. Einstellungen und Grenzen erhalten. 62 Funktionen und22 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
+    "liveScope": "Integrationen auf der Test-VM bestätigt: eigener Werkzeug-Menüpunkt entfernt, alte Links öffnen Einstellungen → Integrationen, Unterbereich nach Reload erhalten. Echter Arbeitsraum-Lesebeleg direkt an der Karte, Projektauswahl ohne Änderung, weitere Verbindungen, aktueller Datenschutzstatus und Mobilbreiten320/390/768px geprüft. Schreibpause und Einstellungen erhalten, Aufgaben bleiben leer. Vollständiger Archivierungsablauf mit eigenen synthetischen Fixture-Projekten geprüft.62 Funktionen/23 synthetische Bilder; breite Fakten-/Geräte-/V1-Abnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }
