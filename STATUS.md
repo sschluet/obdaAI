@@ -1,5 +1,34 @@
 # obdaAI — Status 11.10.2026
 
+## Integrationsphasen, KI-Erstellungsdialog und Mailausgabe – lokal geprüft, 11.10.2026
+
+Neue Definitionen wählen Integrationen getrennt für Eingabe, Bearbeitung und
+Ausgabe. Paperless liefert tatsächlichen privaten Kontext auch für eigenständige
+Use Cases; Projektbindungen kommen weiterhin hinzu. Revisionen/Definitionen und
+Auswahl werden vor Abruf, am Modellübergang und während der Ausgabe geprüft.
+Nicht unterstützte Adapter sind sichtbar gesperrt, keine simulierte Ausführung.
+
+Echter KI-Erstellungsdialog über persistente Runs/Worker: lokale/Auto/Cloud-Wahl,
+Rückfragen, wiederherstellbare Historie, validierter Vorschlag und menschliche
+Übernahme in den Editor. Keine automatische Anlage, Ausführung oder Mail.
+Modellgenerierte Integrations-IDs werden entfernt. Schema0040 speichert Designer
+und Mailvorschauen/Quittungen ohne bestehende Ergebnis-Snapshots umzuschreiben;
+verlustbehafteter Downgrade wird verhindert.
+
+SMTP-Profile unter Integrationen mit gepinntem TLS465/STARTTLS587, verschlüsseltem
+Passwort, sichtbarem Absender und reiner Zugangstest ohne Versand. Primäre Verbindung
+konfigurierbar, explizite Use-Case-/Vorschauauswahl und eindeutiger benannter
+Mailversand im definierten Prompt haben Vorrang. Vorschau bindet Ergebnis,
+Empfänger, Betreff, Verbindung/Revision und Inhalt; Versand ausschließlich nach
+menschlichem Senden-Schritt. Einmalige Quittung, keine automatischen Retries;
+unklare Übernahme bleibt sichtbar. Aktiver Versand blockiert Löschung.
+
+Gezielte Backend- und Browserprüfungen sowie TypeScript/Build erfolgreich; vollständige
+lokale Suite, GitHub-CI, VM-Rollout und tatsächliche Designer-/Paperless-Modellabnahme
+folgen. Kein echter SMTP-Zugang und keine externen Testmails angefordert. Öffentliche
+Galerie erweitert ausschließlich um drei synthetische Ansichten. Aktive VM bleibt
+bis zur geprüften Lieferung b72bf2a/Schema0039.
+
 ## Dynamische Integrationsziele und Paperless – Test-VM geprüft, 11.10.2026
 
 App-Code `b72bf2a` / Schema `0039` installiert. Vollständige GitHub-CI

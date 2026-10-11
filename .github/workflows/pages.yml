@@ -9,6 +9,7 @@ on:
       - 'frontend/showcase-check.mjs'
       - 'frontend/capture-showcase.mjs'
       - 'frontend/capture-use-case-ai.mjs'
+      - 'frontend/capture-use-case-stages.mjs'
       - 'frontend/capture-paperless.mjs'
       - 'frontend/package.json'
       - 'frontend/pnpm-lock.yaml'
@@ -34,7 +35,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
-      - run: node --check frontend/capture-showcase.mjs && node --check frontend/capture-use-case-ai.mjs && node --check frontend/capture-paperless.mjs
+      - run: node --check frontend/capture-showcase.mjs && node --check frontend/capture-use-case-ai.mjs && node --check frontend/capture-paperless.mjs && node --check frontend/capture-use-case-stages.mjs
       - run: npm install -g pnpm@11.19.0 --ignore-scripts
       - run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: frontend

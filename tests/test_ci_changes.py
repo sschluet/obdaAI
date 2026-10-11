@@ -60,6 +60,7 @@ class CIProofTests(unittest.TestCase):
         for path in ["README.md", "STATUS.md", "AGENTS.md", "docs/routing.md",
                      "website/assets/chat.png", "scripts/publish_showcase.py",
                      "frontend/capture-use-case-ai.mjs", "frontend/capture-paperless.mjs",
+                     "frontend/capture-use-case-stages.mjs",
                      ".github/workflows/pages.yml", "frontend/showcase-check.mjs"]:
             with self.subTest(path=path):
                 self.assertFalse(app_relevant(path))

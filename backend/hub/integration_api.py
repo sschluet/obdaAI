@@ -25,10 +25,11 @@ from hub.knowledge_api import Auth
 from hub.mcp_client import discover, target
 from hub.paperless_client import assessment as paperless_assessment
 from hub.provider_settings import decrypt, encrypt
+from hub.use_case_delivery import default_info
 
-IntegrationKind = Literal["home_assistant", "paperless", "mcp", "unifi", "ssh"]
+IntegrationKind = Literal["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp"]
 Scope = Literal["project", "task", "conversation"]
-TYPES = ["home_assistant", "paperless", "mcp", "unifi", "ssh"]
+TYPES = ["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp"]
 
 
 class IntegrationInput(StrictInput):
@@ -38,6 +39,7 @@ class IntegrationInput(StrictInput):
     auth: Literal["api_key", "none", "bearer", "password", "private_key"]
     username: str = Field(default="", max_length=128)
     port: int = Field(default=22, ge=1, le=65535)
+    sender: str = Field(default="", max_length=254)
     host_key: str = Field(default="", max_length=4096)
     protocol: Literal["2026-07-28", "2025-11-25", "2025-06-18"] = "2026-07-28"
     certificate: str = Field(default="", max_length=16384)
@@ -57,10 +59,20 @@ class IntegrationInput(StrictInput):
             "unifi": {"api_key"},
             "mcp": {"none", "bearer"},
             "ssh": {"password", "private_key"},
+            "smtp": {"password"},
         }
         if self.auth not in schemes[self.kind]:
             raise ValueError("Authentication does not match integration type")
-        if self.kind == "ssh":
+        if self.kind == "smtp":
+            from hub.smtp_client import mailbox, validate_host
+
+            validate_host(self.url)
+            mailbox(self.sender)
+            if not self.username.strip() or self.port not in {465, 587}:
+                raise ValueError("SMTP requires user and TLS port 465 or 587")
+            if self.host_key or self.certificate:
+                raise ValueError("SMTP does not use SSH fields")
+        elif self.kind == "ssh":
             # Host only; no URI credentials, command, path, query or ssh options.
             if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.:-]{0,252}", self.url):
                 raise ValueError("SSH requires a host name or IP address")
@@ -101,6 +113,8 @@ class IntegrationInput(StrictInput):
                 raise ValueError("MCP requires its endpoint path")
             if self.username or self.host_key or self.certificate:
                 raise ValueError("SSH fields require an SSH connection")
+        if self.kind != "smtp" and self.sender:
+            raise ValueError("Sender requires SMTP")
         if self.secret and self.auth in {"api_key", "bearer"}:
             if len(self.secret) > 4096 or any(ord(c) < 33 or ord(c) > 126 for c in self.secret):
                 raise ValueError("Invalid API credential")
@@ -129,7 +143,7 @@ class BindingInput(StrictInput):
 
 def approved(cfg: Settings, row: Integration) -> bool:
     config = json.loads(row.config)
-    if policy_allows(cfg, config["url"], ssh=row.kind == "ssh"):
+    if policy_allows(cfg, config["url"], ssh=row.kind in {"ssh", "smtp"}):
         return True
     if row.kind == "home_assistant":
         return canonical_url(config["url"]) == ORIGIN and bool(cfg.ha_allowed_ip)
@@ -145,7 +159,7 @@ def approved(cfg: Settings, row: Integration) -> bool:
 def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
     checked = json.loads(row.last_check) if row.last_check else None
     target_ok = approved(cfg, row)
-    adapter = row.kind in {"home_assistant", "paperless", "mcp"}
+    adapter = row.kind in {"home_assistant", "paperless", "mcp", "smtp"}
     credentials = json.loads(row.config).get("auth") == "none" or bool(row.encrypted_secret)
     reason = (
         "disabled"
@@ -175,7 +189,9 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
         "check_available": reason == "ready",
         "availability_reason": reason,
         "last_check": checked,
-        "execution_available": row.kind == "paperless" and reason == "ready" and connected,
+        "execution_available": row.kind in {"paperless", "smtp"}
+        and reason == "ready"
+        and connected,
         "status": (
             "disabled"
             if not row.enabled
@@ -309,11 +325,20 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     raise HTTPException(409, "Integration geändert; neu laden")
                 previous = json.loads(row.config)
                 # Canonical-equivalent URL edits must not erase a working key.
-                if body.kind != "ssh":
+                if body.kind not in {"ssh", "smtp"}:
                     previous["url"] = canonical_url(previous["url"])
                 if any(
-                    previous.get(k) != getattr(body, k)
-                    for k in ("kind", "url", "auth", "username", "port", "host_key", "certificate")
+                    previous.get(k, "" if k == "sender" else None) != getattr(body, k)
+                    for k in (
+                        "kind",
+                        "url",
+                        "auth",
+                        "username",
+                        "port",
+                        "host_key",
+                        "certificate",
+                        "sender",
+                    )
                 ):
                     row.encrypted_secret = None
                 row.revision += 1
@@ -362,6 +387,19 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                 raise HTTPException(
                     409, "Integration zuerst aus Projekten, Aufgaben und Chats lösen"
                 )
+            from hub.use_cases import Definition, UseCase, UseCaseRevision
+
+            if default_info(db)["integration_id"] == row.id:
+                raise HTTPException(409, "Primäre Mailverbindung zuerst ändern oder zurücksetzen")
+            for case in db.scalars(select(UseCase)):
+                revision_row = db.get(UseCaseRevision, (case.id, case.revision))
+                assert revision_row
+                spec = Definition.model_validate_json(revision_row.spec)
+                if (
+                    row.id in spec.integration_inputs + spec.integration_processing
+                    or spec.output_integration_id == row.id
+                ):
+                    raise HTTPException(409, "Integration zuerst aus Use Cases lösen")
             db.delete(row)
             db.commit()
             return {"deleted": True, "id": str(integration_id)}
@@ -412,29 +450,34 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     )
                     if config["auth"] != "none" and not secret:
                         raise ValueError("Missing credential")
-                    with httpx.Client(
-                        verify=True, trust_env=False, follow_redirects=False, timeout=8
-                    ) as client:
-                        if row.kind == "paperless":
-                            result = paperless_assessment(client, cfg, config["url"], secret)
-                        elif row.kind == "mcp":
-                            result = discover(
-                                client,
-                                cfg,
-                                config["url"],
-                                config["protocol"],
-                                secret,
-                                configured_profile=policy_allows(cfg, config["url"]),
-                            )
-                        else:
-                            result = assessment(
-                                client,
-                                secret,
-                                allowed_ip=cfg.ha_allowed_ip,
-                                network_target=pinned_target(cfg, config["url"])
-                                if cfg.integration_targets_enabled
-                                else None,
-                            )
+                    if row.kind == "smtp":
+                        from hub.smtp_client import assessment as smtp_assessment
+
+                        result = smtp_assessment(cfg, config, secret)
+                    else:
+                        with httpx.Client(
+                            verify=True, trust_env=False, follow_redirects=False, timeout=8
+                        ) as client:
+                            if row.kind == "paperless":
+                                result = paperless_assessment(client, cfg, config["url"], secret)
+                            elif row.kind == "mcp":
+                                result = discover(
+                                    client,
+                                    cfg,
+                                    config["url"],
+                                    config["protocol"],
+                                    secret,
+                                    configured_profile=policy_allows(cfg, config["url"]),
+                                )
+                            else:
+                                result = assessment(
+                                    client,
+                                    secret,
+                                    allowed_ip=cfg.ha_allowed_ip,
+                                    network_target=pinned_target(cfg, config["url"])
+                                    if cfg.integration_targets_enabled
+                                    else None,
+                                )
                     report.update(
                         status="succeeded", message="Lesende Verbindung geprüft", result=result
                     )

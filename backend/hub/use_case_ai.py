@@ -247,8 +247,17 @@ def enqueue_execution(
     conversation: Conversation | None = None,
     user_content: str = "Bitte führe den definierten Verarbeitungsschritt aus.",
 ) -> tuple[Run, list[dict[str, Any]]]:
+    from hub.use_cases import freeze_case_integrations
+
+    integration_selection = freeze_case_integrations(db, case, spec)
     file_parts, receipts = files_context(db, case.id, spec, values)
-    private = bool(case.project_id or file_parts or private_derivatives or mode == "local")
+    private = bool(
+        case.project_id
+        or file_parts
+        or private_derivatives
+        or mode == "local"
+        or any(item.get("kind") == "paperless" for item in integration_selection["bindings"])
+    )
     if mode == "cloud" and private:
         raise HTTPException(
             409,
@@ -343,11 +352,8 @@ def enqueue_execution(
         "web_search_allowed": False,
         "routing_options": routing_options(db),
     }
-    if case.project_id:
-        from hub.integration_api import freeze_bindings
-
-        snapshot["integration_selection"] = freeze_bindings(db, "project", case.project_id)
-        snapshot["integration_scope"] = {"scope": "project", "owner_id": case.project_id}
+    snapshot["integration_selection"] = integration_selection
+    snapshot["integration_scope"] = {"scope": "use_case", "owner_id": case.id}
     execution = Run(
         conversation_id=conversation.id, status="queued", context_snapshot=encode(snapshot)
     )
@@ -653,6 +659,9 @@ def hidden_conversations(db: Any, identifier: str) -> list[str]:
 
 
 def cleanup_case_ai(db: Any, cfg: Any, identifier: str, *, project_delete: bool = False) -> None:
+    from hub.use_case_delivery import cleanup_deliveries
+
+    cleanup_deliveries(db, identifier)
     chats = hidden_conversations(db, identifier)
     if db.scalar(
         select(Run.id).where(Run.conversation_id.in_(chats), Run.status.in_(ACTIVE)).limit(1)

@@ -103,8 +103,29 @@ class Definition(Strict):
     output_columns: list[OutputColumn] = Field(default_factory=list, max_length=20)
     text_template: str = Field(default="", max_length=8000)
 
+    integration_inputs: list[str] = Field(default_factory=list, max_length=10)
+    integration_processing: list[str] = Field(default_factory=list, max_length=10)
+    output_integration_id: str | None = None
+
     @model_validator(mode="after")
     def references(self) -> "Definition":
+        for selected in (self.integration_inputs, self.integration_processing):
+            try:
+                normalized = [str(UUID(identifier)) for identifier in selected]
+            except (ValueError, TypeError, AttributeError):
+                raise ValueError("Integrationsauswahl benötigt gültige UUIDs") from None
+            if len(set(normalized)) != len(normalized):
+                raise ValueError("Integrationen dürfen je Schritt nur einmal ausgewählt werden")
+            selected[:] = normalized
+        if self.output_integration_id is not None:
+            try:
+                self.output_integration_id = str(UUID(self.output_integration_id))
+            except (ValueError, TypeError, AttributeError):
+                raise ValueError("Ausgabeintegration benötigt eine gültige UUID") from None
+        if self.execution_kind != "ai" and (
+            self.integration_inputs or self.integration_processing or self.output_integration_id
+        ):
+            raise ValueError("Integrationen benötigen KI-Verarbeitung")
         texts = [
             self.name,
             self.description,
@@ -152,6 +173,55 @@ class Definition(Strict):
         ):
             raise ValueError("Textausgabe benötigt eine Textvorlage")
         return self
+
+
+def validate_integrations(db: Any, spec: Definition) -> None:
+    from hub.integration_api import paperless_read_ready
+    from hub.integrations import Integration
+
+    for identifier in set(spec.integration_inputs + spec.integration_processing):
+        row = db.get(Integration, identifier)
+        if row is None or not paperless_read_ready(row):
+            raise HTTPException(
+                409,
+                "Eingabe und Bearbeitung benötigen eine aktivierte, erfolgreich geprüfte "
+                "Paperless-Integration",
+            )
+    if spec.output_integration_id:
+        from hub.use_case_delivery import validate_delivery_integration
+
+        validate_delivery_integration(db, spec.output_integration_id)
+
+
+def freeze_case_integrations(db: Any, case: UseCase, spec: Definition) -> dict[str, Any]:
+    """Explicit stage sources plus inherited project context; no remote I/O."""
+    from hub.integration_api import freeze_bindings
+    from hub.integrations import Integration
+
+    validate_integrations(db, spec)
+    project = freeze_bindings(db, "project", case.project_id) if case.project_id else None
+    bindings = list(project["bindings"]) if project else []
+    for identifier in dict.fromkeys(spec.integration_inputs + spec.integration_processing):
+        row = db.get(Integration, identifier)
+        if not any(item["id"] == identifier for item in bindings):
+            bindings.append(
+                {
+                    "id": row.id,
+                    "revision": row.revision,
+                    "kind": row.kind,
+                    "name": row.name,
+                    "enabled": row.enabled,
+                    "execution_available": True,
+                }
+            )
+    return {
+        "mode": "use_case",
+        "revision": case.revision,
+        "bindings": bindings,
+        "execution_available": any(item.get("execution_available") for item in bindings),
+        "project_selection": project,
+        "stages": {"input": spec.integration_inputs, "processing": spec.integration_processing},
+    }
 
 
 class SaveInput(Strict):
@@ -259,16 +329,33 @@ def project_case_witness(db: Any, project_id: str) -> dict[str, Any]:
         )
     )
     uploads = list(db.scalars(select(UseCaseUpload).where(UseCaseUpload.use_case_id.in_(ids))))
+    from hub.use_case_delivery import MailDelivery, MailPreview
+
+    mail = list(
+        db.scalars(
+            select(MailDelivery).where(
+                MailDelivery.preview_id.in_(
+                    select(MailPreview.id).where(MailPreview.run_id.in_([r.id for r in runs]))
+                )
+            )
+        )
+    )
+    previews = list(
+        db.scalars(select(MailPreview).where(MailPreview.run_id.in_([r.id for r in runs])))
+    )
     return {
         "use_cases": len(cases),
         "use_case_runs": len(runs),
-        "active_runs": sum(r.status in {"queued", "routing", "streaming"} for r in executions),
+        "active_runs": sum(r.status in {"queued", "routing", "streaming"} for r in executions)
+        + sum(d.status == "sending" for d in mail),
         "state": sorted([(c.id, c.revision) for c in cases])
         + sorted([(r.id, r.request_digest) for r in runs])
         + sorted([(r.id, r.status, r.cancel_requested) for r in executions])
         + sorted([(d.id, d.revision, d.request_digest) for d in dialogues])
         + sorted([(t.dialogue_id, t.turn, t.request_digest) for t in turns])
-        + sorted([(u.id, u.sha256) for u in uploads]),
+        + sorted([(u.id, u.sha256) for u in uploads])
+        + sorted([(p.id, p.sha256) for p in previews])
+        + sorted([(d.id, d.status, d.request_id) for d in mail]),
     }
 
 
@@ -360,6 +447,7 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 raise HTTPException(
                     422, "Neue Use Cases benötigen KI-Verarbeitung und einen Prompt/Kontext"
                 )
+            validate_integrations(db, body.spec)
             row = UseCase(project_id=target)
             db.add(row)
             db.flush()
@@ -395,6 +483,7 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 if target is not None:
                     project(db, target, True)
                 row.project_id = target
+            validate_integrations(db, body.spec)
             row.revision += 1
             spec = encode(body.spec.model_dump())
             db.add(

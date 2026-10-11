@@ -184,6 +184,24 @@
       "title": "Cloudkosten auf einen Blick.",
       "description": "Kontoguthaben, API-Schlüssellimit und lokales Monatsbudget klar unterscheiden. Ausschließlich synthetische USD-Werte; kein reales OpenRouter-Konto und keine Zugangsdaten.",
       "image": "assets/openroutercosts.png"
+    },
+    {
+      "id": "usecaseintegrations",
+      "title": "Quellen, Verarbeitung und Versand verbinden.",
+      "description": "Synthetischer Use Case mit eigenständiger Auswahl für Paperless-Eingaben, privaten Bearbeitungskontext und Mailausgabe. Keine realen Dokumente, Server oder Zugangsdaten.",
+      "image": "assets/usecaseintegrations.png"
+    },
+    {
+      "id": "usecasedesigner",
+      "title": "Beschreibe deinen Ablauf. Die KI entwirft ihn.",
+      "description": "Synthetischer Erstellungsdialog mit Rückfragen, Modellstatus und prüfbarem Vorschlag. Erst die bewusste Übernahme in den Editor und Speichern legt den Use Case an; keine echte Modellausgabe in dieser Galerie.",
+      "image": "assets/usecasedesigner.png"
+    },
+    {
+      "id": "usecasemail",
+      "title": "Ein Ergebnis. Ein bewusster Versand.",
+      "description": "Synthetische Mailvorschau mit sichtbarer Verbindung, Absender, Empfänger, Betreff und Ergebnis. Der ausdrückliche Senden-Schritt ist separat; keine echten Mails oder Kontakte.",
+      "image": "assets/usecasemail.png"
     }
   ],
   "groups": [
@@ -310,6 +328,26 @@
           "title": "Use Cases mit eigenen Eingaben und Ausgaben",
           "description": "Wiederverwendbare KI-Aufträge mit verpflichtendem Prompt/Kontext. Formulare oder KI-geführte Rückfragen erfassen Parameter und Eingabedateien; Ergebnisse entstehen per Modell in vorgegebenen Text-, Tabellen-, CSV-, Excel- oder Diagrammformaten. Ergebnis-Spalten sind unabhängig von Eingabefeldern. Versionierte Durchläufe, Korrekturen, Status, Modellherkunft und Originaldateibelege bleiben nachvollziehbar. Ältere deterministische Vorlagen und Ergebnisse bleiben erhalten. Allgemeine Integrationsaktionen und Webrecherche im Use Case sind separate Ausbauschritte.",
           "status": "live"
+        },
+        {
+          "title": "Integrationen in Use-Case-Eingabe und Bearbeitung",
+          "status": "implemented",
+          "description": "Paperless-Quellen pro Phase auswählen, auch ohne Projekt. Revisionen und Kontext bleiben an den Lauf gebunden und private Archivdaten lokal."
+        },
+        {
+          "title": "KI-Erstellungsdialog für Use Cases",
+          "status": "implemented",
+          "description": "Ablauf per Prompt beschreiben, Rückfragen beantworten und den validierten Vorschlag im Editor prüfen. Kein automatisches Speichern oder Ausführen."
+        },
+        {
+          "title": "Use-Case-Ergebnisse bewusst per Mail versenden",
+          "status": "implemented",
+          "description": "Verbindung, Empfänger und Inhalt in einer festen Vorschau prüfen und ausdrücklich senden. Eindeutige Quittungen verhindern automatische Wiederholung bei unklarer Übergabe."
+        },
+        {
+          "title": "Konfigurierbare SMTP-Verbindungen und primärer Mailversand",
+          "status": "implemented",
+          "description": "Mailprofile mit TLS unter Integrationen verwalten und primäre Verbindung festlegen. Use Case oder definierter Auftrag können sie gezielt überschreiben."
         }
       ]
     },

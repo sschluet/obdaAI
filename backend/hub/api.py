@@ -67,6 +67,8 @@ from hub.schedule_api import install_schedule_api
 from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
 from hub.task_drafts import install_task_drafts
+from hub.use_case_delivery import install as install_use_case_delivery
+from hub.use_case_designer import install as install_use_case_designer
 from hub.use_cases import install_use_case_api
 from hub.web_settings import endpoint as web_endpoint
 from hub.web_settings import install_web_settings_api, read_options
@@ -169,10 +171,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_personal_profile_api(app, factory)
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
+    install_use_case_delivery(app, cfg, factory)
     install_integration_api(app, cfg, factory)
     install_paperless_api(app, cfg, factory)
     install_paperless_import_api(app, cfg, factory)
     install_use_case_api(app, cfg, factory)
+    install_use_case_designer(app, cfg, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
     from hub.task_writes import install_task_writes

@@ -1,3 +1,4 @@
+import {captureUseCaseStages} from './capture-use-case-stages.mjs';
 import {capturePaperless} from './capture-paperless.mjs';
 import {captureAIUseCases} from './capture-use-case-ai.mjs';
 import {loginFixture} from './fixture-login.mjs';
@@ -63,6 +64,11 @@ try{
   await captureAnswerLimit();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Answer-limit screenshot captured with synthetic data only.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='use-case-stages'){
+  await captureUseCaseStages(page,base,capture);
+  console.log('Synthetic Use Case stages gallery captured.');
+  if(errors.length)throw Error(errors.join('\n'));
+  process.exitCode=0;
  }else if(process.env.SHOWCASE_CAPTURE_ONLY==='paperless'){
   await capturePaperless(page,base,capture);
   if(errors.length)throw Error(errors.join('\n'));

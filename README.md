@@ -89,3 +89,5 @@ HTTPS hinter einer vom Benutzer eingerichteten Synology: [Reverse-Proxy-Vertrag 
 CI startet schwere App-Prüfungen nur für einen noch nicht vollständig geprüften App-Baum; Website und Dokumentation werden gezielt geprüft: [CI-Umfang, Nachweise und Push-Bündelung](docs/ci-efficiency.md).
 
 Längere Konzepte, klare Teilantworten und manuelle Fortsetzung: [Antwort-, Kontext- und Kostenlimits](docs/answer-limits.md).
+
+- [Use Cases: Integrationsphasen, KI-Erstellungsdialog und Mailversand](docs/use-case-integrations.md)

@@ -88,6 +88,7 @@ async def execute_run(
             snapshot = json.loads(run.context_snapshot)
             parts = [ContextPart.model_validate(p) for p in snapshot["parts"]]
             roles = snapshot["roles"]
+        workflow_generation = bool(snapshot.get("use_case") or snapshot.get("use_case_designer"))
         label = (
             Privacy.LOCAL_ONLY
             if any(p.label == Privacy.LOCAL_ONLY for p in parts)
@@ -104,7 +105,9 @@ async def execute_run(
 
     def check_integration_context() -> None:
         selection = snapshot.get("integration_selection", {})
-        if not any(item.get("kind") == "paperless" for item in selection.get("bindings", [])):
+        if snapshot.get("integration_scope", {}).get("scope") != "use_case" and not any(
+            item.get("kind") == "paperless" for item in selection.get("bindings", [])
+        ):
             return
         from hub.integration_api import freeze_bindings
         from hub.paperless_api import validate_selection
@@ -113,7 +116,36 @@ async def execute_run(
             scope = snapshot.get(
                 "integration_scope", {"scope": "conversation", "owner_id": chat_id}
             )
-            if freeze_bindings(db, scope["scope"], scope["owner_id"]) != selection:
+            if scope["scope"] == "use_case":
+                from hub.use_cases import (
+                    Definition,
+                    UseCase,
+                    UseCaseRevision,
+                    freeze_case_integrations,
+                )
+
+                case = db.get(UseCase, scope["owner_id"])
+                frozen_case = snapshot.get("use_case", {})
+                if (
+                    case is None
+                    or case.revision != frozen_case.get("revision")
+                    or case.project_id != frozen_case.get("project_id")
+                ):
+                    raise ExecutionLimitError("Use Case geändert; Auftrag erneut starten")
+                revision = db.get(UseCaseRevision, (case.id, case.revision))
+                if revision is None:
+                    raise ExecutionLimitError("Use-Case-Definition fehlt")
+                try:
+                    current_selection = freeze_case_integrations(
+                        db, case, Definition.model_validate_json(revision.spec)
+                    )
+                except HTTPException as error:
+                    raise ExecutionLimitError(
+                        "Use-Case-Integration geändert oder deaktiviert"
+                    ) from error
+            else:
+                current_selection = freeze_bindings(db, scope["scope"], scope["owner_id"])
+            if current_selection != selection:
                 raise ExecutionLimitError("Integrationsauswahl geändert; Auftrag erneut starten")
             try:
                 validate_selection(db, selection)
@@ -237,6 +269,7 @@ async def execute_run(
             },
         )
         try:
+            check_integration_context()
             selection = snapshot.get("integration_selection", {})
             if any(item.get("kind") == "paperless" for item in selection.get("bindings", [])):
                 from hub.paperless_api import collect_context
@@ -284,14 +317,9 @@ async def execute_run(
             remember = (
                 re.fullmatch(r"(?is)merke dir\s*[:：]?\s+(.+)", latest.content) if latest else None
             )
-            if (
-                remember
-                and latest
-                and not snapshot.get("use_case")
-                and snapshot.get("model_cloud_only")
-            ):
+            if remember and latest and not workflow_generation and snapshot.get("model_cloud_only"):
                 raise ExecutionLimitError("Memory speichern ist lokal. Auto oder Nur lokal wählen.")
-            if remember and latest and not snapshot.get("use_case"):
+            if remember and latest and not workflow_generation:
                 if cancelled():
                     raise asyncio.CancelledError
                 if not cfg.vault_dir or not cfg.vault_writable:
@@ -344,7 +372,7 @@ async def execute_run(
                 )
                 raise MemoryCompleted
             if (
-                not snapshot.get("use_case")
+                not workflow_generation
                 and c.project_id
                 and latest
                 and ambiguous_file_revision(latest.content)
@@ -389,7 +417,7 @@ async def execute_run(
             async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
                     raise asyncio.CancelledError
-                if snapshot.get("use_case"):
+                if workflow_generation:
                     from hub.routing import Route
 
                     route = Route(
@@ -417,7 +445,7 @@ async def execute_run(
                 preparation_step = "Antwortvorbereitung"
                 classifier = None if snapshot.get("model_cloud_only") else route.model_class
                 classifier_reason = "" if snapshot.get("model_cloud_only") else route.reason
-                if latest and not snapshot.get("use_case"):
+                if latest and not workflow_generation:
                     from hub.skill_api import request_without_skill_prefix
 
                     route = conversational_research(
@@ -951,7 +979,7 @@ async def execute_run(
                     if current:
                         current.cost = providers.measured_cost
                         current.cost_basis = providers.cost_basis
-                if status == "succeeded" and not snapshot.get("use_case"):
+                if status == "succeeded" and not workflow_generation:
                     reserve_title(db, cfg, chat_id)
                 db.commit()
         yield ("done", {"status": status})
@@ -978,7 +1006,7 @@ async def execute_run(
             if cancelled() and not task.done():
                 task.cancel()
         await task
-        if cfg.database_url.startswith("sqlite") and not snapshot.get("use_case"):
+        if cfg.database_url.startswith("sqlite") and not workflow_generation:
             await execute_title(factory, providers, chat_id)
     except asyncio.CancelledError:
         task.cancel()

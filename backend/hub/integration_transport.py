@@ -133,7 +133,9 @@ def requests_plan(factory: sessionmaker[Session], cfg: Settings) -> list[dict[st
             try:
                 config = json.loads(row.config)
                 targets = resolved_targets(
-                    cfg, config["url"], ssh_port=config["port"] if row.kind == "ssh" else None
+                    cfg,
+                    config["url"],
+                    ssh_port=config["port"] if row.kind in {"ssh", "smtp"} else None,
                 )
                 plan.append({"id": row.id, "kind": row.kind, "targets": targets})
             except (ValueError, OSError, KeyError, TypeError):

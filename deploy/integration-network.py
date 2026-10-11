@@ -31,7 +31,7 @@ def apply(plan):
     ids = []
     rules = {"iptables": set(), "ip6tables": set()}
     for row in plan[:200]:
-        if row.get("kind") not in {"home_assistant", "paperless", "mcp", "unifi", "ssh"}:
+        if row.get("kind") not in {"home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp"}:
             continue
         accepted = []
         for raw, port in row.get("targets", [])[:32]:
