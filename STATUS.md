@@ -1,5 +1,24 @@
 # obdaAI — Status 11.10.2026
 
+## Kompakte Darstellung und persönliches Erscheinungsbild – 11.10.2026
+
+Kompakt als Standard reduziert Navigation, Karten, Kopfzeilen, Composer und
+Abstände; lesbarer Chattext und mobile Touchziele bleiben erhalten.
+Einstellungen → Allgemein bietet Appnamen, Anzeigenamen und Profilfoto mit
+Vorschau/Entfernen, kompakt/großzügig sowie vier Akzentfarben. Sidebar zeigt
+Foto/Initialen mit Namen darunter; der Profilbutton öffnet die Einstellungen.
+Serverpersistente private Anzeigepräferenzen, CAS und Schema0036 nach0035.
+Foto wird im Browser auf256px zugeschnitten und als Raster neu geschrieben;
+Server prüft Format/Größe und entfernt Metadaten. Keine KI-/Suchkontextnutzung.
+Loginseite enthält vor Anmeldung keine persönlichen Anzeigeinformationen.
+48 gezielte Backendtests bestanden,1 PostgreSQL-Fall übersprungen; Ruff/Mypy75,
+TypeScript/Build, Source-Scan438, Appearance-Browser (Speicherung/Zweitsitzung,
+Foto, Rücksetzen, alle Akzentfarben/Themes, Elementgröße und Mobil) und
+Design/Mobil320–1440px, Use-Case- und allgemeiner Browsercheck bestanden.
+Website66 Features/27synthetische Bilder vorbereitet. GitHub-CI/Publikation
+und Test-VM-Rollout bleiben getrennte Nachweise; keine aktive Schemaänderung.
+Die angefragte Ausnahme für VM-Prüfung statt GitHub-CI wartet auf Nutzerantwort.
+
 ## Use Cases als eigener Hauptbereich – 11.10.2026
 
 Auf ausdrücklichen Nutzerwunsch steht Use Cases jetzt in der Hauptnavigation

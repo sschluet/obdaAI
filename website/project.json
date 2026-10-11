@@ -54,6 +54,12 @@
       "image": "assets/security.png"
     },
     {
+      "id": "appearance",
+      "title": "Dein Arbeitsraum, dein Stil.",
+      "description": "Kompakte oder komfortable Abstände, eigene Akzentfarbe und ein eigener App-Name. Anzeigename und Foto gestalten die persönliche Karte unten links. Ausschließlich synthetische Angaben; diese Anzeigeeinstellungen werden nicht als KI-Profil verwendet.",
+      "image": "assets/appearance.png"
+    },
+    {
       "id": "generic-integrations",
       "title": "Deine Verbindungen. Ein klarer Überblick.",
       "description": "Fünf fiktive Verbindungsprofile für Home Assistant, Paperless, MCP, UniFi und SSH. Suche, Aktiv-Schalter, Status und direkte Zuordnungen; nicht verfügbare Laufzeitadapter werden offen gekennzeichnet.",
@@ -543,6 +549,11 @@
           "title": "Projekte und Chats endgültig löschen",
           "description": "Projekte inklusive ihrer App-Dateien, Quellen, Chats und Projektskills dauerhaft entfernen. Chats direkt über Gesprächsaktionen auch im Archiv löschen. Bestätigung mit Inhaltsübersicht und Zustandsnachweis; Abbrechen, laufende Vorgänge und aktuelle Abhängigkeiten berücksichtigt. Dauerhafte Dateibereinigung über vorhandene isolierte Verarbeiter, sichtbarer Fortschritt, Aufgabenhistorie und Kostenbuch erhalten. Auf der Test-VM mit synthetischen Chats, Quelle und tatsächlich erzeugter Word-Datei geprüft; Inhalte und App-Dateien nach Neuladen entfernt.",
           "status": "live"
+        },
+        {
+          "title": "Oberfläche persönlich gestalten",
+          "description": "Unter Einstellungen → Allgemein einen eigenen App-Namen, persönlichen Anzeigenamen und ein Foto speichern. Kompakte oder komfortable Abstände und vier Akzentfarben gestalten den gesamten Arbeitsraum. Anzeigeeinstellungen bleiben serverseitig gespeichert und sind vom persönlichen KI-Kontext getrennt. Implementiert; reale Test-VM-Abnahme steht noch aus.",
+          "status": "implemented"
         }
       ]
     }

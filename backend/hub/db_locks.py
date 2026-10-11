@@ -1,7 +1,7 @@
 """Stable global transaction-lock namespace; never reuse a key across resources.
 
 42 source storage; 43 memory index; 44 skills; 45 tasks; 46 task execution
-(two-key session locks); 47 artifact storage. 50 integration registry.
+(two-key session locks); 47 artifact storage. 50 integration registry; 51 appearance preferences.
 Keep deployed identifiers stable.
 """
 

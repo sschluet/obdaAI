@@ -19,6 +19,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from hub.account_api import install_account_api
 from hub.action_api import install_action_api
+from hub.appearance import install_appearance_api
 from hub.artifact_api import install_artifact_api
 from hub.artifact_drafts import install_artifact_drafts
 from hub.auth import (
@@ -148,6 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Personal AI Hub", version="0.1.0-dev", lifespan=lifespan)
     install_account_api(app, cfg, factory)
+    install_appearance_api(app, factory)
     install_workspace_search(app, factory)
     install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
