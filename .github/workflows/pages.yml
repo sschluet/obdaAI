@@ -7,6 +7,7 @@ on:
       - 'scripts/build_showcase.py'
       - 'scripts/publish_showcase.py'
       - 'frontend/showcase-check.mjs'
+      - 'frontend/capture-showcase.mjs'
       - 'frontend/package.json'
       - 'frontend/pnpm-lock.yaml'
       - '.github/workflows/pages.yml'
@@ -25,6 +26,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python scripts/scan_secrets.py
+      - run: python -m py_compile scripts/build_showcase.py scripts/publish_showcase.py
       - name: Build public allowlist
         run: python scripts/build_showcase.py --revision "$GITHUB_SHA"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

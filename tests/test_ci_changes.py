@@ -1,5 +1,6 @@
 """CI must not mistake canceled/partial/fork runs for a validated application tree."""
 
+import importlib.util
 import io
 import json
 import subprocess
@@ -10,7 +11,17 @@ import zipfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from scripts.ci_changes import FULL_JOBS, GitHub, app_relevant, decide, fingerprint, matching_proof
+_spec = importlib.util.spec_from_file_location(
+    "ci_changes", Path(__file__).resolve().parents[1] / "scripts/ci_changes.py"
+)
+_ci = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_ci)
+FULL_JOBS = _ci.FULL_JOBS
+GitHub = _ci.GitHub
+app_relevant = _ci.app_relevant
+decide = _ci.decide
+fingerprint = _ci.fingerprint
+matching_proof = _ci.matching_proof
 
 
 class FakeGitHub:

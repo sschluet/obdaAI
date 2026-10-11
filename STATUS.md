@@ -11,7 +11,9 @@ abgebrochene/teilweise/Fork-Läufe. Manuelle Ausführung und fehlende Nachweise 
 vollständig. Website: Pfadfilter, kein ungenutzter Pages-Artifact-Upload; reine
 Dokumentation ohne öffentliche Änderungen erfordert keine neue Veröffentlichung.
 Kleine Änderungen vor Push bündeln, erst später verfügbare Belege als ein leichtes
-Dokumentationsupdate. Acht gezielte CI-Tests lokal bestanden; Workflow-/Live-
+Dokumentationsupdate. Acht gezielte CI-Tests lokal bestanden; erster vollständiger
+CI-Lauf fand einen ausschließlich Pytest betreffenden Test-Importpfadfehler.
+Dynamischer Dateilader korrigiert; beide Testaufrufe werden geprüft. Workflow-/Live-
 Abnahme wird nach tatsächlichem Ergebnis ergänzt. App/Test-VM bleiben unverändert.
 
 ## GitHub Pages in obdaAI – migriert und altes Repository gelöscht, 11.10.2026
