@@ -13,6 +13,8 @@ try {
  await page.goto('http://127.0.0.1:18765');await loginFixture(page);
  const composer=page.locator('form.composer'),model=composer.getByRole('button',{name:'Modellwahl',exact:true}),plus=composer.getByRole('button',{name:'Aktionen und Anhänge',exact:true});
  if(await composer.locator('select').count())throw Error('Native composer selects remain');
+ // Keyboard focus does not wait for a disabled trigger to become ready.
+ await page.waitForFunction(()=>{const trigger=document.querySelector('form.composer button[aria-label="Modellwahl"]');return trigger instanceof HTMLButtonElement&&!trigger.disabled;});
  await model.focus();await page.keyboard.press('ArrowDown');await page.getByRole('menu',{name:'Modellwahl',exact:true}).waitFor();
  if(!await page.getByRole('menuitemradio',{name:'Auto',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Menu does not focus first option');
  await page.keyboard.press('ArrowDown');if(!await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).evaluate(e=>e===document.activeElement))throw Error('Arrow navigation failed');
