@@ -1,6 +1,6 @@
 # obdaAI — Status 11.10.2026
 
-## Integrationsseite bereinigt – lokal geprüft, 11.10.2026
+## Integrationsseite bereinigt – Test-VM geprüft, 11.10.2026
 
 Die redundante Linksektion „Modelle, Recherche und Zeitplanung“ sowie „Bisherige
 MCP-Verbindungen“ sind aus Einstellungen → Integrationen entfernt. Zentrale
@@ -9,7 +9,18 @@ alte Sprunglinks und die nicht mehr benötigte Scheduler-Statusabfrage entfallen
 Gespeicherte Verbindungen, Berechtigungen und API bleiben unverändert.
 TypeScript/Build, vorhandener Integrations-Browserablauf mit Aktionsfreigabe,
 Wiederholungsprüfung, Revisionsschutz, 390px und Prüfung auf fehlende Duplikate
-sowie Source-Scan erfolgreich. CI, Test-VM und öffentliche Veröffentlichung folgen.
+sowie Source-Scan erfolgreich. Vollständige CI38168180177 für App-Code `a0b64de`:
+1043 Backend-/PostgreSQLtests,35 synthetische Browserprüfungen und alle App-Jobs
+inklusive Geheimnisprüfung erfolgreich. Alter MCP-Oberflächentest auf zentrale
+Übersicht angepasst; überholter Lauf38167856707 abgebrochen.
+
+Test-VM aufa0b64de/Schema0040 aktualisiert, beide APIs gesund. Frisches verschlüsseltes
+Off-VM-Backup geprüft; Nachrichten, Use Cases/Revisionen/Ergebnisse, acht Overlays,
+Nginx und bisherige Firewallregeln erhalten. Gepinntes HTTPS, ausgelieferte UI-Module,
+Abwesenheit beider alten Bereiche und bestehende API-Verträge geprüft. Website-
+Beschreibungen und zwei synthetische Galerieansichten aktualisiert. Metadatenabschluss
+verwendet unveränderten App-Fingerprint; exakte leichte CI/Websiteveröffentlichung
+und öffentlicher Hashabgleich werden mit dieser Lieferung protokolliert.
 
 
 ## Cloudguthaben am Profil – Test-VM geprüft, 11.10.2026
