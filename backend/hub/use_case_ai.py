@@ -192,6 +192,8 @@ def output_instruction(spec: Definition) -> str:
         + ",".join(json.dumps(c) + ':"Wert"' for c in columns)
         + '}],"text":"optionale Zusammenfassung"}. Verwende exakt diese Spaltenschlüssel: '
         + json.dumps(columns)
+        + ". Geordnete Ausgabespalten (Schlüssel und fachliche Bedeutung): "
+        + encode([{"key": c.source, "label": c.label} for c in spec.output_columns])
         + ". Maximal 200 Zeilen, je Zelle Text (höchstens 4000 Zeichen), Zahl oder null. "
         + (
             "Für das Diagramm muss mindestens eine Spalte numerische Werte enthalten. "

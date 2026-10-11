@@ -398,3 +398,27 @@ def test_invalid_control_character_in_model_table_is_retained_but_not_exported(k
     assert result["output"]["text"] == raw
     assert client.get(base + "/output.csv").status_code == 409
     assert client.get(base + "/output.xlsx").status_code == 409
+
+
+def test_frozen_model_instruction_explains_independent_output_column_labels(knowledge):
+    spec = ai_spec("table")
+    spec["output_columns"] = [
+        {"source": "ergebnis", "label": "Begründung"},
+        {"source": "spalte_2", "label": "Empfohlene Maßnahme"},
+    ]
+    app, client, headers, case = create(knowledge, spec)
+    model = app.state.providers = Model(
+        [
+            json.dumps(
+                {"rows": [{"ergebnis": "Synthetic reasoning", "spalte_2": "Synthetic action"}]}
+            )
+        ]
+    )
+    first = run(client, headers, case)
+    result = wait(client, f"/api/use-cases/{case['id']}/runs/{first['id']}")
+    assert result["status"] == "succeeded"
+    system = model.calls[0][0][0].content
+    assert '{"key": "ergebnis", "label": "Begründung"}' in system
+    assert '{"key": "spalte_2", "label": "Empfohlene Maßnahme"}' in system
+    assert system.index('"label": "Begründung"') < system.index('"label": "Empfohlene Maßnahme"')
+    assert result["output"]["columns"] == ["Begründung", "Empfohlene Maßnahme"]
