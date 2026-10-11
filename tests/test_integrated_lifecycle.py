@@ -6,6 +6,7 @@ from hub.integrations import Integration, IntegrationBinding
 from hub.use_cases import UseCase, UseCaseRevision, UseCaseRun
 from sqlalchemy import func, select
 from test_actions import gateway  # noqa: F401
+from use_case_legacy_fixture import legacy
 
 
 def test_project_deletion_cas_covers_cases_runs_and_bindings(gateway):  # noqa: F811
@@ -17,7 +18,7 @@ def test_project_deletion_cas_covers_cases_runs_and_bindings(gateway):  # noqa: 
         "fields": [{"key": "amount", "label": "Amount", "type": "number"}],
         "output_columns": [{"label": "Amount", "source": "amount"}],
     }
-    created = client.post(root + "/use-cases", headers=headers, json={"spec": spec})
+    created = legacy(app, spec, project["id"])
     assert created.status_code == 200, created.text
     case_id = created.json()["id"]
     first = client.get(root + "/deletion").json()
@@ -75,7 +76,7 @@ def test_project_deletion_cas_covers_cases_runs_and_bindings(gateway):  # noqa: 
 
 
 def test_detach_invalidates_project_delete_witness_and_preserves_standalone_runs(gateway):  # noqa: F811
-    _, client, headers, _ = gateway
+    app, client, headers, _ = gateway
     project = client.post("/api/projects", headers=headers, json={"name": "Optional owner"}).json()
     root = "/api/projects/" + project["id"]
     definition = {
@@ -83,9 +84,7 @@ def test_detach_invalidates_project_delete_witness_and_preserves_standalone_runs
         "fields": [{"key": "amount", "label": "Amount", "type": "number"}],
         "output_columns": [{"label": "Amount", "source": "amount"}],
     }
-    bound = client.post(
-        "/api/use-cases", headers=headers, json={"spec": definition, "project_id": project["id"]}
-    ).json()
+    bound = legacy(app, definition, project["id"]).json()
     url = "/api/use-cases/" + bound["id"]
     run = client.post(
         url + "/runs",
@@ -95,7 +94,17 @@ def test_detach_invalidates_project_delete_witness_and_preserves_standalone_runs
     before = client.get(root + "/deletion").json()
     assert before["counts"]["use_cases"] == before["counts"]["use_case_runs"] == 1
     detached = client.put(
-        url, headers=headers, json={"spec": definition, "project_id": None, "expected_revision": 1}
+        url,
+        headers=headers,
+        json={
+            "spec": {
+                **definition,
+                "execution_kind": "ai",
+                "processing_prompt": "Synthetic processing",
+            },
+            "project_id": None,
+            "expected_revision": 1,
+        },
     )
     assert detached.status_code == 200, detached.text
     assert (
@@ -118,7 +127,15 @@ def test_detach_invalidates_project_delete_witness_and_preserves_standalone_runs
     rejected = client.put(
         url,
         headers=headers,
-        json={"spec": definition, "project_id": project["id"], "expected_revision": 2},
+        json={
+            "spec": {
+                **definition,
+                "execution_kind": "ai",
+                "processing_prompt": "Synthetic processing",
+            },
+            "project_id": project["id"],
+            "expected_revision": 2,
+        },
     )
     assert rejected.status_code == 404
     assert client.get(url).json()["revision"] == 2

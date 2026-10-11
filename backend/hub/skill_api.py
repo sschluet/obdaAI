@@ -375,7 +375,7 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
     def selection(chat_id: str, auth: Auth) -> dict[str, Any]:
         with factory() as db:
             c = db.get(Conversation, chat_id)
-            if not c:
+            if not c or c.purpose != "chat":
                 raise HTTPException(404, "Gespräch fehlt")
             return {
                 "skill_ids": json.loads(c.skill_selection)
@@ -388,7 +388,7 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
         with factory() as db:
             lock(db)
             c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
-            if not c or c.archived:
+            if not c or c.purpose != "chat" or c.archived:
                 raise HTTPException(404, "Aktives Gespräch fehlt")
             old = json.loads(c.skill_selection) if c.skill_selection is not None else None
             expected = (

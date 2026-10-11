@@ -8,6 +8,7 @@ on:
       - 'scripts/publish_showcase.py'
       - 'frontend/showcase-check.mjs'
       - 'frontend/capture-showcase.mjs'
+      - 'frontend/capture-use-case-ai.mjs'
       - 'frontend/package.json'
       - 'frontend/pnpm-lock.yaml'
       - '.github/workflows/pages.yml'
@@ -32,6 +33,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+      - run: node --check frontend/capture-showcase.mjs && node --check frontend/capture-use-case-ai.mjs
       - run: npm install -g pnpm@11.19.0 --ignore-scripts
       - run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: frontend

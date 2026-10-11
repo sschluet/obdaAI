@@ -8,6 +8,7 @@ import pytest
 from hub.use_cases import Definition, validated_values
 from openpyxl import load_workbook
 from pydantic import ValidationError
+from use_case_legacy_fixture import legacy
 
 pytest_plugins = ["test_knowledge"]
 
@@ -33,7 +34,7 @@ def setup(knowledge, kind="table"):
     app, client, headers, cfg, vault = knowledge
     project = client.post("/api/projects", json={"name": "Synthetic forms"}, headers=headers).json()
     base = f"/api/projects/{project['id']}/use-cases"
-    created = client.post(base, json={"spec": spec(kind)}, headers=headers)
+    created = legacy(app, spec(kind), project["id"])
     assert created.status_code == 200, created.text
     return client, headers, project, base, created.json()
 
@@ -61,7 +62,16 @@ def test_form_revision_snapshots_and_exact_replay(knowledge):
     assert replay.json()["id"] == first.json()["id"]
     assert submit(client, headers, base, case, amount=10, request_id=request_id).status_code == 409
     updated = client.put(
-        base + "/" + case["id"], json={"spec": spec("bi"), "expected_revision": 1}, headers=headers
+        base + "/" + case["id"],
+        json={
+            "spec": {
+                **spec("bi"),
+                "execution_kind": "ai",
+                "processing_prompt": "Synthetic processing",
+            },
+            "expected_revision": 1,
+        },
+        headers=headers,
     )
     assert updated.status_code == 200
     assert updated.json()["revision"] == 2
@@ -185,9 +195,9 @@ def test_invalid_json_number_and_surrogate_return_422_not_500(knowledge):
 
 
 def test_standalone_creation_without_projects_and_global_exports(knowledge):
-    _, client, headers, _, _ = knowledge
+    app, client, headers, _, _ = knowledge
     base = "/api/use-cases"
-    created = client.post(base, json={"spec": spec()}, headers=headers)
+    created = legacy(app, spec())
     assert created.status_code == 200, created.text
     case = created.json()
     assert case["project_id"] is None
@@ -213,7 +223,13 @@ def test_binding_changes_cas_legacy_scope_and_preserve_runs(knowledge):
     url = base + "/" + case["id"]
     original = submit(client, headers, legacy, case).json()
     detached = client.put(
-        url, json={"spec": spec(), "project_id": None, "expected_revision": 1}, headers=headers
+        url,
+        json={
+            "spec": {**spec(), "execution_kind": "ai", "processing_prompt": "Synthetic processing"},
+            "project_id": None,
+            "expected_revision": 1,
+        },
+        headers=headers,
     )
     assert detached.status_code == 200, detached.text
     assert detached.json()["project_id"] is None
@@ -231,12 +247,23 @@ def test_binding_changes_cas_legacy_scope_and_preserve_runs(knowledge):
     )
     rebound = client.put(
         url,
-        json={"spec": spec(), "project_id": project["id"], "expected_revision": 2},
+        json={
+            "spec": {**spec(), "execution_kind": "ai", "processing_prompt": "Synthetic processing"},
+            "project_id": project["id"],
+            "expected_revision": 2,
+        },
         headers=headers,
     )
     assert rebound.status_code == 200, rebound.text
     assert rebound.json()["project_id"] == project["id"]
-    unchanged = client.put(url, json={"spec": spec(), "expected_revision": 3}, headers=headers)
+    unchanged = client.put(
+        url,
+        json={
+            "spec": {**spec(), "execution_kind": "ai", "processing_prompt": "Synthetic processing"},
+            "expected_revision": 3,
+        },
+        headers=headers,
+    )
     assert unchanged.json()["project_id"] == project["id"]
     assert (
         client.put(
@@ -261,7 +288,15 @@ def test_optional_binding_rejects_invalid_deleted_and_archived_projects(knowledg
     assert (
         client.put(
             url,
-            json={"spec": spec(), "project_id": str(uuid4()), "expected_revision": 1},
+            json={
+                "spec": {
+                    **spec(),
+                    "execution_kind": "ai",
+                    "processing_prompt": "Synthetic processing",
+                },
+                "project_id": str(uuid4()),
+                "expected_revision": 1,
+            },
             headers=headers,
         ).status_code
         == 404
@@ -279,7 +314,17 @@ def test_optional_binding_rejects_invalid_deleted_and_archived_projects(knowledg
     )
     assert (
         client.put(
-            url, json={"spec": spec(), "project_id": None, "expected_revision": 1}, headers=headers
+            url,
+            json={
+                "spec": {
+                    **spec(),
+                    "execution_kind": "ai",
+                    "processing_prompt": "Synthetic processing",
+                },
+                "project_id": None,
+                "expected_revision": 1,
+            },
+            headers=headers,
         ).status_code
         == 409
     )
@@ -299,7 +344,7 @@ def test_read_snapshot_survives_delete_after_sql_fetch(knowledge, suffix):
     from sqlalchemy import event
 
     app, client, headers, _, _ = knowledge
-    case = client.post("/api/use-cases", json={"spec": spec()}, headers=headers).json()
+    case = legacy(app, spec()).json()
     run = submit(client, headers, "/api/use-cases", case, amount=42).json()
     reached = Event()
     resume = Event()

@@ -304,7 +304,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> list[dict[str, object]]:
         with factory() as db:
             ownership_lock(db)
-            statement = select(Conversation).where(Conversation.archived == archived)
+            statement = select(Conversation).where(
+                Conversation.archived == archived, Conversation.purpose == "chat"
+            )
             if project_id:
                 if not db.get(Project, project_id):
                     raise HTTPException(404, "Projektraum nicht gefunden")
@@ -394,7 +396,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def get_chat(chat_id: str, session: SessionDependency) -> dict[str, object]:
         with factory() as db:
             c = db.get(Conversation, chat_id)
-            if not c:
+            if not c or c.purpose != "chat":
                 raise HTTPException(404, "Gespräch nicht gefunden")
             messages = db.scalars(
                 select(Message)
@@ -489,7 +491,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         with factory() as db:
             ownership_lock(db)
             c = db.get(Conversation, chat_id)
-            if not c:
+            if not c or c.purpose != "chat":
                 raise HTTPException(404, "Gespräch nicht gefunden")
             if body.title is not None:
                 c.title, c.manual_title, c.title_status = body.title, True, "manual"
@@ -596,13 +598,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         with factory() as db:
             ownership_lock(db)
             if request_id:
+                owner = db.get(Conversation, chat_id)
+                if not owner or owner.purpose != "chat":
+                    raise HTTPException(404, "Gespräch nicht gefunden")
                 previous = db.scalar(select(Run).where(Run.request_key == request_id))
                 if previous:
                     if previous.conversation_id != chat_id or previous.request_digest != digest:
                         raise HTTPException(409, "Anfrage-ID gehört zu anderem Gespräch")
                     return previous.id
             c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
-            if not c or c.archived:
+            if not c or c.purpose != "chat" or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
             if cloud_allowed and not (local_only or model_local_only):
                 provider = cloud_provider or c.cloud_provider

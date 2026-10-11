@@ -17,6 +17,7 @@ LIGHT_ROOTS = {"README.md", "STATUS.md", "AGENTS.md"}
 WEBSITE_FILES = {
     "scripts/build_showcase.py", "scripts/publish_showcase.py",
     "frontend/showcase-check.mjs", "frontend/capture-showcase.mjs",
+    "frontend/capture-use-case-ai.mjs",
     ".github/workflows/pages.yml",
 }
 FULL_JOBS = {"python", "secrets", "frontend", "container", "browser-runner", "artifact-runner"}

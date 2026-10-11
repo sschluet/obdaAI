@@ -172,7 +172,7 @@ def binding_owner(db: Session, scope: Scope, owner_id: str) -> None:
         owner = db.scalar(select(Task).where(Task.id == owner_id).with_for_update())
     else:
         owner = db.scalar(select(Conversation).where(Conversation.id == owner_id).with_for_update())
-    if not owner or owner.archived:
+    if not owner or owner.archived or (isinstance(owner, Conversation) and owner.purpose != "chat"):
         raise HTTPException(404, "Bereich nicht vorhanden oder archiviert")
 
 

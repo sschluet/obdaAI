@@ -152,8 +152,12 @@ async def execute_run(
             ) from None
         if not results:
             raise ExecutionLimitError("Websuche abgeschlossen, keine belegten Ergebnisse")
-        public_cloud = (c.cloud_allowed and not snapshot.get("model_local_only")
-                        and not c.project_id and not c.memory_scope)
+        public_cloud = (
+            c.cloud_allowed
+            and not snapshot.get("model_local_only")
+            and not c.project_id
+            and not c.memory_scope
+        )
         web_parts = [
             ContextPart(
                 content=f"WEBQUELLE {item['url']} · Abruf {item['retrieved_at']}\n"
@@ -166,8 +170,10 @@ async def execute_run(
             for index, item in enumerate(results[:8])
         ]
         if public_cloud:
-            grants.extend(CloudGrant(source_id=p.source_id, revision=p.revision,
-                                     provider_id=c.cloud_provider) for p in web_parts)
+            grants.extend(
+                CloudGrant(source_id=p.source_id, revision=p.revision, provider_id=c.cloud_provider)
+                for p in web_parts
+            )
         parts.extend(web_parts)
         roles.extend("user" for _ in web_parts)
         with factory() as db:
@@ -200,10 +206,16 @@ async def execute_run(
         preparation_step = "lokale Einordnung"
         started = time.monotonic()
         yield ("run", {"id": run_id})
-        yield ("status", {"message": (
-            "Cloudantwort wird vorbereitet" if snapshot.get("model_cloud_only")
-            else "Anfrage wird lokal eingeordnet"
-        )})
+        yield (
+            "status",
+            {
+                "message": (
+                    "Cloudantwort wird vorbereitet"
+                    if snapshot.get("model_cloud_only")
+                    else "Anfrage wird lokal eingeordnet"
+                )
+            },
+        )
         try:
             # Only a direct authenticated user message can request this bounded write.
             # Source/Memory/Web content and model output are never parsed as commands.
@@ -211,9 +223,14 @@ async def execute_run(
             remember = (
                 re.fullmatch(r"(?is)merke dir\s*[:：]?\s+(.+)", latest.content) if latest else None
             )
-            if remember and latest and snapshot.get("model_cloud_only"):
+            if (
+                remember
+                and latest
+                and not snapshot.get("use_case")
+                and snapshot.get("model_cloud_only")
+            ):
                 raise ExecutionLimitError("Memory speichern ist lokal. Auto oder Nur lokal wählen.")
-            if remember and latest:
+            if remember and latest and not snapshot.get("use_case"):
                 if cancelled():
                     raise asyncio.CancelledError
                 if not cfg.vault_dir or not cfg.vault_writable:
@@ -265,7 +282,12 @@ async def execute_run(
                     reason="Explizites Memory ohne Modell",
                 )
                 raise MemoryCompleted
-            if c.project_id and latest and ambiguous_file_revision(latest.content):
+            if (
+                not snapshot.get("use_case")
+                and c.project_id
+                and latest
+                and ambiguous_file_revision(latest.content)
+            ):
                 from hub.chat_artifacts import media_operation, named_originals
 
                 with factory() as db:
@@ -280,8 +302,10 @@ async def execute_run(
             selected: dict[str, ProviderConfig] = {}
             if isinstance(providers, Providers):
                 cfg, providers, selected = runtime_provider(
-                    factory, cfg, external_kind=c.cloud_provider,
-                    cloud_only=bool(snapshot.get("model_cloud_only"))
+                    factory,
+                    cfg,
+                    external_kind=c.cloud_provider,
+                    cloud_only=bool(snapshot.get("model_cloud_only")),
                 )
                 if not snapshot.get("model_cloud_only"):
                     local = selected.get("local")
@@ -304,13 +328,24 @@ async def execute_run(
             async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
                     raise asyncio.CancelledError
-                if snapshot.get("model_cloud_only"):
+                if snapshot.get("use_case"):
+                    from hub.routing import Route
+
+                    route = Route(
+                        capabilities=[Capability.CHAT],
+                        model_class="cloud" if snapshot.get("model_cloud_only") else "local",
+                        reason="Vordefinierter KI Use Case; reine Antwortgenerierung",
+                    )
+                elif snapshot.get("model_cloud_only"):
                     # Explicit Cloud needs no local inference. This route permits only
                     # text and the separately authorized public research operation.
                     from hub.routing import Route
 
-                    route = Route(capabilities=[Capability.CHAT], model_class="cloud",
-                                  reason="Cloud ausdrücklich gewählt")
+                    route = Route(
+                        capabilities=[Capability.CHAT],
+                        model_class="cloud",
+                        reason="Cloud ausdrücklich gewählt",
+                    )
                     if latest and snapshot.get("web_search_allowed"):
                         from hub.chat_artifacts import requests_public_research
 
@@ -321,7 +356,7 @@ async def execute_run(
                 preparation_step = "Antwortvorbereitung"
                 classifier = None if snapshot.get("model_cloud_only") else route.model_class
                 classifier_reason = "" if snapshot.get("model_cloud_only") else route.reason
-                if latest:
+                if latest and not snapshot.get("use_case"):
                     from hub.skill_api import request_without_skill_prefix
 
                     route = conversational_research(
@@ -329,9 +364,11 @@ async def execute_run(
                         request_without_skill_prefix(latest.content, snapshot.get("skills", [])),
                         private_context=bool(c.project_id or c.memory_scope),
                     )
-                if (route.reason == "Textrecherche; keine Datei oder Systemaktion angefordert"
+                if (
+                    route.reason == "Textrecherche; keine Datei oder Systemaktion angefordert"
                     and snapshot.get("web_search_allowed")
-                    and Capability.WEB not in route.capabilities):
+                    and Capability.WEB not in route.capabilities
+                ):
                     route.capabilities.append(Capability.WEB)
                 # A definite authenticated request for public research cannot
                 # become an unsourced file because the model omitted one skill.
@@ -351,9 +388,8 @@ async def execute_run(
                 if cancelled():
                     raise asyncio.CancelledError
                 if snapshot.get("model_cloud_only") and (
-                    route.read_tool or not set(route.capabilities).issubset(
-                        {Capability.CHAT, Capability.WEB}
-                    )
+                    route.read_tool
+                    or not set(route.capabilities).issubset({Capability.CHAT, Capability.WEB})
                 ):
                     raise ExecutionLimitError(
                         "Diese Anfrage benötigt lokale Werkzeuge. Auto oder Nur lokal wählen."
@@ -517,8 +553,11 @@ async def execute_run(
                     preparation_step = "Webrecherche"
                     await research(latest)
                     preparation_step = "Antwortvorbereitung"
-                    label = (Privacy.LOCAL_ONLY if any(p.label == Privacy.LOCAL_ONLY for p in parts)
-                             else Privacy.CLOUD_ALLOWED)
+                    label = (
+                        Privacy.LOCAL_ONLY
+                        if any(p.label == Privacy.LOCAL_ONLY for p in parts)
+                        else Privacy.CLOUD_ALLOWED
+                    )
                     route.answer = None
                     yield ("status", {"message": "Webquellen mit URL und Abrufzeit gespeichert"})
                     if sum(len(p.content) for p in parts) > cfg.context_limit:
@@ -553,9 +592,18 @@ async def execute_run(
                 with factory() as db:
                     routing_options = snapshot.get("routing_options") or read_routing_options(db)
                 trace = decision(
-                    latest.content if latest else "", routing_options,
-                    classifier=classifier, classifier_reason=classifier_reason,
-                    cloud_enabled=cfg.cloud_enabled, cloud_allowed=c.cloud_allowed,
+                    (
+                        snapshot["use_case"]["spec"]["processing_prompt"]
+                        if snapshot.get("use_case")
+                        else latest.content
+                        if latest
+                        else ""
+                    ),
+                    routing_options,
+                    classifier=classifier,
+                    classifier_reason=classifier_reason,
+                    cloud_enabled=cfg.cloud_enabled,
+                    cloud_allowed=c.cloud_allowed,
                     model_local_only=bool(snapshot.get("model_local_only")),
                     model_cloud_only=bool(snapshot.get("model_cloud_only")),
                     private_context=bool(c.project_id or c.memory_scope),
@@ -659,8 +707,9 @@ async def execute_run(
                 if not external and selected_provider:
                     limits = json.loads(selected_provider.config)
                     input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
-                    effective_output = min(limits["output_tokens"],
-                                           limits["context_tokens"] - input_bound)
+                    effective_output = min(
+                        limits["output_tokens"], limits["context_tokens"] - input_bound
+                    )
                     if effective_output < 16:
                         raise ExecutionLimitError("Kontextgrenze lässt keinen Antwortumfang zu")
                     cfg = replace(cfg, local_max_tokens=effective_output)
@@ -715,7 +764,7 @@ async def execute_run(
                         if not output:
                             update(first_content_seconds=time.monotonic() - started)
                         if len(output) + len(chunk) > 96000:
-                            remaining = chunk[:96000 - len(output)]
+                            remaining = chunk[: 96000 - len(output)]
                             if remaining:
                                 output += remaining
                                 yield ("delta", {"text": remaining})
@@ -728,6 +777,16 @@ async def execute_run(
                         yield ("delta", {"text": chunk})
                 if not output:
                     raise ValueError("Empty provider response")
+                if snapshot.get("use_case"):
+                    from hub.use_case_ai import validate_execution
+
+                    try:
+                        validate_execution(snapshot, output)
+                    except (ValueError, HTTPException) as error:
+                        raise ExecutionLimitError(
+                            "KI-Ausgabe entspricht nicht dem definierten Format; "
+                            "Rohtext bleibt erhalten"
+                        ) from error
                 status = "succeeded"
         except (MemoryCompleted, ArtifactCompleted):
             status = "succeeded"
@@ -792,17 +851,20 @@ async def execute_run(
             # credentials to operational logs while retaining a useful diagnosis.
             logging.getLogger(__name__).warning("Chat execution failed (%s)", type(error).__name__)
             message = (
-                "Cloud-Anbieter nicht verfügbar oder ungültige Antwort; "
-                "keine lokale Ersatzantwort." if snapshot.get("model_cloud_only")
+                "Cloud-Anbieter nicht verfügbar oder ungültige Antwort; keine lokale Ersatzantwort."
+                if snapshot.get("model_cloud_only")
                 else "Provider nicht verfügbar oder ungültige Antwort"
             )
             update(error=message)
             yield (
                 "error",
                 {
-                    "message": (message if snapshot.get("model_cloud_only") else
-                                "Antwort fehlgeschlagen. Lokalen Dienst und Provider prüfen; "
-                                "kein Cloud-Fallback.")
+                    "message": (
+                        message
+                        if snapshot.get("model_cloud_only")
+                        else "Antwort fehlgeschlagen. Lokalen Dienst und Provider prüfen; "
+                        "kein Cloud-Fallback."
+                    )
                 },
             )
         finally:
@@ -825,7 +887,7 @@ async def execute_run(
                     if current:
                         current.cost = providers.measured_cost
                         current.cost_basis = providers.cost_basis
-                if status == "succeeded":
+                if status == "succeeded" and not snapshot.get("use_case"):
                     reserve_title(db, cfg, chat_id)
                 db.commit()
         yield ("done", {"status": status})
@@ -852,7 +914,7 @@ async def execute_run(
             if cancelled() and not task.done():
                 task.cancel()
         await task
-        if cfg.database_url.startswith("sqlite"):
+        if cfg.database_url.startswith("sqlite") and not snapshot.get("use_case"):
             await execute_title(factory, providers, chat_id)
     except asyncio.CancelledError:
         task.cancel()

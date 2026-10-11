@@ -31,6 +31,7 @@ separately from local SQLite contract checks.
 - [Provider configuration, encrypted secrets and budgets](docs/providers.md)
 - [Web research settings and connection check](docs/web-settings.md)
 - [Versions and sources](docs/dependencies.md)
+- [KI Use Cases: Prompt, Eingabedateien, Dialog und Ausgabe](docs/ai-use-cases.md)
 - [Operator n8n connection check](docs/n8n-connection-check.md)
 
 ## Current development limits

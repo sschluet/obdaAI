@@ -78,6 +78,12 @@
       "image": "assets/usecases.png"
     },
     {
+      "id": "usecasedialogue",
+      "title": "Die KI fragt nach. Du behältst den Überblick.",
+      "description": "Ein synthetischer KI-Dialog klärt die benötigten Angaben zum fiktiven Servicekonzept. Erfasste Parameter bleiben sichtbar und korrigierbar; das finale Ergebnis wird ausdrücklich angefordert. Die Galerie simuliert Modellantworten und enthält keine privaten Gespräche.",
+      "image": "assets/usecasedialogue.png"
+    },
+    {
       "id": "use-case-builder",
       "title": "Dein Ablauf. Dein Kontext.",
       "description": "Formularfelder und Ausgabeformat direkt wählen. Die durchsuchbare Projektauswahl ist optional: Ohne Projekt funktioniert der Use Case eigenständig. Dieses Beispiel enthält nur fiktive Zahlen und Projektangaben.",
@@ -296,8 +302,8 @@
         },
         {
           "title": "Use Cases mit eigenen Eingaben und Ausgaben",
-          "description": "Eigener Navigationsbereich zwischen Projekte und Aufgaben für eigenständige oder optional projektbezogene Use Cases. Suche, Projektfilter, suchbare Projektauswahl und direkte Feldtyp- und Antwortauswahl. Formulare und Frage-für-Frage-Dialoge mit Text-, Zahlen-, Datums- und Auswahlfeldern. Lokale Ausgabe als Tabelle, CSV, Excel, Balkendiagramm oder Textvorlage; gespeicherte Eingaben und feste Revisionen, Kopieren und endgültiges Löschen. Freier KI-Chat, automatische Berechnungen und Integrationsabfragen sind noch nicht verfügbar.",
-          "status": "limited"
+          "description": "Wiederverwendbare KI-Aufträge mit verpflichtendem Prompt/Kontext. Formulare oder KI-geführte Rückfragen erfassen Parameter und Eingabedateien; Ergebnisse entstehen per Modell in vorgegebenen Text-, Tabellen-, CSV-, Excel- oder Diagrammformaten. Ergebnis-Spalten sind unabhängig von Eingabefeldern. Versionierte Durchläufe, Korrekturen, Status, Modellherkunft und Originaldateibelege bleiben nachvollziehbar. Ältere deterministische Vorlagen und Ergebnisse bleiben erhalten. Allgemeine Integrationsaktionen und Webrecherche im Use Case sind separate Ausbauschritte.",
+          "status": "implemented"
         }
       ]
     },

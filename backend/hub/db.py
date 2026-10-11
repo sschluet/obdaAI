@@ -49,6 +49,7 @@ class AccountCredential(Base):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    purpose: Mapped[str] = mapped_column(String(20), default="chat", server_default="chat")
     skill_selection: Mapped[str | None] = mapped_column(Text, nullable=True)
     memory_scope: Mapped[str | None] = mapped_column(String(20), nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)

@@ -27,6 +27,7 @@ def binding(db: Any, project_id: str, source: ChatSource) -> tuple[ContextPart, 
     )
     if (
         not chat
+        or chat.purpose != "chat"
         or chat.archived
         or chat.memory_scope
         or (chat.project_id and chat.project_id != project_id)

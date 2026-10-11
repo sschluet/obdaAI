@@ -1,4 +1,4 @@
-"""Optionally project-scoped declarative forms and immutable local results; no model execution."""
+"""Versioned AI input workflows and backwards-compatible immutable local forms."""
 
 import csv
 import hashlib
@@ -57,6 +57,7 @@ class UseCaseRun(Base):
     request_digest: Mapped[str] = mapped_column(String(64))
     snapshot: Mapped[str] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float)
+    execution_run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True)
 
 
 class Strict(BaseModel):
@@ -66,7 +67,7 @@ class Strict(BaseModel):
 class InputField(Strict):
     key: str = Field(pattern=r"^[a-z][a-z0-9_]{0,39}$")
     label: str = Field(min_length=1, max_length=100)
-    type: Literal["text", "long_text", "number", "date", "choice"] = "text"
+    type: Literal["text", "long_text", "number", "date", "choice", "file"] = "text"
     required: bool = True
     choices: list[str] = Field(default_factory=list, max_length=30)
 
@@ -92,12 +93,14 @@ class OutputColumn(Strict):
 
 
 class Definition(Strict):
+    execution_kind: Literal["legacy", "ai"] = "legacy"
+    processing_prompt: str = Field(default="", max_length=12000)
     name: str = Field(min_length=1, max_length=160)
     description: str = Field(default="", max_length=1000)
     presentation: Literal["form", "dialogue"] = "form"
     fields: list[InputField] = Field(min_length=1, max_length=20)
     output_kind: Literal["table", "csv", "xlsx", "bi", "chat"] = "table"
-    output_columns: list[OutputColumn] = Field(min_length=1, max_length=20)
+    output_columns: list[OutputColumn] = Field(default_factory=list, max_length=20)
     text_template: str = Field(default="", max_length=8000)
 
     @model_validator(mode="after")
@@ -106,6 +109,7 @@ class Definition(Strict):
             self.name,
             self.description,
             self.text_template,
+            self.processing_prompt,
             *[f.label for f in self.fields],
             *[c.label for c in self.output_columns],
         ]
@@ -120,16 +124,32 @@ class Definition(Strict):
         keys = {f.key for f in self.fields}
         if len(keys) != len(self.fields):
             raise ValueError("Feldschlüssel müssen eindeutig sein")
-        if any(c.source not in keys for c in self.output_columns):
+        if self.execution_kind == "ai" and not self.processing_prompt.strip():
+            raise ValueError("KI Use Cases benötigen einen Prompt/Kontext für die Verarbeitung")
+        if self.execution_kind == "legacy" and any(f.type == "file" for f in self.fields):
+            raise ValueError("Dateieingaben benötigen KI-Verarbeitung")
+        if self.output_kind != "chat" and not self.output_columns:
+            raise ValueError("Strukturierte Ausgabe benötigt Ausgabespalten")
+        if self.execution_kind == "legacy" and any(
+            c.source not in keys for c in self.output_columns
+        ):
             raise ValueError("Ausgabespalte verweist auf unbekanntes Feld")
         if len({c.source for c in self.output_columns}) != len(self.output_columns):
             raise ValueError("Ein Feld darf nur einmal ausgegeben werden")
-        if self.output_kind == "bi" and not any(f.type == "number" for f in self.fields):
+        if (
+            self.execution_kind == "legacy"
+            and self.output_kind == "bi"
+            and not any(f.type == "number" for f in self.fields)
+        ):
             raise ValueError("Diagramme benötigen ein Zahlenfeld")
         tokens = re.findall(r"\{([^{}]*)\}", self.text_template)
-        if any(token not in keys for token in tokens):
+        if self.execution_kind == "legacy" and any(token not in keys for token in tokens):
             raise ValueError("Textvorlage verweist auf unbekanntes Feld")
-        if self.output_kind == "chat" and not self.text_template.strip():
+        if (
+            self.execution_kind == "legacy"
+            and self.output_kind == "chat"
+            and not self.text_template.strip()
+        ):
             raise ValueError("Textausgabe benötigt eine Textvorlage")
         return self
 
@@ -147,7 +167,9 @@ class DeleteInput(Strict):
 class RunInput(Strict):
     request_id: UUID
     expected_revision: int = Field(ge=1)
-    values: dict[str, Any]
+    values: dict[str, Any] = Field(default_factory=dict)
+    model_mode: Literal["auto", "local", "cloud"] = "local"
+    dialogue_id: UUID | None = None
 
 
 def encode(value: Any) -> str:
@@ -176,7 +198,12 @@ def validated_values(spec: Definition, values: dict[str, Any]) -> dict[str, Any]
             valid = len(value) <= (8000 if field.type == "long_text" else 1000) and not re.search(
                 r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff]", value
             )
-            if field.type == "choice":
+            if field.type == "file":
+                try:
+                    valid = str(UUID(value)) == value
+                except ValueError:
+                    valid = False
+            elif field.type == "choice":
                 valid = value in field.choices
             elif field.type == "date":
                 try:
@@ -208,25 +235,57 @@ def result_for(spec: Definition, values: dict[str, Any]) -> dict[str, Any]:
 
 
 def project_case_witness(db: Any, project_id: str) -> dict[str, Any]:
+    from hub.db import Run
+    from hub.use_case_ai import (
+        UseCaseDialogue,
+        UseCaseDialogueTurn,
+        UseCaseUpload,
+        hidden_conversations,
+    )
+
     cases = list(db.scalars(select(UseCase).where(UseCase.project_id == project_id)))
     ids = [c.id for c in cases]
     runs = list(db.scalars(select(UseCaseRun).where(UseCaseRun.use_case_id.in_(ids))))
+    chats = [chat for c in cases for chat in hidden_conversations(db, c.id)]
+    executions = list(db.scalars(select(Run).where(Run.conversation_id.in_(chats))))
+    dialogues = list(
+        db.scalars(select(UseCaseDialogue).where(UseCaseDialogue.use_case_id.in_(ids)))
+    )
+    turns = list(
+        db.scalars(
+            select(UseCaseDialogueTurn).where(
+                UseCaseDialogueTurn.dialogue_id.in_([d.id for d in dialogues])
+            )
+        )
+    )
+    uploads = list(db.scalars(select(UseCaseUpload).where(UseCaseUpload.use_case_id.in_(ids))))
     return {
         "use_cases": len(cases),
         "use_case_runs": len(runs),
+        "active_runs": sum(r.status in {"queued", "routing", "streaming"} for r in executions),
         "state": sorted([(c.id, c.revision) for c in cases])
-        + sorted([(r.id, r.request_digest) for r in runs]),
+        + sorted([(r.id, r.request_digest) for r in runs])
+        + sorted([(r.id, r.status, r.cancel_requested) for r in executions])
+        + sorted([(d.id, d.revision, d.request_digest) for d in dialogues])
+        + sorted([(t.dialogue_id, t.turn, t.request_digest) for t in turns])
+        + sorted([(u.id, u.sha256) for u in uploads]),
     }
 
 
-def delete_project_cases(db: Any, project_id: str) -> None:
-    ids = select(UseCase.id).where(UseCase.project_id == project_id)
+def delete_project_cases(db: Any, project_id: str, cfg: Any = None) -> None:
+    from hub.use_case_ai import cleanup_case_ai
+
+    ids = list(db.scalars(select(UseCase.id).where(UseCase.project_id == project_id)))
+    for identifier in ids:
+        cleanup_case_ai(db, cfg, identifier, project_delete=True)
     db.execute(delete(UseCaseRun).where(UseCaseRun.use_case_id.in_(ids)))
     db.execute(delete(UseCaseRevision).where(UseCaseRevision.use_case_id.in_(ids)))
-    db.execute(delete(UseCase).where(UseCase.project_id == project_id))
+    db.execute(delete(UseCase).where(UseCase.id.in_(ids)))
 
 
 def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
+    from hub.use_case_ai import install_ai_api
+
     prefix = "/api/projects/{project_id}/use-cases"
 
     def project(db: Any, project_id: str, write: bool = False) -> None:
@@ -297,6 +356,10 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 target = project_id
             if target is not None:
                 project(db, target, True)
+            if body.spec.execution_kind != "ai":
+                raise HTTPException(
+                    422, "Neue Use Cases benötigen KI-Verarbeitung und einen Prompt/Kontext"
+                )
             row = UseCase(project_id=target)
             db.add(row)
             db.flush()
@@ -319,6 +382,10 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 project(db, row.project_id, True)
             if body.expected_revision != row.revision:
                 raise HTTPException(409, "Use Case inzwischen geändert")
+            if body.spec.execution_kind != "ai":
+                raise HTTPException(
+                    422, "Bearbeitete Use Cases benötigen KI-Verarbeitung und einen Prompt/Kontext"
+                )
             if "project_id" in body.model_fields_set:
                 target = str(body.project_id) if body.project_id is not None else None
                 if project_id is not None and target != project_id:
@@ -352,6 +419,9 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 project(db, row.project_id, True)
             if body.expected_revision != row.revision:
                 raise HTTPException(409, "Use Case inzwischen geändert")
+            from hub.use_case_ai import cleanup_case_ai
+
+            cleanup_case_ai(db, cfg, identifier)
             db.execute(delete(UseCaseRun).where(UseCaseRun.use_case_id == identifier))
             db.execute(delete(UseCaseRevision).where(UseCaseRevision.use_case_id == identifier))
             db.delete(row)
@@ -360,14 +430,40 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
 
     @app.post("/api/use-cases/{identifier}/runs")
     @app.post(prefix + "/{identifier}/runs")
-    def run(
+    async def run(
         identifier: str, body: RunInput, auth: Auth, project_id: str | None = None
     ) -> dict[str, Any]:
+        from hub.use_case_ai import create_ai_run, start_development
+
         with factory() as db:
             ownership_lock(db)
             row = case(db, project_id, identifier)
             if row.project_id is not None:
                 project(db, row.project_id, True)
+            previous = db.scalar(
+                select(UseCaseRun).where(
+                    UseCaseRun.use_case_id == identifier,
+                    UseCaseRun.request_id == str(body.request_id),
+                )
+            )
+            if previous and not previous.execution_run_id:
+                try:
+                    replay_digest = digest(
+                        encode({"revision": body.expected_revision, "values": body.values})
+                    )
+                except (ValueError, UnicodeEncodeError):
+                    raise HTTPException(422, "Eingaben enthalten ungültige Werte") from None
+                if previous.request_digest != replay_digest or body.dialogue_id:
+                    raise HTTPException(409, "Anfragekennung gehört zu anderen Eingaben")
+                return run_info(previous)
+            stored = db.get(UseCaseRevision, (row.id, row.revision))
+            if stored and Definition.model_validate_json(stored.spec).execution_kind == "ai":
+                answer = create_ai_run(db, cfg, row, body)
+                db.commit()
+                start_development(app, cfg, factory, answer["execution_run_id"])
+                return answer
+            if body.dialogue_id is not None:
+                raise HTTPException(422, "KI-Dialog benötigt KI Use Case")
             try:
                 request_digest = digest(
                     encode({"revision": body.expected_revision, "values": body.values})
@@ -419,6 +515,12 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             return answer
 
     def run_info(row: UseCaseRun) -> dict[str, Any]:
+        if row.execution_run_id:
+            from sqlalchemy.orm import object_session
+
+            from hub.use_case_ai import ai_run_info
+
+            return ai_run_info(object_session(row), row)
         return {
             "id": row.id,
             "revision": row.revision,
@@ -494,7 +596,13 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
         if sum(len(r.snapshot.encode()) for r in rows) > 8_000_000:
             raise HTTPException(413, "Export überschreitet das Größenlimit von 8 MB")
         return [c.label for c in spec.output_columns], [
-            json.loads(r.snapshot)["output"]["row"] for r in rows
+            output_row
+            for r in rows
+            for output_row in (
+                [json.loads(r.snapshot)["output"]["row"]]
+                if not r.execution_run_id
+                else run_info(r).get("output", {}).get("rows", [])
+            )
         ]
 
     @app.get("/api/use-cases/{identifier}/output.csv")
@@ -562,3 +670,5 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 raise HTTPException(404, "Use Case nicht gefunden")
             row, revision = record
             return loaded_info(db, row, revision)
+
+    install_ai_api(app, cfg, factory, case, project)

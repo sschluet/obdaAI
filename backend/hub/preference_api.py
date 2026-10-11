@@ -33,7 +33,11 @@ def install_preference_api(app: FastAPI, factory: sessionmaker[Session]) -> None
                 raise HTTPException(404, "Projektraum nicht gefunden")
             return "project:" + identifier, None, identifier
         conversation = db.get(Conversation, identifier)
-        if conversation is None or (writing and conversation.archived):
+        if (
+            conversation is None
+            or conversation.purpose != "chat"
+            or (writing and conversation.archived)
+        ):
             raise HTTPException(404, "Aktives Gespräch nicht gefunden")
         return "conversation:" + identifier, conversation, None
 

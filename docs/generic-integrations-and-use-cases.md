@@ -59,27 +59,28 @@ Projektbezogene Definitionen sind weiterhin gespeichert, jedoch nicht mehr als
 Projektreiter erreichbar. Frühere Links auf diesen Reiter öffnen den eigenen
 Use-Case-Bereich mit dem entsprechenden Projekt.
 
-Der Editor speichert versionierte Definitionen: Name, Beschreibung,
-Formularfelder, Darstellung als Formular oder Frage-/Antwortfolge sowie geordnete
-Ausgabespalten. Text, längerer Text, Zahlen, Datum und feste Auswahloptionen werden
-validiert. Ergebnisse binden die exakte Definition und Eingabewerte an einen
-wiederholbaren Lauf. CSV/Excel und Diagramme verwenden dieselben gespeicherten
-Werte; Textvorlagen ersetzen nur definierte Platzhalter.
+Neue Definitionen und Bearbeitungen benötigen einen Verarbeitungsprompt. Der
+Editor trennt Auftrag/Kontext, Eingabeparameter und Ausgabevorgaben. Dateifelder
+werden lokal extrahiert und mit Originalhash/Parserbeleg gespeichert. Formularwerte
+oder ein echter KI-Dialog liefern die Parameter; erkannte Angaben bleiben sichtbar
+und im Dialog korrigierbar. Das abschließende Ergebnis wird ausdrücklich beauftragt.
 
-Diese erste Ausführung ist deterministisch und lokal. Sie erfindet keine Zahlen
-und führt weder Modellcode, Tabellenformeln, JavaScript noch SQL aus. Textvorlagen
-sind ausdrücklich keine KI-generierte Analyse. KI-Dialoge, automatische Extraktion
-aus Quellen, mehrere Arbeitsblätter, berechnete Kennzahlen sowie Integration- und
-Task-Ausführung sind weitere Schritte und werden nicht als abgeschlossen beworben.
+KI-Läufe verwenden die bestehende dauerhafte Warteschlange und Provider-/Budget-
+Prüfung. Das Ergebnis kann Markdown, eine strukturierte Tabelle, sichere CSV,
+echte Excel-Datei oder ein lokales Balkendiagramm sein. Ausgabespalten können aus
+der KI-Analyse entstehen und sind nicht auf Eingabefelder beschränkt. Ungültige
+Strukturen werden nicht als erfolgreiche Tabellen exportiert; Rohtext bleibt als
+Fehler-/Teilantwortbeleg erhalten. Keine Modellprogramme, Formeln oder Werkzeug-
+Aktionen werden ausgeführt. Webrecherche und allgemeine Integrationsabfragen im
+Use Case bleiben getrennte Ausbauschritte.
 
-CSV schützt Textzellen vor Tabellenformeln; XLSX erhält Text als Text und echte
-Zahlen als Zahlen. Downloads erfordern eine Anmeldung. Änderungen am Projektbezug
-erzeugen eine neue Definition; bereits gespeicherte Ergebnisse behalten ihre
-ursprüngliche Revision. Projektlöschung entfernt nur die zu diesem Zeitpunkt
-zugeordneten Use-Case-Definitionen, Ergebnisse und Zuordnungen. Eigenständige Use
-Cases und zuvor gelöste Zuordnungen bleiben erhalten; globale Verbindungsprofile
-und externe Originale bleiben erhalten. Neue Ergebnisse oder Zuordnungen machen
-alte Löschvorschauen ungültig.
+Alte deterministische Vorlagen und gespeicherte Ergebnisse bleiben erhalten.
+Bearbeiten erzeugt eine neue KI-Version mit Pflichtprompt; ein KI-Duplikat lässt
+die alte Definition unverändert. Projektbezug bleibt optional. Frühere Ergebnisse
+behalten ihre ursprünglichen Revisionen. Eigenständige und zuvor gelöste Use Cases
+überleben die Löschung eines früheren Projekts. Aktive KI-Läufe blockieren die
+Löschung, bis Abbruch/Abschluss erfolgt ist. Globale Verbindungen und externe
+Originale bleiben erhalten. Details: [KI Use Cases](ai-use-cases.md).
 
 ## Geprüfte Anschlusswege weiterer Dienste
 

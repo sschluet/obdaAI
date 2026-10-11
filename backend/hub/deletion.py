@@ -47,11 +47,13 @@ def plan(
     kind: Literal["project", "conversation"],
     identifier: str,
     cfg: Settings | None = None,
+    *,
+    allow_use_case: bool = False,
 ) -> dict[str, Any]:
     from hub.use_cases import project_case_witness
 
     target: Any = db.get(models.Project if kind == "project" else models.Conversation, identifier)
-    if not target:
+    if not target or (kind == "conversation" and target.purpose != "chat" and not allow_use_case):
         raise HTTPException(
             404, "Projekt nicht gefunden" if kind == "project" else "Gespräch nicht gefunden"
         )
@@ -134,6 +136,8 @@ def plan(
             "Verbundene Wissensräume können hier nicht gelöscht werden. Verbindung unter Wissen "
             "verwalten."
         )
+    if case_state.get("active_runs", 0):
+        blockers.append("Ein KI Use Case läuft noch. Lauf zuerst abbrechen und Abschluss abwarten.")
     if any(r.status in {"queued", "routing", "streaming"} for r in runs):
         blockers.append(
             "Eine Antwort wird noch erzeugt. Lauf zuerst abbrechen und seinen Abschluss abwarten."
@@ -387,8 +391,14 @@ def preview(
     kind: Literal["project", "conversation"],
     identifier: str,
     cfg: Settings | None = None,
+    *,
+    allow_use_case: bool = False,
 ) -> dict[str, Any]:
-    return {k: v for k, v in plan(db, kind, identifier, cfg).items() if not k.startswith("_")}
+    return {
+        k: v
+        for k, v in plan(db, kind, identifier, cfg, allow_use_case=allow_use_case).items()
+        if not k.startswith("_")
+    }
 
 
 def permanently_delete(
@@ -397,6 +407,9 @@ def permanently_delete(
     kind: Literal["project", "conversation"],
     identifier: str,
     body: DeletionInput | None,
+    *,
+    allow_use_case: bool = False,
+    commit: bool = True,
 ) -> dict[str, Any]:
     # Serialize scoped writers before validating the confirmation witness.
     from hub.task_api import lock
@@ -413,8 +426,16 @@ def permanently_delete(
                 raise HTTPException(
                     409, "Vault-Abgleich läuft. Projektlöschung nach Abschluss erneut versuchen."
                 )
-    lock(db)
-    p = plan(db, kind, identifier, cfg)
+    # Internal Use-Case cleanup can already hold a SQLite write transaction.
+    # A second BEGIN IMMEDIATE would fail; that transaction already owns the writer lock.
+    sqlite_writer = (
+        db.bind is not None
+        and db.bind.dialect.name == "sqlite"
+        and bool(getattr(db.connection().connection.driver_connection, "in_transaction", False))
+    )
+    if not sqlite_writer:
+        lock(db)
+    p = plan(db, kind, identifier, cfg, allow_use_case=allow_use_case)
     if p["blockers"]:
         raise HTTPException(409, " ".join(p["blockers"]))
     if body and body.expected_state != p["expected_state"]:
@@ -439,7 +460,7 @@ def permanently_delete(
                     & (IntegrationBinding.owner_id == identifier)
                 )
             )
-            delete_project_cases(db, identifier)
+            delete_project_cases(db, identifier, cfg)
         run_ids = [r.id for r in p["_runs"]]
         db.execute(delete(models.RunEvent).where(models.RunEvent.run_id.in_(run_ids)))
         db.execute(delete(models.Message).where(models.Message.conversation_id.in_(chat_ids)))
@@ -496,7 +517,10 @@ def permanently_delete(
             db.execute(delete(models.Source).where(models.Source.project_id == identifier))
             db.execute(delete(models.Research).where(models.Research.project_id == identifier))
             db.execute(delete(models.Project).where(models.Project.id == identifier))
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
     except Exception:
         db.rollback()
         raise

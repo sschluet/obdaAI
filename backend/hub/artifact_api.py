@@ -115,6 +115,7 @@ def artifact_service(
             )
             if (
                 not chat
+                or chat.purpose != "chat"
                 or chat.memory_scope
                 or (chat.project_id and chat.project_id != project_id)
                 or not message

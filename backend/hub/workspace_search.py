@@ -104,7 +104,9 @@ def install_workspace_search(app: FastAPI, factory: sessionmaker[Session]) -> No
                 collect(
                     "conversation",
                     select(Conversation.id, Conversation.title, Conversation.project_id).where(
-                        Conversation.archived.is_(False), parent_active
+                        Conversation.archived.is_(False),
+                        Conversation.purpose == "chat",
+                        parent_active,
                     ),
                     Conversation.title,
                     body_hit,
