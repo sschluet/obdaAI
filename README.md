@@ -83,3 +83,5 @@ Oberfläche mit eigenem App-Namen, Anzeigenamen, Foto, Abständen und Akzentfarb
 OpenRouter-Kontostatus und Nutzungskosten: [Einrichtung und Bedeutung der Werte](docs/openrouter-cost-status.md). Kontoguthaben benötigt einen separaten Management Key; Modellschlüssel und lokale Budgetgrenzen bleiben getrennt.
 
 HTTPS hinter einer vom Benutzer eingerichteten Synology: [Reverse-Proxy-Vertrag und VM-Vorbereitung](docs/synology-reverse-proxy.md). Der private IP-Zugang bleibt erhalten; der Domainzugang akzeptiert nur den freigegebenen Proxy.
+
+CI startet schwere App-Prüfungen nur für einen noch nicht vollständig geprüften App-Baum; Website und Dokumentation werden gezielt geprüft: [CI-Umfang, Nachweise und Push-Bündelung](docs/ci-efficiency.md).

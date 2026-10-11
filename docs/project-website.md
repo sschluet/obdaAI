@@ -63,8 +63,10 @@ The old website main history is preserved as obdaAI's `gh-pages` branch and in a
 local mirror before deletion. Application source branches remain unchanged.
 
 `.github/workflows/pages.yml` validates the public-file allowlist and runs website
-browser checks on each push to `milestone/m3-actions` or `main`. Once its exact
-commit passes, publishing the site is a required delivery step:
+browser checks for relevant public files/build scripts on pushes to milestone
+branches or main; manual dispatch is also available. Pure documentation changes
+do not trigger the website workflow or require publication. Once a delivery
+affecting the public site passes its exact website CI, publish it:
 
 ```sh
 uv run python scripts/publish_showcase.py
@@ -81,7 +83,8 @@ application sources, documents and runtime data are never copied into that branc
 
 Source revision is generated separately from the tested app release. Publishing
 gh-pages does not redeploy the test VM or merge application code into main.
-When changing the development branch, update the website CI branch filter.
+Website CI accepts main and milestone/** branches. Both workflows cancel
+superseded runs per ref. See [CI scope and proof](ci-efficiency.md).
 After every publication, verify Pages build success, exact public build.json
 revision, catalog, screenshots and content hashes before reporting completion.
 

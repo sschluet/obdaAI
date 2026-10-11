@@ -1,5 +1,19 @@
 # obdaAI — Status 11.10.2026
 
+## CI-Verbrauch gezielt reduzieren – lokal umgesetzt, 11.10.2026
+
+obdaAI bleibt öffentlich. Überholte App-Läufe38141179287 und38141554067 auf
+Nutzerwunsch zum Abbruch angefordert. Neue App-/Website-Workflows ersetzen ältere
+Läufe desselben Refs. Fünf schwere App-Jobs nur ohne passenden geprüften App-Baum;
+Geheimnisprüfung bleibt allgemein. Vollprüfnachweis nur nach allen sechs grünen
+Jobs, tatsächliche Checkout-Baum-Signatur samt Dateimodi/Blobs; keine Freigabe durch
+abgebrochene/teilweise/Fork-Läufe. Manuelle Ausführung und fehlende Nachweise prüfen
+vollständig. Website: Pfadfilter, kein ungenutzter Pages-Artifact-Upload; reine
+Dokumentation ohne öffentliche Änderungen erfordert keine neue Veröffentlichung.
+Kleine Änderungen vor Push bündeln, erst später verfügbare Belege als ein leichtes
+Dokumentationsupdate. Acht gezielte CI-Tests lokal bestanden; Workflow-/Live-
+Abnahme wird nach tatsächlichem Ergebnis ergänzt. App/Test-VM bleiben unverändert.
+
 ## GitHub Pages in obdaAI – migriert und altes Repository gelöscht, 11.10.2026
 
 obdaAI ist öffentlich. Die Projektwebsite wird aus obdaAI/gh-pages am Root

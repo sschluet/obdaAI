@@ -1,13 +1,21 @@
 name: Project website
 on:
   push:
-    branches: [main, milestone/m3-actions]
+    branches: [main, "milestone/**"]
+    paths:
+      - 'website/**'
+      - 'scripts/build_showcase.py'
+      - 'scripts/publish_showcase.py'
+      - 'frontend/showcase-check.mjs'
+      - 'frontend/package.json'
+      - 'frontend/pnpm-lock.yaml'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: project-website
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -16,6 +24,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
+      - run: python scripts/scan_secrets.py
       - name: Build public allowlist
         run: python scripts/build_showcase.py --revision "$GITHUB_SHA"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -37,6 +46,3 @@ jobs:
           done
           cd frontend
           node showcase-check.mjs
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: .local/website-build

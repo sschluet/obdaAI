@@ -22,9 +22,23 @@ in `sschluet/obdaAI` and deletion of the separate website repository after verif
 migration. The `gh-pages` branch contains only the sanitized project presentation.
 Verify owner and visibility with official GitHub API.
 Use milestone branches and PRs; main must pass checks. Inspect staged diff, test,
-scan, commit and push each logical milestone. Never force push. A push does not
+scan, commit and push each logical milestone. Bundle related small changes before
+pushing; do not push each cosmetic/documentation adjustment separately. Never force push. A push does not
 approve deployment. Report branch, commit, push, test results and dirty files.
 Do not claim completion for mocks alone. STATUS records unmet acceptance cases.
+
+## CI scope and consumption
+On 11.10.2026 the user requested full app checks only for relevant code changes,
+light checks for website/documentation, cancellation of superseded runs and
+bundled small deliveries. Use the validated app-tree proof in ci.yml; a skipped
+suite is reuse of the original completed full CI, never a new test result. An
+unvalidated code tree still needs full checks even if a documentation push canceled
+its predecessor. Missing/expired proof or uncertain classification requires full
+checks. Manual dispatch forces full verification. Keep general secret checks.
+Website CI uses relevant path filters; do not trigger or publish Pages for a pure
+documentation update with no public website change. Do not send dummy pushes to
+test cancellation; use targeted tests and necessary evidence updates. Report the
+actual validation provenance. See docs/ci-efficiency.md.
 
 ## Public project website
 The user requested a public GitHub Pages showcase. The repository was initially
@@ -34,8 +48,10 @@ website copy and
 affected screenshots in the same delivery as every feature/status/UI update.
 Keep implemented, live-tested and partial features distinct; never advertise a
 complete V1 from partial evidence. Update the last tested application commit and
-CI evidence only after the matching checks actually pass. After pushing each
-delivery, wait for its website CI and run `uv run python scripts/publish_showcase.py`.
+CI evidence only after the matching checks actually pass. For deliveries affecting
+the public website or its build/publisher/check workflow, wait for the exact
+website CI and run `uv run python scripts/publish_showcase.py`. Pure documentation
+updates without public-content changes do not require another Pages publication.
 This required delivery step synchronizes the public allowlist and website source
 revision. GitHub Pages publishes the application repository's `gh-pages` branch
 automatically. Never replace or publish the application-source branches. Verify
