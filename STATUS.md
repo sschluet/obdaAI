@@ -1,6 +1,8 @@
 # obdaAI — Status 11.10.2026
 
-## Optionaler Projektbezug und moderne Use Cases – lokal umgesetzt
+## Optionale Use Cases auf Test-VM bestätigt – 11.10.2026
+
+Aktiver App-Code `a4b7e79`, Schema0038. [CI38139006020](https://github.com/sschluet/obdaAI/actions/runs/38139006020): alle sechs Jobs erfolgreich,876 Python-/PostgreSQLtests und30 UI-Browsersuiten plus Fixture-Anmeldung/Design. Website-CI38139002037 erfolgreich. Vorheriger Frontend-CI-Fehler war eine unvollständige Test-Wartebedingung nach Löschung; korrigierte Prüfung wartet auf erfolgreiche Serverantwort und Übersicht.
 
 Use Cases können eigenständig erstellt werden, auch ohne vorhandenes Projekt.
 Der suchbare Projektbezug lässt sich hinzufügen, wechseln oder entfernen;
@@ -8,18 +10,25 @@ Feldtypen und Auswahlantworten verwenden direkte Schaltflächen statt nativer
 Dropdowns. Globaler API-Vertrag und Schema0038 bewahren bestehende Zuordnungen,
 Revisionen und Ergebnisse. Ein gelöster Bezug macht alte Projektlöschvorschauen
 ungültig; eigenständige Use Cases bleiben bei Projektlöschung erhalten.
-Migration mit echten SQLite-Kinddatensätzen und aktiven Fremdschlüsseln geprüft;
-Downgrade verweigert Datenverlust bei eigenständigen Definitionen.
-23 gezielte Backendtests bestanden, ein PostgreSQL-Migrationsfall wird in CI
-geprüft. Ruff/Mypy, TypeScript/Build und Source-Scan bestanden. Browsercheck:
-eigenständig ohne sichtbare Projekte, Zuordnen/Lösen mit Ergebniserhalt,
-Pflicht-Radioauswahl/Tastatur/Escape, CSV/XLSX, Revisionen, Altlinks/Reload und
-320/390/768px bestanden. Veralteter URL-Projektparameter ändert keinen
-eigenständigen Entwurf. Konsistente SQL-Lesesnapshots bewahren Antworten bei
-paralleler Löschung; alle sechs Lese-/Exportwege gezielt parallel geprüft.
-Website67 Features/29 synthetische Bilder vorbereitet.
-CI, reale VM-
-Abnahme und Website-Veröffentlichung werden nach erfolgreicher Prüfung ergänzt.
+Konsistente SQL-Lesesnapshots schützen alle sechs Lese-/Exportwege bei paralleler
+Löschung. Ein veralteter URL-Projektparameter ändert keinen eigenständigen Entwurf.
+Migration mit echten SQLite-/PostgreSQL-Kinddatensätzen und aktiven Fremdschlüsseln
+geprüft; Downgrade verweigert Datenverlust bei eigenständigen Definitionen.
+23 gezielte Tests lokal bestanden; kompletter PostgreSQL-Prüfstand in CI grün.
+Ruff/Mypy76, TypeScript/Build und Source-/Gitleaks-Scan bestanden.
+
+Frische verschlüsselte Off-VM-Sicherung mit Hashprüfung; bestehende Nachrichten,
+Use-Case-Definitionen/Revisionen/Ergebnisse vor/nach Migration per Hash unverändert.
+Alle8 Compose-Overlays und normalisierte IPv4-/IPv6-Regeln erhalten; APIs gesund,
+DB-Dienst unverändert. Gepinntes HTTPS/Assets/API-Verträge/Anmeldung geprüft.
+Reale Browserabnahme mit eigenen synthetischen Objekten: eigenständig erstellen,
+Zuordnen/Lösen mit Ergebniserhalt, veraltete Löschvorschau ablehnen, eigenständige
+Ergebnisse nach Löschung des früheren Projekts erhalten, CSV/XLSX, Reload und
+320/390/768px. Originale Aktionsrichtlinie unverändert, keine Renderfehler, eigene
+Testobjekte und QA-Sitzung entfernt. Kein Modell- oder externer Werkzeugaufruf.
+
+Website67 Features/29 ausschließlich synthetische Ansichten, darunter neuer Editor
+mit optionaler Projektwahl; Veröffentlichung wird separat verifiziert.
 Der Nutzer bestätigte am11.10.2026 ausdrücklich öffentliche App-Quellen;
 Laufzeitdaten/Zugangsdaten bleiben privat, Website-Beispiele synthetisch.
 

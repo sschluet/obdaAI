@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "3d003f6",
-  "schema": "0037",
-  "tests": 864,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38136684453",
+  "applicationCommit": "a4b7e79",
+  "schema": "0038",
+  "tests": 876,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38139006020",
   "screenshots": [
     {
       "id": "chat",
