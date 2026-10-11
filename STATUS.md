@@ -1,33 +1,55 @@
 # obdaAI — Status 11.10.2026
 
-## KI Use Cases mit Dateieingaben und echtem Dialog – lokal implementiert, 11.10.2026
+## KI Use Cases mit Dateieingaben und echtem Dialog – Test-VM geprüft, 11.10.2026
 
-Pflichtprompt für neue/bearbeitete Definitionen, Formulare mit lokalen Datei-
-Uploads und KI-geführte Dialoge mit sichtbaren, korrigierbaren Parametern. Echte
-Modellausführung über bestehende Run-/Worker-Pipeline; unabhängige Ergebnis-Spalten,
-strukturvalidierte CSV-/Excel-/Diagrammausgabe oder Markdown. Keine autonomen
-Werkzeugaktionen. Private Dateien/Projektkontexte bleiben lokal; bewusstes Auto/
-Cloud teilt nur den angezeigten aktuellen Auftrag und aktuelle freigegebene Werte.
-Versionen, Originaldateibelege und frühere deterministische Ergebnisse erhalten.
-Schema0039 ergänzt verdeckte Arbeitsgespräche, unveränderliche Uploads und Dialog-
-turns. Normale Chat-/Such-/Dateiquellenrouten schließen diese Arbeitsgespräche aus.
-Aktive Laufblocker, atomare Bereinigung und Abtrennen vom früheren Projekt geprüft.
+App-Code32cd893/Schema0039 installiert, vollständige CI38150177485 mit sechs
+App-Prüfjobs erfolgreich:928 Backend-/PostgreSQLtests und32 synthetische
+Browserprüfungen. 54 gezielte lokale Tests/23 Subtests, TypeScript/Build,
+Use-Case-Browsercheck (Upload, Dialog, Korrekturen, Modusbindung, Abbruch, Reload,
+320/390/768px), Ruff/Mypy78, Source-Scan und Actionlint bestanden.
+Erster CI925 Tests grün, Fehler nur in neuer PG-Testbereinigung:Suchpfad für
+Queue-Trigger korrigiert. Überholte Läufe38149254516/38149979876 abgebrochen;
+abschließender Code vollständig geprüft. Ungültige Zeichen in Ergebniszellen
+werden kontrolliert zurückgewiesen. Fachliche Spaltennamen gelangen bis zum Modell;
+interne Schlüssel erzeugt der Editor automatisch.
 
-54 gezielte Backend-/Lifecycle-/CI-Tests bestanden, zwei PG-Fälle lokal mangels
-Datenbank übersprungen; enthalten sind zwei zusätzliche Downgrade-Schutzfälle. Breiter
-lokaler Lauf:891 bestanden/27 übersprungen; ein zwischenzeitlicher alter Fixture-
-Fehler ist korrigiert und in der gezielten Nachprüfung enthalten. TypeScript/Build,
-synthetischer Use-Case-Browsercheck mit Reload/Upload/Modusbindung/Korrekturen/Abbruch
-und320/390/768px, Ruff/Mypy78, Source-Scan und Actionlint bestanden. Vollständige
-GitHub-CI und Test-VM-Rollout folgen. Erster CI38149254516:925 Tests grün,
-ein Fehler ausschließlich in der neuen PG-Testbereinigung (Suchpfad für Queue-
-Trigger); korrigiert und überholter Lauf abgebrochen. Zusätzlich ungültige
-Steuerzeichen in Ergebniszellen vor Export abgewiesen. Ausgabespalten tragen
-ihre fachliche Bedeutung bis zum Modell; interne Schlüssel werden automatisch
-vergeben. Zwischenlauf38149979876 vor weiterer Prüfung abgebrochen und letzte
-Bedien-/Formatkorrektur gebündelt. Galerie ausschließlich
-synthetisch aktualisiert. Aktive Test-VM weiterhin9a31cc7/Schema0038. Keine neue
-reale KI-Use-Case-Abnahme oder öffentliche Veröffentlichung behauptet.
+Neue/bearbeitete Definitionen benötigen Prompt/Kontext. Formulare und tatsächliche
+KI-Dialoge erfassen Parameter, Dateiinputs und kontrollierbare/korrigierbare Werte.
+Echte Ausführung über bestehende dauerhafte Run-/Worker-Pipeline mit Privacy,
+Budget, Limits und gespeicherter Modellherkunft. Ausgabe:Markdown oder validierte
+mehrzeilige Tabellen/CSV/XLSX/Balkendiagramme. Originaldatei und Extraktionshash
+bleiben belegt; 5MiB/Datei,50 Uploads/Use Case,500MiB Use-Case-Uploads insgesamt.
+Extrahierter Kontext wird nicht still gekürzt; Übergrößen mit Erklärung abgewiesen.
+Dateien/Projektkontext und lokale Dialogableitungen bleiben privat. Bewusstes
+Auto/Cloud teilt die angezeigte aktuelle Definition und erlaubte aktuelle Werte;
+Dialogmodus bleibt bei späterer Verarbeitung gebunden. Keine autonomen Werkzeuge.
+
+Alte deterministische Definitionen/Ergebnisse erhalten. Schema0039:verborgene
+Arbeitsgespräche, Ausführungsreferenzen, Uploads und Dialogturns; alte Snapshots
+unverändert. Normale Chat-/Such-/Quellenrouten schließen diese Gespräche aus.
+Löschung aktiver Läufe blockiert; atomare Bereinigung und Projektdetach erhalten
+passende historische Ergebnisse. Downgrade mit KI-Daten verweigert.
+
+Rollout mit verschlüsseltem geprüftem Off-VM-Backup; bestehende Nachrichten,
+Use-Case-Definitionen/Revisionen/alte Ergebnisse, acht Overlays, Firewall und
+beide Nginx-vHosts unverändert. Gepinntes HTTPS, neue UI-Assets/API-Verträge geprüft.
+Reale Modellabnahme über authentifizierte interne API und dauerhaften Worker:
+- Eigene synthetische CSV mit Mengen12+8:KI-Ergebnis20; Originalbytes erhalten,
+  CSV-/XLSX-Inhalte und Providerlokal bestätigt. Privatdatei in Cloud zurückgewiesen.
+  Wiederholte Anfrage erzeugt keinen zweiten Lauf.
+- Echter KI-Dialog fragt nach, übernimmt Ziel/Zielgruppe und erzeugt nach
+  ausdrücklichem Auftrag ein fertiges Ergebnis über das lokale Modell.
+- Ausdrücklicher Cloud-Use-Case mit synthetischer Anforderung:OpenRouter erfolgreich,
+  Modellherkunft und Kostenbuchung bestätigt.
+Alle eigenen Testobjekte und temporäre Testsitzung entfernt; aktuelles Passwort,
+Providerkonfiguration und fremde Sitzungen erhalten. Keine persönlichen Quellen,
+keine neue authentifizierte UI-Geräteabnahme, keine native Provider-Live-Abnahme.
+
+Website67 Features/30 ausschließlich synthetische Galerieansichten mit KI-Formular,
+Prompteditor und Dialog. CI-/VM-Metadaten aktualisiert; Veröffentlichung nach
+exakter Website-CI über den geprüften Publisher. Beleg im bestehenden PR und
+privater Veröffentlichungsevidenz. Allgemeine Integrationsausführung, Webrecherche
+im Use Case und beliebige programmierbare BI-Abläufe bleiben offen; V1 bleibtpartial.
 
 ## Lange Konzepte und Antwortlimits – auf der Test-VM geprüft, 11.10.2026
 
