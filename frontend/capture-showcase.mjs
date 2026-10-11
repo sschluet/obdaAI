@@ -58,8 +58,14 @@ try{
  ]);
  await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
  await page.setViewportSize({width:1440,height:1400});await capture('projects');await page.setViewportSize({width:1440,height:980});
- await page.getByRole('tab',{name:'Use Cases',exact:true}).click();await page.getByRole('button',{name:/Aurora · Monatskennzahlen/}).click();
+ await page.getByRole('button',{name:'Use Cases',exact:true}).click();
+ await page.locator('.use-cases-hub').getByRole('button',{name:/Aurora · Monatskennzahlen/}).waitFor();await capture('usecasesoverview');
+ await page.locator('.use-cases-hub').getByRole('button',{name:/Aurora · Monatskennzahlen/}).click();
+ const useCasePanel=page.locator('.use-cases-panel');await useCasePanel.waitFor();
+ await page.getByLabel('Monat *',{exact:true}).waitFor();
  await page.getByLabel('Monat *',{exact:true}).fill('Oktober · Demo');await page.getByLabel('Umsatz *',{exact:true}).fill('25000');await page.getByLabel('Kosten *',{exact:true}).fill('15000');await page.getByLabel('Investitionen *',{exact:true}).fill('5000');await page.getByRole('button',{name:'Ergebnis erstellen und Eingabe speichern',exact:true}).click();await page.getByRole('region',{name:'Ergebnis',exact:true}).waitFor();await page.setViewportSize({width:1440,height:2100});await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));await capture('usecases');await page.setViewportSize({width:1440,height:980});
+ await page.getByRole('button',{name:'Projekte',exact:true}).click();
+ await page.getByRole('heading',{name:'Projekt Aurora',exact:true}).locator('..').click();
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});

@@ -76,4 +76,4 @@ Projekte erhalten unter **Projekt bearbeiten** ein konfigurierbares Logo aus 32 
 
 Verbindungen und kontrollierte Aktionen findest du unter **Einstellungen → Integrationen**. Direkte Prüfergebnisse, geführte Archivierung und Ausführungsbelege sind in [docs/integrations.md](docs/integrations.md) beschrieben.
 
-Generische Verbindungsprofile mit Tabelle, Aktivschalter und Projekt-/Aufgaben-/Chatzuordnungen sowie lokale Formular-Use-Cases im Projektraum: [Ausbauvertrag und Grenzen](docs/generic-integrations-and-use-cases.md). Die Profile sind noch keine allgemeinen KI-Werkzeugaufrufe. [Offizielle Anschlusswege weiterer Dienste](docs/integration-services-research.md) unterscheiden API, OAuth, Bridge und Dateiimport.
+Generische Verbindungsprofile mit Tabelle, Aktivschalter und Projekt-/Aufgaben-/Chatzuordnungen sowie lokale Formular-Use-Cases im eigenen Navigationsbereich zwischen Projekte und Aufgaben: [Ausbauvertrag und Grenzen](docs/generic-integrations-and-use-cases.md). Die Profile sind noch keine allgemeinen KI-Werkzeugaufrufe. [Offizielle Anschlusswege weiterer Dienste](docs/integration-services-research.md) unterscheiden API, OAuth, Bridge und Dateiimport.

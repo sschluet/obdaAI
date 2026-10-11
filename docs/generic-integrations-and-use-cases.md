@@ -46,9 +46,17 @@ Die neuen Profile verändern keine Firewallregeln, bestehenden HA-/n8n-Dienste,
 Vault-/NAS-Freigaben oder globale Schreibpause. Reale Serveradressen werden vom
 Benutzer vor Verbindungstests benötigt; Zugangsdaten gehören nur ins lokale UI.
 
-## Use Cases im Projektraum
+## Eigener Bereich Use Cases
 
-Ein eigener Projektreiter speichert versionierte Definitionen: Name, Beschreibung,
+Use Cases ist ein eigener Bereich in der Hauptnavigation zwischen Projekte und
+Aufgaben. Die Übersicht zeigt Anwendungsfälle projektübergreifend; Suche und
+Projektfilter helfen bei der Auswahl. Neue Use Cases werden einem Projekt
+zugeordnet, damit Kontext, Berechtigungen und Löschverhalten eindeutig bleiben.
+Projektbezogene Definitionen sind weiterhin gespeichert, jedoch nicht mehr als
+Projektreiter erreichbar. Frühere Links auf diesen Reiter öffnen den eigenen
+Use-Case-Bereich mit dem entsprechenden Projekt.
+
+Der Editor speichert versionierte Definitionen: Name, Beschreibung,
 Formularfelder, Darstellung als Formular oder Frage-/Antwortfolge sowie geordnete
 Ausgabespalten. Text, längerer Text, Zahlen, Datum und feste Auswahloptionen werden
 validiert. Ergebnisse binden die exakte Definition und Eingabewerte an einen

@@ -1,5 +1,22 @@
 # obdaAI — Status 11.10.2026
 
+## Use Cases als eigener Hauptbereich – 11.10.2026
+
+Auf ausdrücklichen Nutzerwunsch steht Use Cases jetzt in der Hauptnavigation
+zwischen Projekte und Aufgaben. Der frühere Projektreiter ist entfernt. Die
+eigene Übersicht zeigt alle Use Cases mit Suche, Projektfilter und Direktöffnung;
+Neuanlage wählt den Projektkontext für bestehende Speicherung und Berechtigungen.
+Direktlinks enthalten view=Use Cases und die Use-Case-ID; Reload/Zurück erhalten
+die Auswahl. Bisherige projectTab=use-cases-Links öffnen den neuen Bereich.
+Keine Datenmigration, Backendänderung oder Änderung bestehender Ergebnisse.
+Use-Case-Browserprüfung einschließlich Navigation, Übersicht, Suche, Altlinks,
+Formular/Fragefolge, Exporte, Historie, Löschung und320/390/768px bestanden.
+TypeScript/Build, Suche-Navigation und Design/Mobil320–1440px bestanden.
+Websiteprüfung mit65 Features und26 rein synthetischen Bildern bestanden;
+alle betroffenen Navigationsbilder neu aufgenommen. Allgemeiner Browsercheck
+(Login, Chat/SSE, Projekte, Quellen, Bearbeiten/Löschen, Theme/Mobil) bestanden.
+Auslieferung bleibt vom zuvor dokumentierten GitHub-Kontolimit abhängig.
+
 ## Auslieferung durch GitHub-Kontolimit blockiert – 11.10.2026
 
 App-Quellstand `f767b2a` ist auf `milestone/m3-actions` gepusht. GitHub beendete
