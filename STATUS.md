@@ -1,5 +1,25 @@
 # obdaAI — Status 11.10.2026
 
+## Persönliches Profil nur bei passendem Fragekontext – lokal geprüft, 11.10.2026
+
+Aktivierte Profilfelder wurden bisher unabhängig von der Frage am Antwortübergang
+angehängt. Neue konservative Auswahl anhand der aktuellen Frage: allgemeine Recherche,
+Gerätelisten und technische Fragen erhalten kein Profil. Namens-/Berufsfragen und
+persönliche Karriere-/Familienberatung erhalten jeweils passende Felder; allgemeines
+„für mich“ oder Themenüberschneidung reicht nicht aus. Expliziter Profilbezug kann
+weiteren Hintergrund verwenden, ausdrücklicher Ausschluss hat Vorrang. Unklare
+Fragen bleiben ohne zusätzliche Profilangaben. Feldfreigaben für Cloud gelten weiterhin.
+
+Auswahl erst nach Routing; gespeicherte Werte gelangen nicht in Klassifikation,
+Titel oder Websuchtexte. Hash, Profilrevision, Cloudgrants und Privatheitslabels bleiben
+wirksam. Statische Antwortregel verhindert unaufgeforderte Profilzusammenfassungen
+auch aus früherem Chatkontext, ohne bestehende Nachrichten umzuschreiben.
+UI/Dokumentation erklären die automatische kontextbezogene Verwendung; synthetische
+Profilansicht aktualisiert. Gezielte Backend- und Browserprüfungen sowie TypeScript/
+Build erfolgreich. Vollständige CI, exakte VM-Abnahme und Veröffentlichung folgen;
+gespeichertes echtes Profil bleibt unverändert.
+
+
 ## Integrationsseite bereinigt – Test-VM geprüft, 11.10.2026
 
 Die redundante Linksektion „Modelle, Recherche und Zeitplanung“ sowie „Bisherige

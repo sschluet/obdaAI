@@ -7,10 +7,17 @@ oder aus bestehenden privaten Quellen übernommen. Das Profil startet leer und
 ausgeschaltet. Speichern und Aktivieren sind bewusst getrennte Entscheidungen im
 Formular; der Aktivierungsschalter kann mit dem nächsten Speichern gesetzt werden.
 
-Wenn das Profil aktiviert ist, erhalten lokale Chatantworten die ausgefüllten
-Felder als persönlichen Hintergrund. Cloudantworten erhalten ausschließlich die
-pro Feld ausdrücklich freigegebenen Angaben. Nicht freigegebene Felder werden
-bei einer Cloudantwort ausgelassen; sie erzwingen allein keine lokale Auto-Route.
+Wenn das Profil aktiviert ist, wird für jede aktuelle Frage geprüft, ob sie
+persönlichen Kontext braucht. Allgemeine Sachfragen, Gerätelisten und Recherchen
+erhalten keinen zusätzlichen persönlichen Hintergrund. Bei persönlichem Bezug
+werden nur passende ausgefüllte Felder ergänzt. Eine allgemeine Recherche zu
+Managed Services benötigt beispielsweise weder Beruf noch Karriereziele; eine
+Frage nach Auswirkungen auf die eigene Rolle kann den Beruf berücksichtigen.
+Cloudantworten erhalten davon ausschließlich pro Feld ausdrücklich freigegebene
+Angaben. Die Cloudfreigabe ist eine Erlaubnis, keine Aufforderung zur Verwendung
+in jeder Antwort. Die Auswahl erfolgt automatisch ohne zusätzliche Dialoge.
+Nicht freigegebene Felder werden bei einer Cloudantwort ausgelassen; sie erzwingen
+allein keine lokale Auto-Route.
 Das Profil erteilt weder Werkzeugrechte noch Web-, Dokument- oder Cloudfreigaben.
 Private Angaben gelangen nicht automatisch in Suchtexte, Titel oder den Router.
 Es beeinflusst aktuell Chatantworten; eine generelle Verwendung in Aufgaben oder

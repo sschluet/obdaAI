@@ -112,7 +112,7 @@ def test_cloud_unshared_skill_blocks_and_profile_only_shares_reviewed_subset(set
 
     monkeypatch.setattr(provider, "stream", stream)
     response = client.post(f"/api/conversations/{chat}/messages", headers=headers,
-                           json={"content": "Hallo", **CLOUD})
+                           json={"content": "Wie ist mein Name?", **CLOUD})
     assert "succeeded" in response.text and provider.stream_calls == [True]
     assert "SYNTHETIC_SHARED" in " ".join(seen)
     assert "SYNTHETIC_PRIVATE" not in " ".join(seen)

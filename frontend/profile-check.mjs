@@ -1,6 +1,8 @@
 import {chromium} from 'playwright';
 import {loginFixture} from './fixture-login.mjs';
-const base='http://127.0.0.1:18765',browser=await chromium.launch({headless:true}),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+const base=process.env.PROFILE_FIXTURE_URL||'http://127.0.0.1:18765';
+if(!['http://127.0.0.1:18765','http://127.0.0.1:18767'].includes(base))throw Error('Only an isolated synthetic profile fixture is permitted');
+const browser=await chromium.launch({headless:true}),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(15000);let original,auth;
 try{
  await page.goto(base);auth=await loginFixture(page);const headers={'X-CSRF-Token':auth.csrf,Origin:base};const response=await page.request.get(base+'/api/personal-profile');if(!response.ok())throw Error('Profile endpoint unavailable');original=await response.json();

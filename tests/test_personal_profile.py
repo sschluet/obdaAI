@@ -3,7 +3,13 @@ import json
 
 import pytest
 from hub.db import PersonalProfile, Run
-from hub.personal_profile import context_for_provider, digest, freeze_profile
+from hub.personal_profile import (
+    ProfileFields,
+    context_for_provider,
+    digest,
+    freeze_profile,
+    relevant_profile_fields,
+)
 from hub.policy import Privacy, check_egress
 from hub.routing import Route
 from sqlalchemy import select
@@ -80,7 +86,12 @@ def test_api_optional_defaults_auth_cas_clear_validation(setup):
 
 def test_provider_boundary_shares_only_explicit_subset_and_no_permission_grants():
     frozen = snapshot()
-    parts, grants, audit = context_for_provider(frozen, external=True, provider_id="openrouter")
+    parts, grants, audit = context_for_provider(
+        frozen,
+        external=True,
+        provider_id="openrouter",
+        question="Berücksichtige mein persönliches Profil",
+    )
     assert len(parts) == 1 and parts[0].label == Privacy.CLOUD_ALLOWED
     assert "SYNTHETIC_NAME" in parts[0].content and "SYNTHETIC_PRIVATE" not in parts[0].content
     assert audit["applied_fields"] == ["name"] and audit["omitted_fields"] == ["challenges"]
@@ -88,7 +99,12 @@ def test_provider_boundary_shares_only_explicit_subset_and_no_permission_grants(
     check_egress(parts, external=True, provider_id="openrouter", grants=grants)
     with pytest.raises(PermissionError):
         check_egress(parts, external=True, provider_id="other", grants=grants)
-    local, local_grants, _ = context_for_provider(frozen, external=False, provider_id="local")
+    local, local_grants, _ = context_for_provider(
+        frozen,
+        external=False,
+        provider_id="local",
+        question="Berücksichtige mein persönliches Profil",
+    )
     assert "SYNTHETIC_PRIVATE" in local[0].content and local[0].label == Privacy.LOCAL_ONLY
     assert local_grants == []
     with pytest.raises(PermissionError):
@@ -98,7 +114,10 @@ def test_provider_boundary_shares_only_explicit_subset_and_no_permission_grants(
 @pytest.mark.parametrize("changes", [{"enabled": False}, {"cloud_fields": []}, {"fields": {}}])
 def test_empty_disabled_or_unshared_does_not_inject_cloud(changes):
     parts, grants, audit = context_for_provider(
-        snapshot(**changes), external=True, provider_id="openrouter"
+        snapshot(**changes),
+        external=True,
+        provider_id="openrouter",
+        question="Berücksichtige mein persönliches Profil",
     )
     assert parts == [] and grants == [] and audit["applied_fields"] == []
 
@@ -116,7 +135,12 @@ def test_empty_disabled_or_unshared_does_not_inject_cloud(changes):
 )
 def test_corrupt_snapshot_fails_closed(changes):
     with pytest.raises(ValueError):
-        context_for_provider({**snapshot(), **changes}, external=True, provider_id="openrouter")
+        context_for_provider(
+            {**snapshot(), **changes},
+            external=True,
+            provider_id="openrouter",
+            question="Berücksichtige mein persönliches Profil",
+        )
 
 
 @pytest.mark.parametrize("external,shared", [(False, False), (True, False), (True, True)])
@@ -142,7 +166,7 @@ def test_execution_profile_only_after_routing_frozen_and_labels(
 
     async def stream(parts, roles, **kwargs):
         captured.extend(parts)
-        assert roles[-1] == "user"
+        assert roles[-1] == "system"
         async for chunk in original_stream(parts, roles, **kwargs):
             yield chunk
 
@@ -167,7 +191,7 @@ def test_execution_profile_only_after_routing_frozen_and_labels(
     response = client.post(
         f"/api/conversations/{chat}/messages",
         headers=headers,
-        json={"content": "synthetic question", "web_search_allowed": False},
+        json={"content": "Berücksichtige mein persönliches Profil", "web_search_allowed": False},
     )
     assert response.status_code == 200
     with app.state.sessions() as db:
@@ -252,7 +276,10 @@ def test_profile_not_in_public_search_or_title_request(setup, monkeypatch):
     response = client.post(
         f"/api/conversations/{chat}/messages",
         headers=headers,
-        json={"content": "public synthetic research", "web_search_allowed": True},
+        json={
+            "content": "Recherchiere öffentlich nach Strategien für meine Herausforderungen",
+            "web_search_allowed": True,
+        },
     )
     assert "succeeded" in response.text
     assert captured and "SYNTHETIC_PRIVATE" not in json.dumps(captured)
@@ -319,7 +346,7 @@ def test_fully_shared_profile_derivatives_allow_auto_cloud_but_local_override_st
     response = client.post(
         "/api/conversations/" + chat + "/messages",
         headers=headers,
-        json={"content": "Synthetic short greeting", "local_only": local_only},
+        json={"content": "Wie ist mein Name?", "local_only": local_only},
     )
     assert response.status_code == 200
     detail = client.get("/api/conversations/" + chat).json()
@@ -332,3 +359,225 @@ def test_fully_shared_profile_derivatives_allow_auto_cloud_but_local_override_st
     )
     assert response.status_code == 200
     assert provider.stream_calls == [False, not local_only]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        None,
+        "",
+        "   ",
+        "Hallo",
+        "Zeige mir meine Home Assistant Geräte",
+        "Bitte rufe alle Geräte in Home Assistant auf",
+        (
+            "Erstelle eine komplexe Recherche zum Thema Managed Services in der Zukunft "
+            "vor dem Hintergrund AI und den aktuellen Entwicklungen"
+        ),
+        "Erstelle für mich eine Recherche zur Zukunft von Managed Services",
+        "Was bedeutet die Rolle COO in einem Unternehmen?",
+        "Empfiehl IT-Geräte für mich",
+        "Wie behebe ich meine Probleme mit Home Assistant?",
+        "Verwende keine persönlichen Informationen für meine Karriereplanung",
+        "Erkläre Familienstand im Steuerrecht",
+        "Berücksichtige mein persönliches Profil, aber bitte ohne persönliche Informationen",
+        "Nutze mein Profil nicht verwenden",
+        "Berücksichtige mein persönliches Profil nicht",
+        "Verwende nicht mein Profil für meine Karriere",
+        "Berate mich zu meiner Karriere, aber ohne Profil",
+        "Consider my personal profile but do not personalize",
+    ],
+)
+@pytest.mark.parametrize("external", [False, True])
+def test_neutral_or_excluded_questions_never_receive_profile(question, external):
+    fields = {key: "SYNTHETIC_" + key.upper() for key in ProfileFields.model_fields}
+    parts, grants, audit = context_for_provider(
+        snapshot(fields=fields, cloud_fields=list(fields)),
+        external=external,
+        provider_id="openrouter" if external else "local",
+        question=question,
+    )
+    assert parts == grants == []
+    assert audit["applied_fields"] == []
+    assert set(audit["omitted_fields"]) == set(fields)
+    assert "SYNTHETIC" not in json.dumps(audit)
+
+
+@pytest.mark.parametrize(
+    "question,expected",
+    [
+        ("Wie heiße ich?", {"name", "preferred_name"}),
+        ("Was ist mein Beruf?", {"profession"}),
+        ("Welche Rolle ist meine Rolle?", {"profession"}),
+        (
+            "Wie kann ich Arbeit und Familie besser vereinbaren?",
+            {"profession", "family_status", "goals", "challenges"},
+        ),
+        ("Wie sollst du mich ansprechen?", {"name", "preferred_name"}),
+        ("What is my name?", {"name", "preferred_name"}),
+        ("Berate mich zu meiner Karriere", {"profession", "goals", "challenges"}),
+        ("Wie kann ich mich beruflich weiterentwickeln?", {"profession", "goals", "challenges"}),
+        ("Welche Optionen passen zu meiner Familie?", {"family_status"}),
+        ("Was sind meine Ziele?", {"goals"}),
+        ("Wie gehe ich mit meinen Herausforderungen um?", {"challenges"}),
+        ("Empfiehl etwas für meine Interessen", {"interests"}),
+        ("Berücksichtige mein persönliches Profil", set(ProfileFields.model_fields)),
+    ],
+)
+def test_personal_intent_selects_only_relevant_fields(question, expected):
+    fields = {key: "SYNTHETIC_" + key.upper() for key in ProfileFields.model_fields}
+    assert relevant_profile_fields(question) == expected
+    parts, _, audit = context_for_provider(
+        snapshot(fields=fields, cloud_fields=list(fields)),
+        external=False,
+        provider_id="local",
+        question=question,
+    )
+    assert set(audit["applied_fields"]) == expected
+    data = json.loads(parts[0].content.split("\n", 1)[1])
+    assert set(data) == expected
+
+
+@pytest.mark.parametrize("external", [False, True])
+@pytest.mark.parametrize(
+    "question,expected",
+    [
+        ("Zeige mir meine Home Assistant Geräte", set()),
+        ("Recherchiere die Zukunft von Managed Services", set()),
+        ("Berate mich zu meiner Karriere", {"profession", "goals", "challenges"}),
+    ],
+)
+def test_execution_relevance_applies_before_local_or_cloud_provider(
+    setup, monkeypatch, external, question, expected
+):
+    _, client, headers, provider = setup
+    fields = {key: "SYNTHETIC_" + key.upper() for key in ProfileFields.model_fields}
+    save(client, headers, enabled=True, fields=fields, cloud_fields=list(fields)).raise_for_status()
+    provider.decision = Route(
+        capabilities=["chat"], model_class="cloud" if external else "local", reason="synthetic"
+    )
+    seen = []
+    original = provider.stream
+
+    async def stream(parts, roles, **kwargs):
+        seen.extend(zip(parts, roles, strict=True))
+        async for chunk in original(parts, roles, **kwargs):
+            yield chunk
+
+    monkeypatch.setattr(provider, "stream", stream)
+    chat = client.post(
+        "/api/conversations", headers=headers, json={"cloud_allowed": external}
+    ).json()["id"]
+    result = client.post(
+        f"/api/conversations/{chat}/messages",
+        headers=headers,
+        json={"content": question, "web_search_allowed": False},
+    )
+    assert "succeeded" in result.text
+    applied = {
+        key for key, value in fields.items() if value in " ".join(p.content for p, _ in seen)
+    }
+    assert applied == expected
+    assert any(
+        p.source_id == "personal-relevance-policy-1" and role == "system" for p, role in seen
+    )
+    assert provider.stream_calls == [external]
+    run = client.get(f"/api/conversations/{chat}").json()["runs"][-1]
+    audit = client.get(f"/api/runs/{run['id']}").json()["routing"]["personal_profile"]
+    assert set(audit["applied_fields"]) == expected
+
+
+@pytest.mark.parametrize("external", [False, True])
+def test_new_neutral_question_does_not_reapply_profile_from_personal_history(
+    setup, monkeypatch, external
+):
+    from hub.db import Message
+
+    app, client, headers, provider = setup
+    save(
+        client,
+        headers,
+        enabled=True,
+        fields={"profession": "SYNTHETIC_COO", "goals": "SYNTHETIC_CAREER"},
+        cloud_fields=["profession", "goals"],
+    ).raise_for_status()
+    provider.decision = Route(
+        capabilities=["chat"], model_class="cloud" if external else "local", reason="synthetic"
+    )
+    chat = client.post(
+        "/api/conversations", headers=headers, json={"cloud_allowed": external}
+    ).json()["id"]
+    client.post(
+        f"/api/conversations/{chat}/messages",
+        headers=headers,
+        json={"content": "Berate mich zu meiner Karriere", "web_search_allowed": False},
+    )
+    with app.state.sessions() as db:
+        previous = db.scalar(
+            select(Message).where(Message.conversation_id == chat, Message.role == "assistant")
+        )
+        previous.content = "Synthetic prior career advice as COO: focus on family and finances."
+        previous_label = previous.label
+        db.commit()
+    captured = []
+    original = provider.stream
+
+    async def stream(parts, roles, **kwargs):
+        captured.extend(parts)
+        async for chunk in original(parts, roles, **kwargs):
+            yield chunk
+
+    monkeypatch.setattr(provider, "stream", stream)
+    response = client.post(
+        f"/api/conversations/{chat}/messages",
+        headers=headers,
+        json={
+            "content": "Recherchiere die Zukunft von Managed Services",
+            "web_search_allowed": False,
+        },
+    )
+    assert "succeeded" in response.text
+    assert not any(p.source_id.startswith("personal-profile:") for p in captured)
+    assert any(p.source_id == "personal-relevance-policy-1" for p in captured)
+    assert any(
+        "Synthetic prior career advice" in p.content and p.label.value == previous_label
+        for p in captured
+    )
+    run = client.get(f"/api/conversations/{chat}").json()["runs"][-1]
+    assert (
+        client.get(f"/api/runs/{run['id']}").json()["routing"]["personal_profile"]["applied_fields"]
+        == []
+    )
+
+
+def test_relevance_guard_respects_local_only_provider_labels(setup, monkeypatch):
+    from dataclasses import replace
+
+    app, client, headers, provider = setup
+    from hub.execution import execute_run
+
+    async def local_execute(factory, settings, providers, run_id):
+        await execute_run(
+            factory, replace(settings, local_allowed_labels=("LOCAL_ONLY",)), providers, run_id
+        )
+
+    monkeypatch.setattr("hub.api.execute_run", local_execute)
+    provider.decision = Route(capabilities=["chat"], model_class="local", reason="synthetic")
+    original = provider.stream
+    captured = []
+
+    async def stream(parts, roles, **kwargs):
+        assert all(part.label == Privacy.LOCAL_ONLY for part in parts)
+        captured.extend(parts)
+        async for chunk in original(parts, roles, **kwargs):
+            yield chunk
+
+    monkeypatch.setattr(provider, "stream", stream)
+    chat = client.post("/api/conversations", headers=headers, json={}).json()["id"]
+    response = client.post(
+        f"/api/conversations/{chat}/messages",
+        headers=headers,
+        json={"content": "Erkläre Managed Services", "web_search_allowed": False},
+    )
+    assert "succeeded" in response.text
+    assert any(p.source_id == "personal-relevance-policy-1" for p in captured)

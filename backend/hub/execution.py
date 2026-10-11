@@ -730,10 +730,16 @@ async def execute_run(
                 provider = c.cloud_provider if external else "local"
                 # Personal background never enters routing, titles or public queries.
                 # Select the explicitly shared subset only after the final route.
-                from hub.personal_profile import context_for_provider
+                from hub.personal_profile import (
+                    PERSONAL_RELEVANCE_INSTRUCTION,
+                    context_for_provider,
+                )
 
                 profile_parts, profile_grants, profile_audit = context_for_provider(
-                    snapshot.get("personal_profile"), external=external, provider_id=provider
+                    snapshot.get("personal_profile"),
+                    external=external,
+                    provider_id=provider,
+                    question=latest.content if latest else None,
                 )
                 trace["personal_profile"] = profile_audit
                 update(routing_trace=json.dumps(trace, ensure_ascii=False))
@@ -750,6 +756,29 @@ async def execute_run(
                     builtin_answer = False
                     if sum(len(p.content) for p in parts) > cfg.context_limit:
                         raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
+                # Previous assistant messages may contain unsolicited personal advice.
+                # Keep that history and its privacy labels intact, but make the current
+                # response scope explicit. This static instruction contains no user facts.
+                relevance_part = ContextPart(
+                    content=PERSONAL_RELEVANCE_INSTRUCTION,
+                    label=(
+                        Privacy.CLOUD_ALLOWED
+                        if external or "CLOUD_ALLOWED" in cfg.local_allowed_labels
+                        else Privacy.LOCAL_ONLY
+                    ),
+                    source_id="personal-relevance-policy-1",
+                    revision=1,
+                )
+                parts.append(relevance_part)
+                roles.append("system")
+                if external:
+                    grants.append(
+                        CloudGrant(
+                            source_id=relevance_part.source_id, revision=1, provider_id=provider
+                        )
+                    )
+                if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    raise ExecutionLimitError("Antwortkontext überschreitet die Kontextgrenze")
                 if external and isinstance(providers, Providers):
                     cloud = selected.get(c.cloud_provider)
                     if cloud is None or not cloud.enabled:

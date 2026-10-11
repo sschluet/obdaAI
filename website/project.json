@@ -146,7 +146,7 @@
     {
       "id": "profile",
       "title": "Dein persönlicher Hintergrund",
-      "description": "Freiwillige Profilangaben und bewusste Cloudfreigabe pro Feld. Alex Beispiel und alle Angaben sind ausschließlich synthetisch.",
+      "description": "Freiwillige Profilangaben für Fragen mit persönlichem Bezug; allgemeine Recherchen und Gerätelisten bleiben sachlich. Bewusste Cloudfreigabe pro Feld. Alex Beispiel und alle Angaben sind ausschließlich synthetisch.",
       "image": "assets/profile.png"
     },
     {
@@ -289,7 +289,7 @@
         },
         {
           "title": "Persönliches Profil mit gezielter Feldfreigabe",
-          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
+          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Das aktive Profil liefert nur zur aktuellen Frage passende Angaben bei persönlichem Bezug; allgemeine Recherchen und Gerätelisten erhalten keinen zusätzlichen persönlichen Hintergrund. Cloudantworten dürfen ausschließlich ausdrücklich freigegebene passende Felder erhalten. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
           "status": "implemented"
         },
         {

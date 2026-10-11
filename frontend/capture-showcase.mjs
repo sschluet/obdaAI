@@ -61,7 +61,16 @@ try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
  await loginFixture(page);
- if(process.env.SHOWCASE_CAPTURE_ONLY==='cloud-balances'){
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='profile'){
+  await page.goto(base+'/?view=Einstellungen&settingsTab=Über%20mich');
+  await page.getByRole('button',{name:'Über mich',exact:true}).click();
+  await page.getByRole('region',{name:'Persönliches Profil',exact:true}).waitFor();
+  await page.getByLabel('Name',{exact:true}).filter({visible:true}).waitFor();
+  await page.setViewportSize({width:1440,height:1850});
+  await capture('profile');
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Synthetic profile relevance screenshot captured.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='cloud-balances'){
   await captureCloudBalances(page,base,capture);
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Synthetic cloud balances screenshot captured.');
