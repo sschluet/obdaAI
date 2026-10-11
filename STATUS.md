@@ -1,20 +1,36 @@
 # obdaAI — Status 11.10.2026
 
-## CI-Verbrauch gezielt reduzieren – lokal umgesetzt, 11.10.2026
+## CI-Verbrauch gezielt reduzieren – Vollprüfung und Wiederverwendung belegt, 11.10.2026
 
-obdaAI bleibt öffentlich. Überholte App-Läufe38141179287 und38141554067 auf
-Nutzerwunsch zum Abbruch angefordert. Neue App-/Website-Workflows ersetzen ältere
-Läufe desselben Refs. Fünf schwere App-Jobs nur ohne passenden geprüften App-Baum;
-Geheimnisprüfung bleibt allgemein. Vollprüfnachweis nur nach allen sechs grünen
-Jobs, tatsächliche Checkout-Baum-Signatur samt Dateimodi/Blobs; keine Freigabe durch
-abgebrochene/teilweise/Fork-Läufe. Manuelle Ausführung und fehlende Nachweise prüfen
-vollständig. Website: Pfadfilter, kein ungenutzter Pages-Artifact-Upload; reine
-Dokumentation ohne öffentliche Änderungen erfordert keine neue Veröffentlichung.
-Kleine Änderungen vor Push bündeln, erst später verfügbare Belege als ein leichtes
-Dokumentationsupdate. Acht gezielte CI-Tests lokal bestanden; erster vollständiger
-CI-Lauf fand einen ausschließlich Pytest betreffenden Test-Importpfadfehler.
-Dynamischer Dateilader korrigiert; beide Testaufrufe werden geprüft. Workflow-/Live-
-Abnahme wird nach tatsächlichem Ergebnis ergänzt. App/Test-VM bleiben unverändert.
+obdaAI bleibt öffentlich. Workflow-Konfiguration e295829 und CI38143104354 grün:
+alle sechs vollständigen App-Prüfjobs plus Änderungenprüfung/Nachweiserzeugung;
+leichter Job dabei bewusst übersprungen. Backend884 Tests und22 Subtests sowie
+vollständige App-Browserprüfung erfolgreich. Neuer kleiner Vollprüfnachweis322B
+für tatsächlichen Checkout d1ac268fa5be4b6b5756cb96c7a44a76ef867c6c erzeugt.
+Authentifizierte API-Wiederverwendung gegen aktuellen App-Baum bestätigt genau
+CI38143104354. Keine neue Vollprüfung behauptet, wenn nur dieser Nachweis verwendet
+wird. Fehlender/abgelaufener Nachweis oder manuelle Ausführung prüft vollständig.
+
+Überholte Läufe38141179287 und38141554067 manuell abgebrochen (API cancelled).
+CI65a2383 fand einen nur Pytest betreffenden Test-Importpfadfehler; dynamischer
+Dateilader korrigiert und beide Testaufrufe lokal bestanden. Nachfolger e295829
+hat den fehlerhaften Vorgänger38142837679 automatisch abgebrochen (API cancelled).
+Neue Workflow-/Ref-Gruppen beenden nur überholte Läufe desselben Branches/PRs.
+
+Fünf schwere App-Jobs werden nur ohne passenden geprüften App-Baum ausgeführt;
+Geheimnisprüfung bleibt allgemein. Artefakte nur nach allen sechs grünen Jobs;
+abgebrochene/teilweise/Fork-Läufe und reine Wiederverwendung minten keinen neuen
+Vollprüfnachweis. Acht gezielte CI-Tests, Actionlint1.7.12, Ruff und Source-Scan
+bestanden. CI bekommt für die Nachweis-API nur Leserechte; Storage keine Authheader.
+
+Website-CI38143101173 grün: Pfadfilter, Syntaxprüfung, Allowlist/Browser; ungenutzter
+Pages-Artifact-Upload entfällt. Pages f6e92e4 built, Source e29582948a4d und alle37
+öffentlichen Dateihashes bestätigt. Reine Dokumentation ohne öffentliche Änderung
+startet keine Website-CI und erfordert keine neue Veröffentlichung. Dieser gebündelte
+Abnahmebeleg ändert weder App-Baum noch öffentliche Website; die neue leichte CI
+wird nach dem Push zusätzlich beobachtet. Kleine Änderungen vor Push bündeln.
+App-/Test-VM-Code bleibt a4b7e79/Schema0038 unverändert; kein VM-Rollout nötig.
+[Prüfklassen und Nachweisvertrag](docs/ci-efficiency.md).
 
 ## GitHub Pages in obdaAI – migriert und altes Repository gelöscht, 11.10.2026
 
