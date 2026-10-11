@@ -1,0 +1,41 @@
+import {chromium} from 'playwright';
+import {loginFixture} from './fixture-login.mjs';
+const base='http://127.0.0.1:18765',browser=await chromium.launch({headless:true}),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+page.on('pageerror',error=>errors.push(error.message));
+let requests=[],detail;
+const answer=(id,status,text='Synthetisches Konzept: Abschnitt eins bleibt erhalten.')=>({id:'answer-'+id,role:'assistant',content:text,label:'LOCAL_ONLY',processing:{run_id:id,provider:'local',model:'synthetic-fixture',model_used:true,status}});
+const run=(id,status,error)=>({id,status,error,provider:'local',model:'synthetic-fixture',reason:'synthetic limit check',answer_model_used:true});
+try{
+ await page.goto(base);const auth=await loginFixture(page);
+ const created=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':auth.csrf,Origin:base},data:{cloud_allowed:false}});if(!created.ok())throw Error('Synthetic conversation creation failed');const conversation=await created.json();
+ detail={...conversation,title:'Synthetisches Konzept mit Antwortlimit',messages:[{id:'user-initial',role:'user',content:'Erstelle ein ausführliches synthetisches Konzept.',label:'LOCAL_ONLY'},answer('limited-first','limited')],runs:[run('limited-first','limited','Antwortlimit erreicht. Teilantwort gespeichert.')]};
+ await page.route('**/api/conversations/'+conversation.id,async route=>{if(route.request().method()==='GET')await route.fulfill({json:detail});else await route.continue()});
+ await page.route('**/api/conversations/'+conversation.id+'/messages',async route=>{
+  const body=route.request().postDataJSON();requests.push(body);const id='continuation-'+requests.length,status=requests.length===2?'limited':'succeeded',responseText=status==='limited'?'Synthetischer am Limit gespeicherter Stream.':'Synthetisches Konzept: Abschnitt zwei und Abschluss.';
+  detail={...detail,messages:[...detail.messages,{id:'user-'+id,role:'user',content:body.content,label:'LOCAL_ONLY'},answer(id,status,responseText)],runs:[...detail.runs,run(id,status,status==='limited'?'Antwortlimit erreicht. Teilantwort gespeichert.':null)]};
+  await new Promise(resolve=>setTimeout(resolve,250));await route.fulfill({headers:{'content-type':'text/event-stream'},body:[['run',{id}],['provider',{name:'local',model:'synthetic-fixture',model_used:true,reason:'synthetic'}],['delta',{text:responseText}],...(status==='limited'?[['warning',{message:'Antwortlimit erreicht. Teilantwort gespeichert.',reason:'output_limit'}]]:[]),['done',{status}]].map(([event,data])=>`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join('')});
+ });
+ await page.goto(base+'/?view=Chat&chat='+conversation.id);
+ const continueButton=page.getByRole('button',{name:'Antwort fortsetzen',exact:true}),composer=page.getByLabel('Nachricht',{exact:true});
+ await continueButton.waitFor();if(await page.getByRole('alert').count())throw Error('Token limit is still displayed as failure');
+ await page.locator('.answer-processing').filter({hasText:'Teilantwort · Antwortlimit erreicht'}).waitFor();
+ await page.getByRole('button',{name:'Modellwahl',exact:true}).click();await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).click();
+ await composer.fill('Mein ungesendeter eigener Entwurf');await page.reload();await continueButton.waitFor();if(await composer.inputValue()!=='Mein ungesendeter eigener Entwurf')throw Error('Draft disappeared on reload');
+ if(requests.length)throw Error('A paid/model continuation was started automatically');
+ await page.getByRole('button',{name:'Modellwahl',exact:true}).click();await page.getByRole('menuitemradio',{name:'Nur lokal',exact:true}).click();
+ await continueButton.click();await page.getByRole('button',{name:'Nachricht senden',exact:true}).waitFor();await page.getByText('Synthetisches Konzept: Abschnitt zwei und Abschluss.',{exact:true}).waitFor();
+ if(requests.length!==1||requests[0].content==='Mein ungesendeter eigener Entwurf'||!requests[0].content.includes('Abbruchstelle')||!requests[0].model_local_only||requests[0].cloud_allowed||requests[0].web_search_allowed)throw Error('Continuation did not use current local/privacy mode or sent draft');
+ if(await composer.inputValue()!=='Mein ungesendeter eigener Entwurf')throw Error('Continuation replaced unsent composer draft');
+ await page.getByText('Synthetisches Konzept: Abschnitt eins bleibt erhalten.',{exact:true}).waitFor();await page.locator('.answer-processing').filter({hasText:'Teilantwort · Antwortlimit erreicht'}).waitFor();if(await continueButton.count())throw Error('Old limit still appears as active latest notice');
+ await page.reload();await page.getByText('Synthetisches Konzept: Abschnitt zwei und Abschluss.',{exact:true}).waitFor();if(await composer.inputValue()!=='Mein ungesendeter eigener Entwurf')throw Error('Continuation cleared persisted draft');
+ detail={...detail,messages:[...detail.messages,answer('filtered','failed','Synthetischer durch Filter beendeter Text.')],runs:[...detail.runs,run('filtered','failed','Antwort durch Providerfilter beendet')]};await page.reload();await page.getByRole('alert').filter({hasText:'Providerfilter'}).waitFor();if(await continueButton.count())throw Error('Provider filter masquerades as token limit');
+ detail={...detail,messages:detail.messages.slice(0,-1),runs:detail.runs.slice(0,-1)};await page.reload();await composer.fill('Synthetischer Streamtest');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();await continueButton.waitFor();await page.getByText('Teilantwort gespeichert · Antwortlimit erreicht',{exact:true}).waitFor();if(await page.getByRole('alert').count())throw Error('SSE warning/done limited is incorrectly rendered as failure');await page.getByText('Synthetischer am Limit gespeicherter Stream.',{exact:true}).waitFor();
+ const provider={id:'synthetic-provider',name:'Synthetisches lokales Modell',kind:'local',base_url:'http://127.0.0.1:11434/v1',model:'synthetic-fixture',enabled:true,is_default:true,capabilities:['text'],allowed_labels:['LOCAL_ONLY'],context_tokens:32768,context_chars:24000,output_tokens:256,timeout:30,monthly_budget:0,max_run_cost:0,disable_thinking:false,revision:1};
+ await page.route('**/api/providers',route=>route.fulfill({json:{providers:[provider],local_endpoints:[provider.base_url],cloud_enabled:false,encrypted_secrets_available:true,external_provider_kinds:[]}}));
+ await page.goto(base+'/?view=Einstellungen&settingsTab=Modelle');await page.getByRole('button',{name:'Bearbeiten',exact:true}).click();
+ const preset=page.getByRole('button',{name:'Ausführlich 8.192 Tokens'});await preset.click();if(await page.getByLabel('Eigenes Antwortlimit (Tokens)',{exact:true}).inputValue()!=='8192')throw Error('Long answer preset does not configure output limit');
+ await page.getByRole('button',{name:'Kurz 512 Tokens'}).click();if(await page.getByLabel('Eigenes Antwortlimit (Tokens)',{exact:true}).inputValue()!=='512')throw Error('Short answer preset failed');
+ await page.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});await page.goto(base+'/?view=Chat&chat='+conversation.id);await page.getByText('Synthetisches Konzept: Abschnitt zwei und Abschluss.',{exact:true}).waitFor();if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Limit UI has mobile overflow');
+ if(errors.length)throw Error(errors.join('\n'));console.log('Answer limits UI passed: saved partials, calm limit status/reload, no automatic continuation, explicit normal local request, original content and unsent draft preserved, successful continuation clears current notice, provider filters remain errors, answer-length presets and mobile. Synthetic rendering only.');
+}finally{await browser.close()}

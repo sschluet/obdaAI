@@ -35,11 +35,33 @@ async function captureOpenRouterCosts(){
  await page.unroute('**/api/providers',providerRoute);
  await page.unroute('**/api/providers/synthetic-showcase-openrouter/account-status',accountRoute);
 }
+async function captureAnswerLimit(){
+ const csrf=(await(await page.request.get(base+'/api/me')).json()).csrf;
+ const response=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':csrf,Origin:base},data:{cloud_allowed:false}});
+ if(!response.ok())throw Error('Synthetic answer-limit conversation could not be created');
+ const chat=await response.json();
+ const text='## Projekt Aurora: Ein tragfähiges Konzept\n\n*Synthetisches Beispiel einer gespeicherten Teilantwort.*\n\n### 1. Vision und Ziel\n\nAurora bündelt Ideen und Quellen zu nachvollziehbaren Entscheidungen. Wir beginnen mit einem klaren Zielbild und halten Annahmen für das Team sichtbar fest.\n\n### 2. Ein schrittweises Vorgehen\n\nZuerst sammeln wir Anforderungen. Danach bewerten wir Optionen anhand einheitlicher Kriterien. Ein kleiner Pilot hilft, Nutzen und Aufwand zu prüfen.\n\n### 3. Umsetzung und nächste Schritte\n\nDie nächste Projektphase beginnt mit';
+ await page.route('**/api/conversations/'+chat.id,async route=>{if(route.request().method()!=='GET'){await route.continue();return;}await route.fulfill({json:{...chat,title:'Projekt Aurora · Konzeptentwurf',title_status:'succeeded',messages:[{id:'synthetic-limit-user',role:'user',content:'Erstelle ein ausführliches Konzept für unser fiktives Projekt Aurora.',label:'LOCAL_ONLY'},{id:'synthetic-limit-answer',role:'assistant',content:text,label:'LOCAL_ONLY',processing:{run_id:'synthetic-limit-run',provider:'local',model:'synthetic-fixture',model_used:true,status:'limited'}}],runs:[{id:'synthetic-limit-run',status:'limited',provider:'local',error:'Antwortlimit erreicht. Die Teilantwort bleibt gespeichert.',user_message_id:'synthetic-limit-user',assistant_message_id:'synthetic-limit-answer',events:[]}]}});});
+ await page.goto(base+'/?view=Chat&chat='+chat.id);
+ await page.getByRole('heading',{name:'Projekt Aurora: Ein tragfähiges Konzept',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Antwort fortsetzen',exact:true}).waitFor();
+ await page.locator('.answer-partial').filter({hasText:'Teilantwort · Antwortlimit erreicht'}).waitFor();
+ await page.getByText('Integrationen laden…',{exact:true}).waitFor({state:'hidden'});
+ await page.setViewportSize({width:1440,height:1100});
+ await page.locator('.chat-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+ if(await page.locator('.error[role="alert"]').count())throw Error('Answer limit must not appear as a red failure');
+ await capture('partial');
+ await page.setViewportSize({width:1440,height:980});
+}
 try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
  await loginFixture(page);
- if(process.env.SHOWCASE_CAPTURE_ONLY==='openroutercosts'){
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='answerlimit'){
+  await captureAnswerLimit();
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Answer-limit screenshot captured with synthetic data only.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='openroutercosts'){
   await captureOpenRouterCosts();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('OpenRouter costs screenshot captured with synthetic data only.');
@@ -182,17 +204,7 @@ try{
  await page.getByRole('button',{name:'Zum Ende',exact:true}).waitFor();
  await capture('chatreading');
  if(errors.length)throw Error(errors.join('\n'));
- // Preserved partial output is an isolated synthetic illustration, never a failed live chat.
- const partialResult=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':csrf,Origin:base},data:{cloud_allowed:false}});
- if(!partialResult.ok())throw Error('Synthetic partial conversation could not be created');
- const partial=await partialResult.json();
- const partialText='## Projekt Aurora: Eine klare Perspektive\n\n*Synthetische Illustration einer erhaltenen Teilantwort.*\n\n### 1. Den Überblick gewinnen\n\nWir sammeln die wichtigsten Fragen und ordnen die vorhandenen Quellen. Ein gemeinsames Ziel hilft, die Recherche auf die Informationen zu konzentrieren, die eine Entscheidung wirklich unterstützen.\n\n### 2. Ergebnisse nachvollziehbar machen\n\nJede wichtige Aussage soll auf eine Quelle oder eine sichtbar gekennzeichnete Annahme zurückgehen. So lässt sich später prüfen, wie ein Ergebnis zustande gekommen ist.\n\n### 3. Die nächsten Schritte\n\nFür die nächste Projektphase empfehlen wir';
- await page.route('**/api/conversations/'+partial.id,async route=>{if(route.request().method()!=='GET'){await route.continue();return;}await route.fulfill({json:{...partial,title:'Projekt Aurora · Erhaltene Teilantwort',title_status:'succeeded',messages:[{id:'synthetic-partial-user',role:'user',content:'Erstelle eine ausführliche Übersicht zu unserem Beispielprojekt Aurora.',label:'LOCAL_ONLY'},{id:'synthetic-partial-answer',role:'assistant',content:partialText,label:'LOCAL_ONLY',processing:{run_id:'synthetic-partial-run',provider:'local',model:'synthetic-fixture',model_used:true,status:'failed'}}],runs:[{id:'synthetic-partial-run',status:'failed',error:'Die Antwort hat das Zeitlimit erreicht. Die bisher erzeugte Teilantwort bleibt erhalten.',user_message_id:'synthetic-partial-user',assistant_message_id:'synthetic-partial-answer',events:[]}]}});});
- await page.goto(base+'/?view=Chat&chat='+partial.id);
- await page.getByRole('heading',{name:'Projekt Aurora: Eine klare Perspektive',exact:true}).waitFor();
- await page.locator('.answer-partial').filter({hasText:'Teilantwort · unvollständig'}).waitFor();
- await page.locator('.chat-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight;});
- await capture('partial');
+ await captureAnswerLimit();
  // Capture the failed-run illustration too so all gallery views match the active design.
  const errorResult=await page.request.post(base+'/api/conversations',{headers:{'X-CSRF-Token':csrf,Origin:base},data:{cloud_allowed:false}});
  if(!errorResult.ok())throw Error('Synthetic error conversation could not be created');

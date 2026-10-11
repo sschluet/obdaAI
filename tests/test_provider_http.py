@@ -224,7 +224,7 @@ def test_title_is_local_and_rejects_invalid_derivatives(monkeypatch, content):
 
 
 @pytest.mark.parametrize("reason", ["length", "content_filter"])
-def test_stream_truncation_is_explicit_failure(monkeypatch, reason):
+def test_empty_stream_limit_and_filter_have_distinct_messages(monkeypatch, reason):
     from hub.budgets import ExecutionLimitError
 
     original = httpx.AsyncClient
@@ -246,7 +246,8 @@ def test_stream_truncation_is_explicit_failure(monkeypatch, reason):
     )
 
     async def run():
-        with pytest.raises(ExecutionLimitError, match="Tokenlimit"):
+        message = "Antwortlimit" if reason == "length" else "Inhaltsfilter"
+        with pytest.raises(ExecutionLimitError, match=message):
             async for _ in provider.stream(
                 [ContextPart(content="fixture", source_id="x", revision=1)],
                 ["user"],
@@ -321,3 +322,50 @@ def test_router_compacts_only_old_answers_and_stream_keeps_full_context(
         assert answer["enable_thinking"] is False
     else:
         assert "enable_thinking" not in answer
+
+
+@pytest.mark.parametrize("external", [False, True])
+@pytest.mark.parametrize("finish", ["stop", "length", "content_filter"])
+def test_final_delta_limit_and_usage_are_distinct(monkeypatch, external, finish):
+    from hub.budgets import ExecutionLimitError
+    from hub.policy import CloudGrant
+    from hub.providers import AnswerLimitReached
+
+    original = httpx.AsyncClient
+    calls = []
+    frames = [
+        {"choices": [{"delta": {"content": "Opening "}}]},
+        {"choices": [{"delta": {"content": "final"}, "finish_reason": finish}]},
+        {"choices": [], "usage": {"cost": 0.0123}},
+    ]
+    wire = "".join("data: " + json.dumps(frame) + "\n\n" for frame in frames)
+    wire += "data: [DONE]\n\n"
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, text=wire)
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: original(
+        transport=httpx.MockTransport(handler), **kw))
+    provider = Providers(Settings(local_model="fixture", openrouter_model="fixture"))
+    monkeypatch.setattr(provider, "_target", lambda external: (
+        "http://127.0.0.1/v1/chat/completions", {}, {}, ""))
+    chunks = []
+
+    async def collect():
+        async for chunk in provider.stream(
+            [ContextPart(content="Synthetic", label="CLOUD_ALLOWED", source_id="x", revision=1)],
+            ["user"], external=external,
+            grants=[CloudGrant(source_id="x", revision=1, provider_id="openrouter")],
+        ):
+            chunks.append(chunk)
+
+    if finish == "stop":
+        asyncio.run(collect())
+    else:
+        with pytest.raises(AnswerLimitReached if finish == "length" else ExecutionLimitError):
+            asyncio.run(collect())
+    assert "".join(chunks) == ("Opening " if finish == "content_filter" else "Opening final")
+    assert len(calls) == 1
+    if external and finish != "content_filter":
+        assert provider.measured_cost == 0.0123 and provider.cost_basis == "provider_reported"

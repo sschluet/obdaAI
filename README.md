@@ -85,3 +85,5 @@ OpenRouter-Kontostatus und Nutzungskosten: [Einrichtung und Bedeutung der Werte]
 HTTPS hinter einer vom Benutzer eingerichteten Synology: [Reverse-Proxy-Vertrag und VM-Vorbereitung](docs/synology-reverse-proxy.md). Der private IP-Zugang bleibt erhalten; der Domainzugang akzeptiert nur den freigegebenen Proxy.
 
 CI startet schwere App-Prüfungen nur für einen noch nicht vollständig geprüften App-Baum; Website und Dokumentation werden gezielt geprüft: [CI-Umfang, Nachweise und Push-Bündelung](docs/ci-efficiency.md).
+
+Längere Konzepte, klare Teilantworten und manuelle Fortsetzung: [Antwort-, Kontext- und Kostenlimits](docs/answer-limits.md).

@@ -537,3 +537,45 @@ def test_native_consent_reservation_stream_and_cost_basis_end_to_end(managed, mo
         )
         assert client.get("/api/conversations/" + private["id"]).json()["cloud_allowed"] is False
     assert REVIEWED_AT > 0
+
+
+def test_adaptive_answer_tokens_fit_existing_budget_and_preserve_configuration(managed):
+    from hub.budgets import reserve_answer
+
+    app, client, headers, cfg = managed
+    part = ContextPart(content="A" * 1000, source_id="synthetic", revision=1,
+                       label=Privacy.CLOUD_ALLOWED)
+    with app.state.sessions() as db:
+        row = db.get(ProviderConfig, "openrouter-default")
+        data = json.loads(row.config)
+        data.update(output_tokens=8192, max_run_cost=0.005, monthly_budget=0.05,
+                    pricing={"input": 0.0000004, "output": 0.0000016,
+                             "verified_at": time.time(), "context_tokens": 32768})
+        row.config = json.dumps(data)
+        original = row.config
+        ceiling, tokens = reserve_answer(db, row, "adaptive-answer", [part])
+        assert 2000 < tokens < 8192
+        assert ceiling <= 0.005
+        assert row.config == original
+        assert reserve_answer(db, row, "adaptive-answer", [part]) == (ceiling, tokens)
+        db.commit()
+
+
+def test_adaptive_answer_monthly_remainder_and_context_never_exceeded(managed):
+    from hub.budgets import reserve_answer
+
+    app, client, headers, cfg = managed
+    part = ContextPart(content="A" * 100, source_id="synthetic", revision=1,
+                       label=Privacy.CLOUD_ALLOWED)
+    with app.state.sessions() as db:
+        row = db.get(ProviderConfig, "openrouter-default")
+        data = json.loads(row.config)
+        data.update(output_tokens=8192, context_tokens=1024, max_run_cost=0.05,
+                    monthly_budget=0.001, pricing={"input": 0.0000004,
+                    "output": 0.0000016, "verified_at": time.time(), "context_tokens": 1024})
+        row.config = json.dumps(data)
+        ceiling, tokens = reserve_answer(db, row, "monthly-answer", [part])
+        assert len(part.content.encode()) + 64 + 256 + tokens <= 1024
+        assert ceiling <= 0.001
+        with pytest.raises(ValueError, match="Kostenbudget"):
+            reserve_answer(db, row, "next-answer", [part])

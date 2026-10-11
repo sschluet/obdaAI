@@ -364,3 +364,86 @@ def test_existing_openrouter_consent_remains_bound_and_cannot_switch(setup):
         ).status_code
         == 409
     )
+
+
+@pytest.mark.parametrize("has_text", [False, True])
+def test_output_limit_is_persisted_as_limited_without_retry(setup, has_text):
+    from hub.providers import AnswerLimitReached
+
+    app, client, headers, provider = setup
+    provider.decision = Route(capabilities=["chat"], model_class="local", reason="synthetic")
+    calls = []
+
+    async def limited(parts, roles, *, external, grants):
+        calls.append(external)
+        if has_text:
+            yield "Incomplete concept remains readable"
+        raise AnswerLimitReached()
+
+    provider.stream = limited
+    chat_id = new_chat(client, headers)
+    result = client.post(f"/api/conversations/{chat_id}/messages",
+                         json={"content": "Synthetic concept"}, headers=headers)
+    expected = "limited" if has_text else "failed"
+    assert result.status_code == 200
+    assert ('event: warning' if has_text else 'event: error') in result.text
+    detail = client.get("/api/conversations/" + chat_id).json()
+    assert detail["runs"][0]["status"] == expected
+    assert detail["runs"][0]["error"]
+    if has_text:
+        assert detail["messages"][-1]["content"] == "Incomplete concept remains readable"
+        assert detail["messages"][-1]["label"] == "LOCAL_ONLY"
+    else:
+        assert len(detail["messages"]) == 1
+    assert calls == [False]
+
+
+def test_long_partial_answer_can_be_continued_without_losing_saved_text(setup):
+    import json
+
+    app, client, headers, provider = setup
+    provider.decision = Route(capabilities=["chat"], model_class="local", reason="synthetic")
+    chat_id = new_chat(client, headers)
+    original = "Opening context. " + "Long concept paragraph. " * 1800 + "END OF PART ONE"
+    with app.state.sessions() as db:
+        db.add(Message(conversation_id=chat_id, role="user", content="Draft the concept",
+                       label="LOCAL_ONLY", created=1))
+        db.add(Message(conversation_id=chat_id, role="assistant", content=original,
+                       label="LOCAL_ONLY", created=2))
+        db.commit()
+    response = client.post(f"/api/conversations/{chat_id}/messages",
+                           json={"content": "Continue from the last sentence"}, headers=headers)
+    assert response.status_code == 200 and "succeeded" in response.text
+    with app.state.sessions() as db:
+        from sqlalchemy import select
+
+        run = db.scalar(select(Run).where(Run.conversation_id == chat_id))
+        snapshot = json.loads(run.context_snapshot)
+        assert snapshot["parts"][-1]["content"] == "Continue from the last sentence"
+        assert snapshot["parts"][-2]["content"].endswith("END OF PART ONE")
+        assert snapshot["parts"][0]["content"] == "Draft the concept"
+        assert sum(len(p["content"]) for p in snapshot["parts"]) <= 20000
+        assert snapshot["context_window"]["truncated_messages"]
+    detail = client.get("/api/conversations/" + chat_id).json()
+    assert detail["messages"][1]["content"] == original
+
+
+def test_omitted_private_history_still_blocks_explicit_cloud(setup):
+    app, client, headers, provider = setup
+    chat_id = new_chat(client, headers, True)
+    with app.state.sessions() as db:
+        db.add(Message(conversation_id=chat_id, role="user", content="Private original",
+                       label="LOCAL_ONLY", created=1))
+        for index in range(45):
+            db.add(Message(conversation_id=chat_id, role="user", content=f"Public {index}",
+                           label="CLOUD_ALLOWED", created=index + 2))
+        db.commit()
+    response = client.post(f"/api/conversations/{chat_id}/messages",
+                           json={"content": "Latest public question", "model_cloud_only": True},
+                           headers=headers)
+    assert response.status_code == 409 and "geschützte Historie" in response.text
+    assert provider.calls == 0 and provider.stream_calls == []
+    detail = client.get("/api/conversations/" + chat_id).json()
+    assert len(detail["messages"]) == 46
+    assert detail["messages"][0]["content"] == "Private original"
+    assert detail["messages"][0]["label"] == "LOCAL_ONLY"

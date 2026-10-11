@@ -13,8 +13,9 @@ from typing import Any, Literal
 
 import httpx
 
+from hub.budgets import ExecutionLimitError
 from hub.policy import CloudGrant, ContextPart, check_egress
-from hub.providers import pinned_url
+from hub.providers import AnswerLimitReached, pinned_url
 
 NativeKind = Literal["openai", "anthropic"]
 ENDPOINTS = {"openai": "https://api.openai.com/v1", "anthropic": "https://api.anthropic.com/v1"}
@@ -146,6 +147,7 @@ class NativeProvider:
             if not body["messages"] or body["messages"][0]["role"] != "user":
                 raise ValueError("Anthropic requires an initial user message")
         count, input_count, output_count = 0, None, None
+        termination: ExecutionLimitError | None = None
         async with httpx.AsyncClient(
             timeout=cfg.timeout, trust_env=False, follow_redirects=False
         ) as client:
@@ -157,7 +159,7 @@ class NativeProvider:
                     typ = event.get("type", "")
                     chunk = None
                     done = False
-                    if typ in ("error", "response.failed", "response.incomplete"):
+                    if typ in ("error", "response.failed"):
                         raise ValueError("Native provider returned an unsuccessful response")
                     if cfg.kind == "openai":
                         if typ == "response.output_text.delta":
@@ -165,9 +167,16 @@ class NativeProvider:
                         elif typ == "response.output_item.added":
                             if event.get("item", {}).get("type") != "message":
                                 raise ValueError("Native tools are not enabled")
-                        elif typ == "response.completed":
+                        elif typ in ("response.completed", "response.incomplete"):
                             value = event.get("response", {})
-                            if value.get("status") != "completed":
+                            reason = (value.get("incomplete_details") or {}).get("reason")
+                            if typ == "response.incomplete" and reason == "max_output_tokens":
+                                termination = AnswerLimitReached()
+                            elif typ == "response.incomplete" and reason == "content_filter":
+                                termination = ExecutionLimitError(
+                                    "Antwort durch den Inhaltsfilter des Providers beendet"
+                                )
+                            elif value.get("status") != "completed":
                                 raise ValueError("Native response did not complete")
                             usage = value.get("usage")
                             if usage is not None:
@@ -192,7 +201,14 @@ class NativeProvider:
                                 raise ValueError("Unsupported native content block")
                             chunk = delta.get("text")
                         elif typ == "message_delta":
-                            if event.get("delta", {}).get("stop_reason") not in (None, "end_turn"):
+                            stop_reason = event.get("delta", {}).get("stop_reason")
+                            if stop_reason == "max_tokens":
+                                termination = AnswerLimitReached()
+                            elif stop_reason == "refusal":
+                                termination = ExecutionLimitError(
+                                    "Antwort durch den Inhaltsfilter des Providers beendet"
+                                )
+                            elif stop_reason not in (None, "end_turn"):
                                 raise ValueError("Native answer stopped before completion")
                             usage = event.get("usage")
                             if usage is not None:
@@ -207,7 +223,7 @@ class NativeProvider:
                             raise ValueError("Native output exceeds byte limit")
                         yield chunk
                     if done:
-                        if not count:
+                        if not count and termination is None:
                             raise ValueError("Native provider returned no text")
                         if input_count is not None and output_count is not None:
                             if output_count > cfg.output_tokens:
@@ -220,5 +236,7 @@ class NativeProvider:
                                 rate[0] * input_count + rate[1] * output_count
                             ) / Decimal(1000000)
                             self.cost_basis = "usage_estimate"
+                        if termination:
+                            raise termination
                         return
                 raise ValueError("Native stream ended without completion marker")

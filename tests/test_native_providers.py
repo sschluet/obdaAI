@@ -183,3 +183,79 @@ async def test_frame_size_and_truncated_frame_limits():
     for content in (b"data: " + b"x" * 70000 + b"\n\n", b'data: {"type":"ping"}'):
         with pytest.raises(ValueError):
             [value async for value in events(httpx.Response(200, content=content))]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("kind", ["openai", "anthropic"])
+async def test_native_limit_preserves_text_and_usage(monkeypatch, kind):
+    from hub.providers import AnswerLimitReached
+
+    if kind == "openai":
+        model = "gpt-4.1-mini"
+        values = [
+            {"type": "response.output_text.delta", "delta": "Final partial text"},
+            {"type": "response.incomplete", "response": {
+                "status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"},
+                "usage": {"input_tokens": 100, "output_tokens": 20}}},
+        ]
+    else:
+        model = "claude-haiku-4-5-20251001"
+        values = [
+            {"type": "message_start", "message": {"usage": {"input_tokens": 100}}},
+            {"type": "content_block_delta", "delta": {
+                "type": "text_delta", "text": "Final partial text"}},
+            {"type": "message_delta", "delta": {"stop_reason": "max_tokens"},
+             "usage": {"output_tokens": 20}},
+            {"type": "message_stop"},
+        ]
+    requests = fixture(monkeypatch, values)
+    provider = NativeProvider(NativeConfig(kind, model, enabled=True), "synthetic-key")
+    chunks = []
+    with pytest.raises(AnswerLimitReached):
+        async for chunk in provider.stream([part()], ["user"], grants=[grant(kind)]):
+            chunks.append(chunk)
+    assert "".join(chunks) == "Final partial text" and len(requests) == 1
+    assert provider.usage == {"input_tokens": 100, "output_tokens": 20}
+    assert provider.estimated_cost is not None and provider.cost_basis == "usage_estimate"
+
+
+@pytest.mark.anyio
+async def test_native_content_filter_is_not_an_output_limit(monkeypatch):
+    from hub.budgets import ExecutionLimitError
+    from hub.providers import AnswerLimitReached
+
+    fixture(monkeypatch, [
+        {"type": "response.output_text.delta", "delta": "Partial"},
+        {"type": "response.incomplete", "response": {
+            "status": "incomplete", "incomplete_details": {"reason": "content_filter"},
+            "usage": {"input_tokens": 100, "output_tokens": 20}}},
+    ])
+    provider = NativeProvider(NativeConfig("openai", "gpt-4.1-mini", enabled=True), "synthetic")
+    with pytest.raises(ExecutionLimitError, match="Inhaltsfilter") as error:
+        await collect(provider, "openai")
+    assert not isinstance(error.value, AnswerLimitReached)
+    assert provider.estimated_cost == Decimal("0.000072")
+
+
+@pytest.mark.anyio
+async def test_native_limit_cost_reaches_execution_provider_wrapper(monkeypatch):
+    from hub.config import Settings
+    from hub.providers import AnswerLimitReached, Providers
+
+    fixture(monkeypatch, [
+        {"type": "response.output_text.delta", "delta": "Partial"},
+        {"type": "response.incomplete", "response": {
+            "status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"},
+            "usage": {"input_tokens": 100, "output_tokens": 20}}},
+    ])
+    provider = Providers(Settings(cloud_enabled=True, external_provider_kinds=("openai",),
+                                  openrouter_model="gpt-4.1-mini"))
+    provider.external_kind = "openai"
+    provider.keys["openai"] = "synthetic"
+    chunks = []
+    with pytest.raises(AnswerLimitReached):
+        async for chunk in provider.stream([part()], ["user"], external=True,
+                                           grants=[grant("openai")]):
+            chunks.append(chunk)
+    assert "".join(chunks) == "Partial"
+    assert provider.measured_cost == 0.000072 and provider.cost_basis == "usage_estimate"

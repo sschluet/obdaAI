@@ -1,5 +1,33 @@
 # obdaAI — Status 11.10.2026
 
+## Lange Konzepte und Antwortlimits – lokal geprüft, 11.10.2026
+
+Tatsächliche VM-Limits lokal2048 und OpenRouter256 Tokens erklären den frühen
+Abbruch. Gewünschtes neues Antwortlimit8192 pro Standardverbindung; Nutzer hat
+für OpenRouter ausdrücklich0,05USD je Anfrage und1USD monatlich freigegeben.
+Die Konfigurationsanpassung erfolgt beim überprüften Rollout mit CAS/Revisions-
+beleg, ohne Schlüssel/Datenschutzklassen/Modelle zu ändern. Pro Lauf reduziert
+reserve_answer den Umfang bei Kontext-/Budgetknappheit statt Grenzen zu erhöhen.
+Lokale Generation reserviert den vollständigen tatsächlichen Antwortumfang.
+
+Tokenlimit mit Text: terminal limited, gespeicherte Teilantwort/Modellbeleg und
+ruhiger Hinweis, ausdrückliche normale Fortsetzung mit eigenem Lauf/Budget und
+aktueller Modellwahl. Keine automatische Folgerechnung, kein Cloud-Fallback.
+Letzte Deltas und nachgelagerte Kosten erhalten; Inhaltsfilter separatfailed;
+leerer Tokenabbruch bleibt Fehler. Native OpenAI/Anthropic entsprechend behandelt.
+Zusätzliche Antwort-Zeichengrenze96000. Begrenztes Kontextfenster statt Verwerfen
+langer gespeicherter Historie: jüngere Nachrichten/Frage/Antwortende, aktuelle
+Frage vollständig, originale Texte unverändert. Ausgelassene private Historie
+behält LOCAL_ONLY-Marker und blockiert Cloudweitergabe. Audit im Laufsnapshot.
+
+76 gezielte Backendtests bestanden, darunter Budget/Contextcaps, gespeicherter
+Limitlauf, letzteDeltas/Kosten/Filter und lange Fortsetzung mit Privatheitsgrenzen.
+Frontend-Build, Limit-SSE/Reload/manuelleFortsetzung/Entwurferhalt/Presets/Mobil-
+Browsercheck sowie bestehende Fehler-/Verarbeitungschecks bestanden. Ruff/Mypy77,
+Source-Scan und Workflowsyntax bestanden. Ausschließlich synthetisches neues
+Teilantwortbild, Website67Features/35Allowlistdateien. Reale Providerabnahme und
+Test-VM-Rollout erfolgen nach exakter CI; App-Code bishera4b7e79/Schema0038.
+
 ## CI-Verbrauch gezielt reduzieren – Vollprüfung und Wiederverwendung belegt, 11.10.2026
 
 obdaAI bleibt öffentlich. Workflow-Konfiguration e295829 und CI38143104354 grün:

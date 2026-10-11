@@ -121,8 +121,8 @@
     },
     {
       "id": "partial",
-      "title": "Auch bei Abbruch bleibt dein Text.",
-      "description": "Eine erhaltene Teilantwort mit Modellherkunft, sichtbarem Hinweis auf Unvollständigkeit und einer einzelnen konkreten Fehlermeldung. Ausschließlich synthetischer Beispieltext und simulierter Fehler.",
+      "title": "Ein langes Konzept bewusst fortsetzen.",
+      "description": "Gespeicherte Teilantwort am Antwortlimit mit Modellherkunft und ruhigem Hinweis. „Antwort fortsetzen“ startet nur auf deinen Klick einen neuen Lauf mit normalen Datenschutz- und Kostenprüfungen. Ausschließlich synthetischer Beispieltext und simulierter Limitstatus.",
       "image": "assets/partial.png"
     },
     {
@@ -243,7 +243,7 @@
         },
         {
           "title": "Lange Antworten und erhaltene Teilantworten",
-          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte. Vorbereitung optimiert: reine lokale Einordnung mit kompakter älterer Antwortdarstellung; die eigentliche Antwort behält den vollständigen Kontext. Schrittbezogene Timeoutmeldungen. Auf der Test-VM bestätigt: Folgefrage nach 11.081 Zeichen früherer Antwort in27,31s erfolgreich, vollständiger Antwortkontext und Reload geprüft.",
+          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte. Vorbereitung optimiert: reine lokale Einordnung mit kompakter älterer Antwortdarstellung; die eigentliche Antwort behält den vollständigen Kontext. Schrittbezogene Timeoutmeldungen. Auf der Test-VM bestätigt: Folgefrage nach 11.081 Zeichen früherer Antwort in27,31s erfolgreich, vollständiger Antwortkontext und Reload geprüft. Neu implementiert: adaptiver Ausgabeumfang für ausführliche Konzepte innerhalb von Kontext- und Kostengrenzen; ein erreichtes Antwortlimit mit Text wird als gespeicherte Teilantwort dargestellt. Manuelle Fortsetzung erhält einen eigenen Lauf. Kosten- und Monatsbudgets werden nicht automatisch erhöht. Die neue Funktion ist lokal geprüft; ihre Live-Abnahme steht noch aus.",
           "status": "live"
         },
         {

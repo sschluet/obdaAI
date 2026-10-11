@@ -133,6 +133,7 @@ jobs:
           node chat-skills-check.mjs
           node processing-check.mjs
           node run-error-check.mjs
+          node answer-limit-check.mjs
           node chat-scroll-check.mjs
           node pipeline-check.mjs
           node workbench-check.mjs

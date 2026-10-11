@@ -54,7 +54,7 @@ from hub.knowledge_connections import install_knowledge_connections
 from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
 from hub.personal_profile import freeze_profile, install_personal_profile_api
-from hub.policy import ContextPart, Privacy
+from hub.policy import Privacy
 from hub.preference_api import install_preference_api
 from hub.preferences import resolve as resolve_preferences
 from hub.provider_api import install_provider_api
@@ -677,8 +677,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for old in messages[cut + 1 :]:
                     old.active = False
                 messages = messages[: cut + 1]
-            if len(messages) > 40 or sum(len(m.content) for m in messages) > 24000:
-                raise HTTPException(413, "Kontextgrenze erreicht; neues Gespräch starten")
+            from hub.chat_context import recent_context
+
+            history_context = recent_context(messages, local_only=local_only)
             web_options = read_options(db)
             if web_search_allowed and not web_options["enabled"]:
                 raise HTTPException(409, "Webrecherche ist in den Einstellungen deaktiviert")
@@ -701,16 +702,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "web_search_allowed": web_search_allowed,
                 "model_local_only": model_local_only,
                 "model_cloud_only": model_cloud_only,
-                "parts": [
-                    ContextPart(
-                        content=m.content,
-                        label=Privacy.LOCAL_ONLY if local_only else Privacy(m.label),
-                        source_id=m.id,
-                        revision=m.revision,
-                    ).model_dump(mode="json")
-                    for m in messages
-                ],
-                "roles": [m.role for m in messages],
+                **history_context,
             }
             try:
                 needs_vault = c.memory_scope or (
