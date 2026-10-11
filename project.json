@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "85a8581",
-  "schema": "0033",
-  "tests": 794,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
+  "applicationCommit": "3d003f6",
+  "schema": "0037",
+  "tests": 864,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38136684453",
   "screenshots": [
     {
       "id": "chat",
@@ -54,9 +54,33 @@
       "image": "assets/security.png"
     },
     {
+      "id": "appearance",
+      "title": "Dein Arbeitsraum, dein Stil.",
+      "description": "Kompakte oder komfortable Abstände, eigene Akzentfarbe und ein eigener App-Name. Anzeigename und Foto gestalten die persönliche Karte unten links. Ausschließlich synthetische Angaben; diese Anzeigeeinstellungen werden nicht als KI-Profil verwendet.",
+      "image": "assets/appearance.png"
+    },
+    {
+      "id": "generic-integrations",
+      "title": "Deine Verbindungen. Ein klarer Überblick.",
+      "description": "Fünf fiktive Verbindungsprofile für Home Assistant, Paperless, MCP, UniFi und SSH. Suche, Aktiv-Schalter, Status und direkte Zuordnungen; nicht verfügbare Laufzeitadapter werden offen gekennzeichnet.",
+      "image": "assets/genericintegrations.png"
+    },
+    {
+      "id": "use-cases-overview",
+      "title": "Deine Use Cases. Ein eigener Bereich.",
+      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: projektübergreifende Übersicht mit Suche, Projektfilter und direktem Einstieg. Das Beispiel zeigt ausschließlich fiktive Anwendungsfälle aus Projekt Aurora.",
+      "image": "assets/usecasesoverview.png"
+    },
+    {
+      "id": "use-cases",
+      "title": "Eine Eingabe. Dein Ausgabeformat.",
+      "description": "Der eigene Navigationsbereich Use Cases liegt zwischen Projekte und Aufgaben. Beispiel aus dem fiktiven Projekt Aurora: vier konfigurierbare Felder, gespeicherte Eingabe, lokales Balkendiagramm und CSV-/Excel-Download. Das Ergebnis entsteht aus Formularwerten, ohne KI-Aufruf oder automatische Integration.",
+      "image": "assets/usecases.png"
+    },
+    {
       "id": "integrations",
-      "title": "Verbindungen an einem Ort.",
-      "description": "Einstellungen → Integrationen bündelt verfügbare Funktionen nach System. Verständliche Aktionen, Verbindungsstatus und Ergebnisse direkt bei der passenden Integration. Ausschließlich synthetische Beispieldaten.",
+      "title": "Bestehende Aktionen bleiben erreichbar.",
+      "description": "Zusätzlich zur generischen Übersicht bleiben geprüfte Systemaktionen eingeklappt erreichbar: Arbeitsraum lesen, Home Assistant prüfen und Projektarchivierung gezielt vorbereiten. Ausschließlich synthetische Beispieldaten.",
       "image": "assets/integrations.png"
     },
     {
@@ -136,6 +160,12 @@
       "title": "Chats löschen, auch aus dem Archiv.",
       "description": "Direkte Gesprächsaktionen und ein gemeinsamer Bestätigungsdialog. Ausschließlich synthetische Gesprächsdaten.",
       "image": "assets/deletechat.png"
+    },
+    {
+      "id": "openroutercosts",
+      "title": "Cloudkosten auf einen Blick.",
+      "description": "Kontoguthaben, API-Schlüssellimit und lokales Monatsbudget klar unterscheiden. Ausschließlich synthetische USD-Werte; kein reales OpenRouter-Konto und keine Zugangsdaten.",
+      "image": "assets/openroutercosts.png"
     }
   ],
   "groups": [
@@ -164,6 +194,11 @@
           "title": "OpenRouter",
           "description": "Echte Anbieter- und Chatabnahme dokumentiert. Gewöhnlicher Auto-Chat darf aktuelle Eingaben und laufgebundene öffentliche Treffer über konfigurierte Cloudmodelle verarbeiten. Server-, Kosten- und Datenschutzgrenzen bleiben verbindlich.",
           "status": "live"
+        },
+        {
+          "title": "OpenRouter-Guthaben und Cloudkosten",
+          "description": "Kontoguthaben über einen optionalen separaten Kontostatus-Schlüssel, Nutzung und Restlimit des Inferenzschlüssels sowie lokales UTC-Monatsbudget mit offenen Reservierungen. Übersicht in Modelleinstellungen und Chat; manuelle Aktualisierung, Zeitstempel und sichtbare unbekannte Werte. Implementiert; echte Kontostatus- und Testinstanzabnahme stehen noch aus. Reale Schlüsselnutzung und Chatanzeige auf Testinstanz bestätigt; gesamtes Kontoguthaben bleibt ohne separat eingerichteten Management Key unbekannt.",
+          "status": "limited"
         },
         {
           "title": "Direkte OpenAI- und Anthropic-Anbieter",
@@ -252,6 +287,11 @@
           "title": "Öffentliche Webseiten als Quellen",
           "description": "Ausdrücklich hinzugefügte HTTPS-Seiten werden als gebundene Quellensnapshots gespeichert. Netzwerk- und Zielprüfungen begrenzen den Zugriff.",
           "status": "live"
+        },
+        {
+          "title": "Use Cases mit eigenen Eingaben und Ausgaben",
+          "description": "Eigener Navigationsbereich zwischen Projekte und Aufgaben mit einer projektübergreifenden Übersicht, Suche und Projektfilter. Projektbezogene Formulare und Frage-für-Frage-Dialoge mit Text-, Zahlen-, Datums- und Auswahlfeldern. Lokale Ausgabe als Tabelle, CSV, Excel, Balkendiagramm oder Textvorlage; gespeicherte Eingaben und feste Revisionen, Kopieren und endgültiges Löschen. Die Ausgabe entsteht deterministisch aus eingegebenen Werten. Freier KI-Chat, automatische Berechnungen und Integrationsabfragen sind noch nicht verfügbar.",
+          "status": "limited"
         }
       ]
     },
@@ -440,13 +480,23 @@
         },
         {
           "title": "Integrationen mit verständlichen Aktionen",
-          "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP. Direkte Prüfaktionen zeigen Ergebnisse beim jeweiligen System; Projektarchive führen vom Ziel über konkrete Freigabe zur Ausführung. Schreibpause und eingeklappte Ausführungsbelege bleiben erhalten. Auf der Test-VM mit echtem Hub-Lesebeleg, Navigation, Datenschutzstatus und Mobilansicht bestätigt. Vollständige Archivierung isoliert synthetisch geprüft; weitere Schreibadapter bleiben offen.",
-          "status": "live"
+          "description": "Bestehende Arbeitsraum-, Home-Assistant-, Browser- und Archivierungsaktionen bleiben unter Einstellungen → Integrationen eingeklappt erreichbar. Prüfergebnisse erscheinen direkt am passenden System; Archivierung braucht Zielprüfung und konkrete Freigabe. Globale Schreibpause und Ausführungsbelege bleiben erhalten. Die vorherige Ausführung ist geprüft; die neue generische Zuordnung verleiht diesen Aktionen keine zusätzlichen Rechte.",
+          "status": "implemented"
         },
         {
           "title": "Skills direkt im Chat einsetzen",
           "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Synthetisch geprüft; releasegebundene VM-Abnahme folgt. Führende aktivierte Skillaufrufe bleiben mit reiner Textrecherche kompatibel; die Fokusrückgabe wartet auf das Schließen des Dialogs.",
           "status": "implemented"
+        },
+        {
+          "title": "Generische Integrationsübersicht",
+          "description": "Suchbare Übersicht mit typgerechter Einrichtung für Home Assistant, Paperless, MCP, UniFi und SSH. Verschlüsselte Zugangsdaten, Aktiv-Schalter, Revisionen, direkte Zuordnungszahlen und ehrliche Prüfstati. Speichern kontaktiert kein neues Ziel. Zugangsprüfungen nutzen nur bereits freigegebene HA-/MCP-Ziele; Paperless-, UniFi- und SSH-Laufzeitadapter sind noch nicht verfügbar.",
+          "status": "implemented"
+        },
+        {
+          "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
+          "description": "Dauerhafte Profilzuordnungen für Projekte und Aufgaben, Projektvererbung und manuelle Auswahl oder Abwahl im Chat. Bis zu acht Profile je Auswahl; deaktivierte Profile bleiben gesperrt. Auswahl und Revision werden nachvollziehbar gespeichert. Die dynamische automatische KI-Nutzung ist vorbereitet, aber noch nicht implementiert.",
+          "status": "limited"
         }
       ]
     },
@@ -510,6 +560,11 @@
           "title": "Projekte und Chats endgültig löschen",
           "description": "Projekte inklusive ihrer App-Dateien, Quellen, Chats und Projektskills dauerhaft entfernen. Chats direkt über Gesprächsaktionen auch im Archiv löschen. Bestätigung mit Inhaltsübersicht und Zustandsnachweis; Abbrechen, laufende Vorgänge und aktuelle Abhängigkeiten berücksichtigt. Dauerhafte Dateibereinigung über vorhandene isolierte Verarbeiter, sichtbarer Fortschritt, Aufgabenhistorie und Kostenbuch erhalten. Auf der Test-VM mit synthetischen Chats, Quelle und tatsächlich erzeugter Word-Datei geprüft; Inhalte und App-Dateien nach Neuladen entfernt.",
           "status": "live"
+        },
+        {
+          "title": "Oberfläche persönlich gestalten",
+          "description": "Unter Einstellungen → Allgemein einen eigenen App-Namen, persönlichen Anzeigenamen und ein Foto speichern. Kompakte oder komfortable Abstände und vier Akzentfarben gestalten den gesamten Arbeitsraum. Anzeigeeinstellungen bleiben serverseitig gespeichert und sind vom persönlichen KI-Kontext getrennt. Auf der Testinstanz mit synthetischem Namen und Bild, Reload und Mobilansichten geprüft. Ursprüngliche Anzeigeoptionen anschließend wiederhergestellt.",
+          "status": "live"
         }
       ]
     }
@@ -542,16 +597,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0033",
-    "browserChecks": 26,
+    "schema": "0037",
+    "browserChecks": 30,
     "serverDeployment": true,
-    "commit": "85a8581",
-    "ciTests": 794,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
-    "deployedCommit": "85a8581",
-    "deployedSchema": "0033",
-    "liveScope": "Integrationen auf der Test-VM bestätigt: eigener Werkzeug-Menüpunkt entfernt, alte Links öffnen Einstellungen → Integrationen, Unterbereich nach Reload erhalten. Echter Arbeitsraum-Lesebeleg direkt an der Karte, Projektauswahl ohne Änderung, weitere Verbindungen, aktueller Datenschutzstatus und Mobilbreiten320/390/768px geprüft. Schreibpause und Einstellungen erhalten, Aufgaben bleiben leer. Vollständiger Archivierungsablauf mit eigenen synthetischen Fixture-Projekten geprüft.62 Funktionen/23 synthetische Bilder; breite Fakten-/Geräte-/V1-Abnahme offen.",
+    "commit": "3d003f6",
+    "ciTests": 864,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38136684453",
+    "deployedCommit": "3d003f6",
+    "deployedSchema": "0037",
+    "liveScope": "OpenRouter-Schlüsselmetadaten direkt auf Testinstanz bestätigt: Verbrauch und Limit getrennt von lokalen Budgetbuchungen; Einstellungen und zwischengespeicherte Chatanzeige, Mobil320/390/768px. Ohne separaten Management Key bleibt das gesamte Kontoguthaben unbekannt. Provider-/Budgetkonfiguration erhalten, keine Modellabfrage. Kompakte persönliche Oberfläche, generische Profile und lokale Use Cases zuvor gezielt geprüft; allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
     "designModernized": true,
-    "interactionModernized": true
+    "interactionModernized": true,
+    "lastSuccessfulCICommit": "3d003f6",
+    "lastSuccessfulCIUI": 30
   }
 }
