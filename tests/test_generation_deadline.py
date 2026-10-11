@@ -130,15 +130,23 @@ def test_stream_failures_are_specific_and_preserve_only_delivered_output(setup, 
             yield "Synthetic delivered text"
             if failure == "idle":
                 raise httpx.ReadTimeout("PRIVATE PROVIDER BODY")
-            yield "x" * 32000
+            yield "x" * 96000
 
     provider = Failing(Route(capabilities=["chat"], model_class="local", reason="Synthetic"))
     asyncio.run(execute_run(app.state.sessions, app.state.settings, provider, run_id))
     detail = client.get("/api/conversations/" + chat_id).json()
-    assert detail["runs"][0]["status"] == "failed"
-    assert detail["messages"][-1]["content"] == "Synthetic delivered text"
+    assert detail["runs"][0]["status"] == ("failed" if failure == "idle" else "limited")
+    answer = detail["messages"][-1]["content"]
+    if failure == "idle":
+        assert answer == "Synthetic delivered text"
+    else:
+        assert answer.startswith("Synthetic delivered text")
+        assert len(answer) == 96000
+        assert answer.endswith("x")
     assert ("keine Daten" if failure == "idle" else "Längengrenze") in detail["runs"][0]["error"]
-    assert "PRIVATE" not in client.get(f"/api/runs/{run_id}/events").text
+    events = client.get(f"/api/runs/{run_id}/events").text
+    assert "PRIVATE" not in events
+    assert ("event: error" if failure == "idle" else "event: warning") in events
 
 
 def test_pending_stream_cancellation_interrupts_new_budget(setup):
