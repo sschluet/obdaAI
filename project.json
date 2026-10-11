@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "b72bf2a",
-  "schema": "0039",
-  "tests": 976,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38157613877",
+  "applicationCommit": "b7ab319",
+  "schema": "0040",
+  "tests": 1036,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38163734841",
   "screenshots": [
     {
       "id": "chat",
@@ -184,6 +184,24 @@
       "title": "Cloudkosten auf einen Blick.",
       "description": "Kontoguthaben, API-Schlüssellimit und lokales Monatsbudget klar unterscheiden. Ausschließlich synthetische USD-Werte; kein reales OpenRouter-Konto und keine Zugangsdaten.",
       "image": "assets/openroutercosts.png"
+    },
+    {
+      "id": "usecaseintegrations",
+      "title": "Quellen, Verarbeitung und Versand verbinden.",
+      "description": "Synthetischer Use Case mit eigenständiger Auswahl für Paperless-Eingaben, privaten Bearbeitungskontext und Mailausgabe. Keine realen Dokumente, Server oder Zugangsdaten.",
+      "image": "assets/usecaseintegrations.png"
+    },
+    {
+      "id": "usecasedesigner",
+      "title": "Beschreibe deinen Ablauf. Die KI entwirft ihn.",
+      "description": "Synthetischer Erstellungsdialog mit Rückfragen, Modellstatus und prüfbarem Vorschlag. Erst die bewusste Übernahme in den Editor und Speichern legt den Use Case an; keine echte Modellausgabe in dieser Galerie.",
+      "image": "assets/usecasedesigner.png"
+    },
+    {
+      "id": "usecasemail",
+      "title": "Ein Ergebnis. Ein bewusster Versand.",
+      "description": "Synthetische Mailvorschau mit sichtbarer Verbindung, Absender, Empfänger, Betreff und Ergebnis. Der ausdrückliche Senden-Schritt ist separat; keine echten Mails oder Kontakte.",
+      "image": "assets/usecasemail.png"
     }
   ],
   "groups": [
@@ -310,6 +328,26 @@
           "title": "Use Cases mit eigenen Eingaben und Ausgaben",
           "description": "Wiederverwendbare KI-Aufträge mit verpflichtendem Prompt/Kontext. Formulare oder KI-geführte Rückfragen erfassen Parameter und Eingabedateien; Ergebnisse entstehen per Modell in vorgegebenen Text-, Tabellen-, CSV-, Excel- oder Diagrammformaten. Ergebnis-Spalten sind unabhängig von Eingabefeldern. Versionierte Durchläufe, Korrekturen, Status, Modellherkunft und Originaldateibelege bleiben nachvollziehbar. Ältere deterministische Vorlagen und Ergebnisse bleiben erhalten. Allgemeine Integrationsaktionen und Webrecherche im Use Case sind separate Ausbauschritte.",
           "status": "live"
+        },
+        {
+          "title": "Integrationen in Use-Case-Eingabe und Bearbeitung",
+          "status": "live",
+          "description": "Paperless-Quellen pro Phase auswählen, auch ohne Projekt. Revisionen und Kontext bleiben an den Lauf gebunden und private Archivdaten lokal."
+        },
+        {
+          "title": "KI-Erstellungsdialog für Use Cases",
+          "status": "live",
+          "description": "Ablauf per Prompt beschreiben, Rückfragen beantworten und den validierten Vorschlag im Editor prüfen. Kein automatisches Speichern oder Ausführen."
+        },
+        {
+          "title": "Use-Case-Ergebnisse bewusst per Mail versenden",
+          "status": "implemented",
+          "description": "Verbindung, Empfänger und Inhalt in einer festen Vorschau prüfen und ausdrücklich senden. Eindeutige Quittungen verhindern automatische Wiederholung bei unklarer Übergabe."
+        },
+        {
+          "title": "Konfigurierbare SMTP-Verbindungen und primärer Mailversand",
+          "status": "local",
+          "description": "Mailprofile mit TLS unter Integrationen verwalten und primäre Verbindung festlegen. Use Case oder definierter Auftrag können sie gezielt überschreiben."
         }
       ]
     },
@@ -342,7 +380,7 @@
         {
           "title": "Paperless-Dokumente als privater KI-Kontext",
           "description": "Suche und Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Gewählte Archive werden in Chats, Aufgaben und projektbezogenen Use Cases lokal gelesen; Auswahl- und Profiländerungen stoppen den Zugriff. Gekürzte Auszüge bleiben gekennzeichnet. Paperless-Schreiboperationen sind nicht umgesetzt.",
-          "status": "implemented"
+          "status": "live"
         }
       ]
     },
@@ -620,18 +658,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0039",
-    "browserChecks": 32,
+    "schema": "0040",
+    "browserChecks": 34,
     "serverDeployment": true,
-    "commit": "32cd893",
-    "ciTests": 928,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38150177485",
-    "deployedCommit": "32cd893",
-    "deployedSchema": "0039",
-    "liveScope": "KI Use Cases auf der Test-VM installiert und gezielt über die authentifizierte API mit echten Modellen geprüft: lokale CSV-Datei analysiert, CSV-/Excel-Ergebnisse bestätigt, echter KI-Dialog und abschließendes Ergebnis sowie ausdrücklich gewählter OpenRouter-Auftrag erfolgreich. Nur eigene synthetische Daten und eine temporäre Testsitzung; Testobjekte bereinigt. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen, reale Geräteabnahme weiterhin offen. Allgemeine KI-Werkzeugaufrufe, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben Ausbauschritte.",
+    "commit": "b7ab319",
+    "ciTests": 1036,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38163734841",
+    "deployedCommit": "b7ab319",
+    "deployedSchema": "0040",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "32cd893",
-    "lastSuccessfulCIUI": 32
+    "lastSuccessfulCICommit": "b7ab319",
+    "lastSuccessfulCIUI": 34
   }
 }
