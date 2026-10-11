@@ -166,7 +166,8 @@ def test_execution_profile_only_after_routing_frozen_and_labels(
 
     async def stream(parts, roles, **kwargs):
         captured.extend(parts)
-        assert roles[-1] == "system"
+        assert roles[0] == "system"
+        assert roles[-1] == "user"
         async for chunk in original_stream(parts, roles, **kwargs):
             yield chunk
 
