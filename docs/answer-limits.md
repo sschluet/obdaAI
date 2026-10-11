@@ -11,14 +11,14 @@ als eigenständiger Abbruch behandelt.
 ## Antwortumfang
 
 Die gewünschte maximale Antwortlänge wird in der Modellverbindung eingestellt
-und kann bis zu 8192
-Tokens betragen. Für die konkrete Anfrage begrenzen die verbleibende
+und kann bis zu 8192 Tokens betragen. Für die konkrete Anfrage begrenzen die verbleibende
 Kontextkapazität, aktuelle Modellpreise und bestehende Cloudbudgets den tatsächlich
 verfügbaren Umfang. Ein Token ist keine feste Wort- oder Zeichenanzahl.
 
 Die Anwendung erhöht weder das Kostenlimit pro Lauf noch das Monatsbudget
-automatisch. Am11.10.2026 hat der Nutzer für die Test-VM ausdrücklich0,05USD
-pro Cloudanfrage und1USD im Monat freigegeben. Das Antwortlimit einer Modellverbindung bleibt eine konfigurierbare
+automatisch. Auf der Test-VM sind seit dem 11.10.2026 die ausdrücklich freigegebenen
+Grenzen von 0,05 USD pro Cloudanfrage und 1 USD pro Monat aktiv; beide
+Standardverbindungen erlauben bis zu 8192 Antworttokens. Das Antwortlimit bleibt eine konfigurierbare
 Grundlage; die Reservierung verwendet den tatsächlich für diesen Lauf freigegebenen
 Umfang. Unter **Einstellungen → Modelle** lassen sich Modellverbindungen,
 Antwortgrenzen und Kostenlimits prüfen. **Einstellungen → Routing** erklärt die

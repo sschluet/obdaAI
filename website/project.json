@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "a4b7e79",
+  "applicationCommit": "9a31cc7",
   "schema": "0038",
-  "tests": 876,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38139006020",
+  "tests": 902,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38146555023",
   "screenshots": [
     {
       "id": "chat",
@@ -603,18 +603,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0037",
-    "browserChecks": 30,
+    "schema": "0038",
+    "browserChecks": 32,
     "serverDeployment": true,
-    "commit": "3d003f6",
-    "ciTests": 864,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38136684453",
-    "deployedCommit": "3d003f6",
-    "deployedSchema": "0037",
-    "liveScope": "OpenRouter-Schlüsselmetadaten direkt auf Testinstanz bestätigt: Verbrauch und Limit getrennt von lokalen Budgetbuchungen; Einstellungen und zwischengespeicherte Chatanzeige, Mobil320/390/768px. Ohne separaten Management Key bleibt das gesamte Kontoguthaben unbekannt. Provider-/Budgetkonfiguration erhalten, keine Modellabfrage. Kompakte persönliche Oberfläche, generische Profile und lokale Use Cases zuvor gezielt geprüft; allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
+    "commit": "9a31cc7",
+    "ciTests": 902,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38146555023",
+    "deployedCommit": "9a31cc7",
+    "deployedSchema": "0038",
+    "liveScope": "Lange Antworten und manuelle Fortsetzung auf der Test-VM installiert. HTTPS, neue UI-Dateien und revisionierte Antwortgrenzen bestätigt. Reale synthetische Konzepte lokal mit rund 22000 und über OpenRouter mit rund 15000 Zeichen vollständig abgeschlossen. Teilantwort, Verlauf und Entwurferhalt in API-/PostgreSQL- und synthetischen Browserprüfungen belegt; keine neue authentifizierte UI-Live-Abnahme. Use Cases ohne Projektbezug zuvor gezielt geprüft; allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "3d003f6",
-    "lastSuccessfulCIUI": 30
+    "lastSuccessfulCICommit": "9a31cc7",
+    "lastSuccessfulCIUI": 32
   }
 }

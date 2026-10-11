@@ -1,32 +1,45 @@
 # obdaAI — Status 11.10.2026
 
-## Lange Konzepte und Antwortlimits – lokal geprüft, 11.10.2026
+## Lange Konzepte und Antwortlimits – auf der Test-VM geprüft, 11.10.2026
 
-Tatsächliche VM-Limits lokal2048 und OpenRouter256 Tokens erklären den frühen
-Abbruch. Gewünschtes neues Antwortlimit8192 pro Standardverbindung; Nutzer hat
-für OpenRouter ausdrücklich0,05USD je Anfrage und1USD monatlich freigegeben.
-Die Konfigurationsanpassung erfolgt beim überprüften Rollout mit CAS/Revisions-
-beleg, ohne Schlüssel/Datenschutzklassen/Modelle zu ändern. Pro Lauf reduziert
-reserve_answer den Umfang bei Kontext-/Budgetknappheit statt Grenzen zu erhöhen.
-Lokale Generation reserviert den vollständigen tatsächlichen Antwortumfang.
+App-Code `9a31cc7`, Schema `0038`, GitHub-CI `38146555023` vollständig grün:
+902 Backend-/PostgreSQLtests und 32 synthetische Browserprüfungen. Sechs volle
+App-Prüfjobs erfolgreich; Wiederverwendungsnachweis erstellt. Gezielte lokale
+Prüfung 84 Tests, Ruff/Mypy77, Source-Scan, Frontend-Build und Workflowsyntax grün.
 
-Tokenlimit mit Text: terminal limited, gespeicherte Teilantwort/Modellbeleg und
-ruhiger Hinweis, ausdrückliche normale Fortsetzung mit eigenem Lauf/Budget und
-aktueller Modellwahl. Keine automatische Folgerechnung, kein Cloud-Fallback.
-Letzte Deltas und nachgelagerte Kosten erhalten; Inhaltsfilter separatfailed;
-leerer Tokenabbruch bleibt Fehler. Native OpenAI/Anthropic entsprechend behandelt.
-Zusätzliche Antwort-Zeichengrenze96000. Begrenztes Kontextfenster statt Verwerfen
-langer gespeicherter Historie: jüngere Nachrichten/Frage/Antwortende, aktuelle
-Frage vollständig, originale Texte unverändert. Ausgelassene private Historie
-behält LOCAL_ONLY-Marker und blockiert Cloudweitergabe. Audit im Laufsnapshot.
+Tatsächliche alte VM-Limits lokal 2048 und OpenRouter 256 Antworttokens erklärten
+den frühen Abbruch. Beide Standardverbindungen erlauben jetzt bis zu 8192 Tokens.
+Vom Nutzer ausdrücklich freigegebene Cloudgrenzen 0,05 USD je Anfrage und 1 USD
+monatlich aktiviert: lokale Providerrevision 5→6, OpenRouter 14→15. CAS, private
+Vorher-Sicherung und Feldvergleich bestätigen unveränderte Modelle, Schlüssel und
+Datenschutzklassen. Kontextkapazität und verbleibendes Budget können den tatsächlich
+freigegebenen Umfang reduzieren; keine automatische Budgeterhöhung.
 
-76 gezielte Backendtests bestanden, darunter Budget/Contextcaps, gespeicherter
-Limitlauf, letzteDeltas/Kosten/Filter und lange Fortsetzung mit Privatheitsgrenzen.
-Frontend-Build, Limit-SSE/Reload/manuelleFortsetzung/Entwurferhalt/Presets/Mobil-
-Browsercheck sowie bestehende Fehler-/Verarbeitungschecks bestanden. Ruff/Mypy77,
-Source-Scan und Workflowsyntax bestanden. Ausschließlich synthetisches neues
-Teilantwortbild, Website67Features/35Allowlistdateien. Reale Providerabnahme und
-Test-VM-Rollout erfolgen nach exakter CI; App-Code bishera4b7e79/Schema0038.
+Tokenlimit mit empfangenem Text: terminal `limited`, gespeicherte Teilantwort und
+Modellbeleg, ruhiger Hinweis und „Antwort fortsetzen“. Eine ausdrückliche Fortsetzung
+verwendet einen eigenen normalen Lauf mit Kostenprüfung, aktueller Modellwahl und
+erhaltenem Composer-Entwurf. Keine automatische Folgerechnung oder Cloudausweichung.
+Letzte Deltas und nachgelagerte Kosten bleiben erhalten. Inhaltsfilter getrennt;
+ein leerer Tokenabbruch bleibt ein Fehler. Native OpenAI/Anthropic synthetisch geprüft.
+Zusätzliche Zeichengrenze 96000. Begrenztes jüngeres Kontextfenster statt Verwerfen
+langer gespeicherter Historien; aktuelle Frage vollständig, Originale unverändert.
+Ausgelassene private Historie behält LOCAL_ONLY-Marker und blockiert Cloudweitergabe.
+
+Test-VM-Rollout mit geprüftem verschlüsseltem Off-VM-Backup; Nachrichten und
+Use-Case-Daten erhalten, acht Overlays, Firewall und beide Nginx-vHosts unverändert.
+Zertifikatsgeprüftes HTTPS bestätigt neue UI-Dateien und API-Verträge. Reale
+synthetische Konzeptprüfung über installierte Provideradapter vollständig:
+- Lokal: 22170 Zeichen, vollständiges Fazit, 238,65 Sekunden.
+- OpenRouter: 14759 Zeichen, vollständiges Fazit, 19,94 Sekunden; gemeldete Kosten
+  0,004774 USD, Budgetreservierung und Abrechnung geprüft.
+
+Diese Realtests verwenden ausschließlich einen fiktiven Konzeptauftrag ohne
+Profil-/Projektquellen, keinen authentifizierten UI-Chat und keine Webrecherche.
+Aktuelles Benutzerpasswort nicht verändert; manuelle Fortsetzung und Speicherung
+sind durch API-/PostgreSQL- und synthetische Browserprüfungen belegt. Keine neue
+Live-Abnahme nativer Anbieter oder vollständige V1-Abnahme behauptet.
+Website: 67 Features, neue synthetische Teilantwortansicht und aktuelle CI-/VM-
+Metadaten; genaue Veröffentlichung wird nach dem gebündelten Push geprüft.
 
 ## CI-Verbrauch gezielt reduzieren – Vollprüfung und Wiederverwendung belegt, 11.10.2026
 
