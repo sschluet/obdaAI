@@ -75,3 +75,5 @@ Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen A
 Projekte erhalten unter **Projekt bearbeiten** ein konfigurierbares Logo aus 32 frei verwendbaren Lucide-Symbolen; Suche, Vorschau, lokale Darstellung und Lizenzhinweise siehe [docs/project-icons.md](docs/project-icons.md).
 
 Verbindungen und kontrollierte Aktionen findest du unter **Einstellungen → Integrationen**. Direkte Prüfergebnisse, geführte Archivierung und Ausführungsbelege sind in [docs/integrations.md](docs/integrations.md) beschrieben.
+
+Generische Verbindungsprofile mit Tabelle, Aktivschalter und Projekt-/Aufgaben-/Chatzuordnungen sowie lokale Formular-Use-Cases im Projektraum: [Ausbauvertrag und Grenzen](docs/generic-integrations-and-use-cases.md). Die Profile sind noch keine allgemeinen KI-Werkzeugaufrufe. [Offizielle Anschlusswege weiterer Dienste](docs/integration-services-research.md) unterscheiden API, OAuth, Bridge und Dateiimport.

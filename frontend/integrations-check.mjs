@@ -10,6 +10,7 @@ try{
  if(await page.locator('aside nav').getByRole('button',{name:'Werkzeuge',exact:true}).count())throw Error('Tools still in primary navigation');
  await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
  await page.getByRole('button',{name:'Integrationen',exact:true}).click();
+ await page.getByText('Bestehende Systemaktionen',{exact:true}).click();
  await page.getByRole('heading',{name:'Arbeitsraum im Überblick',exact:true}).waitFor();
  const hub=page.locator('.integration-card').filter({has:page.getByRole('heading',{name:'Arbeitsraum im Überblick',exact:true})});
  let executes=0,fail=true;
@@ -32,6 +33,7 @@ try{
  await page.getByRole('heading',{name:'Datenverarbeitung und Aktionen',exact:true}).waitFor();
  await page.locator('.setting-card b').getByText('Einzeln freigeben',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Integrationen',exact:true}).click();
+ await page.getByText('Bestehende Systemaktionen',{exact:true}).click();
  await archive.getByRole('button',{name:'Projekt auswählen',exact:true}).click();
  await archive.getByLabel('Projekte suchen',{exact:true}).fill(ownedProject.name);
  await archive.getByRole('button',{name:ownedProject.name,exact:true}).click();
@@ -56,13 +58,13 @@ try{
  await archive.getByRole('button',{name:'Projekt jetzt archivieren',exact:true}).click();await archive.getByText(/Projekt archiviert · neue Revision/).waitFor();
  if(!(await call('/projects/'+ownedProject.id)).archived)throw Error('Reviewed archive did not execute');
  await page.getByRole('button',{name:'Weitere Verbindungen und Einrichtung',exact:true}).click();
- await page.getByText('Weitere Dienste verbinden',{exact:true}).waitFor();
+ await page.getByText('Bisherige MCP-Verbindungen',{exact:true}).waitFor();
  if(!await page.locator('.integration-connections').evaluate(e=>e.open))throw Error('Connection CTA did not expand advanced connections');
  await page.setViewportSize({width:390,height:844});
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile integration overflow');
  await page.setViewportSize({width:1440,height:1000});
  await page.route('**/api/tools',async route=>{const response=await route.fetch();const tools=await response.json();await route.fulfill({response,json:tools.map(t=>t.id==='ha.inspect'?{...t,configured:false}:t)})});
- await page.reload();await page.getByRole('heading',{name:'Status und Updates',exact:true}).waitFor();
+ await page.reload();await page.getByText('Bestehende Systemaktionen',{exact:true}).click();await page.getByRole('heading',{name:'Status und Updates',exact:true}).waitFor();
  const ha=page.locator('.integration-card').filter({has:page.getByRole('heading',{name:'Status und Updates',exact:true})});
  if(await ha.getByRole('button',{name:'Status prüfen',exact:true}).isEnabled())throw Error('Unconfigured integration is runnable');
  await ha.getByText('Nicht eingerichtet',{exact:true}).waitFor();

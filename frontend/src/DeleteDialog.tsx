@@ -5,7 +5,7 @@ import './delete-dialog.css';
 type API=(path:string,method?:string,body?:unknown)=>Promise<any>;
 export type DeleteTarget={id:string;name:string;kind:'project'|'conversation'};
 type Preview={expected_state:string;name?:string;title?:string;counts:Record<string,number>;blockers:string[];preserved:string[]};
-const countLabels:Record<string,string>={conversations:'Gespräche',messages:'Nachrichten',runs:'KI-Läufe',sources:'Quellen',artifacts:'Erstellte Dateien',artifact_revisions:'Dateiversionen',source_revisions:'Quellenversionen',tasks:'Aufgaben',skills:'Projekt-Skills',connections:'Verbindungen',preferences:'Antwortvorgaben'};
+const countLabels:Record<string,string>={conversations:'Gespräche',messages:'Nachrichten',runs:'KI-Läufe',sources:'Quellen',artifacts:'Erstellte Dateien',artifact_revisions:'Dateiversionen',source_revisions:'Quellenversionen',tasks:'Aufgaben',skills:'Projekt-Skills',connections:'Verbindungen',preferences:'Antwortvorgaben',use_cases:'Use Cases',use_case_runs:'Use-Case-Ausgaben',integration_bindings:'Integrationszuordnungen'};
 export function DeleteDialog({api,target,onClose,onDeleted}:{api:API;target:DeleteTarget;onClose:()=>void;onDeleted:(result:any)=>void|Promise<void>}){
  const [preview,setPreview]=useState<Preview|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[removed,setRemoved]=useState<{cleanup_id?:string}|null>(null),[cleanup,setCleanup]=useState('pending');
  const dialog=useRef<HTMLDivElement>(null),locked=useRef(false),close=useRef(onClose);close.current=onClose;

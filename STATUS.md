@@ -1,5 +1,35 @@
 # obdaAI — Status 11.10.2026
 
+## Generische Profile und lokale Use Cases – erster Ausbauschritt, 11.10.2026
+
+Schema0034/0035 ergänzen eine gemeinsame Integrationsregistry und projektbezogene
+Use Cases. Einstellungen → Integrationen zeigt suchbare Tabelle, Typ/Status,
+Zuordnungszahlen und Aktivschalter; konfigurierbar sind HA, Paperless, MCP, UniFi
+und SSH mit Passwort oder privatem Schlüssel/optionalem Benutzerzertifikat.
+Secrets verschlüsselt, keine Rückgabe; CAS schützt Änderungen. Projekte und
+Aufgaben speichern Auswahlen, Chats können Projektbindungen erben, gezielt auswählen
+oder abwählen. Deaktivierte Profile sind unwirksam. Chat-Laufsnapshots enthalten
+nur Auswahlmetadaten. **Automatische Nutzung dieser neuen Profile durch KI/Aufgaben
+ist noch offen**; prüfbar sind ausschließlich bereits freigegebene HA-/MCP-Ziele.
+Paperless/UniFi/SSH-Laufzeitadapter und neue Zielfreigaben bleiben offen.
+
+Projektreiter Use Cases bietet versionierte Formular-/Fragefolge, typisierte
+Felder, geordnete Spalten, lokale Textvorlage, Tabelle, CSV, Excel und numerische
+Balkendarstellung aus denselben gespeicherten Werten. Laufwiederholung ist
+idempotent; alte Definitionen/Ergebnisse bleiben unverändert. Formel-/Makro-/Code-
+ausführung ausgeschlossen. **KI-Eingabedialoge, Quellenextraktion, berechnete
+Kennzahlen und Integration-/Task-Anbindung des Ablaufs sind weitere Schritte**.
+Projektlöschung umfasst Use Cases, Ergebnisse und Zuordnungen; neue Ergebnisse
+invalidieren alte Löschvorschauen, globale Profile bleiben erhalten.
+Offizielle Recherche: Proton Bridge, Gmail OAuth, Synology SMB/File Station;
+immocloud Export statt nicht angebotener API; Amazon je Kontotyp und CHECK24
+ohne bestätigte allgemeine Privatkonto-API. Details in
+[Ausbauvertrag](docs/generic-integrations-and-use-cases.md) und
+[Anschlussrecherche](docs/integration-services-research.md).
+Lokale Funktionsprüfungen laufen; GitHub-CI, VM-Rollout und öffentliche Website
+werden separat mit exakten Revisionen belegt.
+
+
 ## Integrationen auf Test-VM bestätigt – 11.10.2026
 
 Release `85a8581`, Schema0033 unverändert: [CI38123019558](https://github.com/sschluet/obdaAI/actions/runs/38123019558),

@@ -45,6 +45,7 @@ from hub.db import (
 from hub.db_locks import ownership_lock
 from hub.deletion import DeletionInput
 from hub.execution import execute_run
+from hub.integration_api import freeze_bindings, install_integration_api
 from hub.jobs import enqueue
 from hub.knowledge import context as project_context
 from hub.knowledge_api import install_knowledge_api
@@ -63,6 +64,7 @@ from hub.schedule_api import install_schedule_api
 from hub.skill_api import install_skill_api, select_skills
 from hub.task_api import install_task_api
 from hub.task_drafts import install_task_drafts
+from hub.use_cases import install_use_case_api
 from hub.web_settings import endpoint as web_endpoint
 from hub.web_settings import install_web_settings_api, read_options
 from hub.websearch import install_web_api
@@ -163,6 +165,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_personal_profile_api(app, factory)
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
+    install_integration_api(app, cfg, factory)
+    install_use_case_api(app, cfg, factory)
     install_skill_api(app, factory)
     install_task_api(app, cfg, factory)
     from hub.task_writes import install_task_writes
@@ -727,6 +731,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             snapshot["roles"].extend("user" for _ in sources)
             skill_parts, skill_audit = select_skills(db, c, messages[-1].content)
             snapshot["skills"] = skill_audit
+            snapshot["integration_selection"] = freeze_bindings(db, "conversation", c.id)
             snapshot["parts"].extend(p.model_dump(mode="json") for p in skill_parts)
             snapshot["roles"].extend("user" for _ in skill_parts)
             if local_only or model_local_only:

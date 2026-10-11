@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from hub import db as models
 from hub.config import Settings
 from hub.db_locks import MEMORY_INDEX, ownership_lock
+from hub.integrations import IntegrationBinding
 
 
 class DeletionInput(BaseModel):
@@ -47,6 +48,8 @@ def plan(
     identifier: str,
     cfg: Settings | None = None,
 ) -> dict[str, Any]:
+    from hub.use_cases import project_case_witness
+
     target: Any = db.get(models.Project if kind == "project" else models.Conversation, identifier)
     if not target:
         raise HTTPException(
@@ -62,6 +65,26 @@ def plan(
         )
     )
     chat_ids = [c.id for c in chats]
+    integration_bindings = list(
+        db.scalars(
+            select(IntegrationBinding).where(
+                (
+                    (IntegrationBinding.scope == "conversation")
+                    & IntegrationBinding.owner_id.in_(chat_ids)
+                )
+                | (
+                    (IntegrationBinding.scope == "project")
+                    & (IntegrationBinding.owner_id == identifier)
+                    & (kind == "project")
+                )
+            )
+        )
+    )
+    case_state = (
+        project_case_witness(db, identifier)
+        if kind == "project"
+        else {"use_cases": 0, "use_case_runs": 0, "state": []}
+    )
     runs = list(db.scalars(select(models.Run).where(models.Run.conversation_id.in_(chat_ids))))
     messages = list(
         db.scalars(select(models.Message).where(models.Message.conversation_id.in_(chat_ids)))
@@ -283,6 +306,9 @@ def plan(
         preferences=len(prefs),
         retained_memories=len(retained_notes),
         retained_research=len(retained_research) if kind == "conversation" else 0,
+        integration_bindings=len(integration_bindings),
+        use_cases=case_state["use_cases"],
+        use_case_runs=case_state["use_case_runs"],
     )
     # Hash every persisted column: editing, new runs, new revisions and status changes invalidate
     # confirmation.
@@ -297,6 +323,7 @@ def plan(
         *revisions,
         *events,
         *prefs,
+        *integration_bindings,
     ]
     owned.extend(
         db.scalars(
@@ -324,7 +351,7 @@ def plan(
         for row in owned
     )
     witness = hashlib.sha256(
-        json.dumps([state, blockers, counts], sort_keys=True).encode()
+        json.dumps([state, case_state["state"], blockers, counts], sort_keys=True).encode()
     ).hexdigest()
     return dict(
         kind=kind,
@@ -373,8 +400,11 @@ def permanently_delete(
 ) -> dict[str, Any]:
     # Serialize scoped writers before validating the confirmation witness.
     from hub.task_api import lock
+    from hub.use_cases import delete_project_cases
 
     ownership_lock(db)
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(791103050)"))
     if kind == "project" and db.scalar(
         select(models.Memory.id).where(models.Memory.project_id == identifier).limit(1)
     ):
@@ -396,6 +426,20 @@ def permanently_delete(
     cleanup_id = queue_cleanup(db, p["_sources"], p["_revisions"])
     try:
         chat_ids = [c.id for c in p["_chats"]]
+        db.execute(
+            delete(IntegrationBinding).where(
+                (IntegrationBinding.scope == "conversation")
+                & IntegrationBinding.owner_id.in_(chat_ids)
+            )
+        )
+        if kind == "project":
+            db.execute(
+                delete(IntegrationBinding).where(
+                    (IntegrationBinding.scope == "project")
+                    & (IntegrationBinding.owner_id == identifier)
+                )
+            )
+            delete_project_cases(db, identifier)
         run_ids = [r.id for r in p["_runs"]]
         db.execute(delete(models.RunEvent).where(models.RunEvent.run_id.in_(run_ids)))
         db.execute(delete(models.Message).where(models.Message.conversation_id.in_(chat_ids)))

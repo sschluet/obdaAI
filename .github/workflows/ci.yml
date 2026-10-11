@@ -76,6 +76,8 @@ jobs:
           node fixture-login-check.mjs
           node browser-check.mjs
           node integrations-check.mjs
+          node generic-integrations-check.mjs
+          node use-cases-check.mjs
           node deletion-check.mjs
           node project-icons-check.mjs
           node artifact-check.mjs

@@ -54,9 +54,21 @@
       "image": "assets/security.png"
     },
     {
+      "id": "generic-integrations",
+      "title": "Deine Verbindungen. Ein klarer Überblick.",
+      "description": "Fünf fiktive Verbindungsprofile für Home Assistant, Paperless, MCP, UniFi und SSH. Suche, Aktiv-Schalter, Status und direkte Zuordnungen; nicht verfügbare Laufzeitadapter werden offen gekennzeichnet.",
+      "image": "assets/genericintegrations.png"
+    },
+    {
+      "id": "use-cases",
+      "title": "Eine Eingabe. Dein Ausgabeformat.",
+      "description": "Use Case im fiktiven Projekt Aurora: vier konfigurierbare Felder, gespeicherte Eingabe, lokales Balkendiagramm und CSV-/Excel-Download. Das Ergebnis entsteht aus Formularwerten, ohne KI-Aufruf oder automatische Integration.",
+      "image": "assets/usecases.png"
+    },
+    {
       "id": "integrations",
-      "title": "Verbindungen an einem Ort.",
-      "description": "Einstellungen → Integrationen bündelt verfügbare Funktionen nach System. Verständliche Aktionen, Verbindungsstatus und Ergebnisse direkt bei der passenden Integration. Ausschließlich synthetische Beispieldaten.",
+      "title": "Bestehende Aktionen bleiben erreichbar.",
+      "description": "Zusätzlich zur generischen Übersicht bleiben geprüfte Systemaktionen eingeklappt erreichbar: Arbeitsraum lesen, Home Assistant prüfen und Projektarchivierung gezielt vorbereiten. Ausschließlich synthetische Beispieldaten.",
       "image": "assets/integrations.png"
     },
     {
@@ -252,6 +264,11 @@
           "title": "Öffentliche Webseiten als Quellen",
           "description": "Ausdrücklich hinzugefügte HTTPS-Seiten werden als gebundene Quellensnapshots gespeichert. Netzwerk- und Zielprüfungen begrenzen den Zugriff.",
           "status": "live"
+        },
+        {
+          "title": "Use Cases mit eigenen Eingaben und Ausgaben",
+          "description": "Projektbezogene Formulare und Frage-für-Frage-Dialoge mit Text-, Zahlen-, Datums- und Auswahlfeldern. Lokale Ausgabe als Tabelle, CSV, Excel, Balkendiagramm oder Textvorlage; gespeicherte Eingaben und feste Revisionen, Kopieren und endgültiges Löschen. Die Ausgabe entsteht deterministisch aus eingegebenen Werten. Freier KI-Chat, automatische Berechnungen und Integrationsabfragen sind noch nicht verfügbar.",
+          "status": "limited"
         }
       ]
     },
@@ -440,13 +457,23 @@
         },
         {
           "title": "Integrationen mit verständlichen Aktionen",
-          "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP. Direkte Prüfaktionen zeigen Ergebnisse beim jeweiligen System; Projektarchive führen vom Ziel über konkrete Freigabe zur Ausführung. Schreibpause und eingeklappte Ausführungsbelege bleiben erhalten. Auf der Test-VM mit echtem Hub-Lesebeleg, Navigation, Datenschutzstatus und Mobilansicht bestätigt. Vollständige Archivierung isoliert synthetisch geprüft; weitere Schreibadapter bleiben offen.",
-          "status": "live"
+          "description": "Bestehende Arbeitsraum-, Home-Assistant-, Browser- und Archivierungsaktionen bleiben unter Einstellungen → Integrationen eingeklappt erreichbar. Prüfergebnisse erscheinen direkt am passenden System; Archivierung braucht Zielprüfung und konkrete Freigabe. Globale Schreibpause und Ausführungsbelege bleiben erhalten. Die vorherige Ausführung ist geprüft; die neue generische Zuordnung verleiht diesen Aktionen keine zusätzlichen Rechte.",
+          "status": "implemented"
         },
         {
           "title": "Skills direkt im Chat einsetzen",
           "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Synthetisch geprüft; releasegebundene VM-Abnahme folgt. Führende aktivierte Skillaufrufe bleiben mit reiner Textrecherche kompatibel; die Fokusrückgabe wartet auf das Schließen des Dialogs.",
           "status": "implemented"
+        },
+        {
+          "title": "Generische Integrationsübersicht",
+          "description": "Suchbare Übersicht mit typgerechter Einrichtung für Home Assistant, Paperless, MCP, UniFi und SSH. Verschlüsselte Zugangsdaten, Aktiv-Schalter, Revisionen, direkte Zuordnungszahlen und ehrliche Prüfstati. Speichern kontaktiert kein neues Ziel. Zugangsprüfungen nutzen nur bereits freigegebene HA-/MCP-Ziele; Paperless-, UniFi- und SSH-Laufzeitadapter sind noch nicht verfügbar.",
+          "status": "implemented"
+        },
+        {
+          "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
+          "description": "Dauerhafte Profilzuordnungen für Projekte und Aufgaben, Projektvererbung und manuelle Auswahl oder Abwahl im Chat. Bis zu acht Profile je Auswahl; deaktivierte Profile bleiben gesperrt. Auswahl und Revision werden nachvollziehbar gespeichert. Die dynamische automatische KI-Nutzung ist vorbereitet, aber noch nicht implementiert.",
+          "status": "limited"
         }
       ]
     },
