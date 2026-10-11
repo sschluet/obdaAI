@@ -1,17 +1,23 @@
 # obdaAI — Status 11.10.2026
 
-## GitHub Pages in obdaAI – Migration vorbereitet, 11.10.2026
+## GitHub Pages in obdaAI – migriert und altes Repository gelöscht, 11.10.2026
 
-obdaAI ist bereits öffentlich. Auf Nutzerwunsch zieht die Projektwebsite von
-obdaAI-website in einen eigenen gh-pages-Branch von obdaAI. Die alte Website-
-Historie wird vollständig übernommen und zusätzlich lokal gespiegelt. Publisher,
-aktive Dokumentation und README verwenden das neue Ziel; nur die öffentliche
-Allowlist wird im Pages-Branch veröffentlicht. App-Quellbranches und Test-VM
-bleiben unverändert. Neue URL https://sschluet.github.io/obdaAI/.
-Erst nach neuer Pages-Abnahme wird das alte Repository gelöscht. Der bestehende
-GitHub-CLI-Token besitzt derzeit kein delete_repo-Scope; die abschließende Löschung
-kann daher zusätzliche GitHub-Anmeldung benötigen. Migration, Live-Hash-/Browser-
-Prüfung und Löschung werden separat bestätigt.
+obdaAI ist öffentlich. Die Projektwebsite wird aus obdaAI/gh-pages am Root
+veröffentlicht: https://sschluet.github.io/obdaAI/. Vollständige bisherige Website-
+Historie übernommen, zusätzlich lokales Git-Mirror und Bundle gesichert.
+Publisher4408dd2 klont und pusht ausschließlich gh-pages; schützt App-/Default-
+Branches, erwartet exakte Pages-Quelle und prüft die öffentliche Datei-Allowlist.
+README, Repository-Homepage und aktive Anweisungen verwenden die neue Adresse.
+Website-CI38141176222 grün; erste Publisher-Veröffentlichung9f76e3c built, Revision
+4408dd2313e6 und alle37 öffentlichen Dateihashes sowie Live-Browsercheck für
+Katalog/Galerie/Tastatur und320–1440px bestätigt. App-main bleibt unverändert,
+Test-VM bleibt a4b7e79/Schema0038, keine Infrastruktur-/App-Änderung.
+Der Nutzer hat die erforderliche kontoweite delete_repo-Erweiterung ausdrücklich
+freigegeben und die GitHub-Geräteanmeldung bestätigt. Danach ausschließlich
+sschluet/obdaAI-website gelöscht; authentifizierte Repository-API bestätigt404.
+obdaAI bleibt öffentlich und Pages verweist weiter auf gh-pages. Alte Website-
+Historie und lokales Bundle bleiben erhalten. Künftige Website-Veröffentlichungen
+verwenden nur den neuen Publisher; die alte URL wird nicht mehr gepflegt.
 
 ## Synology-Reverse-Proxy – VM vorbereitet, 11.10.2026
 
