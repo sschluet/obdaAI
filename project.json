@@ -519,7 +519,7 @@
         },
         {
           "title": "Login und verschlüsselte Secrets",
-          "description": "Persistente Sitzungen, CSRF-/Origin-Prüfung, Loginlimits und verschlüsselte Anbieter-/Verbindungssecrets.",
+          "description": "Persistente Sitzungen, CSRF-/Origin-Prüfung, Loginlimits und verschlüsselte Anbieter-/Verbindungssecrets. Separater HTTPS-Domainzugang über einen freigegebenen Reverse Proxy serverseitig vorbereitet; Anmeldung und strikte Origin-/CSRF-Grenzen geprüft. Proxy-, DNS- und externe Routing-Einrichtung erfolgen separat.",
           "status": "live"
         },
         {
