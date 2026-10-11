@@ -37,8 +37,8 @@ try{
  await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('button',{name:'Zur Übersicht',exact:true}).click();await chooseProject(page.locator('.use-cases-hub'),'Nach Projekt filtern','Ohne Projekt');await page.getByLabel('Use Cases suchen',{exact:false}).fill('Synthetic monthly');await page.locator('.use-cases-hub .uc-card').filter({hasText:'Synthetic monthly report'}).click();await panel.locator('.uc-history-row').first().waitFor();
  project=await call('/projects','POST',{name:'Synthetic Use Cases '+Date.now()});
- await page.reload();await panel.locator('.uc-history-row').first().waitFor();
- await panel.getByRole('button',{name:'Bearbeiten',exact:true}).click();await chooseProject(builder,'Projektbezug',project.name);await builder.getByRole('button',{name:'Use Case speichern',exact:true}).click();await panel.locator('.uc-history-row').first().waitFor();
+ await page.goto(base+'/?view=Use+Cases&project='+project.id+'&useCase='+item.id);await panel.locator('.uc-history-row').first().waitFor();
+ await panel.getByRole('button',{name:'Bearbeiten',exact:true}).click();if(!await builder.getByRole('button',{name:'Projektbezug',exact:true}).getByText('Ohne Projekt',{exact:true}).count())throw Error('Stale URL silently rebound standalone draft');await chooseProject(builder,'Projektbezug',project.name);await builder.getByRole('button',{name:'Use Case speichern',exact:true}).click();await panel.locator('.uc-history-row').first().waitFor();
  const linked=(await call('/use-cases')).find(row=>row.id===item.id);if(linked.project_id!==project.id||linked.revision!==3||(await call(prefix+'/runs')).length!==2)throw Error('Project binding lost revisions or history');
 
  await page.goto(base+'/?view=Projekte&project='+project.id+'&projectTab=use-cases');await panel.getByRole('button',{name:'Synthetic monthly report'}).click();if(new URL(page.url()).searchParams.get('view')!=='Use Cases')throw Error('Legacy project link not redirected');

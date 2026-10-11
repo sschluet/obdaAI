@@ -244,8 +244,21 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             raise HTTPException(404, "Use Case nicht gefunden")
         return cast(UseCase, row)
 
-    def info(db: Any, row: UseCase) -> dict[str, Any]:
-        revision = db.get(UseCaseRevision, (row.id, row.revision))
+    def current_query(project_id: str | None = None) -> Any:
+        query = select(UseCase, UseCaseRevision).outerjoin(
+            UseCaseRevision,
+            (UseCaseRevision.use_case_id == UseCase.id)
+            & (UseCaseRevision.revision == UseCase.revision),
+        )
+        if project_id is not None:
+            query = query.where(UseCase.project_id == project_id)
+        return query
+
+    def info(db: Any, row: UseCase, revision: UseCaseRevision | None = None) -> dict[str, Any]:
+        if revision is None:
+            revision = db.get(UseCaseRevision, (row.id, row.revision))
+        if revision is None:
+            raise HTTPException(409, "Use-Case-Definition fehlt; gespeicherten Stand prüfen")
         return {
             "id": row.id,
             "revision": row.revision,
@@ -254,16 +267,21 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             "label": "LOCAL_ONLY",
         }
 
+    def loaded_info(db: Any, row: UseCase, revision: UseCaseRevision | None) -> dict[str, Any]:
+        if revision is None:
+            raise HTTPException(409, "Use-Case-Definition fehlt; gespeicherten Stand prüfen")
+        return info(db, row, revision)
+
     @app.get("/api/use-cases")
     @app.get(prefix)
     def listing(auth: Auth, project_id: str | None = None) -> list[dict[str, Any]]:
         with factory() as db:
             if project_id is not None:
                 project(db, project_id)
-            query = select(UseCase).order_by(UseCase.id)
-            if project_id is not None:
-                query = query.where(UseCase.project_id == project_id)
-            return [info(db, row) for row in db.scalars(query)]
+            # Fetch ownership, current revision and definition in one SQL snapshot.
+            # A concurrent delete cannot remove the definition between separate reads.
+            query = current_query(project_id).order_by(UseCase.id)
+            return [loaded_info(db, row, revision) for row, revision in db.execute(query)]
 
     @app.post("/api/use-cases")
     @app.post(prefix)
@@ -414,16 +432,19 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
     @app.get(prefix + "/{identifier}/runs")
     def runs(identifier: str, auth: Auth, project_id: str | None = None) -> list[dict[str, Any]]:
         with factory() as db:
-            case(db, project_id, identifier)
-            rows = list(
-                db.scalars(
-                    select(UseCaseRun)
-                    .where(UseCaseRun.use_case_id == identifier)
-                    .order_by(UseCaseRun.created.desc())
-                    .limit(200)
-                )
+            if project_id is not None:
+                project(db, project_id)
+            query = (
+                select(UseCase, UseCaseRun)
+                .outerjoin(UseCaseRun, UseCaseRun.use_case_id == UseCase.id)
+                .where(UseCase.id == identifier)
             )
-            return [run_info(row) for row in rows]
+            if project_id is not None:
+                query = query.where(UseCase.project_id == project_id)
+            rows = list(db.execute(query.order_by(UseCaseRun.created.desc()).limit(200)))
+            if not rows:
+                raise HTTPException(404, "Use Case nicht gefunden")
+            return [run_info(item) for _, item in rows if item is not None]
 
     @app.get("/api/use-cases/{identifier}/runs/{run_id}")
     @app.get(prefix + "/{identifier}/runs/{run_id}")
@@ -431,25 +452,43 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
         identifier: str, run_id: str, auth: Auth, project_id: str | None = None
     ) -> dict[str, Any]:
         with factory() as db:
-            case(db, project_id, identifier)
-            row = db.get(UseCaseRun, run_id)
-            if not row or row.use_case_id != identifier:
+            if project_id is not None:
+                project(db, project_id)
+            query = (
+                select(UseCaseRun)
+                .join(UseCase, UseCase.id == UseCaseRun.use_case_id)
+                .where(UseCase.id == identifier, UseCaseRun.id == run_id)
+            )
+            if project_id is not None:
+                query = query.where(UseCase.project_id == project_id)
+            row = db.scalar(query)
+            if row is None:
                 raise HTTPException(404, "Eingabe nicht gefunden")
             return run_info(row)
 
     def export_data(
         db: Any, project_id: str | None, identifier: str
     ) -> tuple[list[str], list[list[Any]]]:
-        row = case(db, project_id, identifier)
-        spec = Definition.model_validate_json(db.get(UseCaseRevision, (row.id, row.revision)).spec)
-        rows = list(
-            db.scalars(
-                select(UseCaseRun)
-                .where(UseCaseRun.use_case_id == identifier, UseCaseRun.revision == row.revision)
-                .order_by(UseCaseRun.created)
-                .limit(1001)
+        if project_id is not None:
+            project(db, project_id)
+        query = (
+            current_query(project_id)
+            .add_columns(UseCaseRun)
+            .outerjoin(
+                UseCaseRun,
+                (UseCaseRun.use_case_id == UseCase.id) & (UseCaseRun.revision == UseCase.revision),
             )
+            .where(UseCase.id == identifier)
+            .order_by(UseCaseRun.created)
+            .limit(1001)
         )
+        records = list(db.execute(query))
+        if not records:
+            raise HTTPException(404, "Use Case nicht gefunden")
+        row, revision, _ = records[0]
+        definition = loaded_info(db, row, revision)
+        spec = Definition.model_validate(definition["spec"])
+        rows = [item for _, _, item in records if item is not None]
         if len(rows) > 1000:
             raise HTTPException(413, "Exportlimit von 1000 Eingaben erreicht")
         if sum(len(r.snapshot.encode()) for r in rows) > 8_000_000:
@@ -518,4 +557,8 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
     @app.get("/api/use-cases/{identifier}")
     def detail(identifier: str, auth: Auth) -> dict[str, Any]:
         with factory() as db:
-            return info(db, case(db, None, identifier))
+            record = db.execute(current_query().where(UseCase.id == identifier)).first()
+            if record is None:
+                raise HTTPException(404, "Use Case nicht gefunden")
+            row, revision = record
+            return loaded_info(db, row, revision)

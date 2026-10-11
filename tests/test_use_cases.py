@@ -285,3 +285,67 @@ def test_optional_binding_rejects_invalid_deleted_and_archived_projects(knowledg
     )
     assert submit(client, headers, "/api/use-cases", case).status_code == 409
     assert client.get(url).status_code == 200
+
+
+@pytest.mark.parametrize(
+    "suffix",
+    ["", "/{id}", "/{id}/runs", "/{id}/runs/{run_id}", "/{id}/output.csv", "/{id}/output.xlsx"],
+)
+def test_read_snapshot_survives_delete_after_sql_fetch(knowledge, suffix):
+    """Pause after DB materialization, delete concurrently, then decode the read response."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from sqlalchemy import event
+
+    app, client, headers, _, _ = knowledge
+    case = client.post("/api/use-cases", json={"spec": spec()}, headers=headers).json()
+    run = submit(client, headers, "/api/use-cases", case, amount=42).json()
+    reached = Event()
+    resume = Event()
+
+    def pause_after_snapshot(state):
+        result = state.invoke_statement()
+        if state.is_select and "use_cases" in str(state.statement) and not reached.is_set():
+            # Materialize and close the cursor before concurrent DELETE, preserving its snapshot.
+            frozen = result.freeze()
+            reached.set()
+            assert resume.wait(10), "Concurrent deletion did not release the paused reader"
+            return frozen()
+        return result
+
+    session_class = app.state.sessions.class_
+    event.listen(session_class, "do_orm_execute", pause_after_snapshot, retval=True)
+    path = "/api/use-cases" + suffix.format(id=case["id"], run_id=run["id"])
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(client.get, path)
+            assert reached.wait(10), "Reader did not fetch its Use Case snapshot"
+            try:
+                deleted = client.request(
+                    "DELETE",
+                    "/api/use-cases/" + case["id"],
+                    json={"expected_revision": 1},
+                    headers=headers,
+                )
+                assert deleted.status_code == 200, deleted.text
+            finally:
+                resume.set()
+            response = pending.result(timeout=10)
+        assert response.status_code == 200, response.text
+        if suffix == "":
+            assert response.json()[0]["spec"]["name"] == spec()["name"]
+        elif suffix == "/{id}":
+            assert response.json()["spec"]["name"] == spec()["name"]
+        elif suffix.endswith("/runs"):
+            assert response.json()[0]["output"]["row"] == [42, "Synthetic"]
+        elif "/runs/" in suffix:
+            assert response.json()["output"]["row"] == [42, "Synthetic"]
+        elif suffix.endswith(".csv"):
+            assert "42;Synthetic" in response.text
+        else:
+            assert load_workbook(io.BytesIO(response.content)).active["A2"].value == 42
+        assert client.get("/api/use-cases/" + case["id"]).status_code == 404
+    finally:
+        resume.set()
+        event.remove(session_class, "do_orm_execute", pause_after_snapshot)

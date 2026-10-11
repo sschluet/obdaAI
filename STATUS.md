@@ -10,11 +10,14 @@ Revisionen und Ergebnisse. Ein gelöster Bezug macht alte Projektlöschvorschaue
 ungültig; eigenständige Use Cases bleiben bei Projektlöschung erhalten.
 Migration mit echten SQLite-Kinddatensätzen und aktiven Fremdschlüsseln geprüft;
 Downgrade verweigert Datenverlust bei eigenständigen Definitionen.
-17 gezielte Backendtests bestanden, ein PostgreSQL-Migrationsfall wird in CI
+23 gezielte Backendtests bestanden, ein PostgreSQL-Migrationsfall wird in CI
 geprüft. Ruff/Mypy, TypeScript/Build und Source-Scan bestanden. Browsercheck:
 eigenständig ohne sichtbare Projekte, Zuordnen/Lösen mit Ergebniserhalt,
 Pflicht-Radioauswahl/Tastatur/Escape, CSV/XLSX, Revisionen, Altlinks/Reload und
-320/390/768px bestanden. Website67 Features/29 synthetische Bilder vorbereitet.
+320/390/768px bestanden. Veralteter URL-Projektparameter ändert keinen
+eigenständigen Entwurf. Konsistente SQL-Lesesnapshots bewahren Antworten bei
+paralleler Löschung; alle sechs Lese-/Exportwege gezielt parallel geprüft.
+Website67 Features/29 synthetische Bilder vorbereitet.
 CI, reale VM-
 Abnahme und Website-Veröffentlichung werden nach erfolgreicher Prüfung ergänzt.
 Der Nutzer bestätigte am11.10.2026 ausdrücklich öffentliche App-Quellen;
