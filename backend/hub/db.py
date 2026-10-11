@@ -661,3 +661,12 @@ class DeletionCleanup(Base):
     artifact_done: Mapped[bool] = mapped_column(Boolean, default=False)
     created: Mapped[float] = mapped_column(Float, default=time.time)
     finished: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class ProviderAccountCredential(Base):
+    __tablename__ = "provider_account_credentials"
+    provider_id: Mapped[str] = mapped_column(
+        ForeignKey("provider_configs.id", ondelete="CASCADE"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    encrypted_secret: Mapped[str | None] = mapped_column(Text, nullable=True)

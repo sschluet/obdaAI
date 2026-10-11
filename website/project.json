@@ -160,6 +160,12 @@
       "title": "Chats löschen, auch aus dem Archiv.",
       "description": "Direkte Gesprächsaktionen und ein gemeinsamer Bestätigungsdialog. Ausschließlich synthetische Gesprächsdaten.",
       "image": "assets/deletechat.png"
+    },
+    {
+      "id": "openroutercosts",
+      "title": "Cloudkosten auf einen Blick.",
+      "description": "Kontoguthaben, API-Schlüssellimit und lokales Monatsbudget klar unterscheiden. Ausschließlich synthetische USD-Werte; kein reales OpenRouter-Konto und keine Zugangsdaten.",
+      "image": "assets/openroutercosts.png"
     }
   ],
   "groups": [
@@ -188,6 +194,11 @@
           "title": "OpenRouter",
           "description": "Echte Anbieter- und Chatabnahme dokumentiert. Gewöhnlicher Auto-Chat darf aktuelle Eingaben und laufgebundene öffentliche Treffer über konfigurierte Cloudmodelle verarbeiten. Server-, Kosten- und Datenschutzgrenzen bleiben verbindlich.",
           "status": "live"
+        },
+        {
+          "title": "OpenRouter-Guthaben und Cloudkosten",
+          "description": "Kontoguthaben über einen optionalen separaten Kontostatus-Schlüssel, Nutzung und Restlimit des Inferenzschlüssels sowie lokales UTC-Monatsbudget mit offenen Reservierungen. Übersicht in Modelleinstellungen und Chat; manuelle Aktualisierung, Zeitstempel und sichtbare unbekannte Werte. Implementiert; echte Kontostatus- und Testinstanzabnahme stehen noch aus.",
+          "status": "implemented"
         },
         {
           "title": "Direkte OpenAI- und Anthropic-Anbieter",

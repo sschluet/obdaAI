@@ -14,10 +14,36 @@ const demoProfile={revision:0,enabled:true,fields:{name:'Alex Beispiel',preferre
 await page.route('**/api/personal-profile',route=>route.request().method()==='GET'?route.fulfill({json:demoProfile}):route.continue());
 await page.route('**/api/web-settings',async route=>{if(route.request().method()!=='GET'){await route.continue();return;}const response=await route.fetch();const settings=await response.json();await route.fulfill({response,json:{...settings,endpoint:'https://search.example.org/search'}});});
 const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:['websettings','routing','profile'].includes(name)});};
+// Account balances in this gallery are synthetic and never fetched from OpenRouter.
+async function captureOpenRouterCosts(){
+ const demoProvider={id:'synthetic-showcase-openrouter',name:'OpenRouter · Demo',kind:'openrouter',base_url:'https://openrouter.ai/v1',model:'demo/model',enabled:true,is_default:true,capabilities:['text'],allowed_labels:['CLOUD_ALLOWED'],context_tokens:32768,context_chars:24000,output_tokens:2048,timeout:30,monthly_budget:20,max_run_cost:0.25,disable_thinking:false,revision:1,secret_ref:'encrypted',budget_used:3.18,last_test:null};
+ const demoAccount={provider_id:demoProvider.id,revision:1,currency:'USD',state:'ready',checked_at:Date.now()/1000,stale:false,error:null,account_error:null,account_key_configured:true,credentials_revision:1,account:{total_credits:'100',total_usage:'24.75',balance:'75.25'},key:{usage:'14',usage_daily:'0.42',usage_weekly:'2.63',usage_monthly:'3.18',limit:'40',limit_remaining:'26',is_free_tier:false},local:{month:new Date().toISOString().slice(0,7),month_used:'3.18',month_measured:'2.93',month_reserved:'0.25',month_unknown_count:1,day_measured:'0.42',monthly_budget:'20',max_run_cost:'0.25',basis:'local_settled_or_estimated_and_reserved'}};
+ const providerRoute=async route=>{if(route.request().method()!=='GET'){await route.continue();return;}const response=await route.fetch();const catalog=await response.json();await route.fulfill({response,json:{...catalog,providers:[demoProvider],cloud_enabled:true,encrypted_secrets_available:true,external_provider_kinds:['openrouter']}});};
+ const accountRoute=route=>route.fulfill({json:demoAccount});
+ await page.route('**/api/providers',providerRoute);
+ await page.route('**/api/providers/synthetic-showcase-openrouter/account-status',accountRoute);
+ await page.goto(base+'/?view=Einstellungen&settingsTab=Modelle');
+ await page.getByRole('button',{name:'Modelle',exact:true}).click();
+ await page.getByRole('heading',{name:'OpenRouter · Demo',exact:true}).waitFor();
+ await page.getByText(/75[,.]25/).first().waitFor();
+ await page.getByText('Kontoguthaben verbinden',{exact:true}).click();
+ await page.getByLabel('Kontostatus-Schlüssel (Management Key)',{exact:true}).waitFor();
+ await page.setViewportSize({width:1440,height:1500});
+ await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));
+ await capture('openroutercosts');
+ await page.setViewportSize({width:1440,height:980});
+ await page.unroute('**/api/providers',providerRoute);
+ await page.unroute('**/api/providers/synthetic-showcase-openrouter/account-status',accountRoute);
+}
 try{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(base);
  await loginFixture(page);
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='openroutercosts'){
+  await captureOpenRouterCosts();
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('OpenRouter costs screenshot captured with synthetic data only.');
+ }else{
  const showcaseCsrf=(await(await page.request.get(base+'/api/me')).json()).csrf;
  const showcaseHeaders={'X-CSRF-Token':showcaseCsrf,Origin:base};
  const showcaseApi=async(path,method='GET',data)=>{const response=await page.request.fetch(base+'/api'+path,{method,headers:showcaseHeaders,data});if(!response.ok())throw Error('Synthetic showcase setup: '+path+' '+response.status());return response.json()};
@@ -173,5 +199,8 @@ try{
  await page.goto(base+'/?view=Projekte&project='+deleteProject.id);await page.getByRole('button',{name:'Projekt löschen',exact:true}).click();const projectDeletion=page.getByRole('dialog',{name:'Projekt endgültig löschen?',exact:true});await projectDeletion.getByRole('button',{name:'Endgültig löschen',exact:true}).waitFor();await page.waitForFunction(()=>![...document.querySelectorAll('.delete-dialog button')].find(b=>b.textContent.includes('Endgültig löschen')).disabled);await capture('deleteproject');await projectDeletion.getByRole('button',{name:'Abbrechen',exact:true}).click();
  await page.goto(base+'/?view=Chat&chat='+deleteChat.id);await page.getByRole('button',{name:'Gespräch löschen',exact:true}).click();const chatDeletion=page.getByRole('dialog',{name:'Gespräch endgültig löschen?',exact:true});await chatDeletion.getByRole('button',{name:'Endgültig löschen',exact:true}).waitFor();await page.waitForFunction(()=>![...document.querySelectorAll('.delete-dialog button')].find(b=>b.textContent.includes('Endgültig löschen')).disabled);await capture('deletechat');await chatDeletion.getByRole('button',{name:'Abbrechen',exact:true}).click();
  if(errors.length)throw Error(errors.join('\n'));
+ await captureOpenRouterCosts();
+ if(errors.length)throw Error(errors.join('\n'));
  console.log((JSON.parse(await readFile(new URL('../website/project.json',import.meta.url),'utf8')).screenshots.length)+' gallery screenshots plus mobile captured with synthetic data only.');
+ }
 }finally{await browser.close();}

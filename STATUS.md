@@ -1,5 +1,24 @@
 # obdaAI — Status 11.10.2026
 
+## OpenRouter-Guthaben und Kostenstatus – implementiert, noch nicht ausgerollt
+
+Modelleinstellungen zeigen Kontoguthaben, Schlüsselnutzung/-limit und eigenes
+UTC-Monatsbudget mit erfassten/geschätzten Kosten und offenen Reservierungen.
+Chat bietet Cloudkosten-Menü mit zwischengespeichertem Guthaben. Öffnen führt
+keine externe Anfrage aus; Aktualisierung ist ausdrücklich, begrenzt und gepinnt.
+Offizielle OpenRouter-API verlangt separaten Management Key für Kontoguthaben;
+optional verschlüsselt über eigene Zugangsdaten eingerichtet, nie für Inferenz.
+Ohne Management Key bleibt Schlüsselverbrauch verfügbar, Kontoguthaben unbekannt.
+Schema0037 ergänzt die getrennte Credentialtabelle. Auth/CSRF/CAS, echter paralleler
+SQLite-Konflikt, Drift, Antwortgröße, keine Redirects, sichere Fehler, fehlende
+Limitdaten und nach Chatlöschung erhaltene Budgetbuchungen geprüft. 21 neue
+Accounttests (inklusive Schutz gespeicherter Credentials beim Downgrade) sowie Provider-Tests, Ruff/Mypy76, TypeScript/Build und neuer
+Status-Browsercheck/Design-Mobil bestanden. 837 Backendtests lokal bestanden,
+26 PostgreSQL-Fälle übersprungen; reale Kontostatus-Abnahme bleibt offen.
+Website: 67 Features / 28 synthetische Bilder im Quellrepository vorbereitet.
+Aktive VM bleibt `fb0d543`/Schema0036; die vorherige CI-Ausnahme war einmalig.
+Eine weitere Freigabe für Ersatzprüfungen/Deployment ist bei blockierter CI nötig.
+
 ## Test-VM ausgerollt mit ausdrücklich freigegebener CI-Ausnahme – 11.10.2026
 
 Aktiver App-Code `fb0d543`, Schema 0036. Nutzer hat die einmalige Ausnahme für

@@ -79,3 +79,5 @@ Verbindungen und kontrollierte Aktionen findest du unter **Einstellungen → Int
 Generische Verbindungsprofile mit Tabelle, Aktivschalter und Projekt-/Aufgaben-/Chatzuordnungen sowie lokale Formular-Use-Cases im eigenen Navigationsbereich zwischen Projekte und Aufgaben: [Ausbauvertrag und Grenzen](docs/generic-integrations-and-use-cases.md). Die Profile sind noch keine allgemeinen KI-Werkzeugaufrufe. [Offizielle Anschlusswege weiterer Dienste](docs/integration-services-research.md) unterscheiden API, OAuth, Bridge und Dateiimport.
 
 Oberfläche mit eigenem App-Namen, Anzeigenamen, Foto, Abständen und Akzentfarbe: [Persönliche Oberfläche](docs/appearance-customization.md). Anzeigeangaben sind vom persönlichen KI-Profil getrennt.
+
+OpenRouter-Kontostatus und Nutzungskosten: [Einrichtung und Bedeutung der Werte](docs/openrouter-cost-status.md). Kontoguthaben benötigt einen separaten Management Key; Modellschlüssel und lokale Budgetgrenzen bleiben getrennt.

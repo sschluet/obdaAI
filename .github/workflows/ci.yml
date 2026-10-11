@@ -79,6 +79,7 @@ jobs:
           node generic-integrations-check.mjs
           node use-cases-check.mjs
           node appearance-check.mjs
+          node openrouter-status-check.mjs
           node deletion-check.mjs
           node project-icons-check.mjs
           node artifact-check.mjs

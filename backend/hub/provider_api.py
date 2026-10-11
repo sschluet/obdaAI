@@ -24,6 +24,7 @@ from hub.db import (
     new_id,
 )
 from hub.policy import CloudGrant, ContextPart, Privacy
+from hub.provider_account import install_account_api
 from hub.provider_settings import (
     ProviderInput,
     decrypt,
@@ -173,6 +174,8 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
 
 
 def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    install_account_api(app, cfg, factory)
+
     @app.get("/api/providers")
     def list_providers(session: Authenticated) -> dict[str, object]:
         with factory() as db:
