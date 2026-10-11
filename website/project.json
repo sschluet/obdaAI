@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "d4e0154",
+  "applicationCommit": "85a8581",
   "schema": "0033",
   "tests": 794,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
   "screenshots": [
     {
       "id": "chat",
@@ -441,7 +441,7 @@
         {
           "title": "Integrationen mit verständlichen Aktionen",
           "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP nach verbundenem System. Direkte Prüfaktionen mit Ergebnis beim jeweiligen System; Projektarchivierung führt vom Ziel über eine konkrete Freigabe zur Ausführung. Schreibpause, Ausführungsverlauf und gebundene Belege bleiben erreichbar. Lokal implementiert; reale Test-VM-Abnahme folgt. Echte Drittanbieterziele und weitere Schreibadapter bleiben offen.",
-          "status": "implemented"
+          "status": "live"
         },
         {
           "title": "Skills direkt im Chat einsetzen",
@@ -543,14 +543,14 @@
   "development": {
     "mode": "local",
     "schema": "0033",
-    "browserChecks": 25,
+    "browserChecks": 26,
     "serverDeployment": true,
-    "commit": "d4e0154",
+    "commit": "85a8581",
     "ciTests": 794,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38088914401",
-    "deployedCommit": "d4e0154",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
+    "deployedCommit": "85a8581",
     "deployedSchema": "0033",
-    "liveScope": "Drei Modellmodi auf der Test-VM bestätigt: Auto, Nur lokal und Cloud ohne Anbieter- oder Neugesprächsdialog. Kurze synthetische Anfrage tatsächlich über den eingerichteten Cloudanbieter beantwortet; Routingbeleg ohne lokalen Klassifikator. Lokale Websperre, private Projekt-Cloudsperre und Mobilansicht320px geprüft. Einstellungen und Grenzen erhalten. 62 Funktionen und22 synthetische Bilder; breite reale Geräte-, Fakten- und vollständige V1-Abnahme bleiben offen.",
+    "liveScope": "Integrationen auf der Test-VM bestätigt: eigener Werkzeug-Menüpunkt entfernt, alte Links öffnen Einstellungen → Integrationen, Unterbereich nach Reload erhalten. Echter Arbeitsraum-Lesebeleg direkt an der Karte, Projektauswahl ohne Änderung, weitere Verbindungen, aktueller Datenschutzstatus und Mobilbreiten320/390/768px geprüft. Schreibpause und Einstellungen erhalten, Aufgaben bleiben leer. Vollständiger Archivierungsablauf mit eigenen synthetischen Fixture-Projekten geprüft.62 Funktionen/23 synthetische Bilder; breite Fakten-/Geräte-/V1-Abnahme offen.",
     "designModernized": true,
     "interactionModernized": true
   }

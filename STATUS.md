@@ -1,5 +1,22 @@
 # obdaAI — Status 11.10.2026
 
+## Integrationen auf Test-VM bestätigt – 11.10.2026
+
+Release `85a8581`, Schema0033 unverändert: [CI38123019558](https://github.com/sschluet/obdaAI/actions/runs/38123019558),
+alle sechs Jobs erfolgreich, 794 Python-/PostgreSQLtests und26 UI-Browsersuiten
+plus Fixture-Anmeldung. Gepinnte HTTPS-/Asset-/API-/Loginprüfung erfolgreich.
+Echte Browserabnahme: Werkzeuge aus Sidebar entfernt; Altlink kanonisch auf
+Einstellungen → Integrationen, Unterbereich nach Reload erhalten. Kein automatischer
+Aktionsstart. Echter Hub-Lesebeleg direkt an der Karte; eigene Projektauswahl/Schließen
+ohne Archivierung oder Freigabe. Zusätzliche Verbindungen, aktueller Datenschutz-
+status und Mobil320/390/768px ohne Überlauf geprüft. Keine Renderfehler. Schreibpause
+und deren Revision unverändert; zuvor bereinigte Aufgaben bleiben leer. Eigenes
+Testprojekt entfernt, QA-Sitzung beendet. Vollständiger Archivierungsablauf inklusive
+Cancel/Stale-Revision/erneuter Freigabe in isolierter Fixture getestet. Keine reale
+Schreibfreigabe geändert. Sicherung, Nachrichten beim Rollout, acht Overlays und
+Netzregeln erhalten. Website62 Features/23 synthetische Bilder; Veröffentlichung
+separat verifiziert. Breite Fakten-/Safari-/Geräte-/V1-Abnahme bleibt offen.
+
 ## Integrationen statt separater Werkzeugseite – implementiert, 11.10.2026
 
 Werkzeuge aus Hauptnavigation entfernt; Einstellungen → Integrationen bündelt
