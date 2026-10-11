@@ -55,10 +55,12 @@ keyboard interaction and mobile overflow. Catalog counts are checked from the ve
 
 ## Publication
 
-GitHub rejected Pages activation in the private application repository (HTTP 422,
-account plan). The user explicitly authorized a separate public repository on
-07.10.2026: `sschluet/obdaAI-website`. The app source was private at creation; the user confirmed public source
-visibility on 11.10.2026. Runtime data remains private.
+The user initially authorized a separate public website repository on 07.10.2026
+because GitHub Pages was unavailable for the then-private app repository.
+On 11.10.2026 they explicitly requested public obdaAI, migration of Pages into
+that repository and deletion of obdaAI-website after the new site is verified.
+The old website main history is preserved as obdaAI's `gh-pages` branch and in a
+local mirror before deletion. Application source branches remain unchanged.
 
 `.github/workflows/pages.yml` validates the public-file allowlist and runs website
 browser checks on each push to `milestone/m3-actions` or `main`. Once its exact
@@ -69,18 +71,20 @@ uv run python scripts/publish_showcase.py
 ```
 
 The publisher requires a clean committed working tree, successful website CI for
-that exact commit and the authorized public target. It copies only the validated
-build into a temporary checkout, creates a normal commit and pushes without force.
-It uses the operator's existing GitHub CLI authentication; no new token is copied
-into Actions secrets. GitHub Pages automatically publishes the public repo's main
-branch root. Source revision is generated separately from the tested app release.
+that exact commit and the authorized public `sschluet/obdaAI` target. It explicitly
+clones only `gh-pages`, validates all existing files against the website allowlist,
+creates a normal commit and pushes only to `refs/heads/gh-pages` without force.
+It uses existing GitHub CLI authentication; no new Actions token is needed.
+GitHub Pages is configured for **Deploy from a branch → gh-pages → /(root)**.
+The branch contains only generated website files and synthetic screenshots;
+application sources, documents and runtime data are never copied into that branch.
 
-When changing the active delivery branch, update the application CI branch filter.
-Feature/status changes and affected screenshots must be maintained before each
-publication. Verify Pages build success and the live page/assets after publishing.
+Source revision is generated separately from the tested app release. Publishing
+gh-pages does not redeploy the test VM or merge application code into main.
+When changing the development branch, update the website CI branch filter.
+After every publication, verify Pages build success, exact public build.json
+revision, catalog, screenshots and content hashes before reporting completion.
 
-Public URL: `https://sschluet.github.io/obdaAI-website/`.
-
-Initial public deployment passed on 07.10.2026: Pages build and live browser checks
-for the complete feature catalog, asset loading, search/filtering, gallery/dialog/
-keyboard navigation and 320–1440 px layouts. App source remained private.
+Public URL: `https://sschluet.github.io/obdaAI/`.
+The old obdaAI-website URL will cease to work after repository deletion. No custom
+DNS or application-domain configuration is changed by this Pages migration.

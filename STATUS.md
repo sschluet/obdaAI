@@ -1,5 +1,18 @@
 # obdaAI — Status 11.10.2026
 
+## GitHub Pages in obdaAI – Migration vorbereitet, 11.10.2026
+
+obdaAI ist bereits öffentlich. Auf Nutzerwunsch zieht die Projektwebsite von
+obdaAI-website in einen eigenen gh-pages-Branch von obdaAI. Die alte Website-
+Historie wird vollständig übernommen und zusätzlich lokal gespiegelt. Publisher,
+aktive Dokumentation und README verwenden das neue Ziel; nur die öffentliche
+Allowlist wird im Pages-Branch veröffentlicht. App-Quellbranches und Test-VM
+bleiben unverändert. Neue URL https://sschluet.github.io/obdaAI/.
+Erst nach neuer Pages-Abnahme wird das alte Repository gelöscht. Der bestehende
+GitHub-CLI-Token besitzt derzeit kein delete_repo-Scope; die abschließende Löschung
+kann daher zusätzliche GitHub-Anmeldung benötigen. Migration, Live-Hash-/Browser-
+Prüfung und Löschung werden separat bestätigt.
+
 ## Synology-Reverse-Proxy – VM vorbereitet, 11.10.2026
 
 Der Nutzer richtet die Synology selbst ein. VM-Nginx erhält einen zusätzlichen

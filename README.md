@@ -4,7 +4,7 @@ Private self-hosted personal assistant: one AUTO chat with projects, knowledge,
 tools, artifacts and n8n tasks. Development begins with an independent modular
 monolith. The current implementation and outstanding work are in [STATUS](STATUS.md).
 This repository contains no personal runtime data or deployment credentials.
-Public project presentation: [obdaAI website](https://sschluet.github.io/obdaAI-website/).
+Public project presentation: [obdaAI website](https://sschluet.github.io/obdaAI/).
 
 ## Local development
 Python 3.12+, Node 24 LTS and uv 0.12.23. Run `uv sync --locked --all-extras`.

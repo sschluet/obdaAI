@@ -17,8 +17,9 @@ in Git. Do not inherit permissions from an older assistant deployment.
 ## Git and completion
 On 11.10.2026 the user explicitly confirmed that the application repository
 `sschluet/obdaAI` should remain public. Private runtime data, documents and
-credentials must still never enter Git. The separately authorized public
-`sschluet/obdaAI-website` contains only the sanitized project presentation.
+credentials must still never enter Git. On 11.10.2026 the user requested Pages
+in `sschluet/obdaAI` and deletion of the separate website repository after verified
+migration. The `gh-pages` branch contains only the sanitized project presentation.
 Verify owner and visibility with official GitHub API.
 Use milestone branches and PRs; main must pass checks. Inspect staged diff, test,
 scan, commit and push each logical milestone. Never force push. A push does not
@@ -36,9 +37,13 @@ complete V1 from partial evidence. Update the last tested application commit and
 CI evidence only after the matching checks actually pass. After pushing each
 delivery, wait for its website CI and run `uv run python scripts/publish_showcase.py`.
 This required delivery step synchronizes the public allowlist and website source
-revision. GitHub Pages publishes the website repository automatically. Verify
+revision. GitHub Pages publishes the application repository's `gh-pages` branch
+automatically. Never replace or publish the application-source branches. Verify
 the public deployment and report its result before completing the delivery.
-The user authorized creating this separate public website repository on 07.10.2026.
+The user originally authorized a separate website repository on 07.10.2026;
+on 11.10.2026 they explicitly requested migration into obdaAI and deletion of
+obdaAI-website only after the new site is verified. Preserve the website history
+in gh-pages and a local mirror before deletion.
 Only isolated synthetic UI fixtures may supply public screenshots. Never publish
 real chats, documents, internal addresses, configuration, logs, runtime data or credentials.
 `scripts/build_showcase.py` uploads an explicit public-file allowlist, never docs
