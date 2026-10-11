@@ -440,7 +440,7 @@
         },
         {
           "title": "Integrationen mit verständlichen Aktionen",
-          "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP nach verbundenem System. Direkte Prüfaktionen mit Ergebnis beim jeweiligen System; Projektarchivierung führt vom Ziel über eine konkrete Freigabe zur Ausführung. Schreibpause, Ausführungsverlauf und gebundene Belege bleiben erreichbar. Lokal implementiert; reale Test-VM-Abnahme folgt. Echte Drittanbieterziele und weitere Schreibadapter bleiben offen.",
+          "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP. Direkte Prüfaktionen zeigen Ergebnisse beim jeweiligen System; Projektarchive führen vom Ziel über konkrete Freigabe zur Ausführung. Schreibpause und eingeklappte Ausführungsbelege bleiben erhalten. Auf der Test-VM mit echtem Hub-Lesebeleg, Navigation, Datenschutzstatus und Mobilansicht bestätigt. Vollständige Archivierung isoliert synthetisch geprüft; weitere Schreibadapter bleiben offen.",
           "status": "live"
         },
         {
