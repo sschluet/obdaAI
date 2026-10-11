@@ -1,5 +1,24 @@
 # obdaAI — Status 11.10.2026
 
+## Auslieferung durch GitHub-Kontolimit blockiert – 11.10.2026
+
+App-Quellstand `f767b2a` ist auf `milestone/m3-actions` gepusht. GitHub beendete
+[App-CI38125798583](https://github.com/sschluet/obdaAI/actions/runs/38125798583)
+und [Website-CI38125796022](https://github.com/sschluet/obdaAI/actions/runs/38125796022)
+vor jedem Prüfschritt: Zahlungsproblem oder erhöht werden müssendes Ausgabenlimit
+laut GitHub-Annotation. Dies ist **kein ausgeführter fehlgeschlagener Codetest**.
+Lokale Backend-, TypeScript/Build-, Ruff/Mypy-/Secret- und Browserprüfungen
+sind separat dokumentiert. Neue operative Adapter und KI-Use-Case-Ausführung
+bleiben unabhängig davon offen.
+
+Die aktive Test-VM bleibt auf Release `85a8581`, Schema0033; Aufgaben weiterhin0,
+Dienste gesund. Neue Images wurden nur inaktiv vorbereitet; eine verschlüsselte externe Sicherung ist geprüft. Kein
+Cutover, keine Migration und keine neue öffentliche Veröffentlichung ohne
+passende erfolgreiche CI. Die öffentliche Website bleibt auf dem vorherigen
+verifizierten Stand `095a0b8`. Im Repository vorbereitet sind65 Features und25
+rein synthetische Bilder. Erneuter exakter CI-Lauf und anschließend Rollout/Pages
+sind nach Entsperrung von GitHub Actions erforderlich.
+
 ## Generische Profile und lokale Use Cases – erster Ausbauschritt, 11.10.2026
 
 Schema0034/0035 ergänzen eine gemeinsame Integrationsregistry und projektbezogene
@@ -26,8 +45,12 @@ immocloud Export statt nicht angebotener API; Amazon je Kontotyp und CHECK24
 ohne bestätigte allgemeine Privatkonto-API. Details in
 [Ausbauvertrag](docs/generic-integrations-and-use-cases.md) und
 [Anschlussrecherche](docs/integration-services-research.md).
-Lokale Funktionsprüfungen laufen; GitHub-CI, VM-Rollout und öffentliche Website
-werden separat mit exakten Revisionen belegt.
+Lokale Prüfung: breite Backend-Suite 801 bestanden/26 übersprungen vor der letzten
+Validierungsnachbesserung; danach gezielte neue Prüfungen 33 bestanden/1 PostgreSQL-
+Fall übersprungen. Ruff, Mypy (74 Module), Source-Scan, TypeScript und Build bestanden.
+Alle 28 UI-Browsersuiten plus Fixture-Anmeldung lokal bestanden, einschließlich
+Design/Mobil320–1440px und Website mit65 Features/25 synthetischen Bildern.
+PostgreSQL-CI, VM-Rollout und öffentliche Veröffentlichung stehen weiterhin aus.
 
 
 ## Integrationen auf Test-VM bestätigt – 11.10.2026
