@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "b7ab319",
+  "applicationCommit": "b668eec",
   "schema": "0040",
-  "tests": 1036,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38163734841",
+  "tests": 1043,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38165936854",
   "screenshots": [
     {
       "id": "chat",
@@ -295,7 +295,7 @@
         {
           "title": "Dauerhafter Cloudstatus neben dem Profil",
           "status": "local",
-          "description": "Guthaben pro aktivierter Verbindung sichtbar, erklärbare fehlende Management-Berechtigung, bounded sichtbare Aktualisierung und gekennzeichnete veraltete Werte. Weitere Anbieter ohne Guthabenadapter bleiben ausdrücklich erkennbar; keine Kontosalden addieren."
+          "description": "Kompakte Provideranzeige dauerhaft neben dem Profil, mit getrenntem Kontoguthaben, Schlüsselverbrauch und App-Nutzung. Fehlende Management-Berechtigung und veraltete Werte sind erklärbar. Sichtbare Aktualisierung alle fünf Minuten. Weitere Anbieter ohne Guthabenadapter bleiben erkennbar; Kontosalden werden nicht addiert. Auf Testinstanz installiert; reale OpenRouter-Nutzung bestätigt, Kontoguthaben wartet auf den Management Key. Oberfläche und mobile Details synthetisch geprüft."
         }
       ]
     },
@@ -670,17 +670,17 @@
   "development": {
     "mode": "local",
     "schema": "0040",
-    "browserChecks": 34,
+    "browserChecks": 35,
     "serverDeployment": true,
-    "commit": "b7ab319",
-    "ciTests": 1036,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38163734841",
-    "deployedCommit": "b7ab319",
+    "commit": "b668eec",
+    "ciTests": 1043,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38165936854",
+    "deployedCommit": "b668eec",
     "deployedSchema": "0040",
-    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand.",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "b7ab319",
-    "lastSuccessfulCIUI": 34
+    "lastSuccessfulCICommit": "b668eec",
+    "lastSuccessfulCIUI": 35
   }
 }

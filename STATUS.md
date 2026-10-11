@@ -1,26 +1,33 @@
 # obdaAI — Status 11.10.2026
 
-## Cloudguthaben am Profil – lokal geprüft, 11.10.2026
+## Cloudguthaben am Profil – Test-VM geprüft, 11.10.2026
 
-Live-Diagnose vorhandener OpenRouter-Verbindung: Modellschlüssel liefert Nutzung,
-kein zusätzlicher Kontostatus-Schlüssel eingerichtet; Kontoguthaben fehlt daher.
-Offizielle Credits-API benötigt Management Key. Keine Zugangsdaten verändert,
-kein Schlüssel ausgegeben und keine Modellanfrage im Diagnosetest.
+Aktiver App-Code `b668eec`, Schema `0040`. Vollständige CI38165936854 erfolgreich:
+1043 Backend-/PostgreSQLtests, 35 synthetische Browserprüfungen, alle sechs App-Jobs
+und Geheimnisprüfung. Lokal36 gezielte Tests/26 Subtests, TypeScript/Build,
+Ruff/Mypy85 und Source-Scan513 Dateien erfolgreich.
 
-Dauerhafte kompakte Anzeige unten links neben Profil für aktivierte Cloudprofile,
-Detailansicht mit Kontoguthaben, Schlüsselverbrauch, lokal erfasster Nutzung und
-Reservierungen getrennt. Keine Addition möglicherweise identischer Konten.
-Management-Einrichtungshinweis direkt erkennbar. Authentifizierte sichtbare
-Aktualisierung initial und alle5 Minuten, Servercache60s; keine externe Abfrage
-bei ausgeschalteter Cloud oder für fehlende Adapter. Fehler erhalten bekannte Werte
-mit Kennzeichnung. OpenAI/Anthropic liefern hier nur lokalen Nutzungsstatus;
-Guthabenadapter fehlen ausdrücklich. Explizit als Management identifizierter
-bestehender Schlüssel kann Credits lesen; normale Modellschlüssel werden nicht
-für Management verwendet. Zusätzlicher Schlüssel bleibt verschlüsselt separat.
+Dauerhafte kompakte Anzeige unten links neben dem Profil für aktivierte Cloudprofile.
+Details trennen Kontoguthaben, Schlüsselverbrauch, lokale App-Nutzung und Reservierungen;
+keine Addition möglicherweise identischer Konten. Fehlende Management-Berechtigung
+und veraltete Werte werden erklärt. Sichtbare authentifizierte Aktualisierung initial
+und alle fünf Minuten, Servercache60s. Keine externe Abfrage bei ausgeschalteter Cloud
+oder fehlendem Adapter. OpenAI/Anthropic zeigen lokalen Nutzungsstatus; Guthabenadapter
+fehlen ausdrücklich. Nur explizit als Management identifizierte Schlüssel können
+Credits lesen; zusätzliche Zugangsdaten bleiben separat verschlüsselt.
 
-Gezielte Backend-/Frontendprüfungen, TypeScript/Build und synthetische Galerie
-geprüft. Vollständige CI/VM-Auslieferung und abschließende Veröffentlichung folgen;
-aktiver VM-Code bleibt bis zur geprüften Lieferung b7ab319/Schema0040.
+Reale OpenRouter-Verbindung auf Test-VM geprüft: Nutzung verfügbar, kein zusätzlicher
+Management Key eingerichtet, Kontoguthaben daher unbekannt. Offizielle Credits-API
+benötigt Management-Berechtigung. Keine Zugangsdaten verändert, keine Modellanfrage;
+eigene temporäre Sitzung entfernt. Die neue Guthabenanzeige und mobile Bedienung
+sind synthetisch geprüft; echte Kontoguthabenabnahme wartet auf den Management Key.
+
+Frisches verschlüsseltes Off-VM-Backup geprüft. Nachrichten, bestehende Use Cases,
+Revisionen/Ergebnisse, acht Compose-Overlays, Nginx und bisherige Firewallregeln erhalten.
+Beide APIs gesund, gepinntes HTTPS und ausgelieferte UI-/API-Verträge bestätigt.
+Website73 Features/35 ausschließlich synthetische Ansichten, einschließlich neuer
+Profil-Guthabenansicht. Exakte Abschluss-/Website-CI und öffentliche Hashprüfung
+werden mit dieser Lieferung protokolliert. V1 bleibt partiell.
 
 ## SMTP-Drahtformat und abschließender Release – Test-VM geprüft, 11.10.2026
 
