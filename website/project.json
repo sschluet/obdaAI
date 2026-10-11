@@ -68,13 +68,13 @@
     {
       "id": "use-cases-overview",
       "title": "Deine Use Cases. Ein eigener Bereich.",
-      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: eigenständige und projektbezogene Use Cases gemeinsam in einer Übersicht. Suche, Projektfilter und direkte Erstellung ohne verpflichtende Projektauswahl. Ausschließlich fiktive Beispiele.",
+      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: KI-Aufträge mit Formularen und echten Dialogen, eigenständig oder optional projektbezogen. Suche und Projektfilter; ausschließlich fiktive Beispiele.",
       "image": "assets/usecasesoverview.png"
     },
     {
       "id": "use-cases",
-      "title": "Eine Eingabe. Dein Ausgabeformat.",
-      "description": "Beispiel aus dem fiktiven Projekt Aurora: vier konfigurierbare Felder, gespeicherte Eingabe, lokales Balkendiagramm und CSV-/Excel-Download. Der Projektbezug ist optional und im Editor änderbar. Das Ergebnis entsteht aus Formularwerten, ohne KI-Aufruf oder automatische Integration.",
+      "title": "Datei hinein. KI-Ergebnis heraus.",
+      "description": "Ein fiktiver Angebotsvergleich verbindet Formular und Eingabedatei mit einem definierten KI-Auftrag. Die Oberfläche zeigt synthetische Empfehlungen, unabhängige Ergebnis-Spalten und CSV-/Excel-Downloads. Die Galerie simuliert Modellantworten und enthält keine realen Angebote oder Providerdaten.",
       "image": "assets/usecases.png"
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "id": "use-case-builder",
-      "title": "Dein Ablauf. Dein Kontext.",
-      "description": "Formularfelder und Ausgabeformat direkt wählen. Die durchsuchbare Projektauswahl ist optional: Ohne Projekt funktioniert der Use Case eigenständig. Dieses Beispiel enthält nur fiktive Zahlen und Projektangaben.",
+      "title": "Dein Auftrag. Deine Eingaben. Dein Format.",
+      "description": "Verbindlicher Prompt und Kontext, Formular oder KI-Dialog, Dateifelder und ein eigenständiges Ausgabeformat. Ein Projekt bleibt optional. Ausschließlich synthetischer Auftrag für Aurora; interne Spaltenschlüssel erzeugt die Anwendung.",
       "image": "assets/usecasebuilder.png"
     },
     {
