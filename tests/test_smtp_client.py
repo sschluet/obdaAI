@@ -70,7 +70,9 @@ def test_tls_authentication_pinned_numeric_connection(monkeypatch, port):
         return value
 
     monkeypatch.setattr(
-        smtp, "resolved_targets", lambda cfg, host, ssh_port: [("203.0.113.7", ssh_port)]
+        smtp,
+        "resolved_targets",
+        lambda cfg, host, ssh_port: [("2001:db8::7", ssh_port), ("203.0.113.7", ssh_port)],
     )
     monkeypatch.setattr(smtp, "PinnedSSL", factory)
     monkeypatch.setattr(smtp.smtplib, "SMTP", factory)

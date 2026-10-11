@@ -1,5 +1,6 @@
 """Pinned TLS-only SMTP; no implicit retries or automatic deliveries."""
 
+import ipaddress
 import re
 import smtplib
 import socket
@@ -52,7 +53,8 @@ def connect(cfg: Settings, config: dict[str, Any], password: str) -> smtplib.SMT
         mailbox(config["sender"])
         if port not in {465, 587} or not password or not config["username"]:
             raise ValueError("Invalid SMTP configuration")
-        address, _ = resolved_targets(cfg, hostname, ssh_port=port)[0]
+        targets = resolved_targets(cfg, hostname, ssh_port=port)
+        address, _ = sorted(targets, key=lambda item: ipaddress.ip_address(item[0]).version)[0]
         connection: smtplib.SMTP
         if port == 465:
             connection = PinnedSSL(address, hostname, port)
