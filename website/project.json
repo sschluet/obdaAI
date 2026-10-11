@@ -54,6 +54,12 @@
       "image": "assets/security.png"
     },
     {
+      "id": "integrations",
+      "title": "Verbindungen an einem Ort.",
+      "description": "Einstellungen → Integrationen bündelt verfügbare Funktionen nach System. Verständliche Aktionen, Verbindungsstatus und Ergebnisse direkt bei der passenden Integration. Ausschließlich synthetische Beispieldaten.",
+      "image": "assets/integrations.png"
+    },
+    {
       "id": "processing",
       "title": "Die Herkunft jeder Antwort.",
       "description": "Kleiner Hinweis direkt unter der Antwort: lokale Verarbeitung oder Cloud-Anbieter und die erfasste Modellkennung. Hier eine isolierte synthetische Testantwort.",
@@ -408,9 +414,9 @@
     },
     {
       "id": "tools",
-      "name": "Werkzeuge & Systeme",
+      "name": "Integrationen & Skills",
       "symbol": "⊞",
-      "intro": "Klare Ziele, feste Grenzen und dauerhafte Belege.",
+      "intro": "Anleitungen und verbundene Funktionen passend einsetzen.",
       "features": [
         {
           "title": "Versionierte Skills",
@@ -433,9 +439,9 @@
           "status": "limited"
         },
         {
-          "title": "Aktionsbelege und Wiederholungsschutz",
-          "description": "Parameter, Freigaben und Ergebnisse werden dauerhaft gebunden. Unklarer Ausgang wird sichtbar; Wiederholung soll keinen unkontrollierten zweiten Effekt erzeugen.",
-          "status": "limited"
+          "title": "Integrationen mit verständlichen Aktionen",
+          "description": "Einstellungen → Integrationen bündelt Arbeitsraum, Home Assistant, freigegebene Webseiten und MCP nach verbundenem System. Direkte Prüfaktionen mit Ergebnis beim jeweiligen System; Projektarchivierung führt vom Ziel über eine konkrete Freigabe zur Ausführung. Schreibpause, Ausführungsverlauf und gebundene Belege bleiben erreichbar. Lokal implementiert; reale Test-VM-Abnahme folgt. Echte Drittanbieterziele und weitere Schreibadapter bleiben offen.",
+          "status": "implemented"
         },
         {
           "title": "Skills direkt im Chat einsetzen",

@@ -1,5 +1,23 @@
 # obdaAI — Status 11.10.2026
 
+## Integrationen statt separater Werkzeugseite – implementiert, 11.10.2026
+
+Werkzeuge aus Hauptnavigation entfernt; Einstellungen → Integrationen bündelt
+Arbeitsraum, Home Assistant, feste Webseitenprüfungen und Projektarchive.
+Leseprüfungen starten nur nach Klick; Fortschritt, Ergebnis und Fehler/Wiederholung
+stehen direkt bei der Aktion. Nicht eingerichtete Dienste erklären ihre Grenzen.
+Suchbare Archivziele und konkrete Schritte Vorbereiten/Freigeben/Ausführen ersetzen
+verstreute Controls. Ein-/Ausklappen erhält den Vorschlag, Abbrechen widerruft ihn;
+Schreibpause, Ablauf und Zielrevision bleiben verbindlich. Datenschutz lädt den
+Pausenstatus bei jedem Öffnen neu; beide Richtungen im Browser geprüft. Technische Belege und
+zusätzliche MCP-Anbindungen sind eingeklappt. Alte Werkzeug-Links und frühere
+Verbindungen-Tabs landen im neuen Bereich; Unterbereich bleibt nach Reload erhalten.
+TypeScript/Build (Hauptpaket470,58KB), Ruff/Mypy71, allgemeiner Browser-, Composer-
+und neuer Integrationscheck erfolgreich. Archivierung ausschließlich mit eigenen
+Fixture-Projekten samt Cancel/Stale-Revisionsfall geprüft. Backend/Schema0033
+unverändert. Website62 Funktionen/23 synthetische Bilder und Galerie/Tastatur/Mobil
+vorbereitet. GitHub-CI, echte VM-Abnahme und Veröffentlichung folgen.
+
 ## Drei Modellmodi auf Test-VM bestätigt – 11.10.2026
 
 Release `d4e0154`, Schema0033 unverändert: [CI38088914401](https://github.com/sschluet/obdaAI/actions/runs/38088914401),

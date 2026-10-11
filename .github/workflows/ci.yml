@@ -75,6 +75,7 @@ jobs:
           cd frontend
           node fixture-login-check.mjs
           node browser-check.mjs
+          node integrations-check.mjs
           node deletion-check.mjs
           node project-icons-check.mjs
           node artifact-check.mjs

@@ -46,9 +46,17 @@ try {
  }
  // Reload a non-chat page while restoring its linked conversation slowly.
  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();await page.locator('button.new').click();
- await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Integrationen',exact:true}).click();
  await page.route('**/api/conversations/*',async route=>{if(route.request().method()==='GET')await new Promise(resolve=>setTimeout(resolve,800));await route.continue()});
- await page.reload();const navigation=page.getByRole('button',{name:'Navigation öffnen',exact:true});await navigation.click();await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+ await page.reload();const navigation=page.getByRole('button',{name:'Navigation öffnen',exact:true});await navigation.click();await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Integrationen',exact:true}).click();
  if(await page.locator('.sidebar.open').count())throw Error('Mobile navigation did not close after restored page selection');
+ // Legacy links still open the integrations tab and never execute an action on entry.
+ const current=new URL(page.url());current.searchParams.set('view','Werkzeuge');current.searchParams.delete('settingsTab');
+ let executions=0;page.on('request',request=>{if(request.method()==='POST'&&request.url().includes('/api/actions'))executions++});
+ await page.goto(current.href);await page.getByRole('heading',{name:'Integrationen',exact:true}).waitFor();
+ if(await page.locator('aside.sidebar button').filter({hasText:/^Werkzeuge$/}).count())throw Error('Tools remain in primary navigation');
+ await page.waitForURL(url=>url.searchParams.get('view')==='Einstellungen'&&url.searchParams.get('settingsTab')==='Integrationen');
+ await page.reload();await page.getByRole('heading',{name:'Integrationen',exact:true}).waitFor();
+ if(executions)throw Error('Entering integrations executed an action');
  if(errors.length)throw Error(errors.join('\n'));console.log('Composer UX passed: actions, keyboard/focus, persistent direct web toggle, local mode, auto height and mobile/short viewport. Synthetic only.');
 }finally{await browser.close();}

@@ -254,11 +254,13 @@ await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 
 await page.getByText(/Verwendete Quellen/).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
-await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
+await page.getByRole('button',{name:'Integrationen',exact:true}).click();
 const haActionResponse=page.waitForResponse(r=>r.url().endsWith('/api/actions')&&r.request().method()==='POST'&&r.ok());
-await page.getByRole('button',{name:'Home Assistant jetzt prüfen',exact:true}).click();
+await page.getByRole('button',{name:'Status prüfen',exact:true}).click();
 const haActionId=(await (await haActionResponse).json()).id;
-const haAction=page.locator('article.action-card').filter({hasText:haActionId});
+await page.locator('details.integration-audit').evaluate(e=>e.open=true);
+const haAction=page.locator('details.integration-audit article.action-card').filter({hasText:haActionId});
 await haAction.getByRole('heading',{name:'Home Assistant · Version 2026.9.3',exact:true}).waitFor();
 await haAction.getByText('Synthetisches Core-Update',{exact:true}).waitFor();
 await haAction.getByText('Backup-Integration erkannt · Wiederherstellung noch nicht geprüft',{exact:true}).waitFor();
@@ -266,12 +268,14 @@ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))thro
 await page.screenshot({path:output+'/ha-report-mobile.png',fullPage:true,animations:'disabled'});
 await page.reload();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
-await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
+await page.getByRole('button',{name:'Integrationen',exact:true}).click();
+await page.locator('details.integration-audit').evaluate(e=>e.open=true);
 await haAction.getByRole('heading',{name:'Home Assistant · Version 2026.9.3',exact:true}).waitFor();
 const backupActionResponse=page.waitForResponse(r=>r.url().endsWith('/api/actions')&&r.request().method()==='POST'&&r.ok());
-await page.getByRole('button',{name:'Installation und Sicherungen prüfen',exact:true}).click();
+await page.getByRole('button',{name:'Sicherungen prüfen',exact:true}).click();
 const backupActionId=(await (await backupActionResponse).json()).id;
-const backupAction=page.locator('article.action-card').filter({hasText:backupActionId});
+const backupAction=page.locator('details.integration-audit article.action-card').filter({hasText:backupActionId});
 await backupAction.getByRole('heading',{name:'Home Assistant · Installation und Sicherungen',exact:true}).waitFor();
 await backupAction.getByText('1 gemeldet · 0 Speicherzugänge mit Fehler',{exact:true}).waitFor();
 await backupAction.getByText('Gemeldete Sicherungen ansehen',{exact:true}).click();
@@ -280,7 +284,8 @@ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))thro
 await page.screenshot({path:output+'/ha-backups-mobile.png',fullPage:true,animations:'disabled'});
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
-await page.getByRole('button',{name:'Verbindungen',exact:true}).click();
+await page.getByRole('button',{name:'Integrationen',exact:true}).click();
+await page.locator('details.integration-connections').evaluate(e=>e.open=true);
 await page.getByRole('button',{name:'MCP-Verbindung hinzufügen',exact:true}).click();
 await page.getByLabel('Name der MCP-Verbindung',{exact:true}).fill(('Synthetic MCP connection '+runSuffix));
 await page.getByLabel('MCP-Serveradresse',{exact:true}).fill('http://127.0.0.1:18765/mcp');
@@ -297,7 +302,8 @@ await page.screenshot({path:output+'/mcp-connections-mobile.png',fullPage:true,a
 await page.reload();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
-await page.getByRole('button',{name:'Verbindungen',exact:true}).click();
+await page.getByRole('button',{name:'Integrationen',exact:true}).click();
+await page.locator('details.integration-connections').evaluate(e=>e.open=true);
 await mcpCard.getByText('1 angebotene Werkzeuge ansehen',{exact:true}).waitFor();
 await mcpCard.getByRole('button',{name:'Verbindung archivieren',exact:true}).click();
 await page.getByText('Archivierte Verbindungen',{exact:true}).click();
@@ -305,7 +311,8 @@ await page.locator('p').filter({hasText:('Synthetic MCP connection '+runSuffix)}
 await page.getByRole('heading',{name:('Synthetic MCP connection '+runSuffix),exact:true}).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 // Passive browser snapshot with protected preview and durable result.
-await page.getByRole('button',{name:'Werkzeuge',exact:true}).click();
+await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
+await page.getByRole('button',{name:'Integrationen',exact:true}).click();
 const browserReceiptResponse=page.waitForResponse(r=>/\/api\/actions\/[^/]+\/execute$/.test(r.url())&&r.request().method()==='POST'&&r.ok());
 await page.getByRole('button',{name:'Webseite jetzt prüfen',exact:true}).click();
 const browserReceipt=(await (await browserReceiptResponse).json()).receipt;
