@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "b668eec",
+  "applicationCommit": "a0b64de",
   "schema": "0040",
   "tests": 1043,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38165936854",
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38168180177",
   "screenshots": [
     {
       "id": "chat",
@@ -62,7 +62,7 @@
     {
       "id": "generic-integrations",
       "title": "Deine Verbindungen. Ein klarer Überblick.",
-      "description": "Fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
+      "description": "Eine zentrale Übersicht ohne doppelte Einstellungsbereiche: fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
       "image": "assets/genericintegrations.png"
     },
     {
@@ -542,7 +542,7 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "Revisionierte Konfiguration, Katalogprüfung und begrenzte parameterfreie Text-Lesewerkzeuge. Echte Drittanbieterziele sind noch nicht abgenommen.",
+          "description": "MCP-Profile in der zentralen Integrationsübersicht mit revisionierter Konfiguration, Katalogprüfung und begrenzten parameterfreien Text-Lesewerkzeugen. Echte Drittanbieterziele sind noch nicht abgenommen.",
           "status": "implemented"
         },
         {
@@ -672,15 +672,15 @@
     "schema": "0040",
     "browserChecks": 35,
     "serverDeployment": true,
-    "commit": "b668eec",
+    "commit": "a0b64de",
     "ciTests": 1043,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38165936854",
-    "deployedCommit": "b668eec",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38168180177",
+    "deployedCommit": "a0b64de",
     "deployedSchema": "0040",
-    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck.",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "b668eec",
+    "lastSuccessfulCICommit": "a0b64de",
     "lastSuccessfulCIUI": 35
   }
 }
