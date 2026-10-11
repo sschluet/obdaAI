@@ -1,6 +1,6 @@
 # obdaAI — Status 11.10.2026
 
-## Persönliches Profil nur bei passendem Fragekontext – lokal geprüft, 11.10.2026
+## Persönliches Profil nur bei passendem Fragekontext – Test-VM geprüft, 11.10.2026
 
 Aktivierte Profilfelder wurden bisher unabhängig von der Frage am Antwortübergang
 angehängt. Neue konservative Auswahl anhand der aktuellen Frage: allgemeine Recherche,
@@ -16,8 +16,31 @@ wirksam. Statische Antwortregel verhindert unaufgeforderte Profilzusammenfassung
 auch aus früherem Chatkontext, ohne bestehende Nachrichten umzuschreiben.
 UI/Dokumentation erklären die automatische kontextbezogene Verwendung; synthetische
 Profilansicht aktualisiert. Gezielte Backend- und Browserprüfungen sowie TypeScript/
-Build erfolgreich. Vollständige CI, exakte VM-Abnahme und Veröffentlichung folgen;
-gespeichertes echtes Profil bleibt unverändert.
+Build erfolgreich.179 gezielte Backendtests, Ruff/Mypy85 und Source-Scan513 Dateien
+bestanden. Statische Regel auf normale Chats beschränkt, führende Systemposition
+bewahrt bestehende Stil- und Use-Case-Verträge. Modellmenü-Tastaturtest wartet auf
+tatsächliche Ladebereitschaft; bisherige Tastaturprüfungen bleiben erhalten.
+Überholte CI38169909075/38170557953 abgebrochen.
+
+Aktiver App-Code `f78e06d`, Schema0040. Vollständige CI38171301160 erfolgreich:
+1103 Backend-/PostgreSQLtests,35 synthetische Browserprüfungen, alle App-Jobs und
+Geheimnisprüfung. Frisches verschlüsseltes Off-VM-Backup geprüft. Gespeichertes
+Profil per Hashvergleich unverändert, ebenso Nachrichten, Use Cases/Revisionen/
+Ergebnisse, acht Overlays, Nginx und bisherige Netzwerkregeln. Beide APIs gesund.
+Gepinntes HTTPS, neue Profil-UI und bestehende API-Verträge bestätigt.
+
+Reale lokale Modellabnahme auf exakt ausgeliefertem Release, ausschließlich fiktive
+Daten: alter COO-/Karriere-/Familienkontext bleibt erhalten; neue HA-Gerätefrage
+liefert nur zwei Testgeräte,108 Zeichen, keine persönliche Empfehlung. Drei neutrale
+Beispielprompts erhalten keinen Profilteil. Cloud-Feldgrenze im ausgelieferten
+Modul geprüft, keine Cloud-Modellanfrage. Eigene QA schreibt weder Profil noch Chats.
+Echte gespeicherte Angaben unverändert. Positive Feldauswahl/Cloudfälle sind mit
+synthetischen Providerszenarien geprüft; keine echte Cloudmodell-Abnahme behauptet.
+
+Website73 Features/35 synthetische Ansichten, aktualisiertes Profilbild und präzisierte
+Beschreibung. Leichter Metadatenabschluss verwendet unveränderten App-Fingerprint;
+exakte Website-CI, Veröffentlichung und öffentliche Dateihashes werden mit dieser
+Lieferung protokolliert. V1 bleibt partiell.
 
 
 ## Integrationsseite bereinigt – Test-VM geprüft, 11.10.2026
