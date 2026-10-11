@@ -33,3 +33,12 @@ Für Website-Abbildungen wird ausschließlich eine isolierte synthetische
 Testoberfläche mit neutralem Avatar verwendet. Die neue Darstellung ist
 implementiert. Die tatsächliche Installation und Abnahme auf der Test-VM sowie
 die Veröffentlichung des öffentlichen Showcase müssen separat bestätigt werden.
+
+## Testinstanz-Abnahme am 11.10.2026
+
+App-Code `fb0d543` mit Schema0036 ist ausgerollt. Eigener synthetischer Name und
+Rasteravatar, Speichern/Reload, Dichte/Akzentfarbe und320/390/768px wurden direkt
+in der ausgelieferten Oberfläche geprüft; ursprüngliche Anzeigeoptionen danach
+wiederhergestellt. Die ausdrücklich bestätigte CI-Ausnahme gilt diesem Rollout.
+GitHub-CI und öffentliche Website-Veröffentlichung sind weiterhin vom Kontolimit
+blockiert. Keine Aussage über echte persönliche Fotos oder alle Gerätekombinationen.

@@ -1,5 +1,34 @@
 # obdaAI — Status 11.10.2026
 
+## Test-VM ausgerollt mit ausdrücklich freigegebener CI-Ausnahme – 11.10.2026
+
+Aktiver App-Code `fb0d543`, Schema 0036. Nutzer hat die einmalige Ausnahme für
+VM-Prüfungen statt blockierter GitHub-CI ausdrücklich bestätigt. 817 lokale
+Backendtests plus sämtliche 26 zuvor übersprungenen PostgreSQL-Fälle auf eigener
+isolierter VM-Datenbank bestanden (zusammen 843). 29 UI-Browsersuiten plus
+Fixture-Anmeldung, Ruff/Mypy (75 Module), Source-Scan, gepinnter Gitleaks-Scan neuer Commit-
+Patches, Offline-Paketbuild und echte Artefakt-/Chromium-Containerprüfungen bestanden.
+Vollständige VM-Wiederholung der bereits lokal geprüften Fälle wurde zugunsten
+der gezielten PostgreSQL-Ergänzung beendet; keine falsche CI-Erfolgsmeldung.
+
+Frische verschlüsselte Sicherung extern mit Hashes geprüft; Migration0033→0036
+und App-/Worker-/Runner-Rollout erfolgreich. Nachrichtenhash vor/nach Migration
+gleich; alle 8 Compose-Overlays und normalisierte IPv4-/IPv6-Regeln unverändert.
+DB-Dienst unverändert, APIs gesund. Gepinntes HTTPS, Assets, Lizenzhash, API-
+Verträge und bestehende Anmeldung geprüft. Reale Browserabnahme ausschließlich
+mit eigenen synthetischen Objekten: Registry/Aktivschalter, Projektbindung,
+Chat-Vererbung/Abwahl, Use Cases als eigener Navigationsbereich, lokales Ergebnis
+und CSV/XLSX, Reload und 320/390/768px, eigener App-/Anzeigename und Rasterfoto,
+Akzentfarbe/Dichte und Persistenz. Originale Anzeigeoptionen wiederhergestellt;
+eigene Projekte/Profile und QA-Sitzung entfernt. Schreibpause unverändert,
+Aufgaben weiterhin 0, keine externen Aktionen/Modellaufrufe und keine Renderfehler.
+
+GitHub-CI38132079830 und Website-CI38132077480 starteten wegen Kontolimit keine
+Schritte. Die Ausnahme gilt nur diesem Test-VM-Rollout; sie ersetzt keinen grünen
+GitHub-Beleg und keine allgemeine künftige Freigabe. Öffentliche Website weiterhin
+auf altem verifiziertem Stand; 66 Features / 27 synthetische Bilder im Quellrepository
+aktualisiert. Allgemeine Integrationsausführung und KI-Use-Cases bleiben offen.
+
 ## Kompakte Darstellung und persönliches Erscheinungsbild – 11.10.2026
 
 Kompakt als Standard reduziert Navigation, Karten, Kopfzeilen, Composer und

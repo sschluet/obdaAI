@@ -552,8 +552,8 @@
         },
         {
           "title": "Oberfläche persönlich gestalten",
-          "description": "Unter Einstellungen → Allgemein einen eigenen App-Namen, persönlichen Anzeigenamen und ein Foto speichern. Kompakte oder komfortable Abstände und vier Akzentfarben gestalten den gesamten Arbeitsraum. Anzeigeeinstellungen bleiben serverseitig gespeichert und sind vom persönlichen KI-Kontext getrennt. Implementiert; reale Test-VM-Abnahme steht noch aus.",
-          "status": "implemented"
+          "description": "Unter Einstellungen → Allgemein einen eigenen App-Namen, persönlichen Anzeigenamen und ein Foto speichern. Kompakte oder komfortable Abstände und vier Akzentfarben gestalten den gesamten Arbeitsraum. Anzeigeeinstellungen bleiben serverseitig gespeichert und sind vom persönlichen KI-Kontext getrennt. Auf der Testinstanz mit synthetischem Namen und Bild, Reload und Mobilansichten geprüft. Ursprüngliche Anzeigeoptionen anschließend wiederhergestellt.",
+          "status": "live"
         }
       ]
     }
@@ -586,16 +586,20 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0033",
-    "browserChecks": 26,
+    "schema": "0036",
+    "browserChecks": 29,
     "serverDeployment": true,
-    "commit": "85a8581",
-    "ciTests": 794,
+    "commit": "fb0d543",
+    "ciTests": null,
     "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
-    "deployedCommit": "85a8581",
-    "deployedSchema": "0033",
-    "liveScope": "Integrationen auf der Test-VM bestätigt: eigener Werkzeug-Menüpunkt entfernt, alte Links öffnen Einstellungen → Integrationen, Unterbereich nach Reload erhalten. Echter Arbeitsraum-Lesebeleg direkt an der Karte, Projektauswahl ohne Änderung, weitere Verbindungen, aktueller Datenschutzstatus und Mobilbreiten320/390/768px geprüft. Schreibpause und Einstellungen erhalten, Aufgaben bleiben leer. Vollständiger Archivierungsablauf mit eigenen synthetischen Fixture-Projekten geprüft.62 Funktionen/23 synthetische Bilder; breite Fakten-/Geräte-/V1-Abnahme offen.",
+    "deployedCommit": "fb0d543",
+    "deployedSchema": "0036",
+    "liveScope": "Auf der Testinstanz geprüft: kompakte Oberfläche, eigene App-/Profilnamen und Rasterfoto mit Speicherung, Akzentfarbe und Dichte; Use Cases als eigener Bereich zwischen Projekte und Aufgaben, lokale Formulare/Ergebnisse und CSV/Excel; generische Verbindungsprofile mit Aktivschaltern, Projektbindung und Chatauswahl. Ursprüngliche Einstellungen erhalten, eigene Testobjekte entfernt, keine externen Aktionen. Dieser Rollout erfolgte nach ausdrücklich freigegebenen Ersatzprüfungen; GitHub-CI ist wegen Kontolimit blockiert. Allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
     "designModernized": true,
-    "interactionModernized": true
+    "interactionModernized": true,
+    "replacementTests": 843,
+    "ciException": true,
+    "lastSuccessfulCICommit": "85a8581",
+    "lastSuccessfulCIUI": 26
   }
 }
