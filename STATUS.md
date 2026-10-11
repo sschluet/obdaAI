@@ -13,13 +13,16 @@ Schema0039 ergänzt verdeckte Arbeitsgespräche, unveränderliche Uploads und Di
 turns. Normale Chat-/Such-/Dateiquellenrouten schließen diese Arbeitsgespräche aus.
 Aktive Laufblocker, atomare Bereinigung und Abtrennen vom früheren Projekt geprüft.
 
-50 gezielte Backend-/Lifecycle-/CI-Tests bestanden, zwei PG-Fälle lokal mangels
-Datenbank übersprungen; zusätzlich zwei Downgrade-Schutzfälle bestanden. Breiter
+53 gezielte Backend-/Lifecycle-/CI-Tests bestanden, zwei PG-Fälle lokal mangels
+Datenbank übersprungen; enthalten sind zwei zusätzliche Downgrade-Schutzfälle. Breiter
 lokaler Lauf:891 bestanden/27 übersprungen; ein zwischenzeitlicher alter Fixture-
 Fehler ist korrigiert und in der gezielten Nachprüfung enthalten. TypeScript/Build,
 synthetischer Use-Case-Browsercheck mit Reload/Upload/Modusbindung/Korrekturen/Abbruch
 und320/390/768px, Ruff/Mypy78, Source-Scan und Actionlint bestanden. Vollständige
-GitHub-CI und Test-VM-Rollout folgen. Galerie ausschließlich
+GitHub-CI und Test-VM-Rollout folgen. Erster CI38149254516:925 Tests grün,
+ein Fehler ausschließlich in der neuen PG-Testbereinigung (Suchpfad für Queue-
+Trigger); korrigiert und überholter Lauf abgebrochen. Zusätzlich ungültige
+Steuerzeichen in Ergebniszellen vor Export abgewiesen. Galerie ausschließlich
 synthetisch aktualisiert. Aktive Test-VM weiterhin9a31cc7/Schema0038. Keine neue
 reale KI-Use-Case-Abnahme oder öffentliche Veröffentlichung behauptet.
 

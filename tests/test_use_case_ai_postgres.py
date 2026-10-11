@@ -96,6 +96,7 @@ def test_ai_queue_is_atomic_idempotent_and_executes_actual_run_pipeline():
         if case_id:
             with factory() as db:
                 if run_id:
+                    db.execute(text("SET LOCAL search_path TO hub_queue, public"))
                     db.execute(
                         text("DELETE FROM hub_queue.procrastinate_jobs WHERE args->>'run_id'=:id"),
                         {"id": run_id},

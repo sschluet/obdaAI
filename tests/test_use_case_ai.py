@@ -385,3 +385,16 @@ def test_auto_dialogue_private_derivatives_stay_local_after_optional_file_remove
         assert all(part["label"] == "LOCAL_ONLY" for part in snapshot["parts"])
         assert not db.get(Conversation, execution.conversation_id).cloud_allowed
         db.rollback()
+
+
+def test_invalid_control_character_in_model_table_is_retained_but_not_exported(knowledge):
+    app, client, headers, case = create(knowledge, ai_spec("xlsx"))
+    raw = json.dumps({"rows": [{"category": "Bad\u0001cell", "total": 42}]})
+    app.state.providers = Model([raw])
+    first = run(client, headers, case)
+    base = f"/api/use-cases/{case['id']}/runs/{first['id']}"
+    result = wait(client, base)
+    assert result["status"] == "failed"
+    assert result["output"]["text"] == raw
+    assert client.get(base + "/output.csv").status_code == 409
+    assert client.get(base + "/output.xlsx").status_code == 409

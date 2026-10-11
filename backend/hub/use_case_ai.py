@@ -422,6 +422,7 @@ def validated_output(spec: Definition, text: str) -> dict[str, Any]:
                 v is None
                 or isinstance(v, str)
                 and len(v) <= 4000
+                and not re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff]", v)
                 or type(v) in (int, float)
                 and math.isfinite(v)
                 and abs(v) <= 1e15
