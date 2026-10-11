@@ -1,5 +1,27 @@
 # obdaAI — Status 11.10.2026
 
+## Synology-Reverse-Proxy – VM vorbereitet, 11.10.2026
+
+Der Nutzer richtet die Synology selbst ein. VM-Nginx erhält einen zusätzlichen
+Domain-vHost für chat.schlueterbusch.de auf bestehendem HTTPS-Port443. Zugelassen
+sind ausschließlich Synology192.168.117.7 und VM-interne Diagnose; bestehender
+IP-vHost/HUB_ORIGIN/Firewall/Compose/App-Code/Schema bleiben unverändert.
+Exakte Domain-Origin-Abbildung am VM-Proxy; fremde Origins werden durchgereicht
+und weiter abgewiesen. CSRF, Secure-/HttpOnly-/SameSite-Strict-Cookies bleiben aktiv.
+600s Lesezeitlimit, keine Pufferung/Cache oder automatischen Upstream-Wiederholungen.
+Nginx-Konfiguration gesichert, Syntax geprüft, ausschließlich Nginx neu geladen.
+Reale VM-Diagnose: Domain-Anmeldung/authentifizierter Zugriff, fremde Origin und
+falsches CSRF abgewiesen, IP-Anmeldung erhalten, eigene Sitzungen abgemeldet.
+Direkter Domain-vHost-Zugriff aus dem LAN abseits der NAS wird mit403 abgewiesen;
+IP-Gesundheit weiterhin200. Aktiver App-Code a4b7e79/Schema0038 unverändert.
+Die vorhandene Synology-Regel liefert nach VM-Anpassung bereits die App:
+Domain-TLS-Zertifikat regulär geprüft, HTML/Health/Anmeldung/authentifizierter
+Zugriff durch die NAS erfolgreich; fremde Origin/falsches CSRF weiterhin403,
+eigene Domain-Sitzung abgemeldet. NAS-Konfiguration wurde nicht verändert.
+Zugriff aus einem tatsächlich externen Netz sowie langes Streaming über den
+NAS-Proxy sind separat offen. Website unterscheidet diesen Abnahmeumfang.
+[Einrichtungsvertrag](docs/synology-reverse-proxy.md).
+
 ## Optionale Use Cases auf Test-VM bestätigt – 11.10.2026
 
 Aktiver App-Code `a4b7e79`, Schema0038. [CI38139006020](https://github.com/sschluet/obdaAI/actions/runs/38139006020): alle sechs Jobs erfolgreich,876 Python-/PostgreSQLtests und30 UI-Browsersuiten plus Fixture-Anmeldung/Design. Website-CI38139002037 erfolgreich. Vorheriger Frontend-CI-Fehler war eine unvollständige Test-Wartebedingung nach Löschung; korrigierte Prüfung wartet auf erfolgreiche Serverantwort und Übersicht.
