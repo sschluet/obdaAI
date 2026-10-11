@@ -7,6 +7,7 @@ import socket
 import ssl
 from collections.abc import Callable
 from email.message import EmailMessage
+from email.policy import SMTP as SMTP_POLICY
 from typing import Any, cast
 
 from hub.config import Settings
@@ -91,6 +92,6 @@ def send(connection: smtplib.SMTP, message: EmailMessage, boundary: Callable[[],
     if connection.mail(sender)[0] != 250 or connection.rcpt(recipient)[0] not in {250, 251}:
         raise ValueError("SMTP-Empfänger abgewiesen")
     boundary()
-    code, _ = connection.data(message.as_bytes())
+    code, _ = connection.data(message.as_bytes(policy=SMTP_POLICY))
     if code != 250:
         raise ValueError("SMTP-Übernahme nicht bestätigt")

@@ -430,3 +430,50 @@ def test_revoked_login_at_transport_prevents_smtp_data(delivery, monkeypatch):
     assert response.json()["status"] == "failed"
     assert transport == ["mail", "rcpt", "close"]
     assert d[6] == []
+
+
+def test_generated_unicode_mail_uses_7bit_protocol_and_date(delivery, monkeypatch):
+    from email import policy
+    from email.parser import BytesParser
+    from email.utils import parsedate_to_datetime
+
+    from hub.smtp_client import send as smtp_send
+
+    d = delivery
+    unicode_result = "Überprüfung: Grüßen und größere Änderungen.\n日本語の結果 – € 100"
+    with d[0].state.sessions() as db:
+        row = db.get(UseCaseRun, d[4])
+        snapshot = json.loads(row.snapshot)
+        snapshot["output"]["text"] = unicode_result
+        row.snapshot = json.dumps(snapshot)
+        db.commit()
+    wire_messages = []
+
+    class Connection:
+        def mail(self, sender):
+            return 250, b"ok"
+
+        def rcpt(self, recipient):
+            return 250, b"ok"
+
+        def data(self, wire):
+            wire_messages.append(wire)
+            return 250, b"accepted"
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("hub.use_case_delivery.connect", lambda *args: Connection())
+    monkeypatch.setattr("hub.use_case_delivery.send", smtp_send)
+    value = preview(d, subject="Überprüfung der Ergebnisse").json()
+    response = send(d, value)
+    assert response.json()["status"] == "sent"
+    wire = wire_messages[0]
+    assert b"\n" not in wire.replace(b"\r\n", b"")
+    assert all(octet < 128 for octet in wire)
+    decoded = BytesParser(policy=policy.default).parsebytes(wire)
+    assert decoded["Content-Transfer-Encoding"] == "quoted-printable"
+    assert str(decoded["Subject"]) == "Überprüfung der Ergebnisse"
+    assert decoded.get_content().replace("\r\n", "\n").strip() == unicode_result
+    assert parsedate_to_datetime(str(decoded["Date"])).tzinfo is not None
+    assert decoded["Message-ID"]

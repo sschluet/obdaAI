@@ -175,3 +175,24 @@ def test_invalid_configuration_rejected_before_connection(monkeypatch, changes):
     monkeypatch.setattr(smtp, "resolved_targets", forbidden)
     with pytest.raises(ValueError):
         smtp.connect(Settings(), {**config(), **changes}, "synthetic")
+
+
+def test_send_serializes_protocol_crlf_even_for_default_email_policy():
+    """smtplib.data receives bytes, so it will not repair bare LF for us."""
+    message = EmailMessage()
+    message["From"], message["To"] = "sender@example.test", "recipient@example.test"
+    message["Subject"] = "Synthetic multiline mail"
+    message.set_content("First line\nSecond line\nThird line")
+    captured = []
+    connection = Connection()
+
+    def data(wire):
+        captured.append(wire)
+        return 250, b"accepted"
+
+    connection.data = data
+    smtp.send(connection, message, lambda: None)
+    wire = captured[0]
+    assert b"\r\n\r\n" in wire
+    assert b"\n" not in wire.replace(b"\r\n", b"")
+    assert b"First line\r\nSecond line\r\nThird line\r\n" in wire

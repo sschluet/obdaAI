@@ -4,7 +4,7 @@ import json
 import re
 import time
 from email.message import EmailMessage
-from email.utils import make_msgid
+from email.utils import formatdate, make_msgid
 from typing import Any, cast
 from uuid import UUID
 
@@ -404,7 +404,8 @@ def install(app: FastAPI, cfg: Any, factory: Any) -> None:
                 snapshot["subject"],
             )
             message["Message-ID"] = row.message_id
-            message.set_content(snapshot["text"])
+            message["Date"] = formatdate(usegmt=True)
+            message.set_content(snapshot["text"], cte="quoted-printable")
             connection = connect(cfg, config, password)
             try:
                 send(connection, message, boundary)
