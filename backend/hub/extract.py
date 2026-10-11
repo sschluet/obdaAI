@@ -12,7 +12,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-MAX_BYTES = 20 * 1024 * 1024
+# Original-file size is independent of decompressed content, text and page limits.
+MAX_BYTES = 40 * 1024 * 1024
 MAX_TEXT = 800_000
 MAX_UNITS = 2000
 EXTENSIONS = {

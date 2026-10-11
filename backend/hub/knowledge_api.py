@@ -173,7 +173,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
         content = bytearray()
         async for chunk in request.stream():
             if len(content) + len(chunk) > MAX_BYTES:
-                raise HTTPException(413, "Maximal 20 MiB pro Datei")
+                raise HTTPException(413, "Maximal 40 MiB pro Datei")
             content.extend(chunk)
         if not content:
             raise HTTPException(422, "Leere Datei")

@@ -2,6 +2,7 @@ import {useEffect,useState,useMemo,lazy,Suspense} from 'react';
 import type {ArtifactSeed} from './ArtifactsPanel';
 import type {TaskSeed} from './TasksPanel';
 import {FileDropzone} from './FileDropzone';
+import {uploadProjectSource} from './projectUpload';
 import {PreferencesPanel} from './PreferencesPanel';
 import './workspace.css';
 const ArtifactsPanel=lazy(()=>import('./ArtifactsPanel').then(m=>({default:m.ArtifactsPanel})));
@@ -23,7 +24,7 @@ export function WorkspacePanel({api,csrf,conversationId,projectId,memoryScope,ta
   const refresh=()=>Promise.all([api('/projects/'+sourceProject),api('/projects/'+sourceProject+'/sources')]).then(([p,s])=>{if(active){setProject(p);setSources(s.filter((row:Source)=>row.status!=='superseded'))}});
   void refresh().catch(e=>{if(active)setError(e.message)});const timer=setInterval(()=>void refresh().catch(()=>{}),3000);return()=>{active=false;clearInterval(timer)};
  },[api,sourceProject]);
- async function upload(files:FileList|null){if(!projectId||!files||uploading)return;setUploading(true);setError('');try{for(const file of Array.from(files)){if(file.size>20*1024*1024)throw Error('Eine Datei darf höchstens 20 MiB groß sein.');const r=await fetch('/api/projects/'+projectId+'/sources',{method:'POST',headers:{'X-CSRF-Token':csrf,'X-File-Name':encodeURIComponent(file.name),'Content-Type':'application/octet-stream'},body:file});if(!r.ok){const v=await r.json();throw Error(typeof v.detail==='string'?v.detail:'Upload konnte nicht bestätigt werden.');}}setSources(await api('/projects/'+projectId+'/sources'));setNotice('Quellen hinzugefügt. Die lokale Verarbeitung läuft; fertige Quellen können für neue Antworten verwendet werden.');}catch(e){setError((e as Error).message)}finally{setUploading(false)}}
+ async function upload(files:File[]|null){if(!projectId||!files||uploading)return;setUploading(true);setError('');try{for(const file of Array.from(files)){await uploadProjectSource(projectId,file,csrf);}setSources(await api('/projects/'+projectId+'/sources'));setNotice('Quellen hinzugefügt. Die lokale Verarbeitung läuft; fertige Quellen können für neue Antworten verwendet werden.');}catch(e){setError((e as Error).message)}finally{setUploading(false)}}
  return <aside className="workbench" aria-label="Arbeitsbereich neben dem Chat"><div className="workbench-heading"><div><small>DEIN ARBEITSKONTEXT</small><h2>Gemeinsam weiterarbeiten</h2></div><button aria-label="Arbeitsbereich schließen" onClick={onClose}>×</button></div>
  <div className="workbench-tabs" role="tablist" aria-label="Arbeitsbereich"><button role="tab" aria-selected={tab==='files'} onClick={()=>onTab('files')}>Dateien</button><button role="tab" aria-selected={tab==='sources'} onClick={()=>onTab('sources')}>Quellen</button><button role="tab" aria-selected={tab==='preferences'} onClick={()=>onTab('preferences')}>Vorgaben</button><button role="tab" aria-selected={tab==='task'} onClick={()=>onTab('task')}>Aufgabe</button></div>
  <div className="workbench-content">{error&&<p className="error" role="alert">{error}</p>}{notice&&<p role="status" className="hint">{notice}</p>}

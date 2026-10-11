@@ -1,5 +1,29 @@
 # obdaAI — Status 11.10.2026
 
+## Projektquellen-Upload und 40 MiB – lokal geprüft, 11.10.2026
+
+VM-Nachweis: beide App-Nginx-Vhosts begrenzen Bodies auf1MiB; Fehlerlog enthält
+abgewiesene Sourceuploads. Oberfläche nannte20MiB, Fehlerpfad verlangte auch bei
+HTML-413 immer JSON und lieferte dadurch eine kryptische Browsermeldung.
+Projektquellen werden jetzt bis40MiB inklusive akzeptiert, gleicher Grenzwert für
+lokalen Parser/Wissensimport und beide Quellenupload-Oberflächen. HTTP-/Transport-
+fehler verständlich, konkrete API-Quotenfehler bleiben erhalten. Dateiauswahl wird
+vor Inputreset gesichert; Rohbytes und Unicode-Dateinamen bleiben unverändert.
+
+Neue scoped Nginx-Location ausschließlich für Projektquellen:40MiB, allgemeine
+Requests bleiben1MiB. Bestehende Host-, Origin-, TLS-/Proxy-/Allowlistparameter bleiben
+identisch; inaktive Konfiguration beider realer Vhosts mit nginx-t geprüft.
+PDF-Seiten/Text/ZIP-/Sandboxgrenzen, Projekt-/Gesamtquoten sowie getrennte Grenzen
+für Dateioperationen/Paperless bleiben erhalten.54 gezielte Backendtests inklusive
+exakt40MiB Streaming/Originalhash und gültiger isoliert extrahierter PDF sowie40MiB+1
+Ablehnung bestanden. TypeScript/Build, neue Uploadbrowserfälle (HTML413, leer502,
+API-JSON, Netzwerk, Größenprüfung, Neuauswahl, Unicode und2MiB-Originalhash in beiden
+UIs) und vorhandene Workbenchprüfung erfolgreich; Ruff/Mypy85 und Source-Scan516.
+Website-Galerie aktualisiert, ausschließlich fiktives Projekt Aurora.
+CI, App-/Proxy-Auslieferung und reale HTTPS40MiB-Abnahme folgen; bisheriger aktiver
+Release bleibt f78e06d/Schema0040 bis zum geprüften Rollout.
+
+
 ## Persönliches Profil nur bei passendem Fragekontext – Test-VM geprüft, 11.10.2026
 
 Aktivierte Profilfelder wurden bisher unabhängig von der Frage am Antwortübergang

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.action_api import StrictInput, encode
 from hub.config import Settings
 from hub.db import KnowledgeConnection, KnowledgeDocument, Memory, Project, Source
+from hub.extract import MAX_BYTES
 from hub.knowledge import extract_source, store
 from hub.knowledge_api import Auth
 from hub.knowledge_clients import ConnectionInput, documents
@@ -129,11 +130,7 @@ async def index_connection(
             assert hasattr(document, "content") and hasattr(document, "path")
             content, path = document.content, document.path
             sha = hashlib.sha256(content).hexdigest()
-            if (
-                not content
-                or len(content) > 20 * 1024 * 1024
-                or total + len(content) > 200 * 1024 * 1024
-            ):
+            if not content or len(content) > MAX_BYTES or total + len(content) > 200 * 1024 * 1024:
                 raise ValueError("Knowledge snapshot limit")
             total += len(content)
             seen.add(path)

@@ -14,7 +14,7 @@
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Unterlagen lokal zusammenführen und im Projektchat verwenden. Ein frei gewähltes Projektsymbol macht den fiktiven Raum Aurora sofort erkennbar.",
+      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen und im Projektchat verwenden. Sichtbare Uploadgrenze, klare Fehlermeldungen und ein frei gewähltes Projektsymbol im fiktiven Raum Aurora.",
       "image": "assets/projects.png"
     },
     {
@@ -317,7 +317,7 @@
         },
         {
           "title": "Dokumentuploads",
-          "description": "PDF, DOCX, PPTX, CSV, XLSX, Markdown, Text und Bilder. Originale werden unverändert mit Hashes aufbewahrt und asynchron eingelesen.",
+          "description": "PDF, DOCX, PPTX, CSV, XLSX, Markdown, Text und Bilder bis 40 MiB je Datei. Originale werden unverändert mit Hashes aufbewahrt und asynchron eingelesen. Browser und Server stimmen die Uploadgrenze ab; verständliche Meldungen grenzen zu große Dateien und vorgeschaltete Uploadbeschränkungen ab.",
           "status": "live"
         },
         {

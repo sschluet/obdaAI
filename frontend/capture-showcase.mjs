@@ -91,6 +91,20 @@ try{
   await captureAIUseCases(page,base,capture);
   if(errors.length)throw Error(errors.join('\n'));
   console.log('AI Use Case screenshots captured with isolated synthetic examples only.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='project-sources'){
+  const projects=await(await page.request.get(base+'/api/projects')).json();
+  const aurora=projects.find(project=>project.name==='Projekt Aurora');if(!aurora)throw Error('Synthetic Aurora seed is required');
+  await page.goto(base+'/?view=Projekte&project='+aurora.id);
+  await page.getByRole('tab',{name:/Quellen ·/}).click();
+  await page.getByText('Dokumente, Tabellen, Präsentationen und Bilder · bis 40 MiB je Datei',{exact:true}).waitFor();
+  await page.locator('input[type=file]').setInputFiles([
+   {name:'Projektueberblick.md',mimeType:'text/markdown',buffer:Buffer.from('# Projekt Aurora\nEin synthetisches Beispiel für eine lokale Wissensbasis.\nZiel: Ideen aus Quellen in überprüfbare Ergebnisse verwandeln.')},
+   {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
+  ]);
+  await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
+  await page.setViewportSize({width:1440,height:1400});await capture('projects');
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Project sources screenshot captured with synthetic documents only.');
  }else if(process.env.SHOWCASE_CAPTURE_ONLY==='openroutercosts'){
   await captureOpenRouterCosts();
   if(errors.length)throw Error(errors.join('\n'));

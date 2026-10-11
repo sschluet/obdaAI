@@ -10,9 +10,14 @@ Ein Projektgespräch lässt sich nicht pauschal für OpenRouter freigeben.
 ## Dateien und Nachweise
 
 DOCX/PPTX/PDF/CSV/XLSX/MD/TXT sowie PNG/JPEG/WebP/TIFF werden unverändert und mit
-SHA256 gespeichert. Alte Office- und Makroformate werden abgewiesen. Limits: 20 MiB
+SHA256 gespeichert. Alte Office- und Makroformate werden abgewiesen. Limits: 40 MiB
 pro Datei, 100 Dateien / 200 MiB pro Projekt, 2 GiB Originaldateien insgesamt;
 zusätzlich Seiten-, Tabellen-, Bildpixel-, ZIP-Verhältnis-, Text-, Zeit- und RAM-Grenzen.
+Die Dateigröße erweitert nicht die Extraktionsgrenzen: PDF bis 100 Seiten, höchstens
+800.000 Textzeichen und 2.000 Fundstellen; Office-Archive bis 80 MiB entpackter Inhalt
+und 20 MiB je Archiveintrag. Eingaben für separate Dateioperationen bleiben auf
+20 MiB je Original beschränkt; der Paperless-Download hat ebenfalls sein eigenes
+20-MiB-Limit. Diese Grenzen sind unabhängig vom Projektquellen-Upload.
 Downloads prüfen den Originalhash und autorisieren den Projektscope. Erneute Verarbeitung
 erstellt eine neue Extraktionsrevision und verwendet keine alte Ergebnis-/Fehlercachedatei.
 
