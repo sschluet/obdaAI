@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "09ab7f7",
+  "applicationCommit": "b7ab319",
   "schema": "0040",
-  "tests": 1034,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38160530984",
+  "tests": 1036,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38163734841",
   "screenshots": [
     {
       "id": "chat",
@@ -661,15 +661,15 @@
     "schema": "0040",
     "browserChecks": 34,
     "serverDeployment": true,
-    "commit": "09ab7f7",
-    "ciTests": 1034,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38160530984",
-    "deployedCommit": "09ab7f7",
+    "commit": "b7ab319",
+    "ciTests": 1036,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38163734841",
+    "deployedCommit": "b7ab319",
     "deployedSchema": "0040",
-    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen.",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "09ab7f7",
+    "lastSuccessfulCICommit": "b7ab319",
     "lastSuccessfulCIUI": 34
   }
 }

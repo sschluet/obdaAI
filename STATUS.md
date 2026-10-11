@@ -1,5 +1,22 @@
 # obdaAI — Status 11.10.2026
 
+## SMTP-Drahtformat und abschließender Release – Test-VM geprüft, 11.10.2026
+
+Aktiver App-Code `b7ab319`, Schema `0040`. Vollständige CI38163734841 erfolgreich:
+1036 Backend-/PostgreSQLtests, 34 synthetische Browserprüfungen, alle sechs App-Jobs
+und Geheimnisprüfung.42 gezielte SMTP-/Versandtests bestätigen CRLF ohne einzelne
+LF,7-Bit-kompatibles Quoted-Printable für Unicode, unveränderten dekodierten
+Unicode-Inhalt, Date mit Zeitzone und Message-ID. Mypy85/Ruff/Source-Scan grün.
+
+Protokollkorrektur mit erneutem frischem verschlüsseltem Off-VM-Backup bereitgestellt;
+Schema0040 bleibt unverändert. Nachrichten, Use Cases/Revisionen/Ergebnisse,
+Compose-Overlays, Nginx und bisherige Firewallregeln erhalten. Beide APIs gesund;
+gepinntes HTTPS und UI-/API-Verträge geprüft. Der reale Modellcode ist unverändert
+gegenüber09ab7f7; dessen dokumentierte lokale Designer-/Paperless-Abnahme bleibt
+der Live-Nachweis. Mailtransport bleibt synthetisch geprüft, kein externer Versand.
+Website-App-/CI-Metadaten auf den abschließenden Release aktualisiert; exakte leichte
+Abschluss-/Websiteprüfung und öffentliche Veröffentlichung gehören zur Lieferung.
+
 ## Integrationsphasen, KI-Erstellungsdialog und Mailausgabe – Test-VM geprüft, 11.10.2026
 
 App-Code `09ab7f7` / Schema `0040` bereitgestellt. Vollständige CI38160530984:
