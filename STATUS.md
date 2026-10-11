@@ -1,6 +1,6 @@
 # obdaAI — Status 11.10.2026
 
-## Projektquellen-Upload und 40 MiB – lokal geprüft, 11.10.2026
+## Projektquellen-Upload und 40 MiB – Test-VM geprüft, 11.10.2026
 
 VM-Nachweis: beide App-Nginx-Vhosts begrenzen Bodies auf1MiB; Fehlerlog enthält
 abgewiesene Sourceuploads. Oberfläche nannte20MiB, Fehlerpfad verlangte auch bei
@@ -20,8 +20,26 @@ Ablehnung bestanden. TypeScript/Build, neue Uploadbrowserfälle (HTML413, leer50
 API-JSON, Netzwerk, Größenprüfung, Neuauswahl, Unicode und2MiB-Originalhash in beiden
 UIs) und vorhandene Workbenchprüfung erfolgreich; Ruff/Mypy85 und Source-Scan516.
 Website-Galerie aktualisiert, ausschließlich fiktives Projekt Aurora.
-CI, App-/Proxy-Auslieferung und reale HTTPS40MiB-Abnahme folgen; bisheriger aktiver
-Release bleibt f78e06d/Schema0040 bis zum geprüften Rollout.
+Aktiver App-Code `9a53d8a`, Schema0040. Vollständige CI38173724018 erfolgreich:
+1107 Backend-/PostgreSQLtests,36 synthetische Browserprüfungen, sämtliche App-Jobs
+und Geheimnisprüfung. Frisches verschlüsseltes Off-VM-Backup geprüft. Nachrichten,
+Profil, Use Cases/Revisionen/Ergebnisse, Compose-Overlays und sonstige Netzwerkregeln
+beim App-Rollout erhalten. Beide APIs gesund, gepinntes HTTPS und neue UI geprüft.
+
+Proxyregel in beiden bestehenden VM-Vhosts atomar nach nginx-t aktiviert. Nur neue
+Quellenuploadlocation hinzugefügt; allgemeine Bodies1MiB, Host/Origin/TLS/Allowlists
+und übrige Proxyparameter unverändert. Vorherige Konfigurationen gesichert.
+Reale HTTPS-Abnahme mit synthetischem eigenem Projekt:2MiB PDF über privaten Vhost,
+exakt40MiB PDF über VM-Vhost der Synology-Weiterleitung, jeweils Statusready und
+Originalgröße/SHA256 identisch.40MiB+1 abgewiesen ohneSourceanlage; allgemeine1MiB-
+Grenze bestätigt. Eigene PDFs/Projekt/Sitzung bereinigt, vorhandene Projekte/Quellen
+nachweislich erhalten. Keine Modellanfrage, keine realen Userdokumente verwendet.
+Die NAS-eigene Konfiguration wurde nicht geändert oder durch diesen Test geprüft.
+
+Website73 Features/35 ausschließlich synthetische Ansichten mit40MiB-Projektansicht.
+Leichter Metadatenabschluss verwendet unveränderten App-Fingerprint; exakte Website-CI,
+Veröffentlichung und öffentlicher Hashabgleich werden mit dieser Lieferung protokolliert.
+V1 bleibt partiell.
 
 
 ## Persönliches Profil nur bei passendem Fragekontext – Test-VM geprüft, 11.10.2026
