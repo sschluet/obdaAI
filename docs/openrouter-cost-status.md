@@ -63,3 +63,11 @@ Die öffentliche Projektvorstellung verwendet ausschließlich synthetische
 Guthaben- und Kostenwerte. Ein Screenshot ist kein Nachweis einer echten
 OpenRouter-Kontoabfrage. Echte Abnahme, installierter Stand und noch offene Fälle
 werden gesondert in `STATUS.md` geführt.
+
+## Gezielte Serverabnahme
+
+App-Code `3d003f6`, Schema0037 am11.10.2026 auf Testinstanz installiert. Reale
+Schlüsselnutzung über bestehenden Inferenzschlüssel abgerufen; Einstellungen,
+Chatcache und mobile320/390/768px geprüft. Providerkonfiguration/Budgetgrenzen
+unverändert, keine Modellabfrage. Kontoguthaben blieb ohne separat konfigurierten
+Management Key unbekannt; dessen echte Einrichtung liegt beim Benutzer.

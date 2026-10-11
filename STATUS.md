@@ -1,5 +1,13 @@
 # obdaAI — Status 11.10.2026
 
+## OpenRouter-Status auf Test-VM bestätigt – 11.10.2026
+
+Aktiver App-Code `3d003f6`, Schema0037. [CI38136684453](https://github.com/sschluet/obdaAI/actions/runs/38136684453): alle6 Jobs erfolgreich,864 Python-/PostgreSQLtests und30 UI-Browsersuiten plus Fixture-Anmeldung. Website-CI38136682088 erfolgreich. Frühere Kontrastmessung während Farbtransition durch reduzierte Animationen im Test stabilisiert; Kontrastgrenze unverändert.
+
+Frische verschlüsselte externe Sicherung, Nachrichtenhash/8 Overlays/Netzregeln erhalten; APIs gesund. Gepinntes HTTPS/Assets/API-Verträge/Login geprüft. Reale OpenRouter-Schlüsselmetadaten mit bestehendem Modellschlüssel erfolgreich abgerufen; kein Modellaufruf. Einstellungen und zwischengespeicherte Chatanzeige, lokale Budgetbuchungen sowie320/390/768px bestätigt. Providerrevision, Modellschlüsselreferenz und Aktionsrichtlinie unverändert. QA-Sitzung beendet.
+
+Kein separater Management Key konfiguriert: Kontoguthaben bleibt ehrlich unbekannt; bestehender Inferenzschlüssel hat kein eigenes Ausgabenlimit. Reale Kontoguthabenabfrage und echte Management-Key-Einrichtung sind zugangsabhängig offen; Einrichtung/Entfernung, Cache, Berechtigungen und sichere Fehler synthetisch/API-geprüft. Quelle für Kontostatus bleibt OpenRouter, lokale erfasste/geschätzte Beträge und Reservierungen sind getrennt. Website67 Features/28 synthetische Bilder aktualisiert; Veröffentlichung wird separat belegt.
+
 ## OpenRouter-Guthaben und Kostenstatus – implementiert, noch nicht ausgerollt
 
 Modelleinstellungen zeigen Kontoguthaben, Schlüsselnutzung/-limit und eigenes

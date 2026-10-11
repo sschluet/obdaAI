@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "85a8581",
-  "schema": "0033",
-  "tests": 794,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
+  "applicationCommit": "3d003f6",
+  "schema": "0037",
+  "tests": 864,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38136684453",
   "screenshots": [
     {
       "id": "chat",
@@ -197,8 +197,8 @@
         },
         {
           "title": "OpenRouter-Guthaben und Cloudkosten",
-          "description": "Kontoguthaben über einen optionalen separaten Kontostatus-Schlüssel, Nutzung und Restlimit des Inferenzschlüssels sowie lokales UTC-Monatsbudget mit offenen Reservierungen. Übersicht in Modelleinstellungen und Chat; manuelle Aktualisierung, Zeitstempel und sichtbare unbekannte Werte. Implementiert; echte Kontostatus- und Testinstanzabnahme stehen noch aus.",
-          "status": "implemented"
+          "description": "Kontoguthaben über einen optionalen separaten Kontostatus-Schlüssel, Nutzung und Restlimit des Inferenzschlüssels sowie lokales UTC-Monatsbudget mit offenen Reservierungen. Übersicht in Modelleinstellungen und Chat; manuelle Aktualisierung, Zeitstempel und sichtbare unbekannte Werte. Implementiert; echte Kontostatus- und Testinstanzabnahme stehen noch aus. Reale Schlüsselnutzung und Chatanzeige auf Testinstanz bestätigt; gesamtes Kontoguthaben bleibt ohne separat eingerichteten Management Key unbekannt.",
+          "status": "limited"
         },
         {
           "title": "Direkte OpenAI- und Anthropic-Anbieter",
@@ -597,20 +597,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0036",
-    "browserChecks": 29,
+    "schema": "0037",
+    "browserChecks": 30,
     "serverDeployment": true,
-    "commit": "fb0d543",
-    "ciTests": null,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38123019558",
-    "deployedCommit": "fb0d543",
-    "deployedSchema": "0036",
-    "liveScope": "Auf der Testinstanz geprüft: kompakte Oberfläche, eigene App-/Profilnamen und Rasterfoto mit Speicherung, Akzentfarbe und Dichte; Use Cases als eigener Bereich zwischen Projekte und Aufgaben, lokale Formulare/Ergebnisse und CSV/Excel; generische Verbindungsprofile mit Aktivschaltern, Projektbindung und Chatauswahl. Ursprüngliche Einstellungen erhalten, eigene Testobjekte entfernt, keine externen Aktionen. Dieser Rollout erfolgte nach ausdrücklich freigegebenen Ersatzprüfungen; GitHub-CI ist wegen Kontolimit blockiert. Allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
+    "commit": "3d003f6",
+    "ciTests": 864,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38136684453",
+    "deployedCommit": "3d003f6",
+    "deployedSchema": "0037",
+    "liveScope": "OpenRouter-Schlüsselmetadaten direkt auf Testinstanz bestätigt: Verbrauch und Limit getrennt von lokalen Budgetbuchungen; Einstellungen und zwischengespeicherte Chatanzeige, Mobil320/390/768px. Ohne separaten Management Key bleibt das gesamte Kontoguthaben unbekannt. Provider-/Budgetkonfiguration erhalten, keine Modellabfrage. Kompakte persönliche Oberfläche, generische Profile und lokale Use Cases zuvor gezielt geprüft; allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
     "designModernized": true,
     "interactionModernized": true,
-    "replacementTests": 843,
-    "ciException": true,
-    "lastSuccessfulCICommit": "85a8581",
-    "lastSuccessfulCIUI": 26
+    "lastSuccessfulCICommit": "3d003f6",
+    "lastSuccessfulCIUI": 30
   }
 }
