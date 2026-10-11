@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "9a31cc7",
-  "schema": "0038",
-  "tests": 902,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38146555023",
+  "applicationCommit": "32cd893",
+  "schema": "0039",
+  "tests": 928,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38150177485",
   "screenshots": [
     {
       "id": "chat",
@@ -68,19 +68,25 @@
     {
       "id": "use-cases-overview",
       "title": "Deine Use Cases. Ein eigener Bereich.",
-      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: eigenständige und projektbezogene Use Cases gemeinsam in einer Übersicht. Suche, Projektfilter und direkte Erstellung ohne verpflichtende Projektauswahl. Ausschließlich fiktive Beispiele.",
+      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: KI-Aufträge mit Formularen und echten Dialogen, eigenständig oder optional projektbezogen. Suche und Projektfilter; ausschließlich fiktive Beispiele.",
       "image": "assets/usecasesoverview.png"
     },
     {
       "id": "use-cases",
-      "title": "Eine Eingabe. Dein Ausgabeformat.",
-      "description": "Beispiel aus dem fiktiven Projekt Aurora: vier konfigurierbare Felder, gespeicherte Eingabe, lokales Balkendiagramm und CSV-/Excel-Download. Der Projektbezug ist optional und im Editor änderbar. Das Ergebnis entsteht aus Formularwerten, ohne KI-Aufruf oder automatische Integration.",
+      "title": "Datei hinein. KI-Ergebnis heraus.",
+      "description": "Ein fiktiver Angebotsvergleich verbindet Formular und Eingabedatei mit einem definierten KI-Auftrag. Die Oberfläche zeigt synthetische Empfehlungen, unabhängige Ergebnis-Spalten und CSV-/Excel-Downloads. Die Galerie simuliert Modellantworten und enthält keine realen Angebote oder Providerdaten.",
       "image": "assets/usecases.png"
     },
     {
+      "id": "usecasedialogue",
+      "title": "Die KI fragt nach. Du behältst den Überblick.",
+      "description": "Ein synthetischer KI-Dialog klärt die benötigten Angaben zum fiktiven Servicekonzept. Erfasste Parameter bleiben sichtbar und korrigierbar; das finale Ergebnis wird ausdrücklich angefordert. Die Galerie simuliert Modellantworten und enthält keine privaten Gespräche.",
+      "image": "assets/usecasedialogue.png"
+    },
+    {
       "id": "use-case-builder",
-      "title": "Dein Ablauf. Dein Kontext.",
-      "description": "Formularfelder und Ausgabeformat direkt wählen. Die durchsuchbare Projektauswahl ist optional: Ohne Projekt funktioniert der Use Case eigenständig. Dieses Beispiel enthält nur fiktive Zahlen und Projektangaben.",
+      "title": "Dein Auftrag. Deine Eingaben. Dein Format.",
+      "description": "Verbindlicher Prompt und Kontext, Formular oder KI-Dialog, Dateifelder und ein eigenständiges Ausgabeformat. Ein Projekt bleibt optional. Ausschließlich synthetischer Auftrag für Aurora; interne Spaltenschlüssel erzeugt die Anwendung.",
       "image": "assets/usecasebuilder.png"
     },
     {
@@ -296,8 +302,8 @@
         },
         {
           "title": "Use Cases mit eigenen Eingaben und Ausgaben",
-          "description": "Eigener Navigationsbereich zwischen Projekte und Aufgaben für eigenständige oder optional projektbezogene Use Cases. Suche, Projektfilter, suchbare Projektauswahl und direkte Feldtyp- und Antwortauswahl. Formulare und Frage-für-Frage-Dialoge mit Text-, Zahlen-, Datums- und Auswahlfeldern. Lokale Ausgabe als Tabelle, CSV, Excel, Balkendiagramm oder Textvorlage; gespeicherte Eingaben und feste Revisionen, Kopieren und endgültiges Löschen. Freier KI-Chat, automatische Berechnungen und Integrationsabfragen sind noch nicht verfügbar.",
-          "status": "limited"
+          "description": "Wiederverwendbare KI-Aufträge mit verpflichtendem Prompt/Kontext. Formulare oder KI-geführte Rückfragen erfassen Parameter und Eingabedateien; Ergebnisse entstehen per Modell in vorgegebenen Text-, Tabellen-, CSV-, Excel- oder Diagrammformaten. Ergebnis-Spalten sind unabhängig von Eingabefeldern. Versionierte Durchläufe, Korrekturen, Status, Modellherkunft und Originaldateibelege bleiben nachvollziehbar. Ältere deterministische Vorlagen und Ergebnisse bleiben erhalten. Allgemeine Integrationsaktionen und Webrecherche im Use Case sind separate Ausbauschritte.",
+          "status": "live"
         }
       ]
     },
@@ -603,18 +609,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0038",
+    "schema": "0039",
     "browserChecks": 32,
     "serverDeployment": true,
-    "commit": "9a31cc7",
-    "ciTests": 902,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38146555023",
-    "deployedCommit": "9a31cc7",
-    "deployedSchema": "0038",
-    "liveScope": "Lange Antworten und manuelle Fortsetzung auf der Test-VM installiert. HTTPS, neue UI-Dateien und revisionierte Antwortgrenzen bestätigt. Reale synthetische Konzepte lokal mit rund 22000 und über OpenRouter mit rund 15000 Zeichen vollständig abgeschlossen. Teilantwort, Verlauf und Entwurferhalt in API-/PostgreSQL- und synthetischen Browserprüfungen belegt; keine neue authentifizierte UI-Live-Abnahme. Use Cases ohne Projektbezug zuvor gezielt geprüft; allgemeine KI-Werkzeugaufrufe und KI-geführte Use-Case-Abläufe bleiben offen.",
+    "commit": "32cd893",
+    "ciTests": 928,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38150177485",
+    "deployedCommit": "32cd893",
+    "deployedSchema": "0039",
+    "liveScope": "KI Use Cases auf der Test-VM installiert und gezielt über die authentifizierte API mit echten Modellen geprüft: lokale CSV-Datei analysiert, CSV-/Excel-Ergebnisse bestätigt, echter KI-Dialog und abschließendes Ergebnis sowie ausdrücklich gewählter OpenRouter-Auftrag erfolgreich. Nur eigene synthetische Daten und eine temporäre Testsitzung; Testobjekte bereinigt. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen, reale Geräteabnahme weiterhin offen. Allgemeine KI-Werkzeugaufrufe, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben Ausbauschritte.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "9a31cc7",
+    "lastSuccessfulCICommit": "32cd893",
     "lastSuccessfulCIUI": 32
   }
 }
