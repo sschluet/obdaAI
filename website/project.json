@@ -62,7 +62,7 @@
     {
       "id": "generic-integrations",
       "title": "Deine Verbindungen. Ein klarer Überblick.",
-      "description": "Fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
+      "description": "Eine zentrale Übersicht ohne doppelte Einstellungsbereiche: fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
       "image": "assets/genericintegrations.png"
     },
     {
@@ -542,7 +542,7 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "Revisionierte Konfiguration, Katalogprüfung und begrenzte parameterfreie Text-Lesewerkzeuge. Echte Drittanbieterziele sind noch nicht abgenommen.",
+          "description": "MCP-Profile in der zentralen Integrationsübersicht mit revisionierter Konfiguration, Katalogprüfung und begrenzten parameterfreien Text-Lesewerkzeugen. Echte Drittanbieterziele sind noch nicht abgenommen.",
           "status": "implemented"
         },
         {

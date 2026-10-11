@@ -57,9 +57,8 @@ try{
  await archive.getByRole('button',{name:ownedProject.name,exact:true}).click();await prepare();await grant();
  await archive.getByRole('button',{name:'Projekt jetzt archivieren',exact:true}).click();await archive.getByText(/Projekt archiviert · neue Revision/).waitFor();
  if(!(await call('/projects/'+ownedProject.id)).archived)throw Error('Reviewed archive did not execute');
- await page.getByRole('button',{name:'Weitere Verbindungen und Einrichtung',exact:true}).click();
- await page.getByText('Bisherige MCP-Verbindungen',{exact:true}).waitFor();
- if(!await page.locator('.integration-connections').evaluate(e=>e.open))throw Error('Connection CTA did not expand advanced connections');
+ for(const title of ['Modelle, Recherche und Zeitplanung','Bisherige MCP-Verbindungen'])if(await page.getByText(title,{exact:true}).count())throw Error('Duplicate integrations section: '+title);
+ if(await page.getByRole('button',{name:'Weitere Verbindungen und Einrichtung',exact:true}).count())throw Error('Obsolete connections CTA still present');
  await page.setViewportSize({width:390,height:844});
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile integration overflow');
  await page.setViewportSize({width:1440,height:1000});
@@ -73,7 +72,7 @@ try{
  await page.getByRole('heading',{name:'Datenverarbeitung und Aktionen',exact:true}).waitFor();
  await page.locator('.setting-card b').getByText('Pausiert',{exact:true}).waitFor();
  if(errors.length)throw Error(errors.join('\n'));
- console.log('Integrations UX passed: navigation, adjacent read result, retry, project search, configuration status, connection CTA and mobile.');
+ console.log('Integrations UX passed: navigation, adjacent read result, retry, project search, configuration status, deduplicated settings and mobile.');
 }finally{
  if(headers&&originalPolicy){const policy=await call('/action-policy');if(policy.paused!==originalPolicy.paused)await call('/action-policy','PATCH',{paused:originalPolicy.paused,expected_revision:policy.revision})}
  if(headers&&ownedProject){const preview=await call('/projects/'+ownedProject.id+'/deletion');if(!preview.blockers.length)await call('/projects/'+ownedProject.id,'DELETE',{expected_state:preview.expected_state})}

@@ -97,7 +97,23 @@ try{
  const mcpDemo=seededProfiles.find(row=>row.kind==='mcp');if(!mcpDemo.enabled)await showcaseApi('/integrations/'+mcpDemo.id+'/control','PATCH',{expected_revision:mcpDemo.revision,enabled:true});
  const projectBinding=await showcaseApi('/integration-bindings/project/'+aurora.id);if(!projectBinding.integration_ids.includes(mcpDemo.id))await showcaseApi('/integration-bindings/project/'+aurora.id,'PUT',{expected_revision:projectBinding.revision,selection_mode:'manual',integration_ids:[mcpDemo.id]});
  async function captureUseCases(){await captureAIUseCases(page,base,capture);}
- if(process.env.SHOWCASE_CAPTURE_ONLY==='usecases'){
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='integrations'){
+  await page.goto(base+'/?view=Einstellungen&settingsTab=Integrationen');
+  await page.getByRole('heading',{name:'Integrationen',exact:true}).waitFor();
+  await page.locator('.registry-table tr').filter({hasText:'Aurora · Testsystem'}).waitFor();
+  await page.setViewportSize({width:1440,height:1550});
+  await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));
+  await capture('genericintegrations');
+  await page.getByText('Bestehende Systemaktionen',{exact:true}).click();
+  await page.getByRole('button',{name:'Überblick anzeigen',exact:true}).click();
+  await page.getByText('Ergebnis lokal gespeichert',{exact:true}).waitFor();
+  await page.setViewportSize({width:1440,height:1300});
+  await page.getByText('Bestehende Systemaktionen',{exact:true}).evaluate(el=>el.scrollIntoView({block:'start'}));
+  await capture('integrations');
+  if(await page.getByText('Modelle, Recherche und Zeitplanung',{exact:true}).count()||await page.getByText('Bisherige MCP-Verbindungen',{exact:true}).count())throw Error('Duplicate integration sections remain');
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Clean integrations gallery captured with isolated synthetic data only.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='usecases'){
   await captureUseCases();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Optional-project Use Cases screenshots captured with synthetic data only.');
