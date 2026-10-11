@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "a0b64de",
+  "applicationCommit": "f78e06d",
   "schema": "0040",
-  "tests": 1043,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38168180177",
+  "tests": 1103,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38171301160",
   "screenshots": [
     {
       "id": "chat",
@@ -146,7 +146,7 @@
     {
       "id": "profile",
       "title": "Dein persönlicher Hintergrund",
-      "description": "Freiwillige Profilangaben und bewusste Cloudfreigabe pro Feld. Alex Beispiel und alle Angaben sind ausschließlich synthetisch.",
+      "description": "Freiwillige Profilangaben für Fragen mit persönlichem Bezug; allgemeine Recherchen und Gerätelisten bleiben sachlich. Bewusste Cloudfreigabe pro Feld. Alex Beispiel und alle Angaben sind ausschließlich synthetisch.",
       "image": "assets/profile.png"
     },
     {
@@ -289,7 +289,7 @@
         },
         {
           "title": "Persönliches Profil mit gezielter Feldfreigabe",
-          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Aktivierte lokale Antworten berücksichtigen die Angaben; Cloudantworten erhalten nur ausdrücklich freigegebene Felder. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang.",
+          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Das aktive Profil liefert nur zur aktuellen Frage passende Angaben bei persönlichem Bezug; allgemeine Recherchen und Gerätelisten erhalten keinen zusätzlichen persönlichen Hintergrund. Cloudantworten dürfen ausschließlich ausdrücklich freigegebene passende Felder erhalten. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang. Kontextauswahl und neutraler Gerätefall mit tatsächlichem lokalen Modell und fiktiven Daten auf der Test-VM geprüft. Bestehende gespeicherte Angaben unverändert; positive persönliche und Cloudfälle synthetisch geprüft.",
           "status": "implemented"
         },
         {
@@ -672,15 +672,15 @@
     "schema": "0040",
     "browserChecks": 35,
     "serverDeployment": true,
-    "commit": "a0b64de",
-    "ciTests": 1043,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38168180177",
-    "deployedCommit": "a0b64de",
+    "commit": "f78e06d",
+    "ciTests": 1103,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38171301160",
+    "deployedCommit": "f78e06d",
     "deployedSchema": "0040",
-    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft.",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft. Profilrelevanz inf78e06d: konservative Feldauswahl anhand der aktuellen Frage, sachliche Recherche/Gerätelisten ohne Profil. Auf dem exakt ausgelieferten Release liefert das echte lokale Modell mit ausschließlich fiktiven Daten eine Geräteübersicht ohne persönliche Empfehlungen trotz früherem COO-Kontext. Gespeichertes Profil und Chats unverändert, keine Cloudmodell-Abnahme für diese Korrektur.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "a0b64de",
+    "lastSuccessfulCICommit": "f78e06d",
     "lastSuccessfulCIUI": 35
   }
 }
