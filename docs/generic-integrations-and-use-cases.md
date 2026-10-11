@@ -50,8 +50,11 @@ Benutzer vor Verbindungstests benötigt; Zugangsdaten gehören nur ins lokale UI
 
 Use Cases ist ein eigener Bereich in der Hauptnavigation zwischen Projekte und
 Aufgaben. Die Übersicht zeigt Anwendungsfälle projektübergreifend; Suche und
-Projektfilter helfen bei der Auswahl. Neue Use Cases werden einem Projekt
-zugeordnet, damit Kontext, Berechtigungen und Löschverhalten eindeutig bleiben.
+Projektfilter helfen bei der Auswahl. Ein neuer Use Case funktioniert auch ohne
+Projekt. Der Projektbezug ist optional und lässt sich im Editor hinzufügen,
+wechseln oder entfernen. Die Übersicht kennzeichnet eigenständige Use Cases als
+„Ohne Projekt“. Suchbare Projektauswahl, Projektfilter und sichtbare Feldtypen
+ersetzen die bisherigen Dropdowns. Auswahlfelder zeigen ihre Optionen direkt.
 Projektbezogene Definitionen sind weiterhin gespeichert, jedoch nicht mehr als
 Projektreiter erreichbar. Frühere Links auf diesen Reiter öffnen den eigenen
 Use-Case-Bereich mit dem entsprechenden Projekt.
@@ -70,8 +73,11 @@ aus Quellen, mehrere Arbeitsblätter, berechnete Kennzahlen sowie Integration- u
 Task-Ausführung sind weitere Schritte und werden nicht als abgeschlossen beworben.
 
 CSV schützt Textzellen vor Tabellenformeln; XLSX erhält Text als Text und echte
-Zahlen als Zahlen. Downloads erfordern eine Anmeldung. Projektlöschung entfernt
-auch Use-Case-Definitionen, Ergebnisse und Zuordnungen; globale Verbindungsprofile
+Zahlen als Zahlen. Downloads erfordern eine Anmeldung. Änderungen am Projektbezug
+erzeugen eine neue Definition; bereits gespeicherte Ergebnisse behalten ihre
+ursprüngliche Revision. Projektlöschung entfernt nur die zu diesem Zeitpunkt
+zugeordneten Use-Case-Definitionen, Ergebnisse und Zuordnungen. Eigenständige Use
+Cases und zuvor gelöste Zuordnungen bleiben erhalten; globale Verbindungsprofile
 und externe Originale bleiben erhalten. Neue Ergebnisse oder Zuordnungen machen
 alte Löschvorschauen ungültig.
 

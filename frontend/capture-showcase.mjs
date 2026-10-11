@@ -55,6 +55,23 @@ try{
  const projectBinding=await showcaseApi('/integration-bindings/project/'+aurora.id);if(!projectBinding.integration_ids.includes(mcpDemo.id))await showcaseApi('/integration-bindings/project/'+aurora.id,'PUT',{expected_revision:projectBinding.revision,selection_mode:'manual',integration_ids:[mcpDemo.id]});
  const existingCases=await showcaseApi('/projects/'+aurora.id+'/use-cases');
  const demoCase=existingCases.find(item=>item.spec.name==='Aurora · Monatskennzahlen')||await showcaseApi('/projects/'+aurora.id+'/use-cases','POST',{spec:{name:'Aurora · Monatskennzahlen',description:'Fiktive Zahlen erfassen, als Diagramm prüfen und im vorgegebenen Format herunterladen.',presentation:'form',fields:[{key:'monat',label:'Monat',type:'text',required:true,choices:[]},{key:'umsatz',label:'Umsatz',type:'number',required:true,choices:[]},{key:'kosten',label:'Kosten',type:'number',required:true,choices:[]},{key:'investitionen',label:'Investitionen',type:'number',required:true,choices:[]}],output_kind:'bi',output_columns:[{label:'Monat',source:'monat'},{label:'Umsatz',source:'umsatz'},{label:'Kosten',source:'kosten'},{label:'Investitionen',source:'investitionen'}],text_template:''}});
+ const independentCases=await showcaseApi('/use-cases');
+ if(!independentCases.some(item=>item.spec.name==='Persönlicher Wochenfokus'))await showcaseApi('/use-cases','POST',{project_id:null,spec:{name:'Persönlicher Wochenfokus',description:'Ein eigenständiger Use Case: Fokus und nächsten Schritt festhalten, auch ohne Projekt.',presentation:'form',fields:[{key:'fokus',label:'Mein Fokus',type:'text',required:true,choices:[]},{key:'schritt',label:'Nächster Schritt',type:'long_text',required:true,choices:[]}],output_kind:'chat',output_columns:[{label:'Mein Fokus',source:'fokus'},{label:'Nächster Schritt',source:'schritt'}],text_template:'Mein Fokus: {fokus}\nNächster Schritt: {schritt}'}});
+ async function captureUseCases(){
+  await page.getByRole('navigation',{name:'Hauptnavigation'}).getByRole('button',{name:'Use Cases',exact:true}).click();
+  await page.locator('.use-cases-hub').getByRole('button',{name:/Persönlicher Wochenfokus/}).waitFor();
+  await page.locator('.use-cases-hub').getByRole('button',{name:/Aurora · Monatskennzahlen/}).waitFor();await capture('usecasesoverview');
+  await page.locator('.use-cases-hub').getByRole('button',{name:/Aurora · Monatskennzahlen/}).click();
+  const useCasePanel=page.locator('.use-cases-panel');await useCasePanel.waitFor();
+  await page.getByLabel('Monat *',{exact:true}).waitFor();
+  await page.getByLabel('Monat *',{exact:true}).fill('Oktober · Demo');await page.getByLabel('Umsatz *',{exact:true}).fill('25000');await page.getByLabel('Kosten *',{exact:true}).fill('15000');await page.getByLabel('Investitionen *',{exact:true}).fill('5000');await page.getByRole('button',{name:'Ergebnis erstellen und Eingabe speichern',exact:true}).click();await page.getByRole('region',{name:'Ergebnis',exact:true}).waitFor();await page.setViewportSize({width:1440,height:2100});await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));await capture('usecases');await page.setViewportSize({width:1440,height:980});
+  await useCasePanel.getByRole('button',{name:'Bearbeiten',exact:true}).click();await useCasePanel.getByRole('button',{name:'Projektbezug',exact:true}).click();await useCasePanel.getByRole('dialog',{name:'Projektbezug auswählen',exact:true}).waitFor();await page.setViewportSize({width:1440,height:1550});await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));await capture('usecasebuilder');await page.keyboard.press('Escape');await useCasePanel.locator('.uc-builder').getByRole('button',{name:'Abbrechen',exact:true}).click();await page.setViewportSize({width:1440,height:980});
+ }
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='usecases'){
+  await captureUseCases();
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Optional-project Use Cases screenshots captured with synthetic data only.');
+ }else{
  await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
  await page.getByText('Ein klarer Plan für Projekt Aurora',{exact:true}).waitFor();
  if(!await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).isVisible())await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();
@@ -84,12 +101,7 @@ try{
  ]);
  await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
  await page.setViewportSize({width:1440,height:1400});await capture('projects');await page.setViewportSize({width:1440,height:980});
- await page.getByRole('button',{name:'Use Cases',exact:true}).click();
- await page.locator('.use-cases-hub').getByRole('button',{name:/Aurora · Monatskennzahlen/}).waitFor();await capture('usecasesoverview');
- await page.locator('.use-cases-hub').getByRole('button',{name:/Aurora · Monatskennzahlen/}).click();
- const useCasePanel=page.locator('.use-cases-panel');await useCasePanel.waitFor();
- await page.getByLabel('Monat *',{exact:true}).waitFor();
- await page.getByLabel('Monat *',{exact:true}).fill('Oktober · Demo');await page.getByLabel('Umsatz *',{exact:true}).fill('25000');await page.getByLabel('Kosten *',{exact:true}).fill('15000');await page.getByLabel('Investitionen *',{exact:true}).fill('5000');await page.getByRole('button',{name:'Ergebnis erstellen und Eingabe speichern',exact:true}).click();await page.getByRole('region',{name:'Ergebnis',exact:true}).waitFor();await page.setViewportSize({width:1440,height:2100});await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));await capture('usecases');await page.setViewportSize({width:1440,height:980});
+ await captureUseCases();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name:'Projekt Aurora',exact:true}).locator('..').click();
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
@@ -202,5 +214,6 @@ try{
  await captureOpenRouterCosts();
  if(errors.length)throw Error(errors.join('\n'));
  console.log((JSON.parse(await readFile(new URL('../website/project.json',import.meta.url),'utf8')).screenshots.length)+' gallery screenshots plus mobile captured with synthetic data only.');
+ }
  }
 }finally{await browser.close();}

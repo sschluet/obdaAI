@@ -1,7 +1,9 @@
 # Public project website
 
 The user authorized a public GitHub Pages project presentation on 07.10.2026.
-The application and repository remain private. Website source lives in `website/`;
+The application runtime and user data remain private. On 11.10.2026 the user
+explicitly confirmed public visibility of `sschluet/obdaAI`; source visibility
+does not authorize publishing private documents or runtime data. Website source lives in `website/`;
 only the explicit allowlist in `scripts/build_showcase.py` becomes public.
 
 ## Contents and upkeep
@@ -55,7 +57,8 @@ keyboard interaction and mobile overflow. Catalog counts are checked from the ve
 
 GitHub rejected Pages activation in the private application repository (HTTP 422,
 account plan). The user explicitly authorized a separate public repository on
-07.10.2026: `sschluet/obdaAI-website`. App source and runtime data stay private.
+07.10.2026: `sschluet/obdaAI-website`. The app source was private at creation; the user confirmed public source
+visibility on 11.10.2026. Runtime data remains private.
 
 `.github/workflows/pages.yml` validates the public-file allowlist and runs website
 browser checks on each push to `milestone/m3-actions` or `main`. Once its exact
@@ -72,7 +75,7 @@ It uses the operator's existing GitHub CLI authentication; no new token is copie
 into Actions secrets. GitHub Pages automatically publishes the public repo's main
 branch root. Source revision is generated separately from the tested app release.
 
-When changing the active delivery branch, update the private CI branch filter.
+When changing the active delivery branch, update the application CI branch filter.
 Feature/status changes and affected screenshots must be maintained before each
 publication. Verify Pages build success and the live page/assets after publishing.
 

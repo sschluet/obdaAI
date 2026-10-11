@@ -15,7 +15,9 @@ in Git. Do not inherit permissions from an older assistant deployment.
   run it against an existing platform implicitly.
 
 ## Git and completion
-Application repository private only. The explicitly authorized public
+On 11.10.2026 the user explicitly confirmed that the application repository
+`sschluet/obdaAI` should remain public. Private runtime data, documents and
+credentials must still never enter Git. The separately authorized public
 `sschluet/obdaAI-website` contains only the sanitized project presentation.
 Verify owner and visibility with official GitHub API.
 Use milestone branches and PRs; main must pass checks. Inspect staged diff, test,
@@ -24,8 +26,10 @@ approve deployment. Report branch, commit, push, test results and dirty files.
 Do not claim completion for mocks alone. STATUS records unmet acceptance cases.
 
 ## Public project website
-The user requested a public GitHub Pages showcase while keeping this repository
-and the application private. Maintain `website/project.json`, website copy and
+The user requested a public GitHub Pages showcase. The repository was initially
+private; on 11.10.2026 the user explicitly confirmed public source visibility.
+The application runtime and user data stay private. Maintain `website/project.json`,
+website copy and
 affected screenshots in the same delivery as every feature/status/UI update.
 Keep implemented, live-tested and partial features distinct; never advertise a
 complete V1 from partial evidence. Update the last tested application commit and
@@ -38,8 +42,8 @@ The user authorized creating this separate public website repository on 07.10.20
 Only isolated synthetic UI fixtures may supply public screenshots. Never publish
 real chats, documents, internal addresses, configuration, logs, runtime data or credentials.
 `scripts/build_showcase.py` uploads an explicit public-file allowlist, never docs
-or the repository root. Keep the app repository private; do not create a public
-source repository to work around a GitHub plan limitation without authorization.
+or the repository root. Keep source visibility aligned with the explicit user choice; do not publish
+private runtime data or create additional repositories without authorization.
 See `docs/project-website.md` for capture, validation and publication commands.
 
 ## Boundaries

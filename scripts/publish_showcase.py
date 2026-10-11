@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory(prefix="website-publish-", dir=ROOT / ".local")
         "# obdaAI project website\n\n"
         "Public project presentation: https://sschluet.github.io/obdaAI-website/\n\n"
         "This repository contains only the public website and synthetic UI screenshots. "
-        "The application source, documents and runtime data remain private.\n\n"
+        "The application runtime, user documents and credentials remain private.\n\n"
         "Features, acceptance limits and screenshots are maintained with each application "
         "delivery. The public files are synchronized only after the exact website CI passes. "
         "GitHub Pages publishes updates from this repository automatically.\n"

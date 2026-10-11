@@ -68,14 +68,20 @@
     {
       "id": "use-cases-overview",
       "title": "Deine Use Cases. Ein eigener Bereich.",
-      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: projektübergreifende Übersicht mit Suche, Projektfilter und direktem Einstieg. Das Beispiel zeigt ausschließlich fiktive Anwendungsfälle aus Projekt Aurora.",
+      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: eigenständige und projektbezogene Use Cases gemeinsam in einer Übersicht. Suche, Projektfilter und direkte Erstellung ohne verpflichtende Projektauswahl. Ausschließlich fiktive Beispiele.",
       "image": "assets/usecasesoverview.png"
     },
     {
       "id": "use-cases",
       "title": "Eine Eingabe. Dein Ausgabeformat.",
-      "description": "Der eigene Navigationsbereich Use Cases liegt zwischen Projekte und Aufgaben. Beispiel aus dem fiktiven Projekt Aurora: vier konfigurierbare Felder, gespeicherte Eingabe, lokales Balkendiagramm und CSV-/Excel-Download. Das Ergebnis entsteht aus Formularwerten, ohne KI-Aufruf oder automatische Integration.",
+      "description": "Beispiel aus dem fiktiven Projekt Aurora: vier konfigurierbare Felder, gespeicherte Eingabe, lokales Balkendiagramm und CSV-/Excel-Download. Der Projektbezug ist optional und im Editor änderbar. Das Ergebnis entsteht aus Formularwerten, ohne KI-Aufruf oder automatische Integration.",
       "image": "assets/usecases.png"
+    },
+    {
+      "id": "use-case-builder",
+      "title": "Dein Ablauf. Dein Kontext.",
+      "description": "Formularfelder und Ausgabeformat direkt wählen. Die durchsuchbare Projektauswahl ist optional: Ohne Projekt funktioniert der Use Case eigenständig. Dieses Beispiel enthält nur fiktive Zahlen und Projektangaben.",
+      "image": "assets/usecasebuilder.png"
     },
     {
       "id": "integrations",
@@ -290,7 +296,7 @@
         },
         {
           "title": "Use Cases mit eigenen Eingaben und Ausgaben",
-          "description": "Eigener Navigationsbereich zwischen Projekte und Aufgaben mit einer projektübergreifenden Übersicht, Suche und Projektfilter. Projektbezogene Formulare und Frage-für-Frage-Dialoge mit Text-, Zahlen-, Datums- und Auswahlfeldern. Lokale Ausgabe als Tabelle, CSV, Excel, Balkendiagramm oder Textvorlage; gespeicherte Eingaben und feste Revisionen, Kopieren und endgültiges Löschen. Die Ausgabe entsteht deterministisch aus eingegebenen Werten. Freier KI-Chat, automatische Berechnungen und Integrationsabfragen sind noch nicht verfügbar.",
+          "description": "Eigener Navigationsbereich zwischen Projekte und Aufgaben für eigenständige oder optional projektbezogene Use Cases. Suche, Projektfilter, suchbare Projektauswahl und direkte Feldtyp- und Antwortauswahl. Formulare und Frage-für-Frage-Dialoge mit Text-, Zahlen-, Datums- und Auswahlfeldern. Lokale Ausgabe als Tabelle, CSV, Excel, Balkendiagramm oder Textvorlage; gespeicherte Eingaben und feste Revisionen, Kopieren und endgültiges Löschen. Freier KI-Chat, automatische Berechnungen und Integrationsabfragen sind noch nicht verfügbar.",
           "status": "limited"
         }
       ]

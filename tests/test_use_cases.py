@@ -182,3 +182,106 @@ def test_invalid_json_number_and_surrogate_return_422_not_500(knowledge):
         )
         assert response.status_code == 422
     assert client.get(base + "/" + case["id"] + "/runs").json() == []
+
+
+def test_standalone_creation_without_projects_and_global_exports(knowledge):
+    _, client, headers, _, _ = knowledge
+    base = "/api/use-cases"
+    created = client.post(base, json={"spec": spec()}, headers=headers)
+    assert created.status_code == 200, created.text
+    case = created.json()
+    assert case["project_id"] is None
+    assert client.get(base).json() == [case]
+    assert client.get(base + "/" + case["id"]).json() == case
+    result = submit(client, headers, base, case, amount=12.5)
+    assert result.status_code == 200, result.text
+    assert client.get(base + "/" + case["id"] + "/runs").json()[0]["id"] == result.json()["id"]
+    assert client.get(base + "/" + case["id"] + "/runs/" + result.json()["id"]).status_code == 200
+    assert "12.5" in client.get(base + "/" + case["id"] + "/output.csv").text
+    workbook = load_workbook(
+        io.BytesIO(client.get(base + "/" + case["id"] + "/output.xlsx").content)
+    )
+    assert workbook.active["A2"].value == 12.5
+    assert client.post(base, json={"spec": spec()}).status_code == 403
+    client.cookies.clear()
+    assert client.get(base).status_code == 401
+
+
+def test_binding_changes_cas_legacy_scope_and_preserve_runs(knowledge):
+    client, headers, project, legacy, case = setup(knowledge)
+    base = "/api/use-cases"
+    url = base + "/" + case["id"]
+    original = submit(client, headers, legacy, case).json()
+    detached = client.put(
+        url, json={"spec": spec(), "project_id": None, "expected_revision": 1}, headers=headers
+    )
+    assert detached.status_code == 200, detached.text
+    assert detached.json()["project_id"] is None
+    assert detached.json()["revision"] == 2
+    assert client.get(legacy).json() == []
+    assert client.get(legacy + "/" + case["id"] + "/runs").status_code == 404
+    assert client.get(url + "/runs").json()[0]["id"] == original["id"]
+    assert (
+        client.put(
+            url,
+            json={"spec": spec(), "project_id": project["id"], "expected_revision": 1},
+            headers=headers,
+        ).status_code
+        == 409
+    )
+    rebound = client.put(
+        url,
+        json={"spec": spec(), "project_id": project["id"], "expected_revision": 2},
+        headers=headers,
+    )
+    assert rebound.status_code == 200, rebound.text
+    assert rebound.json()["project_id"] == project["id"]
+    unchanged = client.put(url, json={"spec": spec(), "expected_revision": 3}, headers=headers)
+    assert unchanged.json()["project_id"] == project["id"]
+    assert (
+        client.put(
+            legacy + "/" + case["id"],
+            json={"spec": spec(), "project_id": None, "expected_revision": 4},
+            headers=headers,
+        ).status_code
+        == 422
+    )
+    assert client.get(legacy + "/" + case["id"] + "/runs").json()[0]["id"] == original["id"]
+
+
+def test_optional_binding_rejects_invalid_deleted_and_archived_projects(knowledge):
+    client, headers, project, _, case = setup(knowledge)
+    url = "/api/use-cases/" + case["id"]
+    assert (
+        client.post(
+            "/api/use-cases", json={"spec": spec(), "project_id": "bad"}, headers=headers
+        ).status_code
+        == 422
+    )
+    assert (
+        client.put(
+            url,
+            json={"spec": spec(), "project_id": str(uuid4()), "expected_revision": 1},
+            headers=headers,
+        ).status_code
+        == 404
+    )
+    client.patch(
+        "/api/projects/" + project["id"],
+        json={"name": "Synthetic forms", "revision": 1, "archived": True},
+        headers=headers,
+    )
+    assert (
+        client.post(
+            "/api/use-cases", json={"spec": spec(), "project_id": project["id"]}, headers=headers
+        ).status_code
+        == 409
+    )
+    assert (
+        client.put(
+            url, json={"spec": spec(), "project_id": None, "expected_revision": 1}, headers=headers
+        ).status_code
+        == 409
+    )
+    assert submit(client, headers, "/api/use-cases", case).status_code == 409
+    assert client.get(url).status_code == 200

@@ -1,5 +1,25 @@
 # obdaAI — Status 11.10.2026
 
+## Optionaler Projektbezug und moderne Use Cases – lokal umgesetzt
+
+Use Cases können eigenständig erstellt werden, auch ohne vorhandenes Projekt.
+Der suchbare Projektbezug lässt sich hinzufügen, wechseln oder entfernen;
+Feldtypen und Auswahlantworten verwenden direkte Schaltflächen statt nativer
+Dropdowns. Globaler API-Vertrag und Schema0038 bewahren bestehende Zuordnungen,
+Revisionen und Ergebnisse. Ein gelöster Bezug macht alte Projektlöschvorschauen
+ungültig; eigenständige Use Cases bleiben bei Projektlöschung erhalten.
+Migration mit echten SQLite-Kinddatensätzen und aktiven Fremdschlüsseln geprüft;
+Downgrade verweigert Datenverlust bei eigenständigen Definitionen.
+17 gezielte Backendtests bestanden, ein PostgreSQL-Migrationsfall wird in CI
+geprüft. Ruff/Mypy, TypeScript/Build und Source-Scan bestanden. Browsercheck:
+eigenständig ohne sichtbare Projekte, Zuordnen/Lösen mit Ergebniserhalt,
+Pflicht-Radioauswahl/Tastatur/Escape, CSV/XLSX, Revisionen, Altlinks/Reload und
+320/390/768px bestanden. Website67 Features/29 synthetische Bilder vorbereitet.
+CI, reale VM-
+Abnahme und Website-Veröffentlichung werden nach erfolgreicher Prüfung ergänzt.
+Der Nutzer bestätigte am11.10.2026 ausdrücklich öffentliche App-Quellen;
+Laufzeitdaten/Zugangsdaten bleiben privat, Website-Beispiele synthetisch.
+
 ## OpenRouter-Status auf Test-VM bestätigt – 11.10.2026
 
 Aktiver App-Code `3d003f6`, Schema0037. [CI38136684453](https://github.com/sschluet/obdaAI/actions/runs/38136684453): alle6 Jobs erfolgreich,864 Python-/PostgreSQLtests und30 UI-Browsersuiten plus Fixture-Anmeldung. Website-CI38136682088 erfolgreich. Frühere Kontrastmessung während Farbtransition durch reduzierte Animationen im Test stabilisiert; Kontrastgrenze unverändert.

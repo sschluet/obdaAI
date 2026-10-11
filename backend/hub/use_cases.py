@@ -1,4 +1,4 @@
-"""Project-scoped declarative forms and immutable local results; no model execution."""
+"""Optionally project-scoped declarative forms and immutable local results; no model execution."""
 
 import csv
 import hashlib
@@ -35,7 +35,7 @@ from hub.knowledge_api import Auth
 class UseCase(Base):
     __tablename__ = "use_cases"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), index=True)
     revision: Mapped[int] = mapped_column(Integer, default=1)
 
 
@@ -135,6 +135,7 @@ class Definition(Strict):
 
 
 class SaveInput(Strict):
+    project_id: UUID | None = None
     spec: Definition
     expected_revision: int | None = Field(default=None, ge=1)
 
@@ -235,10 +236,11 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
         if write and row.archived:
             raise HTTPException(409, "Archiviertes Projekt ist schreibgeschützt")
 
-    def case(db: Any, project_id: str, identifier: str) -> UseCase:
-        project(db, project_id)
+    def case(db: Any, project_id: str | None, identifier: str) -> UseCase:
+        if project_id is not None:
+            project(db, project_id)
         row = db.get(UseCase, identifier)
-        if not row or row.project_id != project_id:
+        if not row or (project_id is not None and row.project_id != project_id):
             raise HTTPException(404, "Use Case nicht gefunden")
         return cast(UseCase, row)
 
@@ -247,27 +249,37 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
         return {
             "id": row.id,
             "revision": row.revision,
+            "project_id": row.project_id,
             "spec": json.loads(revision.spec),
             "label": "LOCAL_ONLY",
         }
 
+    @app.get("/api/use-cases")
     @app.get(prefix)
-    def listing(project_id: str, auth: Auth) -> list[dict[str, Any]]:
+    def listing(auth: Auth, project_id: str | None = None) -> list[dict[str, Any]]:
         with factory() as db:
-            project(db, project_id)
-            return [
-                info(db, row)
-                for row in db.scalars(
-                    select(UseCase).where(UseCase.project_id == project_id).order_by(UseCase.id)
-                )
-            ]
+            if project_id is not None:
+                project(db, project_id)
+            query = select(UseCase).order_by(UseCase.id)
+            if project_id is not None:
+                query = query.where(UseCase.project_id == project_id)
+            return [info(db, row) for row in db.scalars(query)]
 
+    @app.post("/api/use-cases")
     @app.post(prefix)
-    def create(project_id: str, body: SaveInput, auth: Auth) -> dict[str, Any]:
+    def create(body: SaveInput, auth: Auth, project_id: str | None = None) -> dict[str, Any]:
         with factory() as db:
             ownership_lock(db)
-            project(db, project_id, True)
-            row = UseCase(project_id=project_id)
+            target = str(body.project_id) if body.project_id is not None else None
+            if project_id is not None:
+                if "project_id" in body.model_fields_set and target != project_id:
+                    raise HTTPException(
+                        422, "Projektbezug stimmt nicht mit dem Projektpfad überein"
+                    )
+                target = project_id
+            if target is not None:
+                project(db, target, True)
+            row = UseCase(project_id=target)
             db.add(row)
             db.flush()
             spec = encode(body.spec.model_dump())
@@ -277,14 +289,27 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             db.commit()
             return answer
 
+    @app.put("/api/use-cases/{identifier}")
     @app.put(prefix + "/{identifier}")
-    def edit(project_id: str, identifier: str, body: SaveInput, auth: Auth) -> dict[str, Any]:
+    def edit(
+        identifier: str, body: SaveInput, auth: Auth, project_id: str | None = None
+    ) -> dict[str, Any]:
         with factory() as db:
             ownership_lock(db)
-            project(db, project_id, True)
             row = case(db, project_id, identifier)
+            if row.project_id is not None:
+                project(db, row.project_id, True)
             if body.expected_revision != row.revision:
                 raise HTTPException(409, "Use Case inzwischen geändert")
+            if "project_id" in body.model_fields_set:
+                target = str(body.project_id) if body.project_id is not None else None
+                if project_id is not None and target != project_id:
+                    raise HTTPException(
+                        422, "Projektbezug über die globale Use-Case-Ansicht ändern"
+                    )
+                if target is not None:
+                    project(db, target, True)
+                row.project_id = target
             row.revision += 1
             spec = encode(body.spec.model_dump())
             db.add(
@@ -297,12 +322,16 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             db.commit()
             return answer
 
+    @app.delete("/api/use-cases/{identifier}")
     @app.delete(prefix + "/{identifier}")
-    def remove(project_id: str, identifier: str, body: DeleteInput, auth: Auth) -> dict[str, bool]:
+    def remove(
+        identifier: str, body: DeleteInput, auth: Auth, project_id: str | None = None
+    ) -> dict[str, bool]:
         with factory() as db:
             ownership_lock(db)
-            project(db, project_id, True)
             row = case(db, project_id, identifier)
+            if row.project_id is not None:
+                project(db, row.project_id, True)
             if body.expected_revision != row.revision:
                 raise HTTPException(409, "Use Case inzwischen geändert")
             db.execute(delete(UseCaseRun).where(UseCaseRun.use_case_id == identifier))
@@ -311,12 +340,16 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             db.commit()
             return {"deleted": True}
 
+    @app.post("/api/use-cases/{identifier}/runs")
     @app.post(prefix + "/{identifier}/runs")
-    def run(project_id: str, identifier: str, body: RunInput, auth: Auth) -> dict[str, Any]:
+    def run(
+        identifier: str, body: RunInput, auth: Auth, project_id: str | None = None
+    ) -> dict[str, Any]:
         with factory() as db:
             ownership_lock(db)
-            project(db, project_id, True)
             row = case(db, project_id, identifier)
+            if row.project_id is not None:
+                project(db, row.project_id, True)
             try:
                 request_digest = digest(
                     encode({"revision": body.expected_revision, "values": body.values})
@@ -377,8 +410,9 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             **json.loads(row.snapshot),
         }
 
+    @app.get("/api/use-cases/{identifier}/runs")
     @app.get(prefix + "/{identifier}/runs")
-    def runs(project_id: str, identifier: str, auth: Auth) -> list[dict[str, Any]]:
+    def runs(identifier: str, auth: Auth, project_id: str | None = None) -> list[dict[str, Any]]:
         with factory() as db:
             case(db, project_id, identifier)
             rows = list(
@@ -391,8 +425,11 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             )
             return [run_info(row) for row in rows]
 
+    @app.get("/api/use-cases/{identifier}/runs/{run_id}")
     @app.get(prefix + "/{identifier}/runs/{run_id}")
-    def run_detail(project_id: str, identifier: str, run_id: str, auth: Auth) -> dict[str, Any]:
+    def run_detail(
+        identifier: str, run_id: str, auth: Auth, project_id: str | None = None
+    ) -> dict[str, Any]:
         with factory() as db:
             case(db, project_id, identifier)
             row = db.get(UseCaseRun, run_id)
@@ -400,7 +437,9 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 raise HTTPException(404, "Eingabe nicht gefunden")
             return run_info(row)
 
-    def export_data(db: Any, project_id: str, identifier: str) -> tuple[list[str], list[list[Any]]]:
+    def export_data(
+        db: Any, project_id: str | None, identifier: str
+    ) -> tuple[list[str], list[list[Any]]]:
         row = case(db, project_id, identifier)
         spec = Definition.model_validate_json(db.get(UseCaseRevision, (row.id, row.revision)).spec)
         rows = list(
@@ -419,8 +458,9 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             json.loads(r.snapshot)["output"]["row"] for r in rows
         ]
 
+    @app.get("/api/use-cases/{identifier}/output.csv")
     @app.get(prefix + "/{identifier}/output.csv")
-    def export_csv(project_id: str, identifier: str, auth: Auth) -> Response:
+    def export_csv(identifier: str, auth: Auth, project_id: str | None = None) -> Response:
         with factory() as db:
             columns, rows = export_data(db, project_id, identifier)
         stream = io.StringIO(newline="")
@@ -447,8 +487,9 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
             },
         )
 
+    @app.get("/api/use-cases/{identifier}/output.xlsx")
     @app.get(prefix + "/{identifier}/output.xlsx")
-    def export_xlsx(project_id: str, identifier: str, auth: Auth) -> Response:
+    def export_xlsx(identifier: str, auth: Auth, project_id: str | None = None) -> Response:
         from openpyxl import Workbook  # type: ignore[import-untyped]
 
         with factory() as db:
@@ -473,3 +514,8 @@ def install_use_case_api(app: FastAPI, cfg: Any, factory: Any) -> None:
                 "Cache-Control": "no-store",
             },
         )
+
+    @app.get("/api/use-cases/{identifier}")
+    def detail(identifier: str, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            return info(db, case(db, None, identifier))
