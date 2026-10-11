@@ -1,33 +1,57 @@
 # obdaAI — Status 11.10.2026
 
-## Integrationsphasen, KI-Erstellungsdialog und Mailausgabe – lokal geprüft, 11.10.2026
+## Integrationsphasen, KI-Erstellungsdialog und Mailausgabe – Test-VM geprüft, 11.10.2026
 
-Neue Definitionen wählen Integrationen getrennt für Eingabe, Bearbeitung und
-Ausgabe. Paperless liefert tatsächlichen privaten Kontext auch für eigenständige
-Use Cases; Projektbindungen kommen weiterhin hinzu. Revisionen/Definitionen und
-Auswahl werden vor Abruf, am Modellübergang und während der Ausgabe geprüft.
-Nicht unterstützte Adapter sind sichtbar gesperrt, keine simulierte Ausführung.
+App-Code `09ab7f7` / Schema `0040` bereitgestellt. Vollständige CI38160530984:
+1034 Backend-/PostgreSQLtests, 34 synthetische Browserprüfungen, alle sechs App-Jobs
+und Geheimnisprüfung erfolgreich. Breite lokale Suite989 bestanden/29 PG-Skips,
+anschließend74 gezielte Fälle/2 Skips sowie40 SMTP-/Versandtests und zusätzliche
+Browser-Recovery-Prüfungen. Ruff/Mypy85, TypeScript/Build, Workflows und Source-Scan grün.
+Überholte App-Läufe38159958103/38160102109/38160319366 abgebrochen.
 
-Echter KI-Erstellungsdialog über persistente Runs/Worker: lokale/Auto/Cloud-Wahl,
-Rückfragen, wiederherstellbare Historie, validierter Vorschlag und menschliche
-Übernahme in den Editor. Keine automatische Anlage, Ausführung oder Mail.
-Modellgenerierte Integrations-IDs werden entfernt. Schema0040 speichert Designer
-und Mailvorschauen/Quittungen ohne bestehende Ergebnis-Snapshots umzuschreiben;
-verlustbehafteter Downgrade wird verhindert.
+Definitionen wählen Integrationen für Eingabe, Bearbeitung und Ausgabe. Paperless
+liefert tatsächlichen privaten Kontext auch für eigenständige Use Cases;
+Projektbindungen kommen hinzu. Revisionen/Definitionen und Auswahl werden vor
+Abruf, am Modellübergang und während der Ausgabe geprüft. Nicht unterstützte
+Adapter sind sichtbar gesperrt. Echter KI-Erstellungsdialog über persistente
+Runs/Worker mit lokaler/Auto/Cloud-Wahl, Rückfragen, wiederherstellbarer Historie
+und validiertem Vorschlag. Erst menschliche Übernahme und Speichern erzeugen einen
+Use Case. Modellgenerierte Integrations-IDs werden entfernt.
 
-SMTP-Profile unter Integrationen mit gepinntem TLS465/STARTTLS587, verschlüsseltem
-Passwort, sichtbarem Absender und reiner Zugangstest ohne Versand. Primäre Verbindung
-konfigurierbar, explizite Use-Case-/Vorschauauswahl und eindeutiger benannter
-Mailversand im definierten Prompt haben Vorrang. Vorschau bindet Ergebnis,
-Empfänger, Betreff, Verbindung/Revision und Inhalt; Versand ausschließlich nach
-menschlichem Senden-Schritt. Einmalige Quittung, keine automatischen Retries;
-unklare Übernahme bleibt sichtbar. Aktiver Versand blockiert Löschung.
+SMTP unter Integrationen: gepinntes TLS465/STARTTLS587, verschlüsseltes Passwort,
+Absender und Zugangstest ohne Versand. Primäre Verbindung festlegen/zurücksetzen;
+explizite Auswahl und eindeutig benannte Verbindung im definierten Auftrag haben
+Vorrang. Vorschau bindet Ergebnis, Empfänger, Betreff, Verbindung/Revision und
+Inhalt. Einmalige Quittung nach ausdrücklich ausgelöstem Versand, kein automatischer
+Retry. Verlorene HTTP-Antwort behält dieselbe Anfragekennung; fehlgeschlagene oder
+unklare Übergabe lässt bewusst neue Vorschau zu, unklare erst nach Postausgangsprüfung.
+Widerrufene Sitzung verhindert SMTP-DATA. Laufender Versand blockiert Löschung.
 
-Gezielte Backend- und Browserprüfungen sowie TypeScript/Build erfolgreich; vollständige
-lokale Suite, GitHub-CI, VM-Rollout und tatsächliche Designer-/Paperless-Modellabnahme
-folgen. Kein echter SMTP-Zugang und keine externen Testmails angefordert. Öffentliche
-Galerie erweitert ausschließlich um drei synthetische Ansichten. Aktive VM bleibt
-bis zur geprüften Lieferung b72bf2a/Schema0039.
+Schema0040 ergänzt Designer und Mailvorschauen/Quittungen. Bestehende Ergebnis-
+Snapshots bleiben unverändert; verlustbehafteter Downgrade wird verhindert.
+Rollout: frisches verschlüsseltes Off-VM-Backup geprüft, Nachrichten/bisherige
+Use Cases/Revisionen/Ergebnisse, acht Overlays, Nginx-Konfigurationen und alte
+Firewallregeln nachweislich erhalten. Observer aktualisiert, Runtime-Flag bleibt
+aktiv. Erste Startprüfung nach90s löste einen geprüften Rückweg aufb72bf2a/0039 aus.
+Isolierte neue API nach33s gesund; erneuter paralleler Start mit240s Bereitschafts-
+fenster erfolgreich. Temporärer Prüfcontainer entfernt. Kein App-Codewechsel nötig.
+Gepinntes HTTPS, tatsächlich ausgelieferte neue UI-Module/API-Verträge bestätigt.
+
+Reale authentifizierte Abnahme mit tatsächlichem lokalen Modell:
+- Erstellungsdialog erzeugt einen validierten KI-Entwurf mit drei Eingabefeldern.
+  Integrationszuordnung bleibt leer; keine automatische Anlage/Ausführung.
+- Eigener projektloser Use Case bindet echte Paperless-Quelle in Eingabe und
+  Bearbeitung; privater Dokumentkontext, erfolgreicher lokaler Output und Phasen-
+  Snapshot bestätigt. Kein Cloudaufruf, keine Änderungen im Archiv.
+Eigene Designer, Use Cases, Conversations/Runs und temporäre Sitzung entfernt;
+vorhandene Chats/Use Cases erhalten. Keine SMTP-Profile konfiguriert, keine echte
+SMTP-Abnahme oder externe Testmail. Transport-/Versandlogik nur synthetisch geprüft.
+
+Website72 Features/34 ausschließlich synthetische Galerieansichten inklusive
+Integrationsphasen, Erstellungsdialog und Mailvorschau. Metadaten nennen den tatsächlichen
+App-/CI-/Schema-Stand; Veröffentlichung folgt nach exakter Website-CI. Weitere
+Adapter/Aktionen, Paperless-Schreiben und allgemeine BI-/Web-Use-Case-Abläufe bleiben
+offen. V1 bleibt partiell.
 
 ## Dynamische Integrationsziele und Paperless – Test-VM geprüft, 11.10.2026
 

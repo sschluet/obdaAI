@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-11",
-  "applicationCommit": "b72bf2a",
-  "schema": "0039",
-  "tests": 976,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38157613877",
+  "applicationCommit": "09ab7f7",
+  "schema": "0040",
+  "tests": 1034,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38160530984",
   "screenshots": [
     {
       "id": "chat",
@@ -331,12 +331,12 @@
         },
         {
           "title": "Integrationen in Use-Case-Eingabe und Bearbeitung",
-          "status": "implemented",
+          "status": "live",
           "description": "Paperless-Quellen pro Phase auswählen, auch ohne Projekt. Revisionen und Kontext bleiben an den Lauf gebunden und private Archivdaten lokal."
         },
         {
           "title": "KI-Erstellungsdialog für Use Cases",
-          "status": "implemented",
+          "status": "live",
           "description": "Ablauf per Prompt beschreiben, Rückfragen beantworten und den validierten Vorschlag im Editor prüfen. Kein automatisches Speichern oder Ausführen."
         },
         {
@@ -346,7 +346,7 @@
         },
         {
           "title": "Konfigurierbare SMTP-Verbindungen und primärer Mailversand",
-          "status": "implemented",
+          "status": "local",
           "description": "Mailprofile mit TLS unter Integrationen verwalten und primäre Verbindung festlegen. Use Case oder definierter Auftrag können sie gezielt überschreiben."
         }
       ]
@@ -380,7 +380,7 @@
         {
           "title": "Paperless-Dokumente als privater KI-Kontext",
           "description": "Suche und Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Gewählte Archive werden in Chats, Aufgaben und projektbezogenen Use Cases lokal gelesen; Auswahl- und Profiländerungen stoppen den Zugriff. Gekürzte Auszüge bleiben gekennzeichnet. Paperless-Schreiboperationen sind nicht umgesetzt.",
-          "status": "implemented"
+          "status": "live"
         }
       ]
     },
@@ -658,18 +658,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0039",
-    "browserChecks": 32,
+    "schema": "0040",
+    "browserChecks": 34,
     "serverDeployment": true,
-    "commit": "32cd893",
-    "ciTests": 928,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38150177485",
-    "deployedCommit": "32cd893",
-    "deployedSchema": "0039",
-    "liveScope": "KI Use Cases auf der Test-VM installiert und gezielt über die authentifizierte API mit echten Modellen geprüft: lokale CSV-Datei analysiert, CSV-/Excel-Ergebnisse bestätigt, echter KI-Dialog und abschließendes Ergebnis sowie ausdrücklich gewählter OpenRouter-Auftrag erfolgreich. Nur eigene synthetische Daten und eine temporäre Testsitzung; Testobjekte bereinigt. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen, reale Geräteabnahme weiterhin offen. Allgemeine KI-Werkzeugaufrufe, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben Ausbauschritte.",
+    "commit": "09ab7f7",
+    "ciTests": 1034,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38160530984",
+    "deployedCommit": "09ab7f7",
+    "deployedSchema": "0040",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "32cd893",
-    "lastSuccessfulCIUI": 32
+    "lastSuccessfulCICommit": "09ab7f7",
+    "lastSuccessfulCIUI": 34
   }
 }

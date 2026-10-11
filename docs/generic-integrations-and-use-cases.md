@@ -7,7 +7,7 @@ Verbindungsdefinition ist kein Nachweis einer tatsächlich ausgeführten Funktio
 
 Einstellungen → Integrationen verwaltet beliebig benannte Profile für Home
 Assistant (Bearer-API-Token), Paperless-ngx (Token), MCP (Streamable HTTP), UniFi
-(API-Key) und SSH (Benutzer/Passwort oder privater Schlüssel mit optionalem
+(API-Key), SMTP-Mail (TLS465/STARTTLS587) und SSH (Benutzer/Passwort oder privater Schlüssel mit optionalem
 OpenSSH-Benutzerzertifikat). Für SSH ist zusätzlich der öffentliche Hostschlüssel
 vorgesehen. Ein Benutzerzertifikat ersetzt den privaten Schlüssel nicht.
 
@@ -26,7 +26,8 @@ Projekt-/Chat-/Aufgabenauswahl wird am Laufstart eingefroren, vor Dienst- und
 Modellzugriff erneut geprüft und deaktivierte/geänderte Profile werden abgewiesen.
 Der vorhandene Aufgabenmanifest bleibt unverändert; ein separater privater
 Integrationsbeleg bindet alle Startwege. Projektbezogene Use Cases übernehmen
-die Projektbindung. Andere Profile führen noch keine allgemeinen KI-Aktionen aus.
+die Projektbindung; zusätzliche Eingabe- und Bearbeitungsintegrationen sind auch
+ohne Projekt auswählbar. Andere Profile führen noch keine allgemeinen KI-Aktionen aus.
 
 ## Netzwerk und Paperless
 
@@ -36,7 +37,8 @@ nur numerisch geprüfte Adressen und Ports in einer separaten Egress-Kette. Kein
 Änderung von eingehenden Zugriffen, Fremdsystemen oder globaler Schreibpause.
 Home-Assistant-Adressen mit abschließendem Schrägstrich sind gleichwertig; echte
 MCP-Endpunktpfade bleiben exakt. HA, Paperless und MCP haben lesende Zugangstests.
-Für UniFi und SSH fehlen weiterhin die Ausführungsadapter.
+SMTP prüft TLS und Anmeldung ohne Versand. Für UniFi und SSH fehlen weiterhin
+die Ausführungsadapter.
 
 Paperless: Suche, Seitennavigation, Metadaten/OCR, Originaldownload, private OCR-
 Quelle in Projekten und echte lokale Nutzung im KI-Kontext. Keine Paperless-
@@ -66,7 +68,9 @@ der KI-Analyse entstehen und sind nicht auf Eingabefelder beschränkt. Ungültig
 Strukturen werden nicht als erfolgreiche Tabellen exportiert; Rohtext bleibt als
 Fehler-/Teilantwortbeleg erhalten. Keine Modellprogramme, Formeln oder Werkzeug-
 Aktionen werden ausgeführt. Webrecherche und allgemeine Integrationsabfragen im
-Use Case bleiben getrennte Ausbauschritte.
+Use Case über die hier unterstützten Paperless-Quellen hinaus bleiben getrennte
+Ausbauschritte. Mailausgabe erfolgt separat nach einer überprüften Vorschau.
+[Integrationsphasen, KI-Erstellungsdialog und Mailversand](use-case-integrations.md).
 
 Alte deterministische Vorlagen und gespeicherte Ergebnisse bleiben erhalten.
 Bearbeiten erzeugt eine neue KI-Version mit Pflichtprompt; ein KI-Duplikat lässt
