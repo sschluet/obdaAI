@@ -1,28 +1,45 @@
 # obdaAI — Status 11.10.2026
 
-## Dynamische Integrationsziele und Paperless – lokal geprüft, 11.10.2026
+## Dynamische Integrationsziele und Paperless – Test-VM geprüft, 11.10.2026
+
+App-Code `b72bf2a` / Schema `0039` installiert. Vollständige GitHub-CI
+`38157613877`: 976 Backend-/PostgreSQLtests, 33 synthetische Browserprüfungen,
+Container-/Runner-/Geheimnisprüfungen erfolgreich. Gezielte lokale Quellen-,
+Datenschutz-, Transport- und Aufgabenchecks sowie Ruff/Mypy82, TypeScript/Build
+und Workflowsyntax erfolgreich.
 
 Vom Nutzer freigegebene Netzwerk-Erweiterung für aktivierte Integrationsprofile:
-numerische Ziel-/Portfreigaben aus gespeicherten Profilen, private LAN-Ziele,
-gepinntes HTTPS/SNI, keine Weiterleitungen oder System-/Metadatenziele. Eigener
-Observer/Chain, keine neuen eingehenden Ports. Aktive VM bleibt bis zur geprüften
-Lieferung32cd893/Schema0039. Runtime-Flag/Marker/Observer-Rollout folgt; vorhandene
-zusätzliche Egress-/Backup-Pfade werden beim VM-Update ausdrücklich erhalten.
+eigene numerische Ziel-/Portfreigaben, private LAN-Ziele, gepinntes HTTPS/SNI,
+keine Weiterleitungen oder System-/Metadatenziele. Runtime-Flag in API, HTTPS-API
+und Worker sowie tatsächliche Zielregeln bestätigt. Eigener Observer/Chain,
+keine neuen eingehenden Ports. Verschlüsseltes frisches Off-VM-Backup geprüft;
+Nachrichten, Use Cases/Revisionen/alte Ergebnisse, acht Compose-Overlays, beide
+Nginx-Konfigurationen und bisherige Firewallregeln nachweislich erhalten.
+Private bestehende Egress-/Backup-Erweiterungen bleiben erhalten; Rollback liegt vor.
 
-HA nutzt Profilziel/-schlüssel, Root-Slash-Aliase erhalten Zugangsdaten; genaue
+HA nutzt Profilziel/-schlüssel; Root-Slash-Aliase erhalten Zugangsdaten, genaue
 MCP-Endpunktpfade bleiben erhalten. Paperless lesend: Zugangstest, Suche/Seiten,
 Metadaten/OCR, Originaldownload und private OCR-Projektquelle. Ausgewählte Archive
 werden echte lokale KI-Quellen in Chats, Aufgaben (alle vier Startwege) und
 projektbezogenen Use Cases. Bindungen/Revisionen eingefroren und final geprüft;
-private Derivate bleiben lokal, Cloudwunsch mit Archiv wird abgewiesen. Ändern/
-Hochladen/Löschen im Fremdarchiv sowie UniFi-/SSH-Ausführungsadapter bleiben offen.
+private Derivate bleiben lokal, ausdrücklicher Cloudwunsch mit Archiv wird abgewiesen.
 
-944 lokale Backendtests bestanden,29 PostgreSQL-Fälle lokal übersprungen;
-anschließend zusätzliche Auszugsmarkierung und gezielte Quellen-/Datenschutzchecks.
-Ruff/Mypy82, TypeScript/Build, Paperless- und generische Integrationsbrowserchecks
-sowie Workflowsyntax grün. Neue Galerie ausschließlich synthetisch. Vollständige
-CI, VM-Netzwerkaktivierung und echte HA-/Paperless-Abnahme folgen; keine neuen
-Live-Ergebnisse vorweggenommen.
+Reale authentifizierte VM-Abnahme: gespeicherte HA- und Paperless-Zugänge erfolgreich,
+Paperless-Liste/Suche, OCR und Originaldownload tatsächlich verarbeitet.
+Ein eigener temporärer Chat erhält das tatsächliche Archivdokument als LOCAL_ONLY
+und erzeugt erfolgreich eine lokale Modellantwort, ohne Cloudaufruf. Eigenen Chat
+und Sitzung anschließend entfernt; vorhandene Chats und externe Originale erhalten.
+Gepinntes HTTPS, ausgelieferte Paperless-Oberfläche und API-Verträge ebenfalls geprüft.
+Auch die echte OCR-Projektübernahme wurde geprüft: idempotente Wiederholung,
+SHA-256/Downloadbytes, LOCAL_ONLY, erfolgreiche Extraktion und vollständige
+Bereinigung des eigenen Testprojekts samt Quelle/Datei/Sitzung. Vorhandene Projekte
+und Paperless-Originale erhalten. Keine privaten Inhalte in Git oder öffentlicher Galerie.
+
+Website:68 Features/31 ausschließlich synthetische Galerieansichten; App-/CI-Metadaten
+aktualisiert. Veröffentlichung nach exakter Website-CI über den geprüften Publisher.
+Ändern/Hochladen/Löschen im Fremdarchiv sowie UniFi-/SSH-Ausführungsadapter bleiben
+offen. Generische MCP-Ziele unterstützen hier Katalogprüfung; alte Ausführungs-
+Allowlisten und Aktionsfreigaben werden dadurch nicht umgangen. V1 bleibt partiell.
 
 ## KI Use Cases mit Dateieingaben und echtem Dialog – Test-VM geprüft, 11.10.2026
 
