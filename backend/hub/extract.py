@@ -15,6 +15,9 @@ from typing import Any
 
 from hub.extraction_errors import ExtractionError, classify_error
 
+# Load fixed application code before Landlock; editable installs may live outside sys.prefix.
+from hub.ocr_local import needs_ocr, prepare, raster_edge
+
 # Original-file size is independent of decompressed content, text and page limits.
 MAX_BYTES = 40 * 1024 * 1024
 MAX_TEXT = 800_000
@@ -57,8 +60,6 @@ def safe_archive(path: Path) -> None:
 
 
 def ocr(path: Path, cwd: Path, timeout: int = 30) -> str:
-    from hub.ocr_local import prepare
-
     prepared = cwd / "ocr-prepared.png"
     prepare(path, prepared)
     # One CPU thread prevents OpenMP oversubscription and memory spikes within
@@ -190,8 +191,6 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
         notes.append("Formeln erhalten, nicht berechnet; keine externe Verknüpfung ausgeführt")
     elif suffix == ".pdf":
         from pypdf import PdfReader
-
-        from hub.ocr_local import needs_ocr, raster_edge
 
         reader = PdfReader(path, strict=True)
         if reader.is_encrypted:

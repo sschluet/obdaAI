@@ -22,7 +22,10 @@ TypeScript und neue Browserprüfung für realen Retry/Revisionswechsel/Originalh
 mit synthetischem Fehlstatus erfolgreich. Isolierter netzwerkloser Linux-Test unter
 den realen Ressourcen-/Landlockgrenzen liest alle3synthetischen Seiten einschließlich
 2Grad-Schieflage und90Grad-Rotation: Miete und Titel proSeite erkannt,44Sekunden.
-MatchingCI, produktive Pipelineabnahme, App-Rollout und öffentliche
+Vorab-CI38231858470 identifiziert verzögerten OCR-Modulimport nach Landlock in
+editabler Linux-Installation; fester Modulimport vor Sandboxaktivierung korrigiert,
+Dateisystemgrenzen unverändert. MatchingCI, produktive Pipelineabnahme,
+App-Rollout und öffentliche
 Veröffentlichung stehen für diese Lieferung noch aus.
 
 
