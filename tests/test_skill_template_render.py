@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from hub.artifact_render import render
@@ -62,6 +63,9 @@ def test_dotx_preserves_headers_footers_styles_and_removes_samples(tmp_path):
     document.sections[0].header.paragraphs[0].text = "Synthetic company"
     document.sections[0].footer.paragraphs[0].text = "Synthetic footer"
     document.add_paragraph("SAMPLE BODY")
+    document.styles.add_style("Synthetic Corporate Table", WD_STYLE_TYPE.TABLE)
+    sample_table = document.add_table(rows=1, cols=2)
+    sample_table.style = "Synthetic Corporate Table"
     document.styles["Heading 1"].font.name = "Liberation Sans"
     document.save(original)
     template = as_template(original, tmp_path / "template.dotx")
@@ -75,6 +79,7 @@ def test_dotx_preserves_headers_footers_styles_and_removes_samples(tmp_path):
     assert check.sections[0].header.paragraphs[0].text == "Synthetic company"
     assert check.sections[0].footer.paragraphs[0].text == "Synthetic footer"
     assert check.styles["Heading 1"].font.name == "Liberation Sans"
+    assert check.tables[0].style.name == "Synthetic Corporate Table"
     assert "SAMPLE BODY" not in "\n".join(p.text for p in check.paragraphs)
     assert "Goals" in "\n".join(p.text for p in check.paragraphs)
     assert template.read_bytes() == before

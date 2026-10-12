@@ -228,6 +228,7 @@ def document(plan: DocumentPlan, path: Path, template: Path, inputs: list[Path])
     from hub.artifact_render import _read_image
 
     doc = Document(office_stream(template, "docx"))
+    table_style = doc.tables[0].style if doc.tables else None
     # A recognizable letter template must not leak its example addresses.
     if (
         any(p.style is not None and p.style.style_id == "FirstPage-details" for p in doc.paragraphs)
@@ -276,7 +277,9 @@ def document(plan: DocumentPlan, path: Path, template: Path, inputs: list[Path])
             move(doc.add_paragraph(text, style=_style(doc, "Standard", "Normal"))._p)
         if item.table:
             table = doc.add_table(rows=0, cols=len(item.table[0]))
-            table.style = next((s for s in doc.styles if s.type == 3), doc.styles["Normal Table"])
+            table.style = table_style or next(
+                (s for s in doc.styles if s.type == 3), doc.styles["Normal Table"]
+            )
             for row in item.table:
                 for cell, text in zip(table.add_row().cells, row, strict=True):
                     cell.text = text
