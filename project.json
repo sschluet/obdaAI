@@ -44,13 +44,13 @@
     {
       "id": "files",
       "title": "Aus Gedanken werden Dateien.",
-      "description": "Word, PowerPoint, Excel, PDF und Bilder als Auswahlkarten. Geprüfte Skills mit echten Dokumentvorlagen ergänzen den KI-Auftrag. Ausschließlich synthetischer Projektraum und generierter Word-Master.",
+      "description": "Native Office-Dateien mit Vorschau, direktem Download und optionaler fachlicher Freigabe. Geprüfte Skills verwenden echte Dokumentvorlagen. Ausschließlich fiktiver Projektraum Aurora und synthetisches Word-Dokument.",
       "image": "assets/files.png"
     },
     {
       "id": "chatfiles",
       "title": "Dateien direkt im Gespräch.",
-      "description": "Dateien im freien Chat ohne Hilfsprojekt erstellen. Geprüften Folienmaster, Format, Auftrag und Folienanzahl wählen. Vorschauprüfung bleibt vor dem Download erforderlich. Ausschließlich synthetische Initiative Aurora und generierter Folienmaster.",
+      "description": "Eine echte Datei direkt im Chat herunterladen, sobald der Renderer fertig ist. Status und genaue Version bleiben sichtbar; fachliche Freigabe ist optional. Ausschließlich synthetisches Gespräch und Word-Dokument.",
       "image": "assets/chatfiles.png"
     },
     {
@@ -682,6 +682,16 @@
           "title": "Privater Fernzugriff über Tailscale",
           "description": "Separater HTTPS-Zugang im eigenen Tailnet mit gültigem Zertifikat. Startseite, App-Healthcheck und Anmeldeschutz auf dem Server geprüft; bestehender LAN-Zugriff bleibt erhalten. Zugriff von einem zweiten Gerät steht noch zur Abnahme aus. Keine Subnetz- oder Exit-Node-Freigabe.",
           "status": "limited"
+        },
+        {
+          "title": "Auto bevorzugt Cloud, einfache Fragen bleiben lokal",
+          "description": "Kurze Begrüßungen, einzelne einfache Rechen- und ausgewählte Hauptstadtfragen können lokal beantwortet werden. Andere freigegebene Fragen gehen bevorzugt an Cloud. Bei technischem Cloud-Ausfall kann Auto vor Antwortbeginn lokal einspringen; private Kontexte und Nur lokal bleiben geschützt. Lokale Prüfungen laufen; Test-VM-Abnahme offen.",
+          "status": "local"
+        },
+        {
+          "title": "Echte Office-Dateien aus Cloud-Anfragen",
+          "description": "Cloud plant freigegebene Dateiwünsche, der isolierte lokale Renderer erzeugt native PowerPoint-, Word- und Excel-Dateien. Technisch geprüfte Ausgaben erhalten direkte Downloads; eine fachliche Freigabe bleibt separat. Private Originale und nicht geteilte Skills werden nicht automatisch an Cloud übertragen. Test-VM-Abnahme offen.",
+          "status": "local"
         }
       ]
     }
