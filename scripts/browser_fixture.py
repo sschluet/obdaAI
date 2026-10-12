@@ -121,7 +121,12 @@ async def synthetic_artifact(factory, cfg, artifact_id, revision):
     # the separate Linux offline-runner test, never to this synthetic image.
     import hashlib
 
+    import hub.artifact_render as fixture_render
     from hub.artifact_render import render
+
+    # UI fixtures inspect explicit formula data and native structures, not
+    # calculated results. The separate offline runner exercises real Calc.
+    fixture_render.cache_formula_results = lambda path: None
     from hub.artifacts import reconcile, spec_for, spool
     from PIL import Image, ImageDraw
 
