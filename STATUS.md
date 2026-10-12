@@ -1,6 +1,6 @@
 # obdaAI — Status 12.10.2026
 
-## Lokale OCR gescannter Quellen – lokale und isolierte Linux-Prüfung, 12.10.2026
+## Lokale OCR gescannter Quellen – Test-VM geprüft, 12.10.2026
 
 Fehlerdiagnose identifiziert das bisherige OCR-Seitenlimit30Sekunden als Hürde
 bei dichten gescannten PDFs. Sichere Diagnosen ersetzen die Sammelmeldung. PDF-OCR erhält jetzt bis120Sekunden je Seite, gesamte
@@ -25,8 +25,19 @@ den realen Ressourcen-/Landlockgrenzen liest alle3synthetischen Seiten einschlie
 Vorab-CI38231858470 identifiziert verzögerten OCR-Modulimport nach Landlock in
 editabler Linux-Installation; fester Modulimport vor Sandboxaktivierung korrigiert,
 Dateisystemgrenzen unverändert. MatchingCI, produktive Pipelineabnahme,
-App-Rollout und öffentliche
-Veröffentlichung stehen für diese Lieferung noch aus.
+App-Rollout abgeschlossen: f370058/Schema0041, beide APIs gesund, gepinntesHTTPS
+und neue Retry-/Fehleroberfläche bestätigt. Vollständige CI38233910653 erfolgreich:
+1203Backend-/PostgreSQLtests und39Browserprüfungen. Frisches verschlüsseltes
+Off-VM-Backup geprüft, vorhandene Daten/Dateien/Profil/UseCases/Overlays/Nginx/Netzwerk
+beim Rollout erhalten. Keine Schemaänderung.
+
+Produktive HTTPS-Quellenpipeline mit eigenen synthetischen Quellen geprüft:3Scan-
+Seiten inklusive Schieflage/Rotation, bekannte Textstellen und Miete erkannt,
+Originalhash gleich. Geschütztes PDF erhält sicheren PDF_ENCRYPTED-Code; expliziter
+Retry wechselt Revision bei gleichem Original. Eigene Testquellen/Projekt/Sitzung und
+dauerhafte Dateibereinigung abgeschlossen, bestehende Projekte/Quellen erhalten,
+keine Modellanfrage. Appcode unverändert im leichten Evidenzabschluss;
+Website-CI und öffentlicher Hashabgleich folgen im Liefernachweis. V1 bleibt partiell.
 
 
 ## PowerPoint/Word aus normalen Chats – Test-VM geprüft, 12.10.2026
