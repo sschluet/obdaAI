@@ -154,6 +154,27 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
                 )
             ]
 
+    @app.get("/api/projects/{project_id}/sources/{source_id}/deletion")
+    def source_deletion_preview(project_id: str, source_id: str, auth: Auth) -> dict[str, Any]:
+        from hub.source_deletion import preview as source_preview
+
+        with factory() as db:
+            return source_preview(db, project_id, source_id)
+
+    @app.delete("/api/projects/{project_id}/sources/{source_id}")
+    def delete_source(
+        project_id: str, source_id: str, body: DeletionInput, auth: Auth
+    ) -> dict[str, Any]:
+        from hub.source_deletion import permanently_delete as delete_one
+
+        with factory() as db:
+            result = delete_one(db, cfg, project_id, source_id, body)
+        if cfg.database_url.startswith("sqlite") and result["cleanup_id"]:
+            from hub.deletion_cleanup import inline_cleanup
+
+            inline_cleanup(factory, cfg)
+        return result
+
     @app.post("/api/projects/{project_id}/sources")
     async def upload(project_id: str, request: Request, auth: Auth) -> dict[str, Any]:
         # Raw bounded streaming avoids unbounded multipart spooling in the API.

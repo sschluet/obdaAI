@@ -104,3 +104,27 @@ API-/Worker-Abgleiche werden durch PostgreSQL- und Dateisperren geordnet; persis
 Schreibintents bleiben vor dem atomaren Dateiaustausch erhalten. Der globale Wissenschat
 filtert passende Inhalte vor dem 500-Treffer-Limit, statt ältere Quellen zu übergehen
 oder unpassende aktuelle Notizen automatisch beizumischen.
+
+## Einzelne Projektquelle löschen
+
+Im Quellenbereich und im Chat-Arbeitsbereich hat jede Quelle eine Löschaktion.
+Die Vorschau nennt Dateiname, Quellenversionen und Indexeinträge. Erst die erneute
+Bestätigung entfernt ausschließlich diese lokale Quelle aus dem Projekt und
+Suchindex. Originaldatei und alle Parserrevisionen werden über die vorhandene
+dauerhafte Bereinigungsqueue entfernt; der Status bleibt auch nach Schließen des
+Dialogs sichtbar. Andere Quellen, gespeicherte Antworten, deren Quellenangaben
+und abgeschlossene Ausgaben bleiben erhalten. Die entfernte Originalquelle kann
+über diese alten Belege nicht mehr geöffnet werden; historische Inhalte werden
+nicht umgeschrieben.
+
+Laufende Verarbeitung/Indexierung, aktive Antworten mit diesem Projekt oder dieser
+Quelle sowie aktive abhängige Aufgaben, Freigaben und Dateierzeugung verhindern die
+Löschung. Eine geänderte Vorschau erfordert eine neue Bestätigung. Bei importierten
+Wissenskopien wird nur die lokale Zuordnung entfernt: Verbindung und externes
+Original bleiben erhalten, ein erneuter Abgleich kann die Quelle erneut importieren.
+
+Die API bietet `GET /api/projects/{project_id}/sources/{source_id}/deletion` und
+`DELETE /api/projects/{project_id}/sources/{source_id}` mit `expected_state`.
+Authentifizierung, CSRF und Projektzuordnung gelten unverändert. Die transaktionalen
+Ownership-/Aufgabenlocks serialisieren die Mutation mit Verarbeitung und Retry;
+verspätete Workeraufträge dürfen entfernte Quellen nicht neu erzeugen.

@@ -85,6 +85,7 @@ const [appearance,setAppearance]=useState<Appearance>(defaultAppearance),[appear
 const [query,setQuery]=useState(''),[archived,setArchived]=useState(false),[mobile,setMobile]=useState(false),[dark,setDark]=useState(localStorage.getItem('hub-theme')==='dark');
 const [config,setConfig]=useState<Config|null>(null),[,setCloud]=useState(false),[rename,setRename]=useState<string|null>(null),[deleteDialog,setDeleteDialog]=useState<DeleteTarget|null>(null);
 const [deletionCleanup,setDeletionCleanup]=useState<{id:string;status:string;error?:string;noun:string}|null>(null);
+useEffect(()=>{if(!csrf)return;const removed=(event:Event)=>{const result=(event as CustomEvent<{cleanup_id?:unknown}>).detail;if(result&&typeof result.cleanup_id==='string')setDeletionCleanup({id:result.cleanup_id,status:'pending',noun:'Quelle'})};window.addEventListener('source-deleted',removed);return()=>window.removeEventListener('source-deleted',removed)},[csrf]);
 useEffect(()=>{if(!csrf||!deletionCleanup||deletionCleanup.status==='completed')return;let stopped=false;const timer=setInterval(()=>{api('/deletions/'+deletionCleanup.id+'/status').then(result=>{if(!stopped)setDeletionCleanup(old=>old?.id===deletionCleanup.id?{...old,...result}:old)}).catch(()=>{})},1500);return()=>{stopped=true;clearInterval(timer)}},[csrf,deletionCleanup?.id,deletionCleanup?.status]);
 const [cloudProvider,setCloudProvider]=useState('openrouter');
 const [choice,setChoice]=useState<ModelMode>(defaultMode),[room,setRoom]=useState<any|null>(null);

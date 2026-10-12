@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "applicationCommit": "9a53d8a",
   "schema": "0040",
   "tests": 1107,
@@ -14,8 +14,14 @@
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen und im Projektchat verwenden. Sichtbare Uploadgrenze, klare Fehlermeldungen und ein frei gewähltes Projektsymbol im fiktiven Raum Aurora.",
+      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
       "image": "assets/projects.png"
+    },
+    {
+      "id": "sourcedelete",
+      "title": "Quellen gezielt entfernen.",
+      "description": "Eine klare Bestätigung zeigt, welche Projektquelle entfernt wird. Uploadoriginal und Suchindex werden gelöscht; bereits gespeicherte Chatantworten bleiben erhalten. Ausschließlich synthetisches Dokument.",
+      "image": "assets/sourcedelete.png"
     },
     {
       "id": "projecticons",
@@ -319,6 +325,11 @@
           "title": "Dokumentuploads",
           "description": "PDF, DOCX, PPTX, CSV, XLSX, Markdown, Text und Bilder bis 40 MiB je Datei. Originale werden unverändert mit Hashes aufbewahrt und asynchron eingelesen. Browser und Server stimmen die Uploadgrenze ab; verständliche Meldungen grenzen zu große Dateien und vorgeschaltete Uploadbeschränkungen ab. Auf der Test-VM über HTTPS mit gültigen synthetischen PDFs bis exakt40MiB, Textextraktion und unverändertem Originalhash geprüft. PDF-Extraktion bleibt bis100 Seiten; andere Verarbeitungsgrenzen gelten weiterhin.",
           "status": "live"
+        },
+        {
+          "title": "Einzelne Projektquellen löschen",
+          "description": "Dateiuploads und gespeicherte Webseiten einzeln mit einer verständlichen Bestätigung dauerhaft aus dem Projekt entfernen. Lokales Original und Suchindex werden gelöscht, vorhandene Chatantworten bleiben gespeichert. Bei synchronisierten Wissensquellen bleibt das externe Original erhalten; ein erneuter Abgleich kann die lokale Kopie wieder importieren.",
+          "status": "implemented"
         },
         {
           "title": "Fundstellen und lokale OCR",

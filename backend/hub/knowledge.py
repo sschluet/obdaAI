@@ -49,6 +49,11 @@ def store(cfg: Settings, source: Source, content: bytes) -> None:
 
 async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_id: str) -> None:
     with factory() as db:
+        from hub.db_locks import ownership_lock
+        from hub.task_api import lock
+
+        ownership_lock(db)
+        lock(db)
         source = db.get(Source, source_id)
         if source is None or source.status == "ready":
             return
@@ -97,10 +102,10 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
         with factory() as db:
             from hub.task_api import lock
 
+            ownership_lock(db)
             lock(db)
             source = db.get(Source, source_id)
-            assert source is not None
-            if source.revision != revision:
+            if source is None or source.revision != revision:
                 return
             # Reconciliation after interruption replaces only derived chunks.
             for old in db.scalars(select(SourceChunk).where(SourceChunk.source_id == source_id)):
@@ -114,8 +119,10 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
             db.commit()
     except (ValueError, OSError, TimeoutError):
         with factory() as db:
+            ownership_lock(db)
+            lock(db)
             source = db.get(Source, source_id)
-            if source:
+            if source and source.revision == revision:
                 source.status = "failed"
                 source.error = "Extraktion fehlgeschlagen; Format, Schutz, OCR und Limits prüfen"
                 db.commit()
@@ -194,6 +201,7 @@ def context(
         raise ValueError("Projekt nicht verfügbar")
     if project.kind == "knowledge":
         from hub.knowledge_connections import check_chat_source
+
         check_chat_source(db, project.id)
     parts = [
         ContextPart(

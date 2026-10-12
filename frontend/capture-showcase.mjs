@@ -18,6 +18,15 @@ const demoProfile={revision:0,enabled:true,fields:{name:'Alex Beispiel',preferre
 await page.route('**/api/personal-profile',route=>route.request().method()==='GET'?route.fulfill({json:demoProfile}):route.continue());
 await page.route('**/api/web-settings',async route=>{if(route.request().method()!=='GET'){await route.continue();return;}const response=await route.fetch();const settings=await response.json();await route.fulfill({response,json:{...settings,endpoint:'https://search.example.org/search'}});});
 const capture=async name=>{await page.screenshot({path:output+'/'+name+'.png',animations:'disabled',fullPage:['websettings','routing','profile'].includes(name)});};
+async function captureSourceDeletion(){
+ await page.getByRole('button',{name:'Quelle löschen: Projektueberblick.md',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Quelle endgültig löschen?',exact:true});
+ await dialog.getByRole('button',{name:'Endgültig löschen',exact:true}).waitFor();
+ await page.waitForFunction(()=>![...document.querySelectorAll('.delete-dialog button')].find(button=>button.textContent.includes('Endgültig löschen'))?.disabled,null,{timeout:15000});
+ await page.setViewportSize({width:1440,height:1100});await capture('sourcedelete');
+ await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await dialog.waitFor({state:'hidden'});
+}
 // Account balances in this gallery are synthetic and never fetched from OpenRouter.
 async function captureOpenRouterCosts(){
  const demoProvider={id:'synthetic-showcase-openrouter',name:'OpenRouter · Demo',kind:'openrouter',base_url:'https://openrouter.ai/v1',model:'demo/model',enabled:true,is_default:true,capabilities:['text'],allowed_labels:['CLOUD_ALLOWED'],context_tokens:32768,context_chars:24000,output_tokens:2048,timeout:30,monthly_budget:20,max_run_cost:0.25,disable_thinking:false,revision:1,secret_ref:'encrypted',budget_used:3.18,last_test:null};
@@ -97,12 +106,12 @@ try{
   await page.goto(base+'/?view=Projekte&project='+aurora.id);
   await page.getByRole('tab',{name:/Quellen ·/}).click();
   await page.getByText('Dokumente, Tabellen, Präsentationen und Bilder · bis 40 MiB je Datei',{exact:true}).waitFor();
-  await page.locator('input[type=file]').setInputFiles([
+  if(!await page.getByText('Projektueberblick.md',{exact:true}).count())await page.locator('input[type=file]').setInputFiles([
    {name:'Projektueberblick.md',mimeType:'text/markdown',buffer:Buffer.from('# Projekt Aurora\nEin synthetisches Beispiel für eine lokale Wissensbasis.\nZiel: Ideen aus Quellen in überprüfbare Ergebnisse verwandeln.')},
    {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
   ]);
   await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
-  await page.setViewportSize({width:1440,height:1400});await capture('projects');
+  await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Project sources screenshot captured with synthetic documents only.');
  }else if(process.env.SHOWCASE_CAPTURE_ONLY==='openroutercosts'){
@@ -169,7 +178,7 @@ try{
   {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
  ]);
  await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
- await page.setViewportSize({width:1440,height:1400});await capture('projects');await page.setViewportSize({width:1440,height:980});
+ await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();await page.setViewportSize({width:1440,height:980});
  await captureUseCases();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name:'Projekt Aurora',exact:true}).locator('..').click();

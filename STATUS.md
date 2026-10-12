@@ -1,4 +1,27 @@
-# obdaAI — Status 11.10.2026
+# obdaAI — Status 12.10.2026
+
+## Einzelne Projektquellen löschen – lokal geprüft, 12.10.2026
+
+Quellenliste und Chat-Arbeitsbereich bieten je Quelle eine kompakte Löschaktion.
+Vorschau/Bestätigung binden Quelle, Projekt und aktuelle Daten per expected_state.
+Original, Parserrevisionen, Chunks und lokale Wissenszuordnung werden entfernt;
+Dateibereinigung nutzt vorhandene dauerhafte Queue mit globalem Status auch nach
+Schließen des Dialogs. Andere Quellen, Chats/gespeicherte Quellenbelege und fertige
+Ausgaben bleiben erhalten. Bei Wissenskopien bleiben externe Datei/Verbindung erhalten;
+Vorschau erklärt möglichen erneuten Import beim Abgleich.
+
+Aktive Verarbeitung/Indexierung, Projektantworten/Use Cases und andere aktive Runs
+mit exaktem Quellenbezug, abhängige Aufgaben/Freigaben/Aktionen/Dateierzeugung blockieren.
+Workerstart/-abschluss werden mit Mutation/Retry serialisiert; verspäteter Dispatch
+kann gelöschte Quellen nicht erneut anlegen. Bestehende Nullable-Event-Snapshots und
+Bereinigungsstruktur verwendet, keine Migration nötig.17 neue SQLitefälle bestanden,
+2 PostgreSQLfälle für CI; weitere gezielte Lösch-/Quellenprüfungen, Ruff/Mypy86,
+TypeScript/Build und neue Browserprüfung für reale synthetische Löschung in beiden
+UIs, Abbruch/Escape/Fokus,320px,409-Neuprüfung, Zähler/Original404/andereQuelle sowie
+globalen Bereinigungsstatus erfolgreich. Source-Scan521 Dateien. Website74 Features/
+36 synthetische Ansichten einschließlich Quellenbestätigung. CI, Test-VM und exakte
+öffentliche Veröffentlichung folgen; bestehender aktiver Release9a53d8a/Schema0040.
+
 
 ## Projektquellen-Upload und 40 MiB – Test-VM geprüft, 11.10.2026
 
