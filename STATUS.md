@@ -1,6 +1,6 @@
 # obdaAI — Status 12.10.2026
 
-## PowerPoint/Word aus normalen Chats – lokale Prüfung, 12.10.2026
+## PowerPoint/Word aus normalen Chats – Test-VM geprüft, 12.10.2026
 
 Die bisherige Dateierstellung war an Projektgespräche gebunden. Normale Chats
 haben jetzt einen eigenen Dateiarbeitsraum mit Entwurf, unveränderlichen Versionen,
@@ -20,13 +20,29 @@ Download, Reload und mobile Ansicht. Bestehende Dateibrowsertests angepasst und
 bestanden. Öffentliche Galerie mit neuer ausschließlich synthetischer Chatdateiansicht.
 157 gezielte Backend-/Scope-/Datei-/Lösch-/Suchtests bestanden, ein neuer
 PostgreSQLfall für CI. Ruff/Mypy87, Source-Scan530, TypeScript/Build und beide
-Dateibrowserprüfungen erfolgreich. Matching-CI, Schema-/App-Rollout und reale
-Office-/Downloadabnahme stehen noch aus. Vorab-CI38223301866 zeigte zwei
+Dateibrowserprüfungen erfolgreich. Vorab-CI38223301866 zeigte zwei
 Testabweichungen: bisherige Ablehnung normaler Chatdateien wird jetzt durch echte
 Webgrant-Prüfung ersetzt; neue PostgreSQL-Fixture hinterließ einen eigenen
 Cleanupauftrag. Erwartung und exakt auf eigene Daten begrenzte Testbereinigung
 korrigiert, bestehende Downgrade-Schutzprüfung unverändert. Zusätzlicher Test
 belegt Erhalt einer fremden ausstehenden Bereinigung.
+
+Vollständige korrigierte CI38224780120 für8c2cab1 erfolgreich:1178Backend-/PostgreSQLtests,
+38Browserprüfungen und alle App-Jobs. Release8c2cab1/Schema0041 auf Test-VM,
+beide APIs gesund, gepinntesHTTPS und neue Datei-Endpunkte bestätigt. Frisches
+verschlüsseltes Off-VM-Backup geprüft. Bestehende Projektdateien/Dateiversionen,
+Nachrichten/Profil/UseCases/Overlays/Nginx/Netzwerkregeln erhalten.
+
+Reale lokale HTTPS-Abnahme: exakter nackter PowerPointwunsch mit5Folien und
+Wordwunsch stellen Rückfrage; folgende synthetische Inhaltseingabe erzeugt echte
+Dateientwürfe im jeweiligen freien Chat. Office-Renderer erzeugt PPTX mit5Folien
+und DOCX mit1Seite. Alle6PNG-Vorschauseiten visuell geprüft, Download zuvor409,
+nach exakter Freigabe200 und native ZIP-Struktur/SHA256 bestätigt. Belege nach
+Chatreload vorhanden. Eigene Testchats/Dateien/Sitzungen einschließlich dauerhafter
+Bereinigung entfernt; vorhandene Projekte/Quellen erhalten. Keine externe Modell-
+oder Mailanfrage. Öffentliche Galerie74Features/37synthetische Ansichten.
+Leichter Evidenzabschluss verwendet denselben App-Fingerprint; Website-CI und
+öffentlicher Hashabgleich werden im Liefernachweis festgehalten. V1 bleibt partiell.
 
 
 ## Projektfragen mit großen Quellen – Test-VM geprüft, 12.10.2026
