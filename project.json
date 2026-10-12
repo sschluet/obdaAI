@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-12",
-  "applicationCommit": "f370058",
-  "schema": "0041",
-  "tests": 1203,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38233910653",
+  "applicationCommit": "62985e8",
+  "schema": "0042",
+  "tests": 1238,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38292778347",
   "screenshots": [
     {
       "id": "chat",
@@ -44,13 +44,13 @@
     {
       "id": "files",
       "title": "Aus Gedanken werden Dateien.",
-      "description": "Format und Vorlage direkt als Auswahlkarten wählen. KI-Entwurf und manuelle Eingabe wechseln; Inhalte und Originalversionen bleiben erhalten.",
+      "description": "Word, PowerPoint, Excel, PDF und Bilder als Auswahlkarten. Geprüfte Skills mit echten Dokumentvorlagen ergänzen den KI-Auftrag. Ausschließlich synthetischer Projektraum und generierter Word-Master.",
       "image": "assets/files.png"
     },
     {
       "id": "chatfiles",
       "title": "Dateien direkt im Gespräch.",
-      "description": "Word und PowerPoint im freien Chat erstellen, ohne ein Projekt anzulegen. KI-Auftrag, Format und Folienanzahl sind direkt bearbeitbar; Vorschauprüfung bleibt vor dem Download erforderlich. Ausschließlich synthetische Initiative Aurora.",
+      "description": "Dateien im freien Chat ohne Hilfsprojekt erstellen. Geprüften Folienmaster, Format, Auftrag und Folienanzahl wählen. Vorschauprüfung bleibt vor dem Download erforderlich. Ausschließlich synthetische Initiative Aurora und generierter Folienmaster.",
       "image": "assets/chatfiles.png"
     },
     {
@@ -170,13 +170,13 @@
     {
       "id": "skills",
       "title": "Deine Skill-Bibliothek",
-      "description": "Anleitungen suchen, prüfen und mit klaren Verwendungsarten organisieren. Ausschließlich synthetische Beispielskills.",
+      "description": "Anleitungen und Skill-Pakete mit Vorlagen organisieren und gezielt einsetzen. Ausschließlich synthetische Beispielskills.",
       "image": "assets/skills.png"
     },
     {
       "id": "skilleditor",
-      "title": "Skill-Dateien einfach bearbeiten",
-      "description": "Strukturierter Editor, Markdown-Vorschau und direkte Wahl zwischen Standardverwendung, Erwähnung und Stichwörtern. Ausschließlich synthetische Inhalte.",
+      "title": "Vorlagen und Ressourcen im Skill",
+      "description": "Paketdateien, Word-Vorlage und archivierte Helfer im Editor prüfen. Ausschließlich ein generiertes synthetisches Beispielpaket.",
       "image": "assets/skilleditor.png"
     },
     {
@@ -435,6 +435,11 @@
           "status": "live"
         },
         {
+          "title": "Native Excel-Dateien",
+          "description": "Lokale KI-Planung erzeugt echte XLSX-Arbeitsmappen mit benannten Tabellenblättern, Spalten und festen typisierten Werten. Vorschau und Freigabe vor Download. Keine Formelausführung oder importierten Skripte. Auf der Test-VM mit realer lokaler Planung, numerischen Zellwerten, Vorschau/Freigabe und verifiziertem Download geprüft.",
+          "status": "live"
+        },
+        {
           "title": "PDF-Seitenoperationen",
           "description": "Seiten auswählen, umordnen, drehen und weglassen. Neue Inhalts-PDFs aus Text, Tabellen und Bildern sind möglich.",
           "status": "live"
@@ -471,8 +476,8 @@
         },
         {
           "title": "Word- und PowerPoint-Vorlagen",
-          "description": "Leere Gliederungen für Projektübersicht, Besprechungsnotiz, Entscheidungsvorlage und vierteiligen Projektstatus. Vorhandene Inhalte brauchen eine Ersetzungsbestätigung. Lokal geprüft; CI bestanden und auf der Test-VM installiert.",
-          "status": "local"
+          "description": "Originale Word- und PowerPoint-Master aus geprüften Skill-Paketen bei der Dateierstellung verwenden; Folienlayouts, Kopf-/Fußzeilen und Formatvorlagen erhalten. Optionale Präsentationsgestaltung ergänzt die Basis. Vorlage, Skillrevision und Hash sind an Entwurf und Folgeversion gebunden. Leere Gliederungen bleiben als zusätzlicher Startpunkt verfügbar. Reale lokale Planung und native DOCX/PPTX-Ausgaben auf der Test-VM geprüft. Briefangaben werden einmalig gesetzt. Höfliche Infinitivaufträge und konkrete Folienzahl werden unterstützt; ein begrenzter Korrekturversuch ergänzt fehlende Modellentwürfe, ohne Folien zu duplizieren.",
+          "status": "live"
         }
       ]
     },
@@ -555,7 +560,7 @@
       "features": [
         {
           "title": "Versionierte Skills",
-          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche auf der Test-VM geprüft: Skill erstellt, geprüft und aktiviert, per Chatpicker aufgerufen und vom echten lokalen Modell befolgt. Revision, Verlauf und Reload bestätigt. Import wartet auf abgeschlossene Speichervorgänge.",
+          "description": "Skill-Bibliothek mit Suche, Markdown-Editor und geprüften Revisionen. Einzelne SKILL.md-Dateien sowie ZIP-/Skill-Pakete mit Office-Vorlagen, Bildern und Referenzen importieren. Paketdateien, Abhängigkeiten und Importhinweise im Editor prüfen; Originale bleiben lokal und unverändert. Verwendung Immer, Bei Erwähnung oder Nach Stichwort; Cloudfreigabe je Anleitung. Skripte werden archiviert und nicht ausgeführt. Vorlagen für die Dateierstellung sind an die geprüfte Skillrevision gebunden. Paketimport, unveränderte Originalhashes, reale lokale Vorlagenausgaben und Dateidialog mit gemischten Markdown-/Paketbibliotheken auf der Test-VM geprüft.",
           "status": "live"
         },
         {
@@ -580,8 +585,8 @@
         },
         {
           "title": "Skills direkt im Chat einsetzen",
-          "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Synthetisch geprüft; releasegebundene VM-Abnahme folgt. Führende aktivierte Skillaufrufe bleiben mit reiner Textrecherche kompatibel; die Fokusrückgabe wartet auf das Schließen des Dialogs.",
-          "status": "implemented"
+          "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Auf der Test-VM mit realer Word-Dateierstellung und einer modernen Acht-Folien-Präsentation einschließlich gebundener Basisabhängigkeit geprüft. Führende aktivierte Skillaufrufe bleiben mit reiner Textrecherche kompatibel; die Fokusrückgabe wartet auf das Schließen des Dialogs.",
+          "status": "live"
         },
         {
           "title": "Generische Integrationsübersicht",
@@ -703,7 +708,7 @@
     "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft. Profilrelevanz inf78e06d: konservative Feldauswahl anhand der aktuellen Frage, sachliche Recherche/Gerätelisten ohne Profil. Auf dem exakt ausgelieferten Release liefert das echte lokale Modell mit ausschließlich fiktiven Daten eine Geräteübersicht ohne persönliche Empfehlungen trotz früherem COO-Kontext. Gespeichertes Profil und Chats unverändert, keine Cloudmodell-Abnahme für diese Korrektur. Quellenupload in9a53d8a:40MiB für Originaldateien und lokalen Parser, begrenzte Uploadlocation in beiden App-Vhosts. Reale HTTPS-Abnahme mit ausschließlich synthetischen2MiB/40MiB PDFs: gespeichert, verarbeitet und bytegenau/SHA256-gleich heruntergeladen. Überschreitung verworfen, bestehende1MiB-Grenzen anderer Routen und Host/Origin/TLS/Freigaben erhalten. Eigene Daten/Sitzung bereinigt, bestehende Quellen unverändert. NAS-eigene Regeln nicht geprüft; Seiten-/Text-/Archivgrenzen und getrennte Dateioperationsgrenzen bleiben bestehen. Einzelquellen-Löschung in336b32a auf der Test-VM geprüft: bestätigte HTTPS-Mutation nur einer eigenen synthetischen Quelle, Original-/Indexbereinigung abgeschlossen und Original404; andere Quelle bytegenau erhalten. Gespeicherte Antwort und Belegsnapshot unverändert. Testprojekt/Sitzung bereinigt, keine Nutzerdokumente gelöscht oder Modellanfrage. PostgreSQL-FK- und Abhängigkeitsfälle durch vollständige CI bestätigt. Projektkontext in9963308: gezielte UTF-8-budgetierte Auszüge im gesamten Projektscope. Reale lokale HTTPS-Abnahme mit eigenem synthetischem81KB-Vertrag und12weiteren Dateien: Frage angenommen, Antwort erfolgreich mit belegter Miete,19KB-Modellkontext und erhaltenem Original-SHA256. Fremde Dateien ausgeschlossen, Testobjekte/Sitzung bereinigt. Erster Liveversuch meldete einen Provider-ValueError; identische Wiederholung erfolgreich, genaue Erstursache nicht belegt. Keine Vollanalyse aller Dateien und keine Cloud-Abnahme privater Projektquellen. Chatdateien in8c2cab1/0041 auf der Test-VM geprüft: normale Chats erhalten einen eigenen Dateiarbeitsraum ohne Hilfsprojekt. Der nackte PowerPoint-/Word-Wunsch fragt nach dem Thema; anschließend erzeugt das reale lokale Modell einen gebundenen Entwurf. Echte PPTX mit genau5Folien und echte DOCX gerendert, alle6Vorschauseiten visuell geprüft, Download vorher gesperrt und nach exakter Freigabe mit passenden SHA256 bestätigt. Chat-Beleg nach Reload erhalten. Eigene Testchats/Dateien/Sitzung einschließlich dauerhafter Dateibereinigung entfernt, bestehende Projektdateien/Versionen/Profil/UseCases/Daten und Infrastruktur beim Rollout erhalten. Keine Cloud-Dateigenerierung für diese Abnahme. Lokale OCR inf370058 auf der Test-VM geprüft: bis300dpi, bounded Vorverarbeitung für Kontrast/Schieflage/Ausrichtung und ein CPU-Thread. Produktive Quellenpipeline liest3eigene synthetische Scan-Seiten einschließlich2Grad-Schieflage und90Grad-Rotation, bekannte Textstellen und Miete erkannt. Original-SHA256 unverändert. Geschütztes synthetisches PDF erhält gebundenen sicheren Fehlercode; expliziter Retry erhöht Revision und erhält Original. Testprojekt/Quellen/Sitzung einschließlich Dateibereinigung entfernt, keine Modellanfrage. Fehlertexte enthalten keinen Dokumenttext oder Rohstderr. PDF-Seite bis120sOCR, gesamter Parser600s/480CPU, keine Erweiterung von Dateisystem-, Netzwerk- oder Composegrenzen. Quelle/Original müssen bei kritischen Angaben weiterhin gemeinsam geprüft werden.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "f370058",
+    "lastSuccessfulCICommit": "62985e8",
     "lastSuccessfulCIUI": 39
   }
 }
