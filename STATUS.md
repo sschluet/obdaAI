@@ -2945,3 +2945,15 @@ Keine echte Cloud-Dateiplanung auf der VM behauptet. Deployment blockiert durch
 die fehlende Tailnet-Freigabe für HTTPS/SSH; Bestätigung dazu steht noch aus.
 Öffentliche Website mit 78 Features lokal validiert; letzte Pages-Publikation
 weiterhin durch widersprüchlichen alten GitHub-Deploymentstatus blockiert.
+
+
+Website-Veröffentlichung ab8e962 inzwischen erfolgreich: Pages-Lauf 38323586368,
+exakte öffentliche Revision und alle 48 Datei-Hashes bestätigt. Der zuvor
+blockierende externe Pages-Zustand hat sich gelöst.
+App-CI ab8e962 bestand Geheimnisprüfung, Container-, Browserrunner- und
+Artefaktrunnerjobs; die UI-Suite fand einen mehrdeutigen globalen Downloadlocator
+(neuer Link in Arbeitsraum plus Vorschau). Locator auf Vorschau bzw. konkrete
+Versionskarten begrenzt; vollständiger browser-check und artifact-check danach
+gegen die eigene synthetische Fixture bestanden. Keine Produktfunktion für diese
+Korrektur verändert. Vollständige CI auf dem finalen Teststand erforderlich;
+VM-Auslieferung wartet weiterhin auf die separate Tailnet-SSH-Freigabe.

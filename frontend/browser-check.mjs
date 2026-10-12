@@ -1,6 +1,8 @@
 import {loginFixture} from './fixture-login.mjs';
 import {chromium} from 'playwright';
 import {mkdir} from 'node:fs/promises';
+const base=process.env.BROWSER_FIXTURE_ORIGIN||'http://127.0.0.1:18765';
+if(!['http://127.0.0.1:18765','http://127.0.0.1:18767'].includes(base))throw Error('Synthetic fixtures only');
 const runSuffix=Date.now();
 const output='../.local/browser';await mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -11,7 +13,7 @@ async function taskOptions(text){const d=page.locator('.task-options').filter({h
 async function systemActions(){const d=page.locator('details.setting-card').filter({has:page.locator('summary',{hasText:'Bestehende Systemaktionen'})});if(!await d.evaluate(node=>node.open))await d.locator(':scope > summary').click()}
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
-await page.goto('http://127.0.0.1:18765');
+await page.goto(base);
 await loginFixture(page);
 await page.getByRole('heading',{name:'Womit möchtest du beginnen?'}).waitFor();
 await page.screenshot({path:output+'/desktop.png',fullPage:true,animations:'disabled'});
@@ -21,7 +23,7 @@ await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
 if(!await page.getByText('SYNTHETIC_BROWSER_REPLY:',{exact:false}).count())throw Error('Missing persisted reply');
 const firstChat=await createdChatResponse;const firstChatId=(await firstChat.json()).id;
-let firstChatDetail;const titleDeadline=Date.now()+30000;do{firstChatDetail=await (await page.request.get('http://127.0.0.1:18765/api/conversations/'+firstChatId)).json();if(firstChatDetail.title==='Synthetic automatic title')break;await page.waitForTimeout(200)}while(Date.now()<titleDeadline);
+let firstChatDetail;const titleDeadline=Date.now()+30000;do{firstChatDetail=await (await page.request.get(base+'/api/conversations/'+firstChatId)).json();if(firstChatDetail.title==='Synthetic automatic title')break;await page.waitForTimeout(200)}while(Date.now()<titleDeadline);
 if(firstChatDetail.title!=='Synthetic automatic title')throw Error('Current chat did not receive automatic title');
 await page.getByRole('button',{name:'Synthetic automatic title',exact:true}).first().waitFor();
 await page.reload();
@@ -37,7 +39,7 @@ await page.reload();
 await page.locator('aside > button.new').waitFor();
 await page.locator('.history button').first().click();
 await page.waitForFunction(()=>document.querySelectorAll('.message.assistant').length===2&&![...document.querySelectorAll('button')].some(button=>button.getAttribute('aria-label')==='Antwort abbrechen'));
-const reloadedChat=await (await page.request.get('http://127.0.0.1:18765/api/conversations/'+firstChatId)).json();
+const reloadedChat=await (await page.request.get(base+'/api/conversations/'+firstChatId)).json();
 if(reloadedChat.runs.length!==2||reloadedChat.runs.some(run=>run.status!=='succeeded'))throw Error('Reload did not retain both successful runs');
 if(await page.locator('.message.assistant').count()!==2)throw Error('Reload lost or duplicated answer');
 await page.getByRole('button',{name:'Antwort erneut erzeugen',exact:true}).click();
@@ -394,7 +396,7 @@ await previewDialog.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:t
 if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Artifact review mobile overflow');
 await page.screenshot({path:output+'/artifact-review-mobile.png',fullPage:true,animations:'disabled'});
 await previewDialog.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
-await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+await previewDialog.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
 await page.reload();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Projekte',exact:true}).click();
@@ -409,7 +411,10 @@ await artifactDialog.getByLabel('Dateititel',{exact:true}).fill(('Synthetic edit
 await artifactDialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
 await page.getByText(('Synthetic editable Word report revision 2 '+runSuffix+' · Version 2'),{exact:true}).waitFor();
 await page.getByText(('Synthetic editable Word report '+runSuffix+' · Version 1'),{exact:true}).waitFor();
-if(await page.getByRole('link',{name:'Datei herunterladen',exact:true}).count()!==1)throw Error('Old artifact version disappeared or new version bypassed review');
+const versionOne=page.locator('article.citation').filter({hasText:'Synthetic editable Word report '+runSuffix+' · Version 1'});
+const versionTwo=page.locator('article.citation').filter({hasText:'Synthetic editable Word report revision 2 '+runSuffix+' · Version 2'});
+await versionOne.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+await versionTwo.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Abmelden',exact:true}).click();
 await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).waitFor();

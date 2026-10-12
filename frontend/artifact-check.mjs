@@ -38,13 +38,13 @@ try{
  const preview=page.getByRole('dialog',{name:'Dateivorschau',exact:true});
  await preview.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
  await preview.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
- await page.getByRole('link',{name:'Datei herunterladen',exact:true}).first().waitFor();
+ await preview.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  await page.reload();
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name,exact:true}).locator('..').click();
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
- await page.getByRole('link',{name:'Datei herunterladen',exact:true}).first().waitFor();
+ await page.locator('article.citation').filter({hasText:'Synthetic word version · Version 1'}).getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
