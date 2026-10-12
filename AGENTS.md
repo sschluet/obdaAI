@@ -119,3 +119,15 @@ to unrelated infrastructure, HA/n8n services or firewall rules still need their
 own authorization. Local checks, GitHub CI and public showcase synchronization
 remain required. Development subagents are explicitly authorized; coordinate
 shared contracts and file ownership and keep runtime/fixture data out of Git.
+
+
+## Test VM transport preference
+On 13.10.2026 the user explicitly requested LAN-first access to the authorized test
+VM, with Tailscale as fallback whenever the LAN address is unreachable, including
+SSH deployments, transfers and tunnels. Use the private deployment transport
+helper and registered node address; keep tailnet identifiers out of public source.
+Retain the existing deployment key, strict host-key verification and pinned server
+identity across both transports. Select the route before starting a mutation; never
+automatically replay a failed or interrupted deployment over the alternate route.
+Do not silently enable or switch the workstation's VPN/Tailscale account. If neither
+route is available, report the missing client/network connection.
