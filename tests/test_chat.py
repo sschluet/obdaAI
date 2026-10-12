@@ -156,7 +156,8 @@ def test_tools_never_faked(setup):
     result = client.post(
         f"/api/conversations/{chat_id}/messages", json={"content": "fixture"}, headers=headers
     )
-    assert "kein Werkzeug" in result.text
+    assert "Keine Webrecherche" in result.text
+    assert '"status": "failed"' in result.text
     assert provider.stream_calls == []
     assert len(client.get("/api/conversations/" + chat_id).json()["messages"]) == 1
 

@@ -21,7 +21,12 @@ bestanden. Öffentliche Galerie mit neuer ausschließlich synthetischer Chatdate
 157 gezielte Backend-/Scope-/Datei-/Lösch-/Suchtests bestanden, ein neuer
 PostgreSQLfall für CI. Ruff/Mypy87, Source-Scan530, TypeScript/Build und beide
 Dateibrowserprüfungen erfolgreich. Matching-CI, Schema-/App-Rollout und reale
-Office-/Downloadabnahme stehen noch aus.
+Office-/Downloadabnahme stehen noch aus. Vorab-CI38223301866 zeigte zwei
+Testabweichungen: bisherige Ablehnung normaler Chatdateien wird jetzt durch echte
+Webgrant-Prüfung ersetzt; neue PostgreSQL-Fixture hinterließ einen eigenen
+Cleanupauftrag. Erwartung und exakt auf eigene Daten begrenzte Testbereinigung
+korrigiert, bestehende Downgrade-Schutzprüfung unverändert. Zusätzlicher Test
+belegt Erhalt einer fremden ausstehenden Bereinigung.
 
 
 ## Projektfragen mit großen Quellen – Test-VM geprüft, 12.10.2026
