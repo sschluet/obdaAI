@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-11",
-  "applicationCommit": "9a53d8a",
+  "updated": "2026-10-12",
+  "applicationCommit": "336b32a",
   "schema": "0040",
-  "tests": 1107,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38173724018",
+  "tests": 1126,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38215854174",
   "screenshots": [
     {
       "id": "chat",
@@ -14,8 +14,14 @@
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen und im Projektchat verwenden. Sichtbare Uploadgrenze, klare Fehlermeldungen und ein frei gewähltes Projektsymbol im fiktiven Raum Aurora.",
+      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
       "image": "assets/projects.png"
+    },
+    {
+      "id": "sourcedelete",
+      "title": "Quellen gezielt entfernen.",
+      "description": "Eine klare Bestätigung zeigt, welche Projektquelle entfernt wird. Uploadoriginal und Suchindex werden gelöscht; bereits gespeicherte Chatantworten bleiben erhalten. Ausschließlich synthetisches Dokument.",
+      "image": "assets/sourcedelete.png"
     },
     {
       "id": "projecticons",
@@ -318,6 +324,11 @@
         {
           "title": "Dokumentuploads",
           "description": "PDF, DOCX, PPTX, CSV, XLSX, Markdown, Text und Bilder bis 40 MiB je Datei. Originale werden unverändert mit Hashes aufbewahrt und asynchron eingelesen. Browser und Server stimmen die Uploadgrenze ab; verständliche Meldungen grenzen zu große Dateien und vorgeschaltete Uploadbeschränkungen ab. Auf der Test-VM über HTTPS mit gültigen synthetischen PDFs bis exakt40MiB, Textextraktion und unverändertem Originalhash geprüft. PDF-Extraktion bleibt bis100 Seiten; andere Verarbeitungsgrenzen gelten weiterhin.",
+          "status": "live"
+        },
+        {
+          "title": "Einzelne Projektquellen löschen",
+          "description": "Dateiuploads und gespeicherte Webseiten einzeln mit einer verständlichen Bestätigung dauerhaft aus dem Projekt entfernen. Lokales Original und Suchindex werden gelöscht, vorhandene Chatantworten bleiben gespeichert. Bei synchronisierten Wissensquellen bleibt das externe Original erhalten; ein erneuter Abgleich kann die lokale Kopie wieder importieren. Auf der Test-VM über HTTPS mit eigenen synthetischen Daten geprüft: Original-/Indexbereinigung, erhaltene andere Quelle und unveränderte gespeicherte Belege.",
           "status": "live"
         },
         {
@@ -670,17 +681,17 @@
   "development": {
     "mode": "local",
     "schema": "0040",
-    "browserChecks": 36,
+    "browserChecks": 37,
     "serverDeployment": true,
-    "commit": "9a53d8a",
-    "ciTests": 1107,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38173724018",
-    "deployedCommit": "9a53d8a",
+    "commit": "336b32a",
+    "ciTests": 1126,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38215854174",
+    "deployedCommit": "336b32a",
     "deployedSchema": "0040",
-    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft. Profilrelevanz inf78e06d: konservative Feldauswahl anhand der aktuellen Frage, sachliche Recherche/Gerätelisten ohne Profil. Auf dem exakt ausgelieferten Release liefert das echte lokale Modell mit ausschließlich fiktiven Daten eine Geräteübersicht ohne persönliche Empfehlungen trotz früherem COO-Kontext. Gespeichertes Profil und Chats unverändert, keine Cloudmodell-Abnahme für diese Korrektur. Quellenupload in9a53d8a:40MiB für Originaldateien und lokalen Parser, begrenzte Uploadlocation in beiden App-Vhosts. Reale HTTPS-Abnahme mit ausschließlich synthetischen2MiB/40MiB PDFs: gespeichert, verarbeitet und bytegenau/SHA256-gleich heruntergeladen. Überschreitung verworfen, bestehende1MiB-Grenzen anderer Routen und Host/Origin/TLS/Freigaben erhalten. Eigene Daten/Sitzung bereinigt, bestehende Quellen unverändert. NAS-eigene Regeln nicht geprüft; Seiten-/Text-/Archivgrenzen und getrennte Dateioperationsgrenzen bleiben bestehen.",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft. Profilrelevanz inf78e06d: konservative Feldauswahl anhand der aktuellen Frage, sachliche Recherche/Gerätelisten ohne Profil. Auf dem exakt ausgelieferten Release liefert das echte lokale Modell mit ausschließlich fiktiven Daten eine Geräteübersicht ohne persönliche Empfehlungen trotz früherem COO-Kontext. Gespeichertes Profil und Chats unverändert, keine Cloudmodell-Abnahme für diese Korrektur. Quellenupload in9a53d8a:40MiB für Originaldateien und lokalen Parser, begrenzte Uploadlocation in beiden App-Vhosts. Reale HTTPS-Abnahme mit ausschließlich synthetischen2MiB/40MiB PDFs: gespeichert, verarbeitet und bytegenau/SHA256-gleich heruntergeladen. Überschreitung verworfen, bestehende1MiB-Grenzen anderer Routen und Host/Origin/TLS/Freigaben erhalten. Eigene Daten/Sitzung bereinigt, bestehende Quellen unverändert. NAS-eigene Regeln nicht geprüft; Seiten-/Text-/Archivgrenzen und getrennte Dateioperationsgrenzen bleiben bestehen. Einzelquellen-Löschung in336b32a auf der Test-VM geprüft: bestätigte HTTPS-Mutation nur einer eigenen synthetischen Quelle, Original-/Indexbereinigung abgeschlossen und Original404; andere Quelle bytegenau erhalten. Gespeicherte Antwort und Belegsnapshot unverändert. Testprojekt/Sitzung bereinigt, keine Nutzerdokumente gelöscht oder Modellanfrage. PostgreSQL-FK- und Abhängigkeitsfälle durch vollständige CI bestätigt.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "9a53d8a",
-    "lastSuccessfulCIUI": 36
+    "lastSuccessfulCICommit": "336b32a",
+    "lastSuccessfulCIUI": 37
   }
 }
