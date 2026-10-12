@@ -1,6 +1,6 @@
 # obdaAI — Status 12.10.2026
 
-## Projektfragen mit großen Quellen – lokale Prüfung, 12.10.2026
+## Projektfragen mit großen Quellen – Test-VM geprüft, 12.10.2026
 
 Ursache: bis zu acht6k-Zeichen-Passagen wurden unabhängig vom verbleibenden
 Modellfenster angefügt. Die bisherige Kandidatenbegrenzung vor Bewertung konnte
@@ -23,8 +23,20 @@ Deterministische Dateinamen-/Textsuche, keine semantische Vollanalyse sämtliche
 Dateien. Bestehende Upload-/Parser-/Speichergrenzen bleiben erhalten. 14 neue Retrieval-/API-/Executionfälle lokal bestanden, einschließlich10.001
 älterer Chunks vor passender Datei, UTF-8, großer Quellen mit Historie und
 dynamischer Webbelege. Weitere106 Chat-/Profil-/Skills-/Vorgabenprüfungen bestanden;
-Ruff/Mypy86, Source-Scan523 und Websitebuild erfolgreich. Matching-CI,
-Test-VM-Abnahme und öffentliche Veröffentlichung stehen für diese Lieferung noch aus.
+Ruff/Mypy86, Source-Scan523 und Websitebuild erfolgreich. Vollständige CI38219462937 für9963308 erfolgreich:1140Backend-/PostgreSQLtests,
+37Browserprüfungen, alle App-Jobs. App9963308 auf Test-VM, Schema0040, beide APIs gesund,
+gepinntes HTTPS und bestehende UI/API-Verträge bestätigt. Frisches verschlüsseltes
+Off-VM-Backup geprüft, gespeicherte Daten/Profil/UseCases/Overlays/Nginx/Netzwerk erhalten.
+
+Reale lokale HTTPS-Abnahme: eigener synthetischer81.184Byte-Vertrag mit8langen
+Abschnitten plus12weitere Dateien; Frage angenommen, erfolgreicher Modelllauf
+mit1.003Zeichen und korrekter synthetischer Miete. Kontext19.252Bytes innerhalb24.000,
+unpassende Quellen ausgeschlossen und Original-SHA256 erhalten. Erster Liveversuch
+scheiterte mit Provider-ValueError nach angenommener Frage; identische Wiederholung
+erfolgreich, genaue Erstursache nicht belegt. Testprojekt/Quellen/Sitzung jeweils
+bereinigt, bestehende Projekte/Quellen erhalten. Keine Cloud-Abnahme privater Quellen.
+Leichter Dokumentationsabschluss verwendet den unveränderten App-Fingerprint;
+exakte Website-CI und öffentlicher Hashabgleich folgen. V1 bleibt partiell.
 
 
 ## Einzelne Projektquellen löschen – Test-VM geprüft, 12.10.2026
