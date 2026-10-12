@@ -395,6 +395,8 @@ class SkillRevision(Base):
     revision: Mapped[int] = mapped_column(Integer, primary_key=True)
     document: Mapped[str] = mapped_column(Text)
     sha256: Mapped[str] = mapped_column(String(64))
+    bundle_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    bundle_manifest: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
     created: Mapped[float] = mapped_column(Float, default=time.time)
 
 

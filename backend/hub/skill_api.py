@@ -5,15 +5,18 @@ import json
 import re
 import unicodedata
 from typing import Any, Literal
+from urllib.parse import unquote
 from uuid import UUID
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import Field, ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.action_api import StrictInput
+from hub.config import Settings
 from hub.db import Conversation, Project, Run, Skill, SkillRevision
 from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
@@ -23,14 +26,14 @@ from hub.policy import ContextPart, Privacy
 class Metadata(StrictInput):
     format: str = Field(pattern=r"^obdaai-skill-1$")
     name: str = Field(min_length=1, max_length=100)
-    description: str = Field(default="", max_length=500)
+    description: str = Field(default="", max_length=2000)
     keywords: list[str] = Field(default_factory=list, max_length=12)
     usage: Literal["auto", "always", "mention"] = "auto"
     cloud_allowed: bool = False
 
 
 class SkillInput(StrictInput):
-    document: str = Field(min_length=1, max_length=12000)
+    document: str = Field(min_length=1, max_length=64000)
     project_id: UUID | None = None
     activate: bool = False
     expected_revision: int | None = Field(default=None, ge=1)
@@ -48,7 +51,7 @@ class SelectionInput(StrictInput):
 
 
 class ImportInput(StrictInput):
-    document: str = Field(min_length=1, max_length=12000)
+    document: str = Field(min_length=1, max_length=64000)
     name: str | None = Field(default=None, min_length=1, max_length=100)
 
 
@@ -80,7 +83,7 @@ def request_without_skill_prefix(query: str, audit: list[dict[str, Any]]) -> str
 def parse(document: str) -> tuple[Metadata, str]:
     try:
         document = document.replace("\r\n", "\n")
-        if len(document) > 12000 or not document.startswith("---\n"):
+        if len(document) > 64000 or not document.startswith("---\n"):
             raise ValueError
         front, body = document[4:].split("\n---\n", 1)
         # Reject aliases, anchors and explicit tags before construction; safe_load
@@ -166,6 +169,8 @@ def info(s: Skill, r: SkillRevision) -> dict[str, Any]:
         "revision": r.revision,
         "sha256": r.sha256,
         "document": r.document,
+        "bundle_sha256": r.bundle_sha256,
+        "bundle_manifest": json.loads(r.bundle_manifest),
         "project_id": s.project_id,
         "invocation": "/" + slug(parse(r.document)[0].name),
         "archived": s.archived,
@@ -182,6 +187,31 @@ def eligible(s: Skill, r: SkillRevision, project_id: str | None) -> bool:
         and s.trusted_sha256 == r.sha256
         and r.sha256 == sha(r.document)
         and s.project_id in (None, project_id)
+    )
+
+
+def instruction_context(meta: Metadata, body: str, manifest: dict[str, Any], query: str) -> str:
+    """Bounded instruction excerpt; full original remains available in the package."""
+    clean = re.sub(r"```.*?```", "", body, flags=re.S)
+    if len(clean) <= 6000:
+        return clean
+    words = {w.casefold() for w in re.findall(r"[\w-]{4,}", query)}
+    sections = re.split(r"(?m)(?=^#{1,4} )", clean)
+    ranked = sorted(
+        enumerate(sections),
+        key=lambda pair: (-sum(w in pair[1].casefold() for w in words), pair[0]),
+    )
+    chosen = [(0, sections[0][:1800])]
+    left = 5600 - len(chosen[0][1])
+    for index, section in ranked:
+        if index == 0 or left <= 0:
+            continue
+        clipped = section[:left]
+        chosen.append((index, clipped))
+        left -= len(clipped)
+    return (
+        "\n".join(s for _, s in sorted(chosen))
+        + "\n[Auszug aus Skillpaket; vollständige Anweisungen und Vorlagen separat verfügbar.]"
     )
 
 
@@ -225,7 +255,14 @@ def select_skills(
             raise HTTPException(409, "Mehr als drei passende Skills; manuelle Auswahl nötig")
         parts.append(
             ContextPart(
-                content="Vom Benutzer geprüfter Skill: " + meta.name + "\n" + body,
+                content="Vom Benutzer geprüfter Skill: "
+                + meta.name
+                + "\n"
+                + (
+                    instruction_context(meta, body, json.loads(r.bundle_manifest), query)
+                    if r.bundle_sha256
+                    else body
+                ),
                 source_id="skill:" + s.id,
                 revision=r.revision,
                 label=label,
@@ -252,10 +289,133 @@ def select_skills(
         )
     if selected is not None and len(parts) != len(selected):
         raise HTTPException(409, "Ausgewählter Skill fehlt")
+    for entry in list(audit):
+        revision = db.get(SkillRevision, (entry["id"], entry["revision"]))
+        dependencies = (
+            json.loads(revision.bundle_manifest).get("dependencies", []) if revision else []
+        )
+        for dependency in dependencies:
+            if any(item["name"] == dependency for item in audit):
+                continue
+            matches = []
+            for candidate in rows:
+                candidate_revision = db.get(SkillRevision, (candidate.id, candidate.revision))
+                if candidate_revision and eligible(candidate, candidate_revision, chat.project_id):
+                    candidate_meta, candidate_body = parse(candidate_revision.document)
+                    if candidate_meta.name == dependency:
+                        matches.append(
+                            (candidate, candidate_revision, candidate_meta, candidate_body)
+                        )
+            if len(matches) != 1 or len(parts) >= 3:
+                raise HTTPException(
+                    409, "Skill-Abhängigkeit fehlt, ist nicht geprüft oder mehrdeutig"
+                )
+            candidate, candidate_revision, candidate_meta, candidate_body = matches[0]
+            label = Privacy.CLOUD_ALLOWED if candidate_meta.cloud_allowed else Privacy.LOCAL_ONLY
+            parts.append(
+                ContextPart(
+                    content="Vom Benutzer geprüfter Basis-Skill: "
+                    + candidate_meta.name
+                    + "\n"
+                    + instruction_context(
+                        candidate_meta,
+                        candidate_body,
+                        json.loads(candidate_revision.bundle_manifest),
+                        query,
+                    ),
+                    source_id="skill:" + candidate.id,
+                    revision=candidate_revision.revision,
+                    label=label,
+                )
+            )
+            audit.append(
+                {
+                    "id": candidate.id,
+                    "name": candidate_meta.name,
+                    "revision": candidate_revision.revision,
+                    "sha256": candidate_revision.sha256,
+                    "selection": "dependency",
+                    "usage": candidate_meta.usage,
+                    "label": label.value,
+                }
+            )
     return parts, audit
 
 
-def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
+def install_skill_api(
+    app: FastAPI, factory: sessionmaker[Session], cfg: Settings | None = None
+) -> None:
+    cfg = cfg or Settings()
+
+    @app.post("/api/skills/import-package")
+    async def import_package(request: Request, auth: Auth) -> dict[str, Any]:
+        from hub.skill_bundles import MAX_PACKAGE, inspect_package, store
+
+        name = unquote(request.headers.get("X-File-Name", ""))
+        if not name.lower().endswith((".zip", ".skill")):
+            raise HTTPException(422, "Skillpaket als .zip oder .skill hochladen")
+        chunks = bytearray()
+        async for chunk in request.stream():
+            chunks.extend(chunk)
+            if len(chunks) > MAX_PACKAGE:
+                raise HTTPException(413, "Skillpaket maximal 20 MiB")
+        content = bytes(chunks)
+        document, manifest = inspect_package(content)
+        bundle_sha = store(cfg, content)
+        with factory() as db:
+            lock(db)
+            skill = Skill(enabled=False)
+            db.add(skill)
+            db.flush()
+            revision = SkillRevision(
+                skill_id=skill.id,
+                revision=1,
+                document=document,
+                sha256=sha(document),
+                bundle_sha256=bundle_sha,
+                bundle_manifest=json.dumps(manifest),
+            )
+            db.add(revision)
+            db.commit()
+            return info(skill, revision)
+
+    def bundle_revision(db: Session, skill_id: str, revision: int) -> SkillRevision:
+        get(db, skill_id)
+        item = db.get(SkillRevision, (skill_id, revision))
+        if item is None or item.sha256 != sha(item.document):
+            raise HTTPException(404, "Skillrevision fehlt")
+        return item
+
+    @app.get("/api/skills/{skill_id}/revisions/{revision}/files")
+    def download_file(skill_id: str, revision: int, path: str, sha256: str, auth: Auth) -> Response:
+        from hub.skill_bundles import file_bytes
+
+        with factory() as db:
+            content = file_bytes(cfg, bundle_revision(db, skill_id, revision), path, sha256)
+        return Response(
+            content,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": "attachment", "Cache-Control": "no-store"},
+        )
+
+    @app.get("/api/skills/{skill_id}/revisions/{revision}/package")
+    def download_package(skill_id: str, revision: int, sha256: str, auth: Auth) -> Response:
+        from hub.skill_bundles import package_bytes
+
+        with factory() as db:
+            item = bundle_revision(db, skill_id, revision)
+            if item.bundle_sha256 != sha256:
+                raise HTTPException(409, "Paketrevision inzwischen geändert")
+            content = package_bytes(cfg, item)
+        return Response(
+            content,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": "attachment; filename=skill-package.zip",
+                "Cache-Control": "no-store",
+            },
+        )
+
     @app.post("/api/skills/parse")
     def import_document(body: ImportInput, auth: Auth) -> dict[str, Any]:
         raw = body.document.replace("\r\n", "\n")
@@ -310,7 +470,7 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
         parse(body.document)
         with factory() as db:
             lock(db)
-            s, _ = get(db, skill_id)
+            s, previous = get(db, skill_id)
             if s.archived:
                 raise HTTPException(409, "Archivierter Skill kann nicht bearbeitet werden")
             if s.revision != body.expected_revision:
@@ -326,6 +486,8 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
                 revision=s.revision,
                 document=body.document,
                 sha256=sha(body.document),
+                bundle_sha256=previous.bundle_sha256,
+                bundle_manifest=previous.bundle_manifest,
             )
             db.add(r)
             db.commit()
@@ -363,7 +525,13 @@ def install_skill_api(app: FastAPI, factory: sessionmaker[Session]) -> None:
         with factory() as db:
             get(db, skill_id)
             return [
-                {"revision": r.revision, "sha256": r.sha256, "document": r.document}
+                {
+                    "revision": r.revision,
+                    "sha256": r.sha256,
+                    "document": r.document,
+                    "bundle_sha256": r.bundle_sha256,
+                    "bundle_manifest": json.loads(r.bundle_manifest),
+                }
                 for r in db.scalars(
                     select(SkillRevision)
                     .where(SkillRevision.skill_id == skill_id)

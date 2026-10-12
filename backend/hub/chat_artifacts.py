@@ -12,10 +12,11 @@ from sqlalchemy.orm import Session
 
 from hub.artifact_api import CreateArtifact, artifact_service
 from hub.artifact_chat import ChatSource
-from hub.artifact_drafts import DraftInput, preview
+from hub.artifact_drafts import DraftInput, FileSkillBinding, preview
 from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import digest, spec_for
-from hub.db import Artifact, ArtifactRevision, Conversation, Message, Run, Source
+from hub.db import Artifact, ArtifactRevision, Conversation, Message, Run, SkillRevision, Source
+from hub.skill_api import parse
 
 
 def artifact_clarification(goal: str) -> str | None:
@@ -293,7 +294,8 @@ def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
         raise ValueError("Eine konkrete Bitte zur Dateierstellung fehlt")
     formats = []
     for kind, pattern in [
-        ("docx", r"\b(word|docx)\b"),
+        ("docx", r"\b(word|docx|geschäftsbrief|briefdatei)\b"),
+        ("xlsx", r"\b(excel|xlsx)\b"),
         ("pptx", r"\b(powerpoint|pptx|präsentation|presentation)\b"),
         ("pdf", r"\bpdf\b"),
     ]:
@@ -376,6 +378,17 @@ async def create_from_chat(
             raise ValueError("Dateien im aktiven Gespräch erstellen")
         project_id, chat_id, message_id = chat.project_id, chat.id, message.id
         goal = resolved_chat_goal(db, chat, message)
+        from hub.artifact_skill_binding import chosen
+        from hub.skill_api import request_without_skill_prefix
+
+        skill_bindings = chosen(db, chat, goal)
+        skill_names = []
+        for item in skill_bindings:
+            skill_revision = db.get(SkillRevision, (item["id"], item["revision"]))
+            if skill_revision is None:
+                raise ValueError("Ausgewählte Skill-Version fehlt")
+            skill_names.append({"name": parse(skill_revision.document)[0].name})
+        goal = request_without_skill_prefix(goal, skill_names)
         answer_source = None
         if requests_answer_source(goal) and not requests_revision(goal):
             active = list(
@@ -442,6 +455,27 @@ async def create_from_chat(
         # A literal original name is a source selection, not an output format.
         for source in named:
             format_goal = re.sub(re.escape(source.name), "Quelldatei", format_goal, flags=re.I)
+        if (
+            not operation
+            and skill_names
+            and not re.search(
+                r"\b(word|docx|powerpoint|pptx|präsentation|presentation|pdf|excel|xlsx)\b",
+                format_goal,
+                re.I,
+            )
+        ):
+            inferred = set()
+            for binding in skill_bindings:
+                rev = db.get(SkillRevision, (binding["id"], binding["revision"]))
+                if rev:
+                    for asset in json.loads(rev.bundle_manifest or "{}").get("templates", []):
+                        extension = asset["path"].rsplit(".", 1)[-1].lower()
+                        if extension in {"docx", "dotx"}:
+                            inferred.add("docx")
+                        elif extension in {"pptx", "potx"}:
+                            inferred.add("pptx")
+            if len(inferred) == 1:
+                format_goal += " " + next(iter(inferred))
         kind, count = (
             (operation, default_count) if operation else request_format(format_goal, default_count)
         )
@@ -472,6 +506,7 @@ async def create_from_chat(
         target_slide=int(next(iter(targets))) if targets else None,
         chat_source=answer_source,
         sources=sources,
+        skill_bindings=[FileSkillBinding.model_validate(item) for item in skill_bindings],
         base_artifact_id=base.artifact_id if base else None,
         base_revision=base.revision if base else None,
     )
@@ -523,7 +558,10 @@ async def create_from_chat(
             or latest != message_id
             or current_message.revision != revision
             or digest(current_message.content) != sha
-            or resolved_chat_goal(db, current_chat, current_message) != goal
+            or request_without_skill_prefix(
+                resolved_chat_goal(db, current_chat, current_message), skill_names
+            )
+            != goal
         ):
             raise ValueError("Gespräch oder Dateiwunsch wurde inzwischen geändert oder abgebrochen")
 

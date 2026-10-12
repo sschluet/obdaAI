@@ -66,6 +66,19 @@ plans = [
 ]
 plans.append(
     {
+        "kind": "xlsx",
+        "title": "Synthetische Tabelle",
+        "sheets": [
+            {
+                "name": "Planung",
+                "columns": ["Bereich", "Betrag"],
+                "rows": [["Beispiel", 1234.5], ["=not-executed", 678]],
+            }
+        ],
+    }
+)
+plans.append(
+    {
         "kind": "pdf",
         "title": "Synthetische Einzel-PDFs",
         "pages": [{"source": 0, "page": 2, "rotation": 90}, {"source": 0, "page": 1}],
@@ -109,12 +122,12 @@ def prepare() -> None:
 
 def check() -> None:
     manifests = [json.loads((p / "manifest.json").read_text()) for p in results.iterdir()]
-    assert len(manifests) == 6
+    assert len(manifests) == 7
     for manifest in manifests:
         assert manifest["status"] == "needs_review", manifest
         assert manifest["label"] == "LOCAL_ONLY"
         assert not manifest["preview_verified"]
-    assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 2, 2, 2]
+    assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 1, 2, 2, 2]
     split = next(m for m in manifests if m.get("parts"))
     assert [(p["first_page"], p["pages"]) for p in split["parts"]] == [(1, 1), (2, 1)]
     exports = [m["pdf_export"] for m in manifests if m.get("pdf_export")]
@@ -131,6 +144,13 @@ def check() -> None:
                 assert len(first.pages) == len(second.pages) == 1
                 assert first.pages[0].mediabox.width == 300 and first.pages[0].rotation == 90
                 assert second.pages[0].mediabox.width == 200
+        workbook = folder / "version/artifact.xlsx"
+        if workbook.exists():
+            from openpyxl import load_workbook
+
+            book = load_workbook(workbook)
+            assert book["Planung"]["B2"].value == 1234.5
+            assert book["Planung"]["A3"].data_type == "s"
         document = folder / "version/artifact.docx"
         if document.exists():
             with zipfile.ZipFile(document) as archive:
@@ -149,7 +169,7 @@ def check() -> None:
     for folder in requests.iterdir():
         assert not process(folder, results), "Duplicate overwrote an immutable output"
     print(
-        "Six offline plans rendered; nine previews, native split PDFs and Word PDF export; "
+        "Seven offline plans rendered; ten previews, native XLSX, split PDFs and Word PDF export; "
         "duplicate writes rejected"
     )
 

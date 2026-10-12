@@ -55,15 +55,23 @@ def parse_plan(answer: str) -> tuple[Any, str]:
     return value, "+".join(repairs) or "none"
 
 
+class FileSkillBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(pattern=r"^[0-9a-f-]{36}$")
+    revision: int = Field(ge=1, le=100000)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class DraftInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=4000)
-    kind: Literal["docx", "pptx", "pdf", "image"]
+    kind: Literal["docx", "pptx", "xlsx", "pdf", "image"]
     pdf_mode: Literal["content", "pages"] = "content"
     slide_count: int = Field(default=3, ge=1, le=30)
     section_count: int | None = Field(default=None, ge=1, le=29)
     target_slide: int | None = Field(default=None, ge=1, le=30)
     chat_source: ChatSource | None = None
+    skill_bindings: list[FileSkillBinding] = Field(default_factory=list, max_length=3)
     sources: list[SourceBinding] = Field(default_factory=list, max_length=20)
     base_artifact_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     base_revision: int | None = Field(default=None, ge=1)
@@ -107,6 +115,12 @@ def verify_token(
         from hub.artifact_chat import verify as verify_chat
 
         verify_chat(db, project_id, metadata["chat_source"], conversation_id=conversation_id)
+    from hub.artifact_skill_binding import verify as verify_skills
+
+    verify_skills(db, project_id, metadata.get("skills", []))
+    actual_template = spec.template.model_dump(mode="json") if spec.template else None
+    if actual_template != metadata.get("template"):
+        raise ValueError("Vorlagenbindung des Dateientwurfs wurde verändert")
     provider = metadata["provider"]
     base = metadata.get("base")
     if base:
@@ -203,6 +217,21 @@ async def preview(
         }
     )
     source_parts: list[ContextPart] = []
+    skill_records: list[dict[str, Any]] = []
+    selected_template = None
+    with factory() as db:
+        if body.skill_bindings:
+            from hub.artifact_skill_binding import context as skill_context
+
+            skill_parts, selected_template, skill_records = skill_context(
+                db,
+                cfg,
+                project_id,
+                [item.model_dump() for item in body.skill_bindings],
+                body.kind,
+                body.goal,
+            )
+            source_parts.extend(skill_parts)
     citations: list[dict[str, Any]] = []
     web_research = None
     if research_id is not None:
@@ -244,6 +273,9 @@ async def preview(
             ):
                 raise ValueError("Ausgangsversion nicht aktuell")
             original = spec_for(row)
+            if not body.skill_bindings:
+                selected_template = original.template
+                skill_records = json.loads(row.draft_metadata or "{}").get("skills", [])
             if original.plan.kind != body.kind or list(original.sources) != list(body.sources):
                 raise ValueError("Ausgangsformat und Quellenbindung beibehalten")
             base = {
@@ -371,6 +403,22 @@ async def preview(
             '"bullets":["Stichpunkt"],"notes":"Sprechernotiz"}]}'
         )
     )
+    if body.kind == "xlsx":
+        shape = (
+            '{"title":"Titel","sheets":[{"name":"Tabelle",'
+            '"columns":["Spalte","Wert"],"rows":[["Beispiel",12.5]]}]}'
+        )
+    if (
+        selected_template
+        and body.kind == "docx"
+        and "letter" in selected_template.asset_path.lower()
+    ):
+        shape = (
+            '{"title":"Betreff","letter":{"recipient":["Name","Straße","PLZ Ort"],'
+            '"sender":[],"subject":"Betreff","date":"Datum","salutation":"Anrede",'
+            '"signature":["[Unterzeichner ergänzen]"]},"sections":[{"heading":"Brieftext",'
+            '"paragraphs":["Text"],"table":[]}]}'
+        )
     if transform:
         shape = (
             '{"title":"Titel","pages":[{"source":0,"page":2,"rotation":90}]}'
@@ -395,6 +443,10 @@ async def preview(
         "DOCX paragraphs max4000 characters, max30 per section, max29 sections; "
         "tables rectangular with 1..6 columns, max30 rows, each cell max160. "
         "PPTX bullets 1..5 per slide, each max140 characters, notes max3500. "
+        "XLSX sheets1..10, each rows1..200 and columns1..20, cell textmax1000 or finite number; "
+        "no macros or formula code. Letter fields must come from the user; "
+        "never copy sample addresses or invent recipients/signatures. Missing required data "
+        "must remain explicit placeholders. "
         "Do not add a kind, sources, provenance or command field. "
         + ("Exactly " + str(body.slide_count) + " slides." if body.kind == "pptx" else "")
         + (
@@ -512,7 +564,13 @@ async def preview(
             )
     value["kind"] = body.kind
     spec = ArtifactSpec.model_validate(
-        {"plan": value, "sources": [s.model_dump(mode="json") for s in body.sources]}
+        {
+            "plan": value,
+            "sources": [s.model_dump(mode="json") for s in body.sources],
+            **(
+                {"template": selected_template.model_dump(mode="json")} if selected_template else {}
+            ),
+        }
     )
     if spec.plan.kind == "pdf" and transform and not spec.plan.pages:
         raise ValueError("PDF-Seitenoperation darf keinen neuen Textinhalt erzeugen")
@@ -539,7 +597,13 @@ async def preview(
                 slide.get("notes", "") + "\nVerwendete Auszüge:\n" + "\n".join(references)
             )
     spec = ArtifactSpec.model_validate(
-        {"plan": value, "sources": [s.model_dump(mode="json") for s in body.sources]}
+        {
+            "plan": value,
+            "sources": [s.model_dump(mode="json") for s in body.sources],
+            **(
+                {"template": selected_template.model_dump(mode="json")} if selected_template else {}
+            ),
+        }
     )
     if (
         body.target_slide is not None
@@ -567,6 +631,9 @@ async def preview(
             from hub.artifact_research import verify
 
             verify(db, web_research, project_id, conversation_id=conversation_id)
+        from hub.artifact_skill_binding import verify as verify_skills
+
+        verify_skills(db, project_id, skill_records)
         current_owner = owner(db, project_id, conversation_id)
         if isinstance(current_owner, Project) and current_owner.revision != project_revision:
             raise ValueError("Projekt inzwischen geändert")
@@ -588,6 +655,8 @@ async def preview(
         "project_revision": project_revision,
         "sources": [s.model_dump(mode="json") for s in body.sources],
         "citations": citations,
+        "skills": skill_records,
+        "template": selected_template.model_dump(mode="json") if selected_template else None,
         **({"chat_source": chat_receipt} if chat_receipt else {}),
         **({"web_research": web_research} if web_research else {}),
         "slide_count": body.slide_count,

@@ -50,7 +50,7 @@ class PdfPart(BaseModel):
 
 class OutputManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    filename: str = Field(pattern=r"^artifact\.(docx|pptx|pdf|png|jpeg|zip)$")
+    filename: str = Field(pattern=r"^artifact\.(docx|pptx|xlsx|pdf|png|jpeg|zip)$")
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     bytes: int = Field(gt=0, le=MAX_OUTPUT)
     label: str = Field(pattern=r"^LOCAL_ONLY$")
@@ -118,6 +118,24 @@ def bind_sources(
         if total > 100 * 1024 * 1024 or path.stat().st_size > MAX_INPUT:
             raise ValueError("Maximal 100 MiB gebundene Quellen je Artefakt")
         paths.append(path)
+    if spec.template:
+        from hub.db import Skill
+        from hub.skill_bundles import resolve_template
+
+        skill = db.get(Skill, spec.template.skill_id)
+        if not skill or (skill.project_id is not None and skill.project_id != project_id):
+            raise ValueError("Vorlage gehört zu einem anderen Projektraum")
+        template = resolve_template(
+            db,
+            cfg,
+            spec.template.skill_id,
+            spec.template.revision,
+            spec.template.bundle_sha256,
+            spec.template.asset_path,
+        )
+        if hashlib.sha256(template.read_bytes()).hexdigest() != spec.template.asset_sha256:
+            raise ValueError("Vorlagendatei wurde verändert")
+        paths.append(template)
     return paths
 
 
@@ -167,7 +185,7 @@ def spool(db: Session, cfg: Settings, artifact: Artifact, row: ArtifactRevision)
 def output_file(cfg: Settings, row: ArtifactRevision, filename: str, sha256: str) -> Path:
     _, results = roots(cfg)
     pattern = (
-        r"artifact\.(docx|pptx|pdf|png|jpeg|zip)|previews/page-[0-9]{1,3}\.png|"
+        r"artifact\.(docx|pptx|xlsx|pdf|png|jpeg|zip)|previews/page-[0-9]{1,3}\.png|"
         r"previews/artifact\.pdf|parts/part-[0-9]{1,2}\.pdf"
     )
     if not re.fullmatch(pattern, filename):

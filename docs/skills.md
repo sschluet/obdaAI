@@ -25,14 +25,47 @@ gezielte manuelle Auswahl; fremde Projektskills werden abgewiesen.
 
 ## Dateien und Prüfung
 
-Import unterstützt einzelne `.md`/`.markdown`-Anleitungen mit begrenztem YAML-
-Frontmatter sowie das bisherige JSON-Frontmatter. Der Grundaufbau mit `name` und
-`description` entspricht der offiziellen
+Import unterstützt einzelne `.md`/`.markdown`-Anleitungen bis 64 KiB sowie
+`.zip`- und `.skill`-Pakete bis 20 MiB. Pakete enthalten eine `SKILL.md`,
+Referenztexte, Bilder und Office-Vorlagen. Ein Upload wird zunächst als lokaler,
+inaktiver Entwurf mit Verwendung **Bei Erwähnung** gespeichert; Cloudfreigabe
+bleibt ausgeschaltet. Name, Beschreibung, Anleitung, Abhängigkeiten und enthaltene
+Dateien sind vor der Aktivierung sichtbar. YAML-Beschreibungen mit einem
+ungeschützten Doppelpunkt können für den Import normalisiert werden; die App
+zeigt diese Änderung an und erhält das Originalpaket unverändert.
+
+Die Grundstruktur mit `name` und `description` entspricht der
 [Claude-Skill-Dokumentation](https://support.claude.com/en/articles/12512198-how-to-create-custom-skills).
-ZIP-Pakete, Skripte, Ressourcen, Abhängigkeiten oder fremde Werkzeugrechte werden
-nicht ausgeführt oder automatisch übernommen. YAML-Tags, Aliase, zusätzliche
-Rechte und unbekannte Metadaten bleiben ungültig. Das ist eine Verwaltung einzelner
-Anleitungen, keine vollständige Implementierung ausführbarer Claude-Skillpakete.
+Importierte Inhalte werden als Benutzeranleitungen behandelt und verleihen
+keine Werkzeugrechte. Archivpfade, entpackte Größen, Dateianzahl und Office-Inhalte
+werden geprüft; verschlüsselte Archive, Pfadtraversierung und Makrodateien werden
+abgewiesen. Skripte werden archiviert und können heruntergeladen werden,
+**werden jedoch nicht ausgeführt**. Claude-spezifische Werkzeugaufrufe müssen
+durch die unterstützte obdaAI-Dateipipeline abgedeckt sein. YAML-Tags und Aliase
+bleiben ungültig.
+
+### Vorlagen und Ressourcen
+
+Im Skill-Editor zeigt **Vorlagen & Ressourcen** alle Paketdateien mit Typ und Größe.
+Einzeldateien und das unveränderte Originalpaket lassen sich herunterladen.
+Downloads sind an Skill-ID, Revision, Dateipfad und SHA-256 gebunden. Änderungen
+an der Anleitung behalten die Paketzuordnung; historische Revisionen behalten
+ihre ursprünglichen Ressourcen.
+
+Bei der Dateierstellung werden Office-Master aus aktivierten und ausgewählten
+Skills tatsächlich als Vorlage verwendet. Die Vorlage und ihre Revision werden
+an den Dateientwurf gebunden. Word übernimmt Dokumentstruktur und Formatvorlagen;
+PowerPoint nutzt den vorhandenen Master und seine Folienlayouts. Dateien bleiben
+zunächst Entwürfe mit Vorschau und werden erst nach Annahme zum Download
+freigegeben. Ein Import allein macht fremde Skripte, Makros oder nicht unterstützte
+Arbeitsabläufe nicht ausführbar.
+
+Basis- und Gestaltungsskills können gemeinsam gewählt werden. Eine optionale
+Gestaltungslinie ersetzt den zugrunde liegenden Präsentationsmaster nicht. Ein
+archivierter Altstand sollte deaktiviert bleiben, damit neue Anfragen nicht
+versehentlich zwei unterschiedliche Master auswählen. **Bei Erwähnung** oder
+aufgabenbezogene Stichwörter verhindern, dass ein Dokument- oder persönlicher
+Schreibstil in sachfremden Antworten angewendet wird.
 
 ```markdown
 ---
@@ -50,7 +83,7 @@ Aktivierung. Bearbeitung entfernt die bisherige Aktivierung und erzeugt eine
 unveränderliche neue Revision. Veraltete Revisionen oder Hashes führen zu 409.
 Ungespeicherte Editor- und Rohdateiänderungen bleiben beim Schließen geschützt;
 ein ausdrückliches Verwerfen ist erforderlich. Export liefert das portable
-`*-SKILL.md`, ohne Schlüssel, Toolrechte oder lokale
+`*-SKILL.md`; bei Paketen sind zusätzlich Original und Ressourcen verfügbar, ohne Schlüssel, Toolrechte oder lokale
 Projekt-IDs. Import übernimmt keine lokale Aktivierung oder Vertrauensentscheidung.
 
 Skills starten lokal. Die ausdrückliche Option **Diese Anleitung darf auch an das
@@ -73,3 +106,7 @@ Downgrade bei archivierten Einträgen. Die grundlegende Skillmigration 0013 und 
 Vertrauens-/Scopesperren bleiben wirksam. API-, Parser-, Auswahl-, Revisions-,
 Cloud- und Browserprüfungen verwenden synthetische Dateien. Historische echte
 lokale Modelltests sowie neue releasegebundene Abnahmen sind in STATUS dokumentiert.
+
+Der dedizierte Uploadendpunkt `/api/skills/import-package` erhält in den beiden
+Nginx-Vorlagen ein eigenes 20-MiB-Limit. Die allgemeine 1-MiB-Grenze und die
+separate 40-MiB-Grenze für Projektquellen bleiben bestehen.

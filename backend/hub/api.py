@@ -178,7 +178,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_paperless_import_api(app, cfg, factory)
     install_use_case_api(app, cfg, factory)
     install_use_case_designer(app, cfg, factory)
-    install_skill_api(app, factory)
+    install_skill_api(app, factory, cfg)
     install_task_api(app, cfg, factory)
     from hub.task_writes import install_task_writes
 

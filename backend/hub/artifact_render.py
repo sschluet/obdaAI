@@ -19,23 +19,35 @@ from hub.artifact_specs import (
     ImagePlan,
     PdfPlan,
     PresentationPlan,
+    SpreadsheetPlan,
 )
+from hub.template_render import document as template_document
+from hub.template_render import presentation as template_presentation
 
 MAX_INPUT = 20 * 1024 * 1024
 MAX_OUTPUT = 40 * 1024 * 1024
 
 
 def verified_inputs(spec: ArtifactSpec, inputs: list[Path]) -> list[Path]:
-    if len(inputs) != len(spec.sources):
+    if len(inputs) != len(spec.sources) + bool(spec.template):
         raise ValueError("Quellenbindung unvollständig")
-    for binding, path in zip(spec.sources, inputs, strict=True):
+    source_inputs = inputs[: len(spec.sources)]
+    for binding, path in zip(spec.sources, source_inputs, strict=True):
         if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
             raise ValueError("Verknüpfte Quelldatei nicht erlaubt")
         if not path.is_file() or not 0 < path.stat().st_size <= MAX_INPUT:
             raise ValueError("Ungültige Quellengröße")
         if hashlib.sha256(path.read_bytes()).hexdigest() != binding.sha256:
             raise ValueError("Quelldatei wurde verändert")
-    return inputs
+    if spec.template:
+        path = inputs[-1]
+        if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
+            raise ValueError("Verknüpfte Vorlagendatei nicht erlaubt")
+        if not path.is_file() or not 0 < path.stat().st_size <= MAX_INPUT:
+            raise ValueError("Ungültige Vorlagengröße")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != spec.template.asset_sha256:
+            raise ValueError("Vorlage wurde verändert")
+    return source_inputs
 
 
 def _document(plan: DocumentPlan, path: Path, inputs: list[Path]) -> None:
@@ -290,13 +302,64 @@ def _image(plan: ImagePlan, inputs: list[Path], path: Path) -> None:
         check.verify()
 
 
+def _spreadsheet(plan: SpreadsheetPlan, path: Path) -> None:
+    from openpyxl import Workbook, load_workbook  # type: ignore[import-untyped]
+    from openpyxl.styles import (  # type: ignore[import-untyped]
+        Alignment,
+        Border,
+        Font,
+        PatternFill,
+        Side,
+    )
+    from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
+
+    book = Workbook()
+    book.remove(book.active)
+    for item in plan.sheets:
+        sheet = book.create_sheet(item.name)
+        sheet.append(item.columns)
+        for row in item.rows:
+            sheet.append(row)
+        for row in sheet:
+            for cell in row:
+                # Model strings remain literal cells, never formulas/external links.
+                if isinstance(cell.value, str):
+                    cell.data_type = "s"
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
+                cell.font = Font(name="Liberation Sans", size=11, color="020623")
+        for cell in sheet[1]:
+            cell.border = Border(bottom=Side(style="medium", color="E6531F"))
+            cell.fill = PatternFill("solid", fgColor="020623")
+            cell.font = Font(name="Liberation Sans", size=11, bold=True, color="FFFFFF")
+        for index, column in enumerate(item.columns, 1):
+            sheet.column_dimensions[get_column_letter(index)].width = min(
+                48, max(16, len(column) + 4)
+            )
+        sheet.freeze_panes = "A2"
+        sheet.auto_filter.ref = sheet.dimensions
+        sheet.sheet_properties.pageSetUpPr.fitToPage = True
+        sheet.page_setup.orientation = "landscape"
+        sheet.page_setup.paperSize = sheet.PAPERSIZE_A4
+        sheet.page_setup.fitToWidth = 1
+        sheet.page_setup.fitToHeight = 0
+        sheet.print_title_rows = "1:1"
+    book.properties.title, book.properties.creator = plan.title, "obdaAI"
+    book.save(str(path))
+    check = load_workbook(path, read_only=True, data_only=False)
+    try:
+        if check.sheetnames != [item.name for item in plan.sheets]:
+            raise ValueError("Excel-Dateiprüfung fehlgeschlagen")
+    finally:
+        check.close()
+
+
 def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, Any]:
     """Write into a fresh private directory, never overwrite an existing version.
 
     The caller supplies only server-bound input paths and a new job output directory.
     No title, model parameter or source value becomes a filesystem path.
     """
-    verified_inputs(spec, inputs)
+    source_inputs = verified_inputs(spec, inputs)
     if output.exists() or output.is_symlink() or any(p.is_symlink() for p in output.parents):
         raise ValueError("Ausgabeversion existiert bereits")
     output.mkdir(mode=0o700)
@@ -307,9 +370,17 @@ def render(spec: ArtifactSpec, inputs: list[Path], output: Path) -> dict[str, An
     path = output / ("artifact." + suffix)
     try:
         if isinstance(plan, DocumentPlan):
-            _document(plan, path, inputs)
+            if spec.template:
+                template_document(plan, path, inputs[-1], source_inputs)
+            else:
+                _document(plan, path, source_inputs)
         elif isinstance(plan, PresentationPlan):
-            _presentation(plan, path)
+            if spec.template:
+                template_presentation(plan, path, inputs[-1], spec.template.style == "modern")
+            else:
+                _presentation(plan, path)
+        elif isinstance(plan, SpreadsheetPlan):
+            _spreadsheet(plan, path)
         elif isinstance(plan, PdfPlan):
             if split:
                 # The joined PDF is only the ordered review surface. Downloads

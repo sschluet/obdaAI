@@ -151,7 +151,10 @@ async def synthetic_artifact(factory, cfg, artifact_id, revision):
             fixture_preview.office_pdf = synthetic_pdf
         manifest = render(
             spec,
-            [request / ("source-" + str(i)) for i in range(len(spec.sources))],
+            [
+                request / ("source-" + str(i))
+                for i in range(len(spec.sources) + bool(spec.template))
+            ],
             output / "version",
         )
         manifest["spec_sha256"] = row.spec_sha256
@@ -288,6 +291,19 @@ class SyntheticProvider:
                         "pages": [{"source": 0, "page": 2, "rotation": 90}],
                     }
                 )
+            elif '"sheets"' in parts[0].content:
+                yield json.dumps(
+                    {
+                        "title": "Synthetic local spreadsheet",
+                        "sheets": [
+                            {
+                                "name": "Overview",
+                                "columns": ["Item", "Value"],
+                                "rows": [["Synthetic", 42], ["Reviewed", True]],
+                            }
+                        ],
+                    }
+                )
             elif '"slides"' in parts[0].content:
                 import re
 
@@ -309,6 +325,24 @@ class SyntheticProvider:
                 yield json.dumps(
                     {
                         "title": "Synthetic local document draft",
+                        **(
+                            {
+                                "letter": {
+                                    "recipient": [
+                                        "Synthetic recipient",
+                                        "Example street 1",
+                                        "12345 Example city",
+                                    ],
+                                    "sender": ["Synthetic sender"],
+                                    "subject": "Synthetic letter",
+                                    "date": "2026-10-12",
+                                    "salutation": "Guten Tag,",
+                                    "signature": ["Synthetic sender"],
+                                }
+                            }
+                            if '"letter"' in parts[0].content
+                            else {}
+                        ),
                         "sections": [
                             {
                                 "heading": "Draft result",
@@ -373,10 +407,12 @@ def fixture_completion(body: dict[str, object]) -> dict[str, object] | Streaming
         ):
             raise HTTPException(400, "Synthetic endpoint only supports the bounded model probe")
         return StreamingResponse(
-            iter([
-                'data: {"choices":[{"delta":{"content":"4"}}]}\n\n',
-                "data: [DONE]\n\n",
-            ]),
+            iter(
+                [
+                    'data: {"choices":[{"delta":{"content":"4"}}]}\n\n',
+                    "data: [DONE]\n\n",
+                ]
+            ),
             media_type="text/event-stream",
         )
     return {

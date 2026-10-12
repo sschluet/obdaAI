@@ -170,13 +170,13 @@
     {
       "id": "skills",
       "title": "Deine Skill-Bibliothek",
-      "description": "Anleitungen suchen, prüfen und mit klaren Verwendungsarten organisieren. Ausschließlich synthetische Beispielskills.",
+      "description": "Anleitungen und Skill-Pakete mit Vorlagen organisieren und gezielt einsetzen. Ausschließlich synthetische Beispielskills.",
       "image": "assets/skills.png"
     },
     {
       "id": "skilleditor",
-      "title": "Skill-Dateien einfach bearbeiten",
-      "description": "Strukturierter Editor, Markdown-Vorschau und direkte Wahl zwischen Standardverwendung, Erwähnung und Stichwörtern. Ausschließlich synthetische Inhalte.",
+      "title": "Vorlagen und Ressourcen im Skill",
+      "description": "Paketdateien, Word-Vorlage und archivierte Helfer im Editor prüfen. Ausschließlich ein generiertes synthetisches Beispielpaket.",
       "image": "assets/skilleditor.png"
     },
     {
@@ -555,7 +555,7 @@
       "features": [
         {
           "title": "Versionierte Skills",
-          "description": "Intuitive Skill-Bibliothek mit Suche, Vorlagen, strukturiertem Editor, Markdown-Vorschau und geprüften Revisionen. Verwendungsarten Immer, Bei Erwähnung und Nach Stichwort; Cloudfreigabe je geprüfter Anleitung. Einzelne SKILL.md-Dateien importieren/exportieren, Entwürfe schützen und archivieren. Kein ausführbarer Code oder Rechte aus Importen. Neue Oberfläche auf der Test-VM geprüft: Skill erstellt, geprüft und aktiviert, per Chatpicker aufgerufen und vom echten lokalen Modell befolgt. Revision, Verlauf und Reload bestätigt. Import wartet auf abgeschlossene Speichervorgänge.",
+          "description": "Skill-Bibliothek mit Suche, Markdown-Editor und geprüften Revisionen. Einzelne SKILL.md-Dateien sowie ZIP-/Skill-Pakete mit Office-Vorlagen, Bildern und Referenzen importieren. Paketdateien, Abhängigkeiten und Importhinweise im Editor prüfen; Originale bleiben lokal und unverändert. Verwendung Immer, Bei Erwähnung oder Nach Stichwort; Cloudfreigabe je Anleitung. Skripte werden archiviert und nicht ausgeführt. Vorlagen für die Dateierstellung sind an die geprüfte Skillrevision gebunden. Releasegebundene Abnahme der neuen Paket- und Vorlagenfunktionen folgt.",
           "status": "live"
         },
         {

@@ -41,3 +41,7 @@ HA-Backup-Leseadapter: websockets 17.1, BSD-3-Clause, gepinnt mit Lock/Hashes.
 Offizielle Herkunft https://pypi.org/project/websockets/17.1/ und API
 https://websockets.readthedocs.io/en/stable/reference/sync/client.html .
 Kein generischer WebSocketzugang; fester Host, geprüfter Socket, minimale Kommandos.
+
+Office-Dateirunner: LibreOffice Writer, Impress und Calc erstellen lokale PDF-/PNG-
+Vorschauen für DOCX, PPTX und XLSX. Calc ergänzt die bestehende isolierte Runtime;
+keine Office-Makros oder importierten Skillskripte werden ausgeführt.

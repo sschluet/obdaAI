@@ -1,5 +1,27 @@
 # obdaAI — Status 12.10.2026
 
+## Skill-Pakete und echte Office-Vorlagen – Entwicklung, 12.10.2026
+
+Private ZIP/.skill-Pakete mit unveränderten Originalen, revisionierten Manifesten,
+Referenzen und Vorlagen. Importierte Helferskripte bleiben archivierte Daten;
+fest implementierte Offline-Adapter erzeugen Dateien aus validierten Datenplänen.
+Schema0042 ergänzt Paketbelege. Aktive geprüfte Skillrevision, Dokument-/Paket- und
+Vorlagenhash, Projektscope und Entwurfstoken werden vor Planung und Dispatch geprüft.
+Lange Anleitungen als begrenzte aufgabenbezogene Auszüge, niemals automatische
+Cloudfreigabe. Moderne Gestaltung bindet genau einen geprüften Basis-Skill.
+
+DOTX/DOCX nutzt echte Vorlagen: Deckblatt/Rückseite, Kopf-/Fußzeilen und Formatvorlagen;
+Briefangaben separat editierbar. POTX/PPTX verwendet enthaltene Master/Layouts;
+moderne Gestaltung optional. XLSX-Datenpläne erzeugen echte numerische Zellen und
+lokale Vorschauen via Calc; Zeichenfolgen bleiben literal, keine Formel-/Makroausführung.
+Paketressourcen und unveränderte Originale authentifiziert herunterladbar. Upload
+20MiB spezifischer Route, sonstige Proxygrenzen und Ziel-/Zugriffsregeln unverändert.
+
+Synthetische API-/Render-/Browserprüfungen einschließlich gebundenem Master und
+Folgeversion bestanden. Linux-/PostgreSQL-/vollständige CI und produktive Abnahme
+stehen vor Rollout noch aus. Private Nutzerpakete oder Ausgaben sind kein öffentlicher
+Testinhalt. V1 bleibt partiell; keine vollständige Claude-Code-/Werkzeugemulation.
+
 ## Lokale OCR gescannter Quellen – Test-VM geprüft, 12.10.2026
 
 Fehlerdiagnose identifiziert das bisherige OCR-Seitenlimit30Sekunden als Hürde

@@ -245,3 +245,4 @@ try{
  console.error('Runtime errors:',errors);
  throw e;
 }finally{await browser.close()}
+await import('./artifact-skills-check.mjs');

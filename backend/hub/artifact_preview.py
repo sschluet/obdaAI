@@ -48,7 +48,7 @@ def previews(path: Path) -> list[dict[str, Any]]:
             ImageOps.contain(image, (1200, 1200)).save(folder / "page-1.png")
     else:
         pdf = path
-        if path.suffix in {".docx", ".pptx"}:
+        if path.suffix in {".docx", ".pptx", ".xlsx"}:
             pdf = office_pdf(path, folder)
         elif path.suffix != ".pdf":
             raise ValueError("Vorschauformat nicht unterstützt")
