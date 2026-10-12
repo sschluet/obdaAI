@@ -150,6 +150,12 @@ def test_real_file_review_download_replay_and_immutable_versions(setup):
     assert c.get(base(pid, row) + "/download").status_code == 409
     ready = pump(app, c, cfg, pid, row)
     assert ready["status"] == "needs_review"
+    direct = c.get(base(pid, ready) + "/download")
+    assert direct.status_code == 200
+    assert hashlib.sha256(direct.content).hexdigest() == ready["output"]["sha256"]
+    with app.state.sessions() as db:
+        pending = db.get(ArtifactRevision, (ready["artifact_id"], 1))
+        assert pending.status == "needs_review" and pending.accepted is None
     preview = c.get(base(pid, ready) + "/preview/1")
     assert preview.content.startswith(b"\x89PNG") and preview.headers["cache-control"] == "no-store"
     assert (
@@ -184,6 +190,22 @@ def test_real_file_review_download_replay_and_immutable_versions(setup):
     assert c.post(base(pid, ready) + "/cancel", headers=h).status_code == 409
 
 
+
+@pytest.mark.parametrize("status", ["queued", "rendering", "failed", "cancelled"])
+def test_non_ready_versions_cannot_download_even_with_valid_manifest(setup, status):
+    app, c, h, cfg, pid, spec = setup
+    ready = pump(app, c, cfg, pid, create(c, h, pid, spec).json())
+    # Queued/rendering reconcile a legitimate result; remove the runner receipt
+    # to model an interrupted job, retaining its stale database manifest.
+    receipt = Path(cfg.artifact_result_dir) / (ready["artifact_id"] + "-1") / "manifest.json"
+    receipt.unlink()
+    with app.state.sessions() as db:
+        row = db.get(ArtifactRevision, (ready["artifact_id"], 1))
+        row.status = status
+        db.commit()
+    assert c.get(base(pid, ready) + "/download").status_code == 409
+
+
 def test_output_drift_and_stale_sources_prevent_acceptance(setup):
     app, c, h, cfg, pid, spec = setup
     ready = pump(app, c, cfg, pid, create(c, h, pid, spec).json())
@@ -191,6 +213,7 @@ def test_output_drift_and_stale_sources_prevent_acceptance(setup):
         source = db.get(Source, spec["sources"][0]["id"])
         source.revision += 1
         db.commit()
+    assert c.get(base(pid, ready) + "/download").status_code == 409
     assert (
         c.post(base(pid, ready) + "/accept", headers=h, json=acceptance(ready)).status_code == 409
     )
@@ -276,7 +299,7 @@ def test_waiting_artifact_transaction_does_not_freeze_health(setup, monkeypatch)
         assert result.result(timeout=3).status_code == 200
 
 
-def test_optional_pdf_export_shares_review_gate_and_detects_drift(setup, monkeypatch):
+def test_optional_pdf_export_downloads_without_review_and_detects_drift(setup, monkeypatch):
     from pypdf import PdfWriter
 
     app, c, h, cfg, pid, _ = setup
@@ -325,7 +348,7 @@ def test_optional_pdf_export_shares_review_gate_and_detects_drift(setup, monkeyp
         if r["artifact_id"] == row["artifact_id"]
     )
     assert ready["status"] == "needs_review"
-    assert c.get(base(pid, row) + "/download?pdf=true").status_code == 409
+    assert c.get(base(pid, row) + "/download?pdf=true").status_code == 200
     assert c.post(base(pid, row) + "/accept", headers=h, json=acceptance(ready)).status_code == 200
     response = c.get(base(pid, row) + "/download?pdf=true")
     assert response.status_code == 200 and response.content == pdf.read_bytes()
@@ -339,7 +362,7 @@ def test_optional_pdf_export_shares_review_gate_and_detects_drift(setup, monkeyp
     assert c.get(base(pid, row) + "/download").status_code == 409
 
 
-def test_pdf_parts_require_full_review_and_reject_archive_or_piece_drift(setup, tmp_path):
+def test_pdf_parts_download_without_review_and_reject_archive_or_piece_drift(setup, tmp_path):
     import io
     import zipfile
 
@@ -382,7 +405,7 @@ def test_pdf_parts_require_full_review_and_reject_archive_or_piece_drift(setup, 
     ready = pump(app, c, cfg, pid, row)
     assert ready["status"] == "needs_review"
     prefix = base(pid, ready)
-    assert c.get(prefix + "/download?part=1").status_code == 409
+    assert c.get(prefix + "/download?part=1").status_code == 200
     assert c.post(prefix + "/accept", headers=h, json=acceptance(ready, False)).status_code == 409
     assert c.post(prefix + "/accept", headers=h, json=acceptance(ready)).status_code == 200
     package = c.get(prefix + "/download")

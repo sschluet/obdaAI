@@ -152,4 +152,4 @@ def test_no_auto_match_and_cloud_privacy_of_skills(setup):
     assert snapshot(app, chat)["skills"] == []
     send(c, h, chat)
     assert snapshot(app, chat)["parts"][-1]["label"] == "LOCAL_ONLY"
-    assert not any(provider.stream_calls)
+    assert provider.stream_calls == [True, False]

@@ -7,6 +7,7 @@ import uuid
 from pathlib import PurePath
 from typing import Any
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,23 @@ from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import digest, spec_for
 from hub.db import Artifact, ArtifactRevision, Conversation, Message, Run, SkillRevision, Source
 from hub.skill_api import parse
+
+
+def explicit_file_request(goal: str) -> bool:
+    """A concrete creation command with a supported format, not a format mention."""
+    if not re.search(
+        r"\b(?:erstelle|erzeuge|generiere|verfasse|schreibe|create|generate|make|write)\b",
+        goal,
+        re.I,
+    ):
+        return False
+    if re.search(r"\b(?:sende|send|lösche|delete|installiere|install|deploy)\b", goal, re.I):
+        return False
+    try:
+        request_format(goal)
+    except ValueError:
+        return False
+    return True
 
 
 def artifact_clarification(goal: str) -> str | None:
@@ -361,8 +379,76 @@ def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
     return formats[0], int(counts[0]) if counts else default_slide_count
 
 
+async def preview_chat(
+    factory: Any,
+    cfg: Any,
+    run_id: str,
+    project_id: str | None,
+    body: DraftInput,
+    provider: Any,
+    *,
+    research_id: str | None,
+    conversation_id: str | None,
+    provider_kind: str,
+) -> dict[str, Any]:
+    """Auto can recreate a data plan locally after a cloud transport failure only."""
+    options = dict(research_id=research_id, conversation_id=conversation_id)
+    try:
+        return await preview(
+            factory,
+            cfg,
+            project_id,
+            body,
+            provider,
+            **options,
+            cloud_run_id=run_id if provider_kind != "local" else None,
+            provider_kind=provider_kind,
+        )
+    except (httpx.TransportError, httpx.HTTPStatusError) as error:
+        transient = isinstance(error, httpx.TransportError) or (
+            isinstance(error, httpx.HTTPStatusError)
+            and (error.response.status_code == 429 or error.response.status_code >= 500)
+        )
+        if provider_kind == "local" or not transient:
+            raise
+        with factory() as db:
+            run = db.scalar(select(Run).where(Run.id == run_id).with_for_update())
+            snapshot = json.loads(run.context_snapshot or "{}") if run else {}
+            if (
+                not run
+                or run.status != "routing"
+                or run.cancel_requested
+                or snapshot.get("model_cloud_only")
+            ):
+                raise
+            snapshot["artifact_planning_fallback"] = {
+                "from": provider_kind,
+                "to": "local",
+                "reason": "Cloud-Dateiplan wegen Verbindungsfehler nicht verfügbar",
+            }
+            run.context_snapshot = json.dumps(snapshot, ensure_ascii=False)
+            db.commit()
+        # No artifact has been committed at this point. The failed cloud attempt's
+        # budget/usage remains on Run; a fresh local plan uses the same bound input.
+        return await preview(
+            factory,
+            cfg,
+            project_id,
+            body,
+            provider,
+            **options,
+            provider_kind="local",
+        )
+
+
 async def create_from_chat(
-    factory: Any, cfg: Any, run_id: str, provider: Any = None, *, research_id: str | None = None
+    factory: Any,
+    cfg: Any,
+    run_id: str,
+    provider: Any = None,
+    *,
+    research_id: str | None = None,
+    provider_kind: str = "local",
 ) -> dict[str, Any]:
     with factory() as db:
         run = db.get(Run, run_id)
@@ -514,14 +600,25 @@ async def create_from_chat(
         base_artifact_id=base.artifact_id if base else None,
         base_revision=base.revision if base else None,
     )
-    proposal = await preview(
+    if provider_kind != "local":
+        private_binding = bool(
+            project_id or body.sources or body.chat_source or body.base_artifact_id
+        )
+        with factory() as db:
+            current = db.get(Run, run_id)
+            cloud_only = bool(json.loads(current.context_snapshot or "{}").get("model_cloud_only"))
+        if private_binding and not cloud_only:
+            provider_kind = "local"
+    proposal = await preview_chat(
         factory,
         cfg,
+        run_id,
         project_id,
         body,
         provider,
         research_id=research_id,
         conversation_id=chat_id if project_id is None else None,
+        provider_kind=provider_kind,
     )
     proposed = ArtifactSpec.model_validate(proposal["spec"])
     if targets and original and original.plan.kind == "pptx" and proposed.plan.kind == "pptx":
@@ -586,9 +683,14 @@ async def create_from_chat(
             "sources": [source.model_dump(mode="json") for source in sources],
             "requires_review": True,
             "base_revision": base.revision if base else None,
+            **(
+                {"planning_fallback": snapshot["artifact_planning_fallback"]}
+                if snapshot.get("artifact_planning_fallback")
+                else {}
+            ),
         }
         current.context_snapshot = json.dumps(snapshot, ensure_ascii=False)
-        current.provider = "local"
+        current.provider = proposal["provider"]["kind"]
         current.model = proposal["provider"]["model"]
         current.provider_revision = proposal["provider"]["revision"]
 

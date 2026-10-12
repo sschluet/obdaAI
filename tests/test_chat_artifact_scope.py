@@ -234,7 +234,7 @@ def test_chat_preview_accept_download_immutable_revision_and_private_headers(set
     preview_file = c.get(path + "/preview/1")
     assert preview_file.status_code == 200 and preview_file.headers["cache-control"] == "no-store"
     assert c.get(path.replace(cid, other) + "/preview/1").status_code == 404
-    assert c.get(path + "/download").status_code == 409
+    assert c.get(path + "/download").status_code == 200
     assert (
         c.post(
             path + "/accept", headers=h, json=test_artifact_api.acceptance(row, False)

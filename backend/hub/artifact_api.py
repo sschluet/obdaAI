@@ -450,10 +450,13 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
         with factory() as db:
             ownership_lock(db)
             row = row_for(db, project_id, artifact_id, revision, conversation_id)
-            if row.status != "published" or not row.manifest:
-                raise HTTPException(409, "Vorschau erst prüfen und Dateiversion freigeben")
+            reconcile(db, cfg, row)
+            if row.status not in {"needs_review", "published"} or not row.manifest:
+                raise HTTPException(409, "Datei und Vorschau sind noch nicht vollständig erstellt")
             try:
                 manifest = checked_manifest(cfg, row, row.manifest)
+                bind_sources(db, cfg, project_id, spec_for(row), conversation_id=conversation_id)
+                db.commit()
                 if pdf and not manifest.pdf_export:
                     raise HTTPException(404, "Für diese Version wurde kein PDF-Export erstellt")
                 if part is not None and (pdf or not 1 <= part <= len(manifest.parts)):

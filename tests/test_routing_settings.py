@@ -3,7 +3,7 @@ import json
 
 import pytest
 from hub.db import Run
-from hub.routing_settings import RoutingOptions, decision
+from hub.routing_settings import RoutingOptions, decision, very_simple_request
 from sqlalchemy import select
 
 pytest_plugins = ["test_chat"]
@@ -44,7 +44,7 @@ def test_strategy_and_switch_choices():
                 model_local_only=False, private_context=False)
     assert decision(PROMPT, {"strategy": "local_first"}, **args)["policy_model_class"] == "local"
     assert decision(PROMPT, {"strategy": "balanced", "complex_research_cloud": False},
-                    **args)["policy_model_class"] == "local"
+                    **args)["policy_model_class"] == "cloud"
     assert decision("Hallo", {"strategy": "cloud_first"}, **args)["policy_model_class"] == "cloud"
 
 
@@ -130,3 +130,47 @@ def test_explicit_cloud_scope_covers_public_search_results_only(setup, monkeypat
     run = client.get("/api/runs/" + detail["runs"][0]["id"]).json()
     assert all(p["label"] == "CLOUD_ALLOWED" for p in run["context"]["parts"])
     assert run["routing"]["actual_provider"] == "openrouter"
+
+
+@pytest.mark.parametrize("prompt", ["Hallo", "Vielen Dank!", "What is 2 + 3?",
+    "Berechne 12 / 4", "Was ist die Hauptstadt von Frankreich?"])
+def test_auto_only_explicit_very_simple_requests_local(prompt):
+    assert very_simple_request(prompt)
+    trace = decision(prompt, RoutingOptions().model_dump(), classifier="local",
+        cloud_enabled=True, cloud_allowed=True, model_local_only=False, private_context=False)
+    assert trace["effective_model_class"] == "local" and trace["complexity"] == "simple"
+    preview = decision(prompt, RoutingOptions().model_dump(), classifier=None,
+        cloud_enabled=True, cloud_allowed=True, model_local_only=False, private_context=False,
+        preview=True)
+    assert preview["effective_model_class"] == "local"
+
+
+@pytest.mark.parametrize("prompt", ["Erstelle ein Konzept", "Wie entwickeln sich Managed Services?",
+    "Erstelle ein Word-Dokument", "Erstelle eine Powerpoint Präsentation mit 5 Folien",
+    "Erstelle eine Excel-Tabelle", "Schreibe Python-Code", "Erkläre Quantenphysik",
+    "Und warum?", "Ist dieses Medikament sicher?", "Was sind aktuelle Aktienkurse?",
+    "Hallo, erstelle eine Präsentation", "Hallo\nRecherchiere für mich",
+    "Was ist die Hauptstadt von Frankreich? Und warum?", "Was ist 2 + 3 + 4?",
+    "Hallo" + "!" * 161, " ".join(["Hallo"] * 21)])
+def test_auto_uncertain_short_and_long_prompts_use_cloud(prompt):
+    assert not very_simple_request(prompt)
+    for classifier in ("local", "cloud", None):
+        trace = decision(prompt, {"strategy": "balanced", "complex_research_cloud": False},
+            classifier=classifier, cloud_enabled=True, cloud_allowed=True,
+            model_local_only=False, private_context=False)
+        assert trace["policy_model_class"] == "cloud"
+        assert trace["effective_model_class"] == "cloud"
+
+
+def test_classifier_may_escalate_allowlisted_question_and_manual_modes_remain_binding():
+    args = dict(classifier="cloud", cloud_enabled=True, cloud_allowed=True,
+                model_local_only=False, private_context=False)
+    assert decision("Hallo", {"strategy": "balanced"}, **args)["effective_model_class"] == "cloud"
+    assert decision("Hallo", {"strategy": "balanced"}, **{**args, "model_local_only": True})[
+        "effective_model_class"] == "local"
+    assert decision("Hallo", {"strategy": "balanced"}, **{**args, "private_context": True})[
+        "effective_model_class"] == "local"
+    assert decision("Hallo", {"strategy": "balanced"}, **{**args, "private_parts": True})[
+        "effective_model_class"] == "local"
+    assert decision("Hallo", {"strategy": "local_first"}, **{**args, "classifier": "local"})[
+        "effective_model_class"] == "local"

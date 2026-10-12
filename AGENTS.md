@@ -131,3 +131,17 @@ identity across both transports. Select the route before starting a mutation; ne
 automatically replay a failed or interrupted deployment over the alternate route.
 Do not silently enable or switch the workstation's VPN/Tailscale account. If neither
 route is available, report the missing client/network connection.
+
+
+## Auto routing and downloadable Cloud files
+On 13.10.2026 the user requested Auto to answer locally only for short, very simple
+questions, with local as fallback. Other permitted ordinary requests prefer Cloud.
+An Auto cloud transport outage may use local only before the first answer content;
+keep provenance visible and retain cloud-attempt accounting. Explicit Cloud must
+not silently become local, and content filters/privacy/cancellation are not bypassed.
+The user also requested real downloadable Office files from Cloud requests: Cloud
+may plan the currently permitted public request and explicitly shared skill prose;
+native file construction remains in the isolated local renderer. Private sources,
+older LOCAL_ONLY context and template binaries are not implicitly shared. Checked
+rendered files may be downloaded before optional human approval; a download does
+not assert that the user reviewed or approved the content.

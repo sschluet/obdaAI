@@ -42,6 +42,31 @@ def read_options(db: Session) -> dict[str, Any]:
     }
 
 
+# A short request is not necessarily simple. Unknown requests use the cloud;
+# this allowlist deliberately excludes analysis, files, code and follow-up work.
+SIMPLE_MAX_CHARS = 160
+SIMPLE_MAX_WORDS = 20
+
+
+def very_simple_request(prompt: str) -> bool:
+    text = prompt.strip().casefold()
+    if (len(text) > SIMPLE_MAX_CHARS or len(text.split()) > SIMPLE_MAX_WORDS
+            or "\n" in text or "\r" in text):
+        return False
+    patterns = (
+        r"(?:hallo|hi|hello|hey|guten morgen|guten tag|guten abend|"
+        r"danke|danke schön|vielen dank|thanks|thank you)[.!?]*",
+        r"(?:(?:was ist|wie viel ist|wieviel ist|what is|berechne)\s+)?"
+        r"-?\d{1,6}(?:[.,]\d{1,4})?\s*[+*/×÷-]\s*"
+        r"-?\d{1,6}(?:[.,]\d{1,4})?[?!.]*",
+        r"(?:was ist die hauptstadt von|wie heißt die hauptstadt von|"
+        r"what is the capital of)\s+(?:deutschland|germany|frankreich|france|"
+        r"italien|italy|spanien|spain|österreich|austria|portugal|"
+        r"japan|kanada|canada)[?!.]*",
+    )
+    return any(re.fullmatch(pattern, text) is not None for pattern in patterns)
+
+
 def decision(
     prompt: str,
     options: dict[str, Any],
@@ -71,25 +96,26 @@ def decision(
             re.I,
         )
     )
+    very_simple = very_simple_request(prompt)
     strategy = options.get("strategy", "balanced")
     chosen = classifier or "local"
     reasons = [
         "Lokale Einordnung des aktuellen Wunsches"
         if classifier
-        else "Vorschau ohne Modellaufruf; die spätere Einordnung kann abweichen"
+        else "Vorschau ohne Modellaufruf; Freigaben und spätere Einordnung bleiben maßgeblich"
     ]
     if strategy == "cloud_first" and not builtin:
         chosen = "cloud"
         reasons.append("Cloud bevorzugt für generierte Antworten")
-    elif strategy == "balanced" and options.get("complex_research_cloud", True) and complex_request:
-        chosen = "cloud"
+    elif strategy == "balanced":
+        chosen = "local" if very_simple and classifier != "cloud" else "cloud"
         reasons.append(
-            "Komplexe Recherche oder Analyse: Cloud für höhere Antwortqualität bevorzugt"
+            "Kurze, sehr einfache Anfrage aus der lokalen Auswahlliste"
+            if chosen == "local"
+            else "Auto verwendet Cloud für alle anderen oder unklaren Anfragen"
         )
     elif strategy == "local_first":
-        reasons.append("Lokale Einordnung entscheidet; kein automatischer Komplexitätsaufschlag")
-    else:
-        reasons.append("Ausgewogene Auswahl anhand der lokalen Einordnung")
+        reasons.append("Manuelle lokale Präferenz: die lokale Einordnung entscheidet")
     if model_cloud_only:
         chosen = "cloud"
         reasons = ["Cloud für diesen Lauf ausdrücklich gewählt; Komplexität ist unerheblich"]
@@ -114,7 +140,7 @@ def decision(
             ("blocked" if model_cloud_only else "local") if blockers else chosen
         ),
         "requested_mode": "cloud" if model_cloud_only else "local" if model_local_only else "auto",
-        "complexity": "complex" if complex_request else "simple",
+        "complexity": "complex" if complex_request else "simple" if very_simple else "standard",
         "reasons": reasons,
         "blockers": blockers,
         "preview": preview,

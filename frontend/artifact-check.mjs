@@ -38,13 +38,13 @@ try{
  const preview=page.getByRole('dialog',{name:'Dateivorschau',exact:true});
  await preview.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
  await preview.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
- await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+ await page.getByRole('link',{name:'Datei herunterladen',exact:true}).first().waitFor();
  await page.reload();
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name,exact:true}).locator('..').click();
  await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();
- await page.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+ await page.getByRole('link',{name:'Datei herunterladen',exact:true}).first().waitFor();
  await page.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
@@ -53,7 +53,7 @@ try{
  await dialog.getByLabel('Dateititel',{exact:true}).fill('Synthetic word version two');
  await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();
  await page.getByText('Synthetic word version two · Version 2',{exact:true}).waitFor();
- if(await page.getByRole('link',{name:'Datei herunterladen',exact:true}).count()!==1)throw Error('Old file lost or new version bypassed review');
+ await page.waitForFunction(()=>[...document.querySelectorAll('a')].filter(a=>a.textContent==='Datei herunterladen').length===2); // Both validated versions download without claiming human review.
  await page.getByRole('tab',{name:/Quellen ·/}).click();
  await page.locator('input[type=file]').setInputFiles([
   {name:'synthetic-artifact.pdf',mimeType:'application/pdf',buffer:await readFile(output+'/artifact-input.pdf')},
@@ -199,6 +199,7 @@ try{
  await page.getByLabel('Nachricht',{exact:true}).fill('Erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true}).waitFor();
+ const inlineFile=page.locator('.messages article.citation').filter({has:page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true})});await inlineFile.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true}).click();
  await page.getByRole('complementary',{name:'Arbeitsbereich neben dem Chat',exact:true}).waitFor();
  await page.getByText('Synthetic local document draft · Version 1',{exact:true}).first().waitFor();

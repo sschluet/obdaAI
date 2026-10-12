@@ -7,7 +7,9 @@ import json
 import os
 import re
 import time
+import uuid
 from contextlib import aclosing
+from dataclasses import replace
 from pathlib import PurePath
 from typing import Any, Literal
 
@@ -22,8 +24,8 @@ from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import bind_sources, digest, spec_for
 from hub.db import Artifact, ArtifactRevision, Project, ProviderConfig, Source, SourceChunk
 from hub.knowledge_api import Auth
-from hub.policy import ContextPart
-from hub.provider_settings import cipher, runtime_provider
+from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
+from hub.provider_settings import cipher, fresh_cloud_prices, runtime_provider
 from hub.providers import Providers
 
 AAD = b"obdaai-artifact-draft-v1"
@@ -148,11 +150,11 @@ def verify_token(
         row = db.get(ProviderConfig, provider["id"])
         if (
             not row
-            or row.kind != "local"
+            or row.kind != provider.get("kind", "local")
             or not row.enabled
             or row.revision != provider["revision"]
         ):
-            raise ValueError("Lokaler Modellanbieter inzwischen geändert")
+            raise ValueError("Datei-Modellanbieter inzwischen geändert")
     if spec.plan.kind == "pptx" and len(spec.plan.slides) != metadata["slide_count"]:
         raise ValueError("Dateientwurf benötigt die verlangte Folienanzahl")
     if metadata.get("pdf_mode") == "pages" and (spec.plan.kind != "pdf" or not spec.plan.pages):
@@ -195,7 +197,14 @@ async def preview(
     *,
     research_id: str | None = None,
     conversation_id: str | None = None,
+    cloud_run_id: str | None = None,
+    provider_kind: str = "local",
 ) -> dict[str, Any]:
+    external = provider_kind != "local"
+    if external:
+        from hub.cloud_artifact_planning import authorize
+
+        authorize(factory, cloud_run_id, conversation_id, project_id, body, provider_kind)
     transform = body.kind == "image" or (body.kind == "pdf" and body.pdf_mode == "pages")
     if body.pdf_mode == "pages" and body.kind != "pdf":
         raise ValueError("Seitenmodus gehört ausschließlich zu PDF")
@@ -205,8 +214,16 @@ async def preview(
         raise ValueError("Inhaltsentwurf benötigt höchstens vier ausgewählte Originale")
     rows: dict[str, Any] = {}
     if provider is None or isinstance(provider, Providers):
-        cfg, provider, rows = runtime_provider(factory, cfg, local_only=True)
-        if not cfg.local_model or not rows.get("local") or not rows["local"].enabled:
+        cfg, provider, rows = runtime_provider(
+            factory,
+            cfg,
+            local_only=not external,
+            cloud_only=external,
+            external_kind=provider_kind if external else "openrouter",
+        )
+        if not external and (
+            not cfg.local_model or not rows.get("local") or not rows["local"].enabled
+        ):
             raise ValueError("Lokaler Anbieter nicht verfügbar")
     # Bind only the explicitly selected originals. No other project, vault,
     # conversation or global memory is implicitly added to this prompt.
@@ -514,27 +531,70 @@ async def preview(
         *source_parts,
         ContextPart(source_id="artifact-draft-goal", revision=1, content=body.goal),
     ]
-    row = rows.get("local")
+    row = rows.get(provider_kind)
+    if external:
+        if row is None or not row.enabled or not isinstance(provider, Providers):
+            raise ValueError("Cloud-Dateianbieter nicht verfügbar")
+        from hub.cloud_artifact_planning import shared_parts
+
+        source_parts = shared_parts(factory, source_parts, skill_records, research_id)
+        parts = [parts[0], *source_parts, parts[-1]]
+        parts = [part.model_copy(update={"label": Privacy.CLOUD_ALLOWED}) for part in parts]
+        row = await fresh_cloud_prices(factory, row, provider)
     configuration = json.loads(row.config) if row else {}
-    if sum(len(p.content) for p in parts) > cfg.context_limit or (
-        sum(len(p.content.encode()) + 64 for p in parts) + 256 + cfg.local_max_tokens
-        > configuration.get("context_tokens", 32768)
+    if not external and (
+        sum(len(p.content) for p in parts) > cfg.context_limit
+        or (
+            sum(len(p.content.encode()) + 64 for p in parts)
+            + 256
+            + (cfg.openrouter_max_tokens if external else cfg.local_max_tokens)
+            > configuration.get("context_tokens", 32768)
+        )
     ):
         raise ValueError("Dateientwurf überschreitet die lokalen Kontextgrenzen")
     deadline = time.monotonic() + min(170, cfg.generation_timeout)
     draft_attempts = 0
     first_output_sha256 = None
+    cloud_total = 0.0
+    cloud_estimate = 0.0
+    cloud_known = True
 
     async def generate(active_parts: list[ContextPart]) -> str:
+        nonlocal cloud_total, cloud_estimate, cloud_known
         result = ""
+        grants = []
+        request_id = None
+        if external:
+            from hub.budgets import reserve_answer
+            from hub.cloud_artifact_planning import authorize, shared_parts
+
+            authorize(factory, cloud_run_id, conversation_id, project_id, body, provider_kind)
+            shared_parts(factory, source_parts, skill_records, research_id)
+
+            active_parts = [
+                p.model_copy(update={"label": Privacy.CLOUD_ALLOWED}) for p in active_parts
+            ]
+            grants = [
+                CloudGrant(source_id=p.source_id, revision=p.revision, provider_id=provider_kind)
+                for p in active_parts
+            ]
+            check_egress(active_parts, external=True, provider_id=provider_kind, grants=grants)
+            request_id = str(uuid.uuid4())
+            with factory() as db:
+                estimate, output_tokens = reserve_answer(db, row, request_id, active_parts)
+                if cloud_estimate + estimate > configuration["max_run_cost"]:
+                    raise ValueError("Kostenlimit für Dateientwurf und Korrektur erreicht")
+                db.commit()
+            cloud_estimate += estimate
+            provider.settings = replace(provider.settings, openrouter_max_tokens=output_tokens)
         try:
             async with asyncio.timeout(max(0.001, deadline - time.monotonic())):
                 async with aclosing(
                     provider.stream(
                         active_parts,
                         ["system"] + ["user"] * (len(active_parts) - 1),
-                        external=False,
-                        grants=[],
+                        external=external,
+                        grants=grants,
                     )
                 ) as stream:
                     async for chunk in stream:
@@ -545,6 +605,22 @@ async def preview(
             raise ValueError(
                 "Lokaler Dateientwurf hat sein Zeitlimit erreicht; keine Datei gespeichert"
             ) from None
+        finally:
+            if request_id:
+                from hub.budgets import settle
+                from hub.db import Run
+
+                measured = provider.measured_cost
+                cloud_known = cloud_known and measured is not None
+                cloud_total += measured or 0.0
+                with factory() as db:
+                    settle(db, request_id, measured)
+                    current = db.get(Run, cloud_run_id)
+                    if current:
+                        current.cost_estimate = cloud_estimate
+                        current.cost = cloud_total if cloud_known else None
+                        current.cost_basis = "provider_reported" if cloud_known else "unknown"
+                    db.commit()
         return result
 
     from hub.artifact_planning import previous_plan
@@ -579,9 +655,14 @@ async def preview(
                 content=previous_plan(answer),
             ),
         ]
-        if sum(len(p.content) for p in retry_parts) > cfg.context_limit or (
-            sum(len(p.content.encode()) + 64 for p in retry_parts) + 256 + cfg.local_max_tokens
-            > configuration.get("context_tokens", 32768)
+        if not external and (
+            sum(len(p.content) for p in retry_parts) > cfg.context_limit
+            or (
+                sum(len(p.content.encode()) + 64 for p in retry_parts)
+                + 256
+                + (cfg.openrouter_max_tokens if external else cfg.local_max_tokens)
+                > configuration.get("context_tokens", 32768)
+            )
         ):
             raise ValueError("Dateientwurf überschreitet die lokalen Kontextgrenzen")
         answer = await generate(retry_parts)
@@ -625,9 +706,14 @@ async def preview(
                     content=previous_plan(answer),
                 ),
             ]
-            if sum(len(p.content) for p in retry_parts) > cfg.context_limit or (
-                sum(len(p.content.encode()) + 64 for p in retry_parts) + 256 + cfg.local_max_tokens
-                > configuration.get("context_tokens", 32768)
+            if not external and (
+                sum(len(p.content) for p in retry_parts) > cfg.context_limit
+                or (
+                    sum(len(p.content.encode()) + 64 for p in retry_parts)
+                    + 256
+                    + (cfg.openrouter_max_tokens if external else cfg.local_max_tokens)
+                    > configuration.get("context_tokens", 32768)
+                )
             ):
                 raise ValueError("Dateientwurf überschreitet die lokalen Kontextgrenzen") from None
             answer = await generate(retry_parts)
@@ -753,7 +839,7 @@ async def preview(
         if row:
             actual = db.get(ProviderConfig, row.id)
             if not actual or not actual.enabled or actual.revision != row.revision:
-                raise ValueError("Lokaler Anbieter inzwischen geändert")
+                raise ValueError("Datei-Anbieter inzwischen geändert")
         for citation in citations:
             chunk = db.get(SourceChunk, citation["chunk_id"])
             if not chunk or digest(chunk.content[:800]) != citation["excerpt_sha256"]:
@@ -778,8 +864,10 @@ async def preview(
         "provider": {
             "id": row.id if row else "synthetic-local",
             "revision": row.revision if row else 1,
-            "model": cfg.local_model if row else "synthetic",
-            "kind": "local",
+            "model": (cfg.openrouter_model if external else cfg.local_model)
+            if row
+            else "synthetic",
+            "kind": provider_kind,
         },
         "prompt_sha256": digest(policy),
         "goal_sha256": digest(body.goal),

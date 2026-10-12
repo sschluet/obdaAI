@@ -51,7 +51,7 @@ def test_each_answer_uses_exact_linked_run_after_model_selection_and_reload(setu
     local = client.post(
         f"/api/conversations/{chat}/messages",
         headers=headers,
-        json={"content": "First local synthetic question"},
+        json={"content": "Hallo"},
     )
     assert events(local, "provider")[0] == {
         "name": "local",

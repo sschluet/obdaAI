@@ -511,6 +511,14 @@ async def execute_run(
                         model_class="cloud",
                         reason="Cloud ausdrücklich gewählt",
                     )
+                    if latest:
+                        from hub.chat_artifacts import explicit_file_request
+                        from hub.skill_api import request_without_skill_prefix
+
+                        if explicit_file_request(
+                            request_without_skill_prefix(latest.content, snapshot.get("skills", []))
+                        ):
+                            route.capabilities = [Capability.ARTIFACT]
                     if latest and snapshot.get("web_search_allowed"):
                         from hub.chat_artifacts import requests_public_research
 
@@ -554,7 +562,9 @@ async def execute_run(
                     raise asyncio.CancelledError
                 if snapshot.get("model_cloud_only") and (
                     route.read_tool
-                    or not set(route.capabilities).issubset({Capability.CHAT, Capability.WEB})
+                    or not set(route.capabilities).issubset(
+                        {Capability.CHAT, Capability.WEB, Capability.ARTIFACT}
+                    )
                 ):
                     raise ExecutionLimitError(
                         "Diese Anfrage benötigt lokale Werkzeuge. Auto oder Nur lokal wählen."
@@ -584,7 +594,36 @@ async def execute_run(
                     deadline.reschedule(
                         asyncio.get_running_loop().time() + min(170, cfg.generation_timeout)
                     )
-                    yield ("status", {"message": "Lokaler Dateientwurf wird erstellt"})
+                    artifact_external = (
+                        not snapshot.get("model_local_only")
+                        and c.cloud_allowed
+                        and not c.project_id
+                        and not c.memory_scope
+                        and cfg.cloud_enabled
+                        and not any(part.label == Privacy.LOCAL_ONLY for part in parts)
+                        and (
+                            snapshot.get("model_cloud_only")
+                            or not any(
+                                item.get("label") == "LOCAL_ONLY"
+                                for item in snapshot.get("skills", [])
+                            )
+                        )
+                    )
+                    if snapshot.get("model_cloud_only") and not artifact_external:
+                        raise ExecutionLimitError(
+                            "Privater Dateikontext bleibt lokal; Nur lokal wählen"
+                        )
+                    artifact_provider = c.cloud_provider if artifact_external else "local"
+                    yield (
+                        "status",
+                        {
+                            "message": (
+                                "Cloud-Dateientwurf wird erstellt"
+                                if artifact_external
+                                else "Lokaler Dateientwurf wird erstellt"
+                            )
+                        },
+                    )
                     try:
                         artifact = await create_from_chat(
                             factory,
@@ -592,6 +631,7 @@ async def execute_run(
                             run_id,
                             providers,
                             research_id=run_id if Capability.WEB in route.capabilities else None,
+                            provider_kind=artifact_provider,
                         )
                     except HTTPException as exc:
                         raise ExecutionLimitError(
@@ -602,6 +642,17 @@ async def execute_run(
                             raise asyncio.CancelledError from None
                         raise ExecutionLimitError(str(exc)) from None
                     label = Privacy.LOCAL_ONLY
+                    draft_provider = (artifact.get("draft") or {}).get("provider", {})
+                    update(answer_model_used=True)
+                    yield (
+                        "provider",
+                        {
+                            "name": draft_provider.get("kind", artifact_provider),
+                            "model": draft_provider.get("model"),
+                            "model_used": True,
+                            "revision": draft_provider.get("revision"),
+                        },
+                    )
                     base = (artifact.get("draft") or {}).get("base")
                     output = (
                         (
@@ -609,18 +660,18 @@ async def execute_run(
                             + artifact["kind"].upper()
                             + "-Version "
                             + str(artifact["revision"])
-                            + " wird lokal erstellt. "
+                            + " wird als echte Datei erstellt. "
                             "Die bisherige Version bleibt erhalten. "
                             if base
-                            else "Die " + artifact["kind"].upper() + "-Datei wird lokal erstellt. "
+                            else "Die " + artifact["kind"].upper() + "-Datei wird erstellt. "
                         )
                         + (
                             "Öffne den Dateibereich dieses Projekts, "
                             if c.project_id
                             else "Öffne den Arbeitsbereich dieses Chats unter Dateien, "
                         )
-                        + "prüfe alle Vorschauseiten und gib die Version "
-                        "anschließend zum Download frei. "
+                        + "lade die fertige Datei direkt herunter. "
+                        "Die Vorschau und optionale Freigabe stehen dort ebenfalls bereit. "
                         + (
                             "Verwendet wurden dein Dateiwunsch und die ausdrücklich freigegebenen "
                             "Websuchauszüge, mit URLs und Abrufzeiten in der Datei. "
@@ -876,32 +927,50 @@ async def execute_run(
                             "Cloud-Provider ist nicht eingerichtet oder deaktiviert"
                         )
                         update(routing_trace=json.dumps(trace, ensure_ascii=False))
-                        raise ExecutionLimitError(
-                            "Cloud-Anbieter ist nicht eingerichtet oder deaktiviert. "
-                            "In Einstellungen prüfen; keine lokale Ersatzantwort."
+                        if snapshot.get("model_cloud_only"):
+                            raise ExecutionLimitError(
+                                "Cloud-Anbieter ist nicht eingerichtet oder deaktiviert. "
+                                "In Einstellungen prüfen; keine lokale Ersatzantwort."
+                            )
+                        external, provider = False, "local"
+                        trace["effective_model_class"] = "local"
+                        trace["fallback"] = {
+                            "from": c.cloud_provider,
+                            "to": "local",
+                            "reason": "Cloud-Anbieter nicht eingerichtet oder deaktiviert",
+                        }
+                        trace["reasons"].append(trace["fallback"]["reason"])
+                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                        yield (
+                            "status",
+                            {"message": "Cloud nicht verfügbar – lokale Ersatzantwort"},
                         )
-                    check_egress(parts, external=True, provider_id=c.cloud_provider, grants=grants)
-                    assert isinstance(providers, Providers)
-                    cloud = await fresh_cloud_prices(factory, cloud, providers)
-                    selected[c.cloud_provider] = cloud
-                    with factory() as db:
-                        estimate, effective_output = reserve_answer(db, cloud, run_id, parts)
-                        current = db.get(Run, run_id)
-                        assert current is not None
-                        current.cost_estimate = estimate
-                        db.commit()
-                    reserved = True
-                    cfg = replace(cfg, openrouter_max_tokens=effective_output)
-                    providers.settings = replace(
-                        providers.settings, openrouter_max_tokens=effective_output
-                    )
-                    trace["answer_limits"] = {
-                        "configured_output_tokens": json.loads(cloud.config)["output_tokens"],
-                        "effective_output_tokens": effective_output,
-                        "budget_or_context_adjusted": (
-                            effective_output < json.loads(cloud.config)["output_tokens"]
-                        ),
-                    }
+                    if external:
+                        assert cloud is not None
+                        check_egress(
+                            parts, external=True, provider_id=c.cloud_provider, grants=grants
+                        )
+                        assert isinstance(providers, Providers)
+                        cloud = await fresh_cloud_prices(factory, cloud, providers)
+                        selected[c.cloud_provider] = cloud
+                        with factory() as db:
+                            estimate, effective_output = reserve_answer(db, cloud, run_id, parts)
+                            current = db.get(Run, run_id)
+                            assert current is not None
+                            current.cost_estimate = estimate
+                            db.commit()
+                        reserved = True
+                        cfg = replace(cfg, openrouter_max_tokens=effective_output)
+                        providers.settings = replace(
+                            providers.settings, openrouter_max_tokens=effective_output
+                        )
+                        trace["answer_limits"] = {
+                            "configured_output_tokens": json.loads(cloud.config)["output_tokens"],
+                            "effective_output_tokens": effective_output,
+                            "budget_or_context_adjusted": (
+                                effective_output < json.loads(cloud.config)["output_tokens"]
+                            ),
+                        }
                 selected_provider = selected.get(provider)
                 if selected_provider:
                     final_limits = json.loads(selected_provider.config)
@@ -965,26 +1034,112 @@ async def execute_run(
                     generation_started = True
                     deadline.reschedule(asyncio.get_running_loop().time() + cfg.generation_timeout)
                     check_integration_context()
-                    async for chunk in providers.stream(
-                        parts, roles, external=external, grants=grants
-                    ):
-                        if cancelled():
-                            raise asyncio.CancelledError
-                        check_integration_context()
-                        if not output:
-                            update(first_content_seconds=time.monotonic() - started)
-                        if len(output) + len(chunk) > 96000:
-                            remaining = chunk[: 96000 - len(output)]
-                            if remaining:
-                                output += remaining
-                                yield ("delta", {"text": remaining})
-                            raise AnswerLimitReached(
-                                "Antwort hat die Längengrenze von 96.000 Zeichen erreicht. "
-                                "Der bisherige Text bleibt erhalten; "
-                                "bitte in Abschnitten fortsetzen."
+                    while True:
+                        try:
+                            async for chunk in providers.stream(
+                                parts, roles, external=external, grants=grants
+                            ):
+                                if cancelled():
+                                    raise asyncio.CancelledError
+                                check_integration_context()
+                                if not output:
+                                    update(first_content_seconds=time.monotonic() - started)
+                                if len(output) + len(chunk) > 96000:
+                                    remaining = chunk[: 96000 - len(output)]
+                                    if remaining:
+                                        output += remaining
+                                        yield ("delta", {"text": remaining})
+                                    raise AnswerLimitReached(
+                                        "Antwort hat die Längengrenze von 96.000 Zeichen erreicht. "
+                                        "Der bisherige Text bleibt erhalten; "
+                                        "bitte in Abschnitten fortsetzen."
+                                    )
+                                output += chunk
+                                yield ("delta", {"text": chunk})
+                            break
+                        except (httpx.TransportError, httpx.HTTPStatusError) as error:
+                            retryable = not isinstance(error, httpx.HTTPStatusError) or (
+                                error.response.status_code == 429
+                                or error.response.status_code >= 500
                             )
-                        output += chunk
-                        yield ("delta", {"text": chunk})
+                            if (
+                                not external
+                                or output
+                                or not retryable
+                                or snapshot.get("model_cloud_only")
+                                or cancelled()
+                            ):
+                                raise
+                            # Auto may fall back only before any answer was displayed.
+                            # Preserve the cloud attempt's accounting before replacing it.
+                            if reserved and isinstance(providers, Providers):
+                                with factory() as db:
+                                    settle(db, run_id, providers.measured_cost)
+                                    current = db.get(Run, run_id)
+                                    if current:
+                                        current.cost = providers.measured_cost
+                                        current.cost_basis = providers.cost_basis
+                                    db.commit()
+                                reserved = False
+                            if isinstance(providers, Providers):
+                                cfg, providers, local_selected = runtime_provider(
+                                    factory, cfg, local_only=True
+                                )
+                                local = local_selected.get("local")
+                                if not local or not local.enabled:
+                                    raise ExecutionLimitError(
+                                        "Cloud nicht erreichbar; lokales Ersatzmodell deaktiviert"
+                                    ) from error
+                                limits = json.loads(local.config)
+                                input_bound = (
+                                    sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                                )
+                                effective_output = min(
+                                    limits["output_tokens"], limits["context_tokens"] - input_bound
+                                )
+                                if (
+                                    sum(len(p.content) for p in parts) > limits["context_chars"]
+                                    or effective_output < 16
+                                ):
+                                    raise ExecutionLimitError(
+                                        "Cloud nicht erreichbar; Kontext passt nicht "
+                                        "ins lokale Ersatzmodell"
+                                    ) from error
+                                providers.settings = replace(
+                                    providers.settings, local_max_tokens=effective_output
+                                )
+                                selected_provider = local
+                            external, provider, model = False, "local", cfg.local_model
+                            trace["effective_model_class"] = "local"
+                            trace["fallback"] = {
+                                "from": c.cloud_provider,
+                                "to": "local",
+                                "reason": "Cloud vor Antwortbeginn nicht erreichbar",
+                            }
+                            trace["reasons"].append(trace["fallback"]["reason"])
+                            trace.update(actual_provider=provider, actual_model=model)
+                            update(
+                                routing_trace=json.dumps(trace, ensure_ascii=False),
+                                provider=provider,
+                                model=model,
+                                answer_model_used=True,
+                                provider_revision=(
+                                    selected_provider.revision if selected_provider else None
+                                ),
+                            )
+                            yield (
+                                "status",
+                                {"message": "Cloud nicht erreichbar – lokale Ersatzantwort"},
+                            )
+                            yield (
+                                "provider",
+                                {
+                                    "name": provider,
+                                    "model": model,
+                                    "model_used": True,
+                                    "reason": trace["fallback"]["reason"],
+                                },
+                            )
                 check_integration_context()
                 if not output:
                     raise ValueError("Empty provider response")
@@ -1012,7 +1167,10 @@ async def execute_run(
                 },
             )
             yield ("delta", {"text": output})
-        except (MemoryCompleted, ArtifactCompleted):
+        except ArtifactCompleted:
+            status = "succeeded"
+            yield ("delta", {"text": output})
+        except MemoryCompleted:
             status = "succeeded"
             update(provider="local", model="", answer_model_used=False)
             yield (

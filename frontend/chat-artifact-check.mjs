@@ -25,6 +25,9 @@ try{
   const row=work.locator('article.citation').filter({hasText:'Synthetisches Aurora '+kind});await row.getByRole('button',{name:'Vorschau öffnen',exact:true}).click();
   const preview=page.getByRole('dialog',{name:'Dateivorschau',exact:true});
   if(!await preview.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).isDisabled())throw Error('Review bypass');
+  const earlyDownload=preview.getByRole('link',{name:'Datei herunterladen',exact:true});await earlyDownload.waitFor();
+  const fileEvent=page.waitForEvent('download');await earlyDownload.click();const file=await fileEvent;if(!file.suggestedFilename().endsWith('.'+kind)||await file.failure())throw Error('Ready unreviewed file did not download');
+  const rows=await page.evaluate(async id=>(await fetch('/api/conversations/'+id+'/artifacts')).json(),conversationId);if(rows.find(value=>value.spec.plan.title==='Synthetisches Aurora '+kind).accepted)throw Error('Download falsely recorded human acceptance');
   await preview.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();await preview.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
   const download=row.getByRole('link',{name:'Datei herunterladen',exact:true});await download.waitFor();
   if(!(await download.getAttribute('href')).startsWith('/api/conversations/'+conversationId+'/artifacts/'))throw Error('Download owner incorrect');

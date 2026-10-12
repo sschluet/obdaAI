@@ -2914,3 +2914,34 @@ Kein App-Rollout nötig; App bleibt f95768a / Schema 0042. Nginx-Syntaxprüfung
 bestanden. Privater Beleg unter .local/deployment; keine Tailnet-Adressen in Git.
 Realer Zugriff von einem zweiten Gerät und vollständiger authentifizierter
 Schreibtest über den neuen Zugang stehen noch aus; Mac-Client derzeit gestoppt.
+
+
+### 13.10.2026: Cloud-orientiertes Auto und native Dateidownloads – in Prüfung
+
+Auto verwendet lokal nur eine konservative Auswahl sehr einfacher kurzer Fragen
+(bis 160 Zeichen / 20 Wörter, einzeilig); andere freigegebene Anfragen bevorzugen
+Cloud. Private Kontexte und Nur lokal bleiben lokal. Auto kann bei einem technischen
+Cloud-Ausfall vor dem ersten Antworttext lokal einspringen; Herkunft und
+Cloud-Versuchskosten bleiben nachvollziehbar. Explizite Cloudwahl, Inhaltsfilter
+und begonnene Antworten werden nicht automatisch umgeschaltet.
+
+Cloud-Dateiwünsche erhalten echte native Office-Dateien aus dem isolierten Renderer
+statt bloßer Modelltexte. Cloud-Planung ist an den aktuellen freigegebenen Wunsch
+und explizit geteilte Skill-Anweisungen gebunden; private Quellen/Vorlagenbinärdaten
+bleiben geschützt. Download nach technischer Renderprüfung auch vor optionaler
+fachlicher Freigabe; keine vorgetäuschte menschliche Abnahme. Lokale/CI-Abnahme
+und Test-VM-Rollout werden erst nach tatsächlicher Prüfung ergänzt.
+
+
+Lokale Abnahme dieser Lieferung: Ruff / Mypy (96 Backendmodule), TypeScript und
+Frontendbuild bestanden. Browserprüfungen für Chat-Dateien und Dateiarbeitsraum
+mit direkten DOCX-/PPTX-Downloads vor optionaler Freigabe bestanden; neue Galerie
+ausschließlich synthetisch. Breite Backendregression: 1312 bestanden, 33
+umgebungsabhängig übersprungen, fünf veraltete Annahmen zur lokalen Standardwahl
+gefunden. Diese wurden ohne Abschwächung der Datenschutztests angepasst; 133 Tests
+der betroffenen Bereiche danach bestanden. Abschließende Cloud-Datei-/Ersatzweg-
+Abnahme: 22 Tests bestanden. Weitere Artefakt-, Skill- und Klärungstests bestanden.
+Keine echte Cloud-Dateiplanung auf der VM behauptet. Deployment blockiert durch
+die fehlende Tailnet-Freigabe für HTTPS/SSH; Bestätigung dazu steht noch aus.
+Öffentliche Website mit 78 Features lokal validiert; letzte Pages-Publikation
+weiterhin durch widersprüchlichen alten GitHub-Deploymentstatus blockiert.

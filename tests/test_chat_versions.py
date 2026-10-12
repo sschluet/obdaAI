@@ -12,7 +12,7 @@ def test_edit_preserves_old_run_context_and_rebinds_privacy(setup):
     app, client, headers, _ = setup
     chat_id = new_chat(client, headers, cloud=True)
     path = f"/api/conversations/{chat_id}"
-    client.post(path + "/messages", headers=headers, json={"content": "original revision"})
+    client.post(path + "/messages", headers=headers, json={"content": "Hallo"})
     detail = client.get(path).json()
     source = detail["messages"][0]
     old_run = detail["runs"][0]["id"]
@@ -26,7 +26,7 @@ def test_edit_preserves_old_run_context_and_rebinds_privacy(setup):
     assert edited["content"] == "edited revision" and edited["revision"] == 2
     assert edited["label"] == "LOCAL_ONLY"
     old = client.get("/api/runs/" + old_run).json()
-    assert old["context"]["parts"][0]["content"] == "original revision"
+    assert old["context"]["parts"][0]["content"] == "Hallo"
     assert old["context"]["parts"][0]["revision"] == 1
     assert old["answer"] == "SYNTHETIC_ANSWER"
     # Same action/key replays without another model call or another revision.

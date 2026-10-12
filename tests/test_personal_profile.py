@@ -247,6 +247,13 @@ def test_profile_not_in_public_search_or_title_request(setup, monkeypatch):
         enabled=True,
         fields={"name": "SYNTHETIC_NAME", "challenges": "SYNTHETIC_PRIVATE"},
     )
+    # Deliberately select the local-first policy: this test covers a local
+    # private-profile answer and protected derivatives, rather than Auto's
+    # preference for cloud on ordinary research.
+    assert client.put(
+        "/api/routing-settings", headers=headers,
+        json={"revision": 0, "strategy": "local_first", "complex_research_cloud": True},
+    ).status_code == 200
     cfg = replace(app.state.settings, search_url="https://synthetic-search.invalid/search")
     captured = []
 
@@ -359,7 +366,7 @@ def test_fully_shared_profile_derivatives_allow_auto_cloud_but_local_override_st
         json={"content": "Synthetic next question", "cloud_allowed": True},
     )
     assert response.status_code == 200
-    assert provider.stream_calls == [False, not local_only]
+    assert provider.stream_calls == [not local_only, not local_only]
 
 
 @pytest.mark.parametrize(
