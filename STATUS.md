@@ -1,6 +1,6 @@
 # obdaAI — Status 12.10.2026
 
-## Dateianfragen mit Skill-Aufruf – Korrektur in Prüfung, 12.10.2026
+## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 
 Der Screenshotauftrag „Bitte Präsentation über Blumenzucht über 8 Slides erstellen“
 wurde wegen der nicht erkannten Infinitivform abgewiesen. Höfliche Infinitivformen
@@ -14,10 +14,15 @@ Folien mit Basisvorlage und optionalem modernen Skill. Der exakt zuvor erzeugte 
 Briefplan wurde einmal unter unveränderten Linux-/Landlockgrenzen erneut gerendert:
 Anrede/Gruß/Unterschrift einmalig, kein generischer Brieftext-Titel, kein überflüssiger
 Unterzeichnerplatzhalter. Funktionsplatzhalter und Namensnennungen im Text bleiben erhalten.
-Aktive App bc12946/0042 enthält die Skillpakete; diese Korrekturen noch nicht ausgerollt.
-Matching CI und produktive Abnahme folgen. Private Pakete und Prüfdateien bleiben privat.
+Aktive App62985e8/0042 enthält die geprüften Korrekturen. Vollständige CI38292778347
+erfolgreich:1238Backend-/PostgreSQLtests,39Browserprüfungen und Offline-Runnersmoke.
+Beide APIs gesund; verschlüsseltes Off-VM-Backup, bestehende Nachrichten/Profil/
+UseCases/Dateibelege/Overlays und HTTPS-Freigabe erhalten. Produktive reale lokale
+Planung, acht native moderne Folien mit gebundener Basis, Vorschau/Freigabe und
+Downloadhash geprüft. Word, Brief und native Excel-Zellwerte ebenfalls geprüft;
+eigene Testprojekte/Chats gelöscht. Private Pakete und Prüfdateien bleiben privat.
 
-## Skill-Pakete und echte Office-Vorlagen – Entwicklung, 12.10.2026
+## Skill-Pakete und echte Office-Vorlagen – Test-VM geprüft, 12.10.2026
 
 Private ZIP/.skill-Pakete mit unveränderten Originalen, revisionierten Manifesten,
 Referenzen und Vorlagen. Importierte Helferskripte bleiben archivierte Daten;
@@ -34,10 +39,12 @@ lokale Vorschauen via Calc; Zeichenfolgen bleiben literal, keine Formel-/Makroau
 Paketressourcen und unveränderte Originale authentifiziert herunterladbar. Upload
 20MiB spezifischer Route, sonstige Proxygrenzen und Ziel-/Zugriffsregeln unverändert.
 
-Synthetische API-/Render-/Browserprüfungen einschließlich gebundenem Master und
-Folgeversion bestanden. Linux-/PostgreSQL-/vollständige CI und produktive Abnahme
-stehen vor Rollout noch aus. Private Nutzerpakete oder Ausgaben sind kein öffentlicher
-Testinhalt. V1 bleibt partiell; keine vollständige Claude-Code-/Werkzeugemulation.
+API-/Render-/Browserprüfungen einschließlich gebundenem Master und Folgeversion
+bestanden. Reale lokale Modellplanung und native Vorlagendateien produktiv geprüft,
+einschließlich Briefkorrektur ohne Modellwiederholung und nativer Excel-Zahlen.
+Originalpakete unverändert, importierte Skripte bleiben inert; komplexe Claude-
+Diagramm-/Formelhelfer sind keine vollständige Werkzeugemulation. Private Nutzerpakete
+oder Ausgaben sind kein öffentlicher Testinhalt. V1 bleibt partiell.
 
 ## Lokale OCR gescannter Quellen – Test-VM geprüft, 12.10.2026
 
