@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {FileText,Presentation,Files,Image,Check,Sheet} from 'lucide-react';
 import './artifacts.css';
+import {SlideVisualEditor,WorkbookEditor} from './OfficeContentEditor';
 
 export type ArtifactSeed = {project_id:string|null;conversation_id:string;message_id:string;revision:number;content:string};
 type API = (path:string, method?:string, body?:unknown)=>Promise<any>;
@@ -12,7 +13,7 @@ type Row = {artifact_id:string; revision:number; title:string; kind:string; stat
   error:string; spec:any; spec_sha256:string; output:any; accepted:number|null; draft?:any; chat?:any};
 type DocumentImage = {sourceId:string;caption:string;width:number};
 type Section = {heading:string; paragraphs:string; table:string[][]; images?:DocumentImage[]};
-type Slide = {title:string; bullets:string; notes:string};
+type Slide = {title:string; bullets:string; notes:string;layout?:string;kicker?:string;subtitle?:string;footer?:string;visual?:any};
 type Page = {sourceId:string; page:number; rotation:number; splitAfter?:boolean};
 type Tile = {sourceId:string; crop:number[];caption?:string};
 type FileTemplate = {id:string;kind:'docx'|'pptx';name:string;headings:string[];instruction:string};
@@ -24,8 +25,8 @@ const fileTemplates:FileTemplate[] = [
 ];
 const fileFormats=[
   {id:'docx',label:'Word-Dokument',short:'Word',description:'Texte und Tabellen',icon:FileText},
-  {id:'xlsx',label:'Excel-Tabelle',short:'Excel',description:'Strukturierte Tabellen',icon:Sheet},
-  {id:'pptx',label:'PowerPoint-Präsentation',short:'Präsentation',description:'Folien und Notizen',icon:Presentation},
+  {id:'xlsx',label:'Excel-Tabelle',short:'Excel',description:'Tabellen, Formeln und Charts',icon:Sheet},
+  {id:'pptx',label:'PowerPoint-Präsentation',short:'Präsentation',description:'Folien, Diagramme und Charts',icon:Presentation},
   {id:'pdf',label:'PDF-Dokument',short:'PDF',description:'Dokument oder Seiten',icon:Files},
   {id:'image',label:'Bild / Collage',short:'Bild',description:'Ausschnitte und Collagen',icon:Image},
 ];
@@ -136,7 +137,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
     setPdfExport(plan?.pdf_export||false);setPdfMode(!project||plan?.sections?.length?'text':'pages');
     setSections(plan?.sections?.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[],images:(s.images||[]).map((image:any)=>({sourceId:row!.spec.sources[image.source].id,caption:image.caption||'',width:image.width_inches}))}))||[{heading:'Ergebnis',paragraphs:'',table:[]}]);
     setBoundIds(row?.spec.sources?.map((s:any)=>s.id)||[]);
-    setSlides(plan?.slides?.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''}))||[{title:'',bullets:'',notes:''}]);
+    setSlides(plan?.slides?.map((s:any)=>({...s,bullets:s.bullets.join('\n'),notes:s.notes||''}))||[{title:'',bullets:'',notes:''}]);
     const bound=row?.spec.sources||[];
     setPages(plan?.pages?.map((p:any)=>({sourceId:bound[p.source].id,page:p.page,rotation:p.rotation,splitAfter:(plan.split_after||[]).includes(plan.pages.indexOf(p)+1)}))||[]);
     setTiles(plan?.tiles?.map((t:any)=>({sourceId:bound[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''}))||[]);
@@ -184,7 +185,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
       }
       else if(kind==='xlsx'){if(!sheets.length)throw Error('Bitte die Excel-Tabelle zunächst lokal entwerfen.');plan={kind,title,sheets};}
       else if(kind==='pptx'){
-        const entries=slides.map(s=>({title:s.title,notes:s.notes,bullets:s.bullets.split('\n').map(v=>v.trim()).filter(Boolean)}));
+        const entries=slides.map(s=>({...s,bullets:s.bullets.split('\n').map(v=>v.trim()).filter(Boolean)}));
         if(entries.some(s=>!s.bullets.length||s.bullets.length>5||s.bullets.some(v=>v.length>140)))throw Error('Je Folie bitte ein bis fünf Stichpunkte mit maximal 140 Zeichen eingeben.');
         plan={kind,title,slides:entries};
       }else if(kind==='pdf'){
@@ -207,7 +208,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
       const plan=draft.spec.plan;setTitle(plan.title);setBoundTemplate(draft.spec.template||null);setSkillsChanged(false);setLetter(plan.letter||null);setSheets(plan.sheets||[]);
       if(kind==='docx'||(kind==='pdf'&&pdfMode==='text'))setSections(plan.sections.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[]})));
       else if(kind==='xlsx')setSheets(plan.sheets);
-      else if(kind==='pptx')setSlides(plan.slides.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''})));
+      else if(kind==='pptx')setSlides(plan.slides.map((s:any)=>({...s,bullets:s.bullets.join('\n'),notes:s.notes||''})));
       else if(kind==='pdf')setPages(plan.pages.map((p:any)=>({sourceId:draft.spec.sources[p.source].id,page:p.page,rotation:p.rotation,splitAfter:(plan.split_after||[]).includes(plan.pages.indexOf(p)+1)})));
       else {setTiles(plan.tiles.map((t:any)=>({sourceId:draft.spec.sources[t.source].id,crop:t.crop.map((v:number)=>v*100),caption:t.caption||''})));setColumns(plan.columns);setWidth(plan.tile_width);setHeight(plan.tile_height);setFormat(plan.format)}
       setDraftToken(draft.draft_token);setDraftInfo(draft);setContentOpen(true);setResumeNeedsReview(false);
@@ -268,7 +269,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
         {sources.length>0&&<details className="artifact-source-selection"><summary>Gebundene Quelldateien</summary><p className="hint">Nur ausgewählte Quellen werden an das lokale Modell übergeben. Textentwürfe nutzen bis zu vier Quellen mit Auszügen. Jede Auswahl wird an Revision und Hash gebunden.</p>{(kind==='image'?images:kind==='pdf'&&pdfMode==='pages'?pdfs:sources).map(source=><label key={source.id}><input type="checkbox" checked={boundIds.includes(source.id)} onChange={e=>{setBoundIds(e.target.checked?[...boundIds,source.id]:boundIds.filter(id=>id!==source.id));setDraftToken(null);setDraftInfo(null)}}/>{source.name}</label>)}</details>}
         <details className="artifact-content" open={contentOpen} onToggle={e=>setContentOpen(e.currentTarget.open)}><summary>Inhalt bearbeiten{original?' · neue Version':''}</summary>
         <label>Dateititel<input required value={title} maxLength={160} onChange={e=>setTitle(e.target.value)}/></label>
-        {kind==='xlsx'&&<div className="artifact-context"><p>Tabelleninhalt aus dem lokalen KI-Entwurf. Für Änderungen passe den Auftrag an und entwirf erneut.</p>{sheets.map((sheet:any,index:number)=><details key={index} open><summary>{sheet.name} · {sheet.rows.length} Zeilen</summary><div className="skill-package-files"><table><thead><tr>{sheet.columns?.map((column:string,index:number)=><th key={index}>{column}</th>)}</tr></thead><tbody>{sheet.rows.slice(0,30).map((row:any[],i:number)=><tr key={i}>{row.map((cell:any,j:number)=><td key={j}>{String(cell??'')}</td>)}</tr>)}</tbody></table></div>{sheet.rows.length>30&&<p className="hint">Vorschau der ersten 30 Zeilen. Die Datei enthält alle Zeilen.</p>}</details>)}</div>}
+        {kind==='xlsx'&&<WorkbookEditor sheets={sheets} onChange={setSheets}/>}
         {kind==='docx'&&letter&&<fieldset><legend>Briefangaben</legend>{(['recipient','sender','signature'] as const).map(key=><label key={key}>{({recipient:'Empfänger',sender:'Absender',signature:'Unterschrift'})[key]}<textarea rows={3} value={letter[key].join('\n')} onChange={e=>setLetter({...letter,[key]:e.target.value.split('\n').filter(Boolean)})}/></label>)}{(['subject','date','salutation'] as const).map(key=><label key={key}>{({subject:'Betreff',date:'Datum',salutation:'Anrede'})[key]}<input maxLength={160} value={letter[key]} onChange={e=>setLetter({...letter,[key]:e.target.value})}/></label>)}</fieldset>}
         {(kind==='docx'||(kind==='pdf'&&pdfMode==='text'))&&<>{kind==='docx'&&<label><input type="checkbox" checked={pdfExport} onChange={e=>setPdfExport(e.target.checked)}/> Zusätzlich als PDF zum Download bereitstellen</label>}{sections.map((section,index)=><fieldset key={index}><legend>Abschnitt {index+1}</legend>
           <label>Abschnittsüberschrift<input required maxLength={160} value={section.heading} onChange={e=>setSections(sections.map((s,i)=>i===index?{...s,heading:e.target.value}:s))}/></label>
@@ -283,6 +284,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
         {kind==='pptx'&&<><p>{slides.length} Folie{slides.length===1?'':'n'} · Die Ausgabe enthält genau diese Folien.</p>{slides.map((slide,index)=><fieldset key={index}><legend>Folie {index+1}</legend>
           <label>Folientitel<input required maxLength={160} value={slide.title} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,title:e.target.value}:s))}/></label>
           <label>Stichpunkte<textarea aria-label="Stichpunkte" required rows={5} value={slide.bullets} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,bullets:e.target.value}:s))}/></label><p className="hint">Ein Stichpunkt je Zeile, maximal fünf.</p>
+          <SlideVisualEditor slide={slide} onChange={value=>setSlides(slides.map((s,i)=>i===index?value:s))}/>
           <details className="artifact-advanced"><summary>Notizen und Folienreihenfolge</summary><label>Sprechernotizen<textarea aria-label="Sprechernotizen" maxLength={4000} value={slide.notes} onChange={e=>setSlides(slides.map((s,i)=>i===index?{...s,notes:e.target.value}:s))}/></label>
           <button type="button" disabled={index===0} onClick={()=>setSlides(move(slides,index,-1))}>Folie nach oben</button><button type="button" disabled={index===slides.length-1} onClick={()=>setSlides(move(slides,index,1))}>Folie nach unten</button><button type="button" disabled={slides.length===1} onClick={()=>setSlides(slides.filter((_,i)=>i!==index))}>Folie entfernen</button></details>
         </fieldset>)}<button type="button" disabled={slides.length>=30} onClick={()=>setSlides([...slides,{title:'',bullets:'',notes:''}])}>Folie hinzufügen</button></>}

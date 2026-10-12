@@ -580,6 +580,10 @@ async def execute_run(
                             raise asyncio.CancelledError
                     from hub.chat_artifacts import create_from_chat
 
+                    # File planning is generation, not the shorter routing stage.
+                    deadline.reschedule(
+                        asyncio.get_running_loop().time() + min(170, cfg.generation_timeout)
+                    )
                     yield ("status", {"message": "Lokaler Dateientwurf wird erstellt"})
                     try:
                         artifact = await create_from_chat(

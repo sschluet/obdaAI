@@ -137,7 +137,12 @@ def test_potx_keeps_master_and_layout_uses_requested_style(tmp_path, modern):
     check = Presentation(tmp_path / "out/artifact.pptx")
     assert check.slide_width == 12192000
     assert len(check.slides) == 1
-    assert check.slides[0].shapes.title.text == "New title"
+    if modern:
+        assert "New title" in [
+            shape.text for shape in check.slides[0].shapes if shape.has_text_frame
+        ]
+    else:
+        assert check.slides[0].shapes.title.text == "New title"
     assert check.slides[0].notes_slide.notes_text_frame.text == "Speaker note"
     assert "SAMPLE SLIDE" not in "\n".join(
         s.text for slide in check.slides for s in slide.shapes if s.has_text_frame

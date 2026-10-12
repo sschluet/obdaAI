@@ -2839,3 +2839,32 @@ Aufgaben und Einstellungen laden erst bei Bedarf. Build-Hauptpaket 500,83 → 44
 kB (gzip 148,65 → 135,71 kB), keine erhöhten Chunklimits zur Unterdrückung der
 Warnung. Normale Desktop-/Mobile-Gesamtabnahme mit sichtbaren Schritten bestanden.
 CI erhält eine explizite lokale Liberation-Schriftabhängigkeit für Bildtests.
+
+### 12.10.2026: Native Skill-Grafiken und Excel-Berechnungen
+
+Zwölf feste native Schaubildtypen und sechs PowerPoint-Chartvarianten ergänzen
+versionierte Dateipläne. Moderne Präsentationen übernehmen Cover 1 / Empty 1 /
+End 2, das vorgegebene AVENDIS-Raster, Farben und das Arial-Profil für Mac.
+Tatsächliche Schriftbreiten begrenzen dichte Inhalte. Keine beliebige Ausführung
+importierter SDK-Skripte; Spezialkompositionen und freie Bildauswahl bleiben offen.
+
+Excel ergänzt geprüfte Formeln, Querverweise, fünf native Charttypen, Zahlenformate,
+Ergebniszeilen, Eingabemarkierungen und Detailspalten. Offline-Calc berechnet
+Formelwerte; nur Zellcaches werden in die originale XLSX übernommen. Externe
+Referenzen, Zirkelbezüge und unbeschränkte Formelgraphen werden abgewiesen.
+Alte Pläne ohne Erweiterungen behalten ihre kanonische Gestalt. Moderne
+Excel-Funktionen erhalten die erforderlichen OOXML-Präfixe.
+
+1249 lokale Tests bestanden (33 umgebungsabhängige Fälle übersprungen); danach
+zusätzliche gezielte Formel-/Planreparaturprüfungen bestanden. Ruff/mypy und
+UI-Bearbeitung einschließlich nativer Folgeversionen bestanden. Private echte
+AVENDIS-Master auf der Test-VM in einem isolierten Linux-Offline-Container:
+14 Präsentationsseiten und zwei Excel-Seiten erzeugt; Vorschauen visuell sowie
+SUMIFS/IF/VLOOKUP/ROUND, Querverweise, Ergebniszeile und Chart geprüft. Öffentliche
+Screenshots ausschließlich aus synthetischen UI-Entwürfen. Reale lokale KI-Planung erzeugt gültige sechs Folien (Titel, Prozess, Swimlane,
+benannte Roadmap, Chart, Abschluss) und zwei Finanzplanblätter mit nativen
+Formeln und Charts. Ein zusätzlicher SUMIF-Kriterienbezug in der nicht angeforderten
+Kategorie-B-Zusammenfassung benötigt eine manuelle Korrektur in der Vorschau;
+Strukturprüfung ersetzt keine fachliche Abnahme. Gesamter Linux-CI-Smoke:
+neun Pläne und fünfzehn Vorschauen bestanden. Vollständige CI und aktive
+App-Auslieferung noch in Abnahme.

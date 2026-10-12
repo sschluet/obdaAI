@@ -43,3 +43,5 @@
 .artifact-template-card>svg{color:var(--accent);flex-shrink:0}
 .workbench .artifact-format-options{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:600px){.artifact-format-options{grid-template-columns:repeat(2,minmax(0,1fr))}.artifact-template-options{grid-template-columns:1fr}}
+.office-layout-choices{display:flex;gap:.35rem;flex-wrap:wrap;margin:.5rem 0 1rem}.office-layout-choices button{padding:.35rem .65rem;font-size:.8rem;border-radius:.55rem}.office-layout-choices button[aria-pressed=true]{background:var(--accent-soft,#e9edff);border-color:var(--accent,#4164e8);color:var(--accent,#4164e8)}.skill-package-files td input:not([type=checkbox]){min-width:7rem;max-width:13rem;font-size:.82rem;padding:.4rem}
+.office-cell-types{display:flex;gap:.2rem}.office-cell-types button{font-size:.65rem;padding:.1rem .3rem}

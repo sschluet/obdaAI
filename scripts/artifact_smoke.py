@@ -87,6 +87,68 @@ plans.append(
 )
 
 
+plans.extend(
+    [
+        {
+            "kind": "pptx",
+            "title": "Native diagram smoke",
+            "slides": [
+                {"title": "Synthetic cover", "bullets": ["Synthetic"], "layout": "cover"},
+                {
+                    "title": "Native process",
+                    "bullets": ["Synthetic"],
+                    "visual": {
+                        "kind": "process",
+                        "items": [
+                            {"label": "Analyse", "text": "Input"},
+                            {"label": "Deliver", "text": "Output"},
+                        ],
+                    },
+                },
+                {
+                    "title": "Native chart",
+                    "bullets": ["Synthetic values"],
+                    "visual": {
+                        "kind": "chart",
+                        "columns": ["A", "B"],
+                        "series": [{"name": "Demo", "values": [2, 4]}],
+                    },
+                },
+            ],
+        },
+        {
+            "kind": "xlsx",
+            "title": "Native calculation smoke",
+            "sheets": [
+                {
+                    "name": "Daten",
+                    "columns": ["Label", "Value", "Result"],
+                    "rows": [
+                        ["A", 10, {"formula": "=SUM(B2:B3)"}],
+                        ["B", 20, {"formula": "=IF(B3>10,B3*2,0)"}],
+                    ],
+                    "charts": [
+                        {
+                            "type": "bar",
+                            "title": "Demo",
+                            "categories": "A2:A3",
+                            "series": ["B1:B3"],
+                            "anchor": "E2",
+                        }
+                    ],
+                    "totals": {"B": "sum"},
+                },
+                {
+                    "name": "Summary",
+                    "columns": ["Calculation", "Result"],
+                    "rows": [["SUMIF", {"formula": '=SUMIF(Daten!A2:A3,"A",Daten!B2:B3)'}]],
+                },
+            ],
+        },
+    ]
+)
+
+
 def prepare() -> None:
     for plan in plans:
         folder = requests / (str(uuid.uuid4()) + "-1")
@@ -122,12 +184,12 @@ def prepare() -> None:
 
 def check() -> None:
     manifests = [json.loads((p / "manifest.json").read_text()) for p in results.iterdir()]
-    assert len(manifests) == 7
+    assert len(manifests) == 9
     for manifest in manifests:
         assert manifest["status"] == "needs_review", manifest
         assert manifest["label"] == "LOCAL_ONLY"
         assert not manifest["preview_verified"]
-    assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 1, 2, 2, 2]
+    assert sorted(len(m["previews"]) for m in manifests) == [1, 1, 1, 1, 2, 2, 2, 2, 3]
     split = next(m for m in manifests if m.get("parts"))
     assert [(p["first_page"], p["pages"]) for p in split["parts"]] == [(1, 1), (2, 1)]
     exports = [m["pdf_export"] for m in manifests if m.get("pdf_export")]
@@ -149,8 +211,16 @@ def check() -> None:
             from openpyxl import load_workbook
 
             book = load_workbook(workbook)
-            assert book["Planung"]["B2"].value == 1234.5
-            assert book["Planung"]["A3"].data_type == "s"
+            if "Planung" in book:
+                assert book["Planung"]["B2"].value == 1234.5
+                assert book["Planung"]["A3"].data_type == "s"
+            else:
+                assert book["Daten"]["C2"].data_type == "f"
+                assert len(book["Daten"]._charts) == 1
+                cached = load_workbook(workbook, data_only=True)
+                assert cached["Daten"]["C2"].value == 30
+                assert cached["Daten"]["C3"].value == 40
+                assert cached["Summary"]["B2"].value == 10
         document = folder / "version/artifact.docx"
         if document.exists():
             with zipfile.ZipFile(document) as archive:
@@ -169,7 +239,8 @@ def check() -> None:
     for folder in requests.iterdir():
         assert not process(folder, results), "Duplicate overwrote an immutable output"
     print(
-        "Seven offline plans rendered; ten previews, native XLSX, split PDFs and Word PDF export; "
+        "Nine offline plans rendered; fifteen previews, native charts/formulas, "
+        "split PDFs and Word PDF export; "
         "duplicate writes rejected"
     )
 

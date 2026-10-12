@@ -395,8 +395,7 @@ def document(plan: DocumentPlan, path: Path, template: Path, inputs: list[Path])
 
 def presentation(plan: PresentationPlan, path: Path, template: Path, modern: bool) -> None:
     from pptx import Presentation
-    from pptx.dml.color import RGBColor
-    from pptx.enum.shapes import MSO_SHAPE, PP_PLACEHOLDER
+    from pptx.enum.shapes import PP_PLACEHOLDER
     from pptx.util import Inches, Pt
 
     from hub.artifact_render import _fit_slide_text
@@ -421,7 +420,88 @@ def presentation(plan: PresentationPlan, path: Path, template: Path, modern: boo
         )
     if layout is None:
         raise ValueError("PowerPoint-Vorlage benötigt ein Titel-/Inhaltslayout")
-    for item in plan.slides:
+    from hub.presentation_features import content
+
+    for number, item in enumerate(plan.slides, 1):
+        if modern:
+            name = {"cover": "Cover 1", "end": "End 2", "content": "Empty 1"}[item.layout]
+            selected_layout = next((entry for entry in layouts if entry.name == name), None)
+            # Generic imported masters may lack branded layouts; retain a blank native fallback.
+            if selected_layout is None:
+                selected_layout = next(
+                    (entry for entry in layouts if not entry.placeholders), layouts[-1]
+                )
+            slide = deck.slides.add_slide(selected_layout)
+            if item.layout == "content":
+                for placeholder in list(slide.placeholders):
+                    element = placeholder._element
+                    element.getparent().remove(element)
+                content(slide, item, number, plan.title, len(plan.slides))
+                continue
+            # Cover/end masters reserve small contact fields, not a five-item summary.
+            # Adapt the left navy area when the plan carries substantial visible content.
+            if (
+                len(item.bullets) > 1
+                or sum(len(value) for value in item.bullets) > 90
+                or len(item.subtitle) > 70
+                or (item.subtitle and item.bullets != [item.subtitle])
+            ):
+                from hub.presentation_features import shape as modern_shape
+                from hub.presentation_features import text as modern_text
+
+                for placeholder in list(slide.placeholders):
+                    if placeholder.has_text_frame:
+                        element = placeholder._element
+                        element.getparent().remove(element)
+                modern_shape(slide, 0.45, 1.34, 5.78, 5.25, "020623")
+                modern_text(
+                    slide,
+                    0.53,
+                    1.45,
+                    5.54,
+                    0.3,
+                    item.kicker.upper() if item.kicker else "",
+                    8,
+                    "FFFFFF",
+                    True,
+                )
+                modern_text(slide, 0.53, 1.96, 5.54, 1.4, item.title, 30, "FFFFFF", True)
+                body = ([item.subtitle] if item.subtitle else []) + item.bullets
+                modern_text(slide, 0.53, 3.57, 5.54, 2.95, "\n".join(body), 14, "FFFFFF")
+                slide.notes_slide.notes_text_frame.text = item.notes
+                continue
+            title_placeholder = slide.shapes.title
+            if title_placeholder is not None:
+                title_placeholder.text = item.title
+                _fit_slide_text(title_placeholder.text_frame, maximum=34, minimum=24, bold=True)
+            else:
+                from hub.presentation_features import text as modern_text
+
+                modern_text(slide, 0.52, 4.5, 8, 1.5, item.title, 34, "FFFFFF", True)
+            for placeholder in slide.placeholders:
+                if placeholder == title_placeholder or not placeholder.has_text_frame:
+                    continue
+                idx = placeholder.placeholder_format.idx
+                if idx == 1:
+                    has_contact = any(p.placeholder_format.idx == 15 for p in slide.placeholders)
+                    placeholder.text = (
+                        item.subtitle
+                        if item.layout == "end" and has_contact
+                        else (item.subtitle or "\n".join(item.bullets))
+                    )
+                    if placeholder.text:
+                        _fit_slide_text(placeholder.text_frame, maximum=14, minimum=12)
+                elif idx == 15 and item.layout == "end":
+                    placeholder.text = "\n".join(item.bullets)
+                    _fit_slide_text(placeholder.text_frame, maximum=14, minimum=12)
+                else:
+                    placeholder.text = ""
+            if item.kicker and item.layout == "cover":
+                from hub.presentation_features import text as modern_text
+
+                modern_text(slide, 0.52, 4.15, 8, 0.3, item.kicker.upper(), 8, "FFFFFF", True)
+            slide.notes_slide.notes_text_frame.text = item.notes
+            continue
         slide = deck.slides.add_slide(layout)
         title = slide.shapes.title
         if title is None:
@@ -437,27 +517,20 @@ def presentation(plan: PresentationPlan, path: Path, template: Path, modern: boo
         if not candidates:
             raise ValueError("PowerPoint-Vorlage benötigt einen Inhaltsplatzhalter")
         box = max(candidates, key=lambda p: p.width * p.height)
-        if modern:
+        if item.visual:
+            from hub.presentation_features import visual
+
             box.text = ""
-            count = len(item.bullets)
-            height = box.height // count
-            for index, text in enumerate(item.bullets):
-                card = slide.shapes.add_shape(
-                    MSO_SHAPE.ROUNDED_RECTANGLE,
-                    box.left,
-                    box.top + height * index,
-                    box.width,
-                    height - Inches(0.09),
-                )
-                card.fill.solid()
-                card.fill.fore_color.rgb = RGBColor(0xF0, 0xF4, 0xFC)  # type: ignore[no-untyped-call]
-                card.line.fill.background()
-                card.text_frame.margin_left = Inches(0.2)
-                card.text_frame.margin_right = Inches(0.2)
-                card.text_frame.text = text
-                _fit_slide_text(card.text_frame, maximum=20, minimum=14)
-                for paragraph in card.text_frame.paragraphs:
-                    paragraph.font.color.rgb = RGBColor(0x02, 0x06, 0x23)  # type: ignore[no-untyped-call]
+            visual(
+                slide,
+                item.visual,
+                (
+                    box.left / Inches(1),
+                    box.top / Inches(1),
+                    box.width / Inches(1),
+                    box.height / Inches(1),
+                ),
+            )
         else:
             frame = box.text_frame
             frame.clear()

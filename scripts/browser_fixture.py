@@ -273,6 +273,59 @@ class SyntheticProvider:
             return
         if parts and parts[0].source_id == "artifact-draft-policy":
             assert not external and not grants
+            rich = any("rich-office" in part.content for part in parts)
+            if rich and ('"sheets"' in parts[0].content or '"slides"' in parts[0].content):
+                if '"sheets"' in parts[0].content:
+                    yield json.dumps(
+                        {
+                            "title": "Synthetic formulas and chart",
+                            "sheets": [
+                                {
+                                    "name": "Overview",
+                                    "columns": ["Item", "Value", "Total"],
+                                    "rows": [
+                                        ["Alpha", 10, {"formula": "=SUM(B2:B3)"}],
+                                        ["Beta", 20, 30],
+                                    ],
+                                    "number_formats": {"B": "currency"},
+                                    "charts": [
+                                        {
+                                            "type": "bar",
+                                            "title": "Synthetic amounts",
+                                            "categories": "A2:A3",
+                                            "series": ["B1:B3"],
+                                            "anchor": "E2",
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    )
+                else:
+                    import re
+
+                    count = int(re.search(r"Exactly ([0-9]+) slides", parts[0].content)[1])
+                    yield json.dumps(
+                        {
+                            "title": "Synthetic structured presentation",
+                            "slides": [
+                                {
+                                    "title": "Process " + str(i + 1),
+                                    "bullets": ["Editable summary"],
+                                    "kicker": "SYNTHETIC",
+                                    "visual": {
+                                        "kind": "process",
+                                        "items": [
+                                            {"label": "Analyse", "text": "Gather input"},
+                                            {"label": "Deliver", "text": "Review output"},
+                                        ],
+                                    },
+                                }
+                                for i in range(count)
+                            ],
+                        }
+                    )
+                return
             if '"tiles"' in parts[0].content:
                 yield json.dumps(
                     {

@@ -226,6 +226,18 @@
       "title": "Cloudguthaben direkt am Profil.",
       "description": "Dauerhafte kompakte Provideranzeige neben dem Profil mit klar getrenntem Kontoguthaben, Schlüsselverbrauch und App-Nutzung. Alle Werte und Verbindungen dieser Darstellung sind synthetisch.",
       "image": "assets/cloudbalances.png"
+    },
+    {
+      "id": "officegraphics",
+      "title": "Grafiken gezielt gestalten.",
+      "description": "Strukturierte Foliengrafiken im Dateidialog bearbeiten. Ausschließlich synthetischer Prozess und lokale Testantwort.",
+      "image": "assets/officegraphics.png"
+    },
+    {
+      "id": "officeformulas",
+      "title": "Formeln und Werte im Blick.",
+      "description": "Formelzellen ausdrücklich kennzeichnen und Werte bearbeiten. Ausschließlich synthetischer Finanzplan; die Galerie verwendet lokale Testantworten.",
+      "image": "assets/officeformulas.png"
     }
   ],
   "groups": [
@@ -431,13 +443,13 @@
         },
         {
           "title": "PowerPoint-Präsentationen",
-          "description": "Native Folien, Notizen und gezielte Folienänderungen. Dichte deutsche Folien und Folgeversionen wurden geprüft; breite Layoutabnahme bleibt offen.",
-          "status": "live"
+          "description": "Native Folien, Notizen und gezielte Folgeversionen. Neu: zwölf strukturierte Schaubildtypen und sechs bearbeitbare Chartvarianten. Die moderne Gestaltung folgt dem geprüften Masterraster, Farben und Arial-Profil. Neue Grafikfunktionen lokal getestet; Test-VM-Abnahme noch offen.",
+          "status": "local"
         },
         {
           "title": "Native Excel-Dateien",
-          "description": "Lokale KI-Planung erzeugt echte XLSX-Arbeitsmappen mit benannten Tabellenblättern, Spalten und festen typisierten Werten. Vorschau und Freigabe vor Download. Keine Formelausführung oder importierten Skripte. Auf der Test-VM mit realer lokaler Planung, numerischen Zellwerten, Vorschau/Freigabe und verifiziertem Download geprüft.",
-          "status": "live"
+          "description": "Lokale KI-Planung für echte XLSX-Arbeitsmappen. Neue native Formeln, Querverweise, Charts, Zahlenformate, Ergebniszeilen und Detailspalten. Offline-Neuberechnung erhält Formeln und Originalstile; externe Verweise und Zirkelbezüge werden abgewiesen. Formel-/Zahlbearbeitung im Dateidialog geprüft. Neue Funktionen lokal getestet; Test-VM-Abnahme noch offen.",
+          "status": "local"
         },
         {
           "title": "PDF-Seitenoperationen",

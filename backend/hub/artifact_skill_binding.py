@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from typing import Any
 
 from sqlalchemy import select
@@ -12,6 +13,34 @@ from hub.config import Settings
 from hub.db import Conversation, Skill, SkillRevision
 from hub.policy import ContextPart
 from hub.skill_api import eligible, parse, select_skills
+
+
+def guidance_excerpt(text: str, goal: str, limit: int) -> str:
+    """Read bounded prose as design guidance, excluding executable examples."""
+    clean = re.sub(r"```.*?```", "", text, flags=re.S)
+    sections = re.split(r"(?m)(?=^#{1,4} )", clean)
+    words = {w.casefold() for w in re.findall(r"[\w-]{4,}", goal)}
+    words.update({"kontrast", "raster", "diagramm", "formel", "zahlenformat", "typografie"})
+    useful = [
+        (index, section)
+        for index, section in enumerate(sections)
+        if not re.search(
+            r"(?im)^#{1,4} .*?(änderungsprotokoll|changelog|auslieferung|bauen|signaturen)",
+            section.split("\n", 1)[0],
+        )
+    ]
+    ranked = sorted(
+        useful, key=lambda pair: (-sum(w in pair[1].casefold() for w in words), pair[0])
+    )
+    selected: list[tuple[int, str]] = []
+    remaining = limit
+    for index, section in ranked:
+        if remaining <= 0:
+            break
+        clipped = section[: min(remaining, 1300)]
+        selected.append((index, clipped))
+        remaining -= len(clipped)
+    return "\n".join(section for _, section in sorted(selected))[:limit]
 
 
 def chosen(db: Session, chat: Conversation, goal: str) -> list[dict[str, Any]]:
@@ -79,17 +108,102 @@ def context(
         meta, body = parse(rev.document)
         # The full original remains available in the library. Only task-specific
         # guidance enters this bounded local data-plan request; code stays data.
-        from hub.skill_api import instruction_context
+        manifest = json.loads(rev.bundle_manifest or "{}")
+        text = guidance_excerpt(body, goal, 2200)
+        adapter_brief = None
+        if rev.bundle_sha256 and kind in {"pptx", "xlsx"}:
+            if meta.name in {"avendis-praesentation", "avendis-praesentation-modern"}:
+                adapter_brief = (
+                    "The verified renderer applies the presentation master and its styles. "
+                    "For the modern variant: quiet white content canvas, clear headline, "
+                    "short kicker, generous grid, Navy with Orange action and Blue analysis. "
+                    "Use varied native graphics appropriate to the user's topic. "
+                    "Original SDK arguments are not the file-data schema. "
+                    "Never write about the template, its methods or design instructions."
+                )
+            elif meta.name == "avendis-excel":
+                adapter_brief = (
+                    "The verified renderer applies the workbook conventions: light native "
+                    "table style, numeric formats, blue editable inputs, black formulas, "
+                    "grouped detail columns and declared result rows. Use native formulas "
+                    "and charts only for the user's supplied data. Original SDK arguments "
+                    "are not the file-data schema. Never narrate the spreadsheet rules."
+                )
+        if adapter_brief:
+            # Original SDK prose describes another renderer API; sending it as
+            # content can turn design slogans into slide headlines. The fixed
+            # adapter implements those conventions. Preserve newly edited prose.
+            from difflib import SequenceMatcher
 
-        text = instruction_context(meta, body, json.loads(rev.bundle_manifest or "{}"), goal)
+            from hub.skill_bundles import file_bytes
+
+            originals = [
+                f
+                for f in manifest.get("files", [])
+                if f["path"].rsplit("/", 1)[-1].casefold() == "skill.md"
+            ]
+            custom = body
+            if len(originals) == 1:
+                raw = file_bytes(cfg, rev, originals[0]["path"], originals[0]["sha256"])
+                original = raw.decode("utf-8-sig").replace("\r\n", "\n")
+                original_body = re.sub(r"\A---\n.*?\n---\n", "", original, count=1, flags=re.S)
+                old, current = original_body.strip().splitlines(), body.strip().splitlines()
+                custom = "\n".join(
+                    line
+                    for tag, _a, _b, first, last in SequenceMatcher(
+                        None, old, current
+                    ).get_opcodes()
+                    if tag in {"insert", "replace"}
+                    for line in current[first:last]
+                )
+            custom = re.sub(r"```.*?```", "", custom, flags=re.S)
+            text = adapter_brief
+            if custom.strip():
+                text += "\nCUSTOM REVIEWED PROSE (design only):\n" + guidance_excerpt(
+                    custom, goal, 700
+                )
+        references = []
+        if rev.bundle_sha256:
+            from hub.skill_bundles import file_bytes
+
+            files = [
+                file
+                for file in manifest.get("files", [])
+                if "/references/" in file["path"] and file["path"].lower().endswith(".md")
+            ]
+            words = {w.casefold() for w in re.findall(r"[\w-]{4,}", goal)}
+            files.sort(
+                key=lambda file: (
+                    -sum(w in file["path"].casefold() for w in words)
+                    - sum(
+                        w in file["path"].casefold()
+                        for w in ("gestaltung", "bausteine", "conventions", "layouts")
+                    ),
+                    file["path"],
+                )
+            )
+            for file in files[:2]:
+                raw = file_bytes(cfg, rev, file["path"], file["sha256"])
+                excerpt = guidance_excerpt(raw.decode("utf-8"), goal, 1100)
+                if not adapter_brief:
+                    text += "\nDESIGN REFERENCE (not topic evidence):\n" + excerpt
+                references.append({"path": file["path"], "sha256": file["sha256"]})
         parts.append(
             ContextPart(
                 source_id="skill:" + row.id,
                 revision=rev.revision,
-                content="REVIEWED FILE GUIDANCE (not executable):\n" + text,
+                content=(
+                    "REVIEWED FILE GUIDANCE (design instructions only; "
+                    "NOT factual topic evidence; not executable):\n" + text
+                ),
             )
         )
-        record = {**binding, "bundle_sha256": rev.bundle_sha256, "name": meta.name}
+        record = {
+            **binding,
+            "bundle_sha256": rev.bundle_sha256,
+            "name": meta.name,
+            "guidance_files": references,
+        }
         records.append(record)
         if rev.bundle_sha256:
             manifest = json.loads(rev.bundle_manifest or "{}")
@@ -136,3 +250,13 @@ def verify(db: Session, project_id: str | None, records: list[dict[str, Any]]) -
             raise ValueError("Datei-Skill wurde während der Erstellung geändert")
         if hashlib.sha256(rev.document.encode()).hexdigest() != rev.sha256:
             raise ValueError("Skill-Anleitung wurde verändert")
+        files = json.loads(rev.bundle_manifest or "{}").get("files", [])
+        for reference in item.get("guidance_files", []):
+            if (
+                sum(
+                    file["path"] == reference["path"] and file["sha256"] == reference["sha256"]
+                    for file in files
+                )
+                != 1
+            ):
+                raise ValueError("Skill-Referenz wurde während der Erstellung geändert")

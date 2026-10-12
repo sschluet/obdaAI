@@ -16,11 +16,14 @@ from typing import Any
 from hub.artifact_specs import (
     ArtifactSpec,
     DocumentPlan,
+    FormulaCell,
     ImagePlan,
     PdfPlan,
     PresentationPlan,
     SpreadsheetPlan,
 )
+from hub.presentation_features import content as presentation_content
+from hub.spreadsheet_features import cache_formula_results, decorate_sheet, native_formula
 from hub.template_render import document as template_document
 from hub.template_render import presentation as template_presentation
 
@@ -109,6 +112,11 @@ def _presentation(plan: PresentationPlan, path: Path) -> None:
         paragraph.font.bold = True
         paragraph.font.color.rgb = RGBColor(0x15, 0x39, 0x76)  # type: ignore[no-untyped-call]
         _fit_slide_text(title.text_frame, maximum=30, minimum=18, bold=True)
+        if item.visual:
+            for element in list(slide.shapes):
+                element._element.getparent().remove(element._element)
+            presentation_content(slide, item, number, plan.title, len(plan.slides))
+            continue
         box = slide.shapes.add_textbox(Inches(0.9), Inches(2), Inches(11.5), Inches(4.6))
         box.text_frame.word_wrap = True
         for index, text in enumerate(item.bullets):
@@ -319,11 +327,37 @@ def _spreadsheet(plan: SpreadsheetPlan, path: Path) -> None:
         sheet = book.create_sheet(item.name)
         sheet.append(item.columns)
         for row in item.rows:
-            sheet.append(row)
+            sheet.append([
+                native_formula(cell.formula) if isinstance(cell, FormulaCell) else cell
+                for cell in row
+            ])
+        if item.totals:
+            functions = {"sum": 109, "average": 101, "count": 103, "min": 105, "max": 104}
+            sheet.append(
+                [
+                    f"=SUBTOTAL({functions[item.totals[column]]},"
+                    f"{column}2:{column}{len(item.rows) + 1})"
+                    if column in item.totals
+                    else ""
+                    for column in (
+                        get_column_letter(number) for number in range(1, len(item.columns) + 1)
+                    )
+                ]
+            )
         for row in sheet:
             for cell in row:
                 # Model strings remain literal cells, never formulas/external links.
-                if isinstance(cell.value, str):
+                original = (
+                    item.rows[cell.row - 2][cell.column - 1]
+                    if 1 < cell.row <= len(item.rows) + 1
+                    else None
+                )
+                total_formula = cell.row == len(item.rows) + 2 and cell.column_letter in item.totals
+                if (
+                    isinstance(cell.value, str)
+                    and not hasattr(original, "formula")
+                    and not total_formula
+                ):
                     cell.data_type = "s"
                 cell.alignment = Alignment(vertical="top", wrap_text=True)
                 cell.font = Font(name="Liberation Sans", size=11, color="020623")
@@ -343,8 +377,10 @@ def _spreadsheet(plan: SpreadsheetPlan, path: Path) -> None:
         sheet.page_setup.fitToWidth = 1
         sheet.page_setup.fitToHeight = 0
         sheet.print_title_rows = "1:1"
+        decorate_sheet(sheet, item, len(book.worksheets))
     book.properties.title, book.properties.creator = plan.title, "obdaAI"
     book.save(str(path))
+    cache_formula_results(path)
     check = load_workbook(path, read_only=True, data_only=False)
     try:
         if check.sheetnames != [item.name for item in plan.sheets]:

@@ -114,9 +114,61 @@ separate 40-MiB-Grenze für Projektquellen bleiben bestehen.
 Dateiwünsche akzeptieren auch höfliche Infinitivformen wie „Bitte Präsentation
 über ein Thema mit acht Folien erstellen“. Die verlangte Folienanzahl wird
 als konkrete JSON-Struktur vorgegeben. Ein falscher Modellumfang erhält höchstens
-einen lokalen Korrekturversuch innerhalb der gemeinsamen 120-Sekunden-Frist;
+einen lokalen Korrekturversuch innerhalb der gemeinsamen Dateiplanungsfrist (maximal 170 Sekunden);
 es werden keine Folien dupliziert oder erfunden. Ein eindeutig fehlgeschriebener
 `bulles`-Schlüssel wird als `bullets` übernommen und im Beleg vermerkt;
 widersprüchliche Felder bleiben ungültig. Briefvorlagen geben strukturierte
 Anrede, Gruß und Unterschrift einmal aus, ohne doppelte abschließende Modellabsätze.
 Fehlende Funktionsangaben bleiben sichtbar; die Originalvorlagen bleiben unverändert.
+
+
+## Native Diagramme und Excel-Berechnungen
+
+Dateientwürfe unterstützen strukturierte, in Office bearbeitbare Grafikdaten.
+Für Präsentationen stehen Prozess, Swimlane, Kreislauf, Roadmap, Matrix,
+Kennzahlen, Schichten, Vergleich, Punktmatrix, Statusbalken, Botschaften und
+native Charts zur Verfügung. Charts unterstützen Säulen, Balken, Linien,
+Flächen, Kreis und Ring. Die moderne AVENDIS-Linie verwendet die vorhandenen
+Layouts Cover 1 / Empty 1 / End 2, das vorgegebene Raster und die Navy-/Orange-/
+Blau-Farben. Das im Skill vorgesehene Arial-Profil eignet sich für Mac-Empfänger.
+Zu dichte Inhalte werden abgewiesen, statt Text außerhalb der Folie zu erzeugen.
+Spezielle freie SDK-Kompositionen und beliebige importierte Python-Helfer sind
+keine ausführbaren Werkzeuge; die Grafiktypen sind feste, geprüfte Adapter.
+
+Excel enthält native Formeln als ausdrücklich markierte Zellen, beispielsweise
+`{"formula":"=SUM(B2:B5)"}`. Gewöhnlicher Text, der mit `=` beginnt, bleibt Text.
+Die feste Funktionsliste unterstützt unter anderem IF, SUMIFS, COUNTIFS,
+SUMPRODUCT, VLOOKUP, INDEX/MATCH und finanzielle Berechnungen. Zellverweise sind
+auf die Datenblätter begrenzt; Zirkelbezüge, externe Arbeitsmappen und unbekannte
+Funktionen werden abgewiesen. Die Offline-Berechnung übernimmt nur berechnete
+Zellwerte zurück in die originale XLSX: Formeln, Charts und Tabellenstile bleiben
+erhalten. Nicht berechenbare Formeln erhalten keine erfolgreiche Dateivorschau.
+
+Währungs-/Prozent-/Datumsformate, Tabellenstil, Eingabe-/Formelfarben,
+Ergebniszeilen, gelbe Eingabemarkierungen und einklappbare Detailspalten sind
+strukturierte Optionen. Balken-, Linien-, Flächen-, Kreis- und XY-Charts bleiben
+in Excel editierbar. Der Dateidialog zeigt Formelzellen ausdrücklich und erhält
+Grafikdaten, Vorlagenbindung und Berechnungen in Folgeversionen.
+
+Designanleitungen und gehashte Referenztexte werden bei der lokalen Planung als
+Gestaltungsvorgaben behandelt. Sie sind keine fachlichen Quellen zum Thema der
+Präsentation. Numerische Grafiken brauchen vorgegebene Daten oder ausdrücklich
+als synthetisch angeforderte Beispiele.
+
+Bei falschen Grafik-/Formelstrukturen ist höchstens ein lokaler Korrekturversuch
+innerhalb der gemeinsamen Zeitgrenze möglich. Er benennt nur Validierungspfade;
+ungültige Felder werden nicht still entfernt und Quellenwerte nicht verändert.
+
+XLOOKUP unterstützt genaue Treffer in gleich großen eindimensionalen Bereichen
+und einen optionalen Wert für fehlende Treffer. Abweichende Suchmodi sind nicht
+freigegeben. Für Calc 7.4 wird nur die separate Berechnungskopie in INDEX/MATCH
+übersetzt; die Download-Datei behält die native Excel-Funktion. Chart-Datenreihen
+können entweder die Kopfzeile enthalten oder eindeutig als reiner Datenbereich
+angegeben werden. Titel beziehen sich weiterhin auf die tatsächliche Kopfzelle.
+
+Roadmaps können benannte Zeiträume mit `from_period` / `to_period` verwenden.
+Die Darstellung ordnet sie eindeutig den vorhandenen Spalten zu und trennt
+überlappende Aufgaben in Unterzeilen. Es werden keine Datumswerte erfunden.
+Dateiplanung verwendet eine eigene Generierungsfrist von maximal 170 Sekunden
+innerhalb der konfigurierten Generierungsgrenze, einschließlich höchstens einer
+Korrektur; die kürzere Chat-Vorbereitungsfrist wird dafür nicht verwendet.

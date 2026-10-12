@@ -395,7 +395,7 @@ def test_progressing_draft_may_exceed_http_inactivity_timeout(setup):
         assert db.scalar(select(func.count()).select_from(ArtifactRevision)) == 0
 
 
-def test_draft_total_deadline_prevents_unsaved_output_without_retry(setup):
+def test_draft_total_deadline_prevents_unsaved_output_without_retry(setup, monkeypatch):
     app, c, h, cfg, pid, _ = setup
 
     class SlowProvider(DraftProvider):
@@ -405,12 +405,16 @@ def test_draft_total_deadline_prevents_unsaved_output_without_retry(setup):
             await asyncio.sleep(1.1)
             yield DOCUMENT[20:]
 
+    from types import SimpleNamespace
+
+    clock = iter([0.0, 29.99])
+    monkeypatch.setattr("hub.artifact_drafts.time", SimpleNamespace(monotonic=lambda: next(clock)))
     provider = SlowProvider(DOCUMENT)
     with pytest.raises(ValueError, match="Zeitlimit"):
         asyncio.run(
             preview(
                 app.state.sessions,
-                replace(cfg, local_timeout=30, run_timeout=1),
+                replace(cfg, local_timeout=30, generation_timeout=30),
                 pid,
                 DraftInput(goal="Short Word section", kind="docx"),
                 provider,
@@ -509,3 +513,117 @@ def test_known_bullets_key_typo_never_drops_conflicting_content(setup, ambiguous
     assert response.status_code == (422 if ambiguous else 200)
     if not ambiguous:
         assert response.json()["spec"]["plan"]["slides"][0]["bullets"] == ["Original content"]
+
+
+@pytest.mark.parametrize("kind", ["pptx", "xlsx"])
+def test_rich_schema_correction_is_bounded_and_preserves_data(setup, kind):
+    app, c, h, cfg, pid, spec = setup
+    if kind == "pptx":
+        good = {
+            "title": "Demo",
+            "slides": [
+                {
+                    "title": "Process",
+                    "bullets": ["Demo"],
+                    "visual": {
+                        "kind": "swimlane",
+                        "items": [
+                            {"label": "Input", "lane": "Team A"},
+                            {"label": "Review", "lane": "Team B"},
+                        ],
+                    },
+                }
+            ],
+        }
+        bad = {
+            "title": "Demo",
+            "slides": [
+                {
+                    "title": "Process",
+                    "bullets": ["Demo"],
+                    "visual": {"kind": "swimlane", "items": [{"label": "Input"}]},
+                }
+            ],
+        }
+    else:
+        good = {
+            "title": "Demo",
+            "sheets": [
+                {
+                    "name": "Data",
+                    "columns": ["Item", "Value"],
+                    "rows": [["A", 10], ["Total", {"formula": "=SUM(B2)"}]],
+                    "number_formats": {"B": "currency"},
+                }
+            ],
+        }
+        bad = {
+            "title": "Demo",
+            "sheets": [
+                {
+                    "name": "Data",
+                    "columns": ["Item", "Value"],
+                    "rows": [["A", 10]],
+                    "optional": {"number_formats": {"B": "currency"}},
+                }
+            ],
+        }
+
+    class Repair(DraftProvider):
+        async def stream(self, parts, roles, *, external, grants):
+            self.calls += 1
+            assert not external and not grants
+            if self.calls == 2:
+                assert "SCHEMA CORRECTION" in parts[0].content
+                assert "validation pointers" in parts[0].content
+                assert roles == ["system"] + ["user"] * (len(parts) - 1)
+                assert parts[-1].source_id == "artifact-invalid-plan"
+                assert parts[-1].label == "LOCAL_ONLY"
+                assert json.dumps(bad) in parts[-1].content
+            yield json.dumps(bad if self.calls == 1 else good)
+
+    provider = Repair("")
+    app.state.providers = provider
+    result = c.post(
+        "/api/projects/" + pid + "/artifact-drafts",
+        headers=h,
+        json={"goal": "Synthetic structured output", "kind": kind, "slide_count": 1},
+    )
+    assert result.status_code == 200, result.text
+    assert provider.calls == 2
+    value = result.json()
+    if kind == "pptx":
+        assert value["spec"]["plan"]["slides"][0]["visual"]["items"][0]["lane"] == "Team A"
+    else:
+        assert value["spec"]["plan"]["sheets"][0]["rows"][1][1]["formula"] == "=SUM(B2)"
+
+
+@pytest.mark.parametrize(
+    "goal", ["Qualitative strategy", "Swimlane Vergleich Roadmap", "KPI Charts Punktmatrix"]
+)
+def test_compact_presentation_scaffold_is_valid_and_format_specific(goal):
+    from hub.artifact_planning import office_policy
+
+    policy = office_policy("pptx", goal, 6)
+    shape = json.JSONDecoder().raw_decode(policy.split("Shape: ", 1)[1])[0]
+    spec = ArtifactSpec.model_validate({"plan": {"kind": "pptx", **shape}})
+    assert len(spec.plan.slides) == 6
+    assert all(slide.visual for slide in spec.plan.slides[1:-1])
+    assert spec.plan.slides[0].layout == "cover"
+    assert spec.plan.slides[-1].layout == "end"
+    assert len(policy) < 6000
+    assert "SUMIF" not in policy and "DOCX" not in policy
+    assert "never omit user data" in policy
+
+
+def test_compact_excel_scaffold_and_repair_evidence_bounds():
+    from hub.artifact_planning import office_policy, previous_plan
+
+    policy = office_policy("xlsx", "Calculation", 6)
+    shape = json.JSONDecoder().raw_decode(policy.split("Shape: ", 1)[1])[0]
+    ArtifactSpec.model_validate({"plan": {"kind": "xlsx", **shape}})
+    assert len(policy) < 4000 and "slide" not in policy
+    assert "=B2*2" in policy
+    assert "Repair me" in previous_plan("Repair me")
+    assert "Do not infer missing content" in previous_plan("PRIVATE-DATA" * 800)
+    assert "PRIVATE-DATA" not in previous_plan("PRIVATE-DATA" * 800)
