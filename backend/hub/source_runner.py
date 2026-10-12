@@ -9,6 +9,7 @@ from pathlib import Path
 
 from hub.deletion_cleanup import blocked, consume_markers
 from hub.extract import EXTENSIONS, isolated_parse
+from hub.extraction_errors import classify_error
 
 
 def process(root: Path, output: Path, job: Path) -> None:
@@ -42,10 +43,20 @@ def process(root: Path, output: Path, job: Path) -> None:
         result = isolated_parse(original, suffix)
         result["sha256"] = digest
         result["revision"] = revision
-    except (ValueError, OSError, KeyError, TimeoutError, TypeError):
-        result = {"error": "Extraktion fehlgeschlagen; Format, Schutz, OCR und Limits prüfen"}
-        identifier = job.stem
-        revision = spec.get("revision", 1) if "spec" in locals() and isinstance(spec, dict) else 1
+    except (ValueError, OSError, KeyError, TimeoutError, TypeError) as error:
+        # Invalid envelopes have no safe destination or source identity.
+        if (
+            "identifier" not in locals()
+            or "digest" not in locals()
+            or "suffix" not in locals()
+            or "revision" not in locals()
+        ):
+            return
+        result = {
+            "error": classify_error(error, suffix).code,
+            "sha256": digest,
+            "revision": revision,
+        }
     if blocked(root, "source", identifier):
         return
     temporary = output / ("." + identifier + "-" + str(revision) + ".tmp")

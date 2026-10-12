@@ -24,6 +24,12 @@
       "image": "assets/sourcedelete.png"
     },
     {
+      "id": "sourceocr",
+      "title": "Gescannten Quellen eine zweite Chance geben.",
+      "description": "Eine verständliche Fehlermeldung und erneute lokale Verarbeitung direkt an der Quelle. Das Original bleibt erhalten. Ausschließlich synthetische Quellen; der OCR-Fehler ist für diese UI-Illustration simuliert.",
+      "image": "assets/sourceocr.png"
+    },
+    {
       "id": "projecticons",
       "title": "Ein Zeichen für jedes Projekt.",
       "description": "Ein persönliches Projektsymbol aus 32 frei nutzbaren Lucide-Icons suchen und als eigenes Projektlogo wählen. Ausschließlich fiktives Projekt Aurora.",
@@ -339,7 +345,7 @@
         },
         {
           "title": "Fundstellen und lokale OCR",
-          "description": "Quellenbasierte Antworten, technische Fundstellen und lokale Texterkennung. Die aktuelle Frage steuert eine textbasierte Auswahl begrenzter Dokumentauszüge innerhalb des Modellkontexts. Große Fundstellen behalten Quellen-ID und Fundstelle; Originaldateien bleiben unverändert. Eine Auswahl ersetzt keine vollständige Dokumentprüfung. Die Auswahl für umfangreiche Projektquellen ist auf der Test-VM mit einem großen synthetischen Vertrag und zwölf weiteren Dateien sowie echter lokaler Antwort geprüft. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
+          "description": "Quellenbasierte Antworten und lokale Deutsch-/Englisch-OCR für gescannte PDFs und Bilder. Scanvorbereitung mit 300 dpi für übliche Papiergrößen, Kontrastanpassung, Schräglagen- und Orientierungserkennung innerhalb fester Pixelgrenzen. Verständliche Fehler unterscheiden Verarbeitung, Schutz und Limits; eine fehlgeschlagene Quelle lässt sich direkt im Projekt oder Chat-Arbeitsbereich erneut lokal verarbeiten. Originaldateien bleiben unverändert. Die textbasierte Auswahl begrenzter Dokumentauszüge erhält Quellen-ID und Fundstelle; sie ersetzt keine vollständige Dokumentprüfung. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
           "status": "live"
         },
         {

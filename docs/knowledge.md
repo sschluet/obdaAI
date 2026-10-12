@@ -30,9 +30,27 @@ unter Linux bricht ab; macOS ist ausschließlich Entwicklungsbetrieb ohne diese 
 
 Fundstellen tragen Originalhash und ID: PDF-Seite, Foliennummer, Dokumentabschnitt
 oder Tabelle, Sheet/Zellbereich, CSV-Zeile, Markdown-Überschrift/Zeile. Text wird direkt
-extrahiert; textlose PDF-Seiten und Bilder erhalten lokale Tesseract-OCR. OCR kann
-fehlerhaft sein; Bild- und Diagrammsemantik sowie komplexes Office-Layout werden nicht
-als verstanden behauptet. Office-Formeln werden erhalten, nicht ausgeführt. ZIP-Makros
+extrahiert; textlose PDF-Seiten, schwache Textschichten von Bildseiten und Bilder
+werden lokal mit Tesseract in Deutsch und Englisch verarbeitet. PDF-Seiten werden für
+gewöhnliche Papiergrößen mit 300 dpi gerastert; große Seiten bleiben unter festen
+Pixelgrenzen. Graustufen, Weißhintergrund für Transparenz, vorsichtige Kontrastanpassung
+und Korrektur kleiner Schräglagen verbessern die Scanvorbereitung. Tesseract prüft
+zusätzlich die Seitenorientierung. Weder Vorbereitung noch OCR verändern das Original.
+OCR kann fehlerhaft sein; Handschrift, Tabellenstruktur, Bild- und Diagrammsemantik
+sowie komplexes Office-Layout werden nicht als zuverlässig verstanden behauptet. Fehlschläge unterscheiden Passwortschutz, Seiten-/Textgrenzen, fehlende OCR-Runtime,
+OCR- und Parserzeitlimits sowie ungültige Dateien über feste, verständliche Meldungen
+mit Diagnosecode. Der PDF-Parser hat bis zu 600 Sekunden Gesamtzeit und 480 Sekunden
+CPU-Zeit; Rasterung bleibt je Aufruf auf 30 Sekunden begrenzt; PDF-OCR erhält bis zu
+120 Sekunden je Scan-Seite, Bild-OCR weiterhin 30 Sekunden. Andere
+Formate behalten 120 Sekunden Gesamtzeit und 90 Sekunden CPU-Zeit. Umfangreiche
+oder besonders schwierige Scans können diese Grenzen weiterhin erreichen.
+Prozessausgaben und Dokumentinhalte werden nicht als Fehlertexte
+an den Browser weitergereicht. Im Projekt und im Chat-Arbeitsbereich steht bei einer
+fehlgeschlagenen Quelle direkt „Erneut verarbeiten“ bereit. Das ist ein ausdrücklicher
+neuer lokaler Versuch, kein automatischer Retry. Originaldownload bleibt erreichbar;
+archivierte Projekte müssen zur Bearbeitung zunächst wieder geöffnet werden.
+
+Office-Formeln werden erhalten, nicht ausgeführt. ZIP-Makros
 und eingebettete aktive Office-Inhalte werden abgewiesen; kein Dokumentcode läuft.
 
 Recherche begrenzt Fundstellen vor dem Modellkontext und wendet den Projektscope im

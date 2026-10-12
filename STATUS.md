@@ -1,5 +1,31 @@
 # obdaAI — Status 12.10.2026
 
+## Lokale OCR gescannter Quellen – lokale und isolierte Linux-Prüfung, 12.10.2026
+
+Fehlerdiagnose identifiziert das bisherige OCR-Seitenlimit30Sekunden als Hürde
+bei dichten gescannten PDFs. Sichere Diagnosen ersetzen die Sammelmeldung. PDF-OCR erhält jetzt bis120Sekunden je Seite, gesamte
+PDF-Verarbeitung600Sekunden, CPU480; PDF-Worker650, sonstige120/90/150 unverändert.
+Keine Schema-, Compose-, Netzwerk- oder Landlockänderung.
+
+Bis300dpi mit festen12M-Pixel/5000px-Grenzen, Graustufen/Kontrast, Weißkomposition,
+EXIF und konservative Schieflagenkorrektur. Deutsch/Englisch, automatische
+Orientierung, ein CPU-Thread, genau ein OCR-Lauf je Seite. Kurze/beschädigte
+Textschichten in Scan-PDFs werden berücksichtigt, Originale unverändert. Sichere
+Fehlercodes unterscheiden OCR/Parserzeit, Ressourcen, Schutz, Seiten-/Textlimits
+und ungültige Dateien; Fehlerresultate an SHA/Revision gebunden. Kein Rohstderr
+oder Dokumentinhalt im Fehlertext. Explizites „Erneut verarbeiten“ direkt bei
+fehlgeschlagener Quelle in Projekt/Arbeitsbereich, keine automatische Wiederholung.
+
+83 gezielte Backendtests bestanden, zwei PostgreSQLfälle für CI; zusätzliche
+PDF-Seitenfristprüfung erfolgreich. Ruff/Mypy89, Source-Scan538, FrontendBuild/
+TypeScript und neue Browserprüfung für realen Retry/Revisionswechsel/Originalhash
+mit synthetischem Fehlstatus erfolgreich. Isolierter netzwerkloser Linux-Test unter
+den realen Ressourcen-/Landlockgrenzen liest alle3synthetischen Seiten einschließlich
+2Grad-Schieflage und90Grad-Rotation: Miete und Titel proSeite erkannt,44Sekunden.
+MatchingCI, produktive Pipelineabnahme, App-Rollout und öffentliche
+Veröffentlichung stehen für diese Lieferung noch aus.
+
+
 ## PowerPoint/Word aus normalen Chats – Test-VM geprüft, 12.10.2026
 
 Die bisherige Dateierstellung war an Projektgespräche gebunden. Normale Chats

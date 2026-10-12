@@ -27,6 +27,13 @@ async function captureSourceDeletion(){
  await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
  await dialog.waitFor({state:'hidden'});
 }
+async function captureSourceOCR(){
+ const projects=await(await page.request.get(base+'/api/projects')).json();const project=projects.find(item=>item.name==='Projekt Aurora');if(!project)throw Error('Synthetic Aurora seed is required');
+ const pattern='**/api/projects/'+project.id+'/sources';
+ const failedRoute=async route=>{const response=await route.fetch();const rows=await response.json();await route.fulfill({response,json:rows.map((source,index)=>index===0?{...source,name:'Scan-Beispiel.pdf',status:'failed',error:'OCR konnte auf einer Seite keinen lesbaren Text erkennen. Bitte Scanqualität prüfen.'}:source)})};
+ await page.route(pattern,failedRoute);await page.goto(base+'/?view=Projekte&project='+project.id);await page.getByRole('tab',{name:/Quellen ·/}).click();await page.getByRole('button',{name:'Quelle erneut verarbeiten: Scan-Beispiel.pdf',exact:true}).waitFor();
+ await page.setViewportSize({width:1440,height:1400});await capture('sourceocr');await page.unroute(pattern,failedRoute);
+}
 // Account balances in this gallery are synthetic and never fetched from OpenRouter.
 async function captureOpenRouterCosts(){
  const demoProvider={id:'synthetic-showcase-openrouter',name:'OpenRouter · Demo',kind:'openrouter',base_url:'https://openrouter.ai/v1',model:'demo/model',enabled:true,is_default:true,capabilities:['text'],allowed_labels:['CLOUD_ALLOWED'],context_tokens:32768,context_chars:24000,output_tokens:2048,timeout:30,monthly_budget:20,max_run_cost:0.25,disable_thinking:false,revision:1,secret_ref:'encrypted',budget_used:3.18,last_test:null};
@@ -111,7 +118,7 @@ try{
    {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
   ]);
   await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
-  await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();
+  await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();await captureSourceOCR();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Project sources screenshot captured with synthetic documents only.');
  }else if(process.env.SHOWCASE_CAPTURE_ONLY==='chatfiles'){
@@ -189,7 +196,7 @@ try{
   {name:'Meilensteine.csv',mimeType:'text/csv',buffer:Buffer.from('Phase;Ziel\nEntdecken;Quellen sammeln\nVerstehen;Fragen beantworten\nGestalten;Dateien erstellen')}
  ]);
  await page.getByText('Projektueberblick.md',{exact:true}).waitFor();await page.getByText('Meilensteine.csv',{exact:true}).waitFor();await page.getByText('Bereit',{exact:true}).first().waitFor();
- await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();await page.setViewportSize({width:1440,height:980});
+ await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();await captureSourceOCR();await page.setViewportSize({width:1440,height:980});
  await captureUseCases();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
  await page.getByRole('heading',{name:'Projekt Aurora',exact:true}).locator('..').click();

@@ -16,6 +16,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from hub.config import Settings
 from hub.db import Memory, Project, Research, Source, SourceChunk
 from hub.extract import isolated_parse
+from hub.extraction_errors import ExtractionError, classify_error
 from hub.policy import ContextPart, Privacy
 
 
@@ -86,18 +87,22 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
             )
             os.replace(temporary, job)
             output = Path(cfg.parser_result_dir) / (source_id + "-" + str(revision) + ".json")
-            async with asyncio.timeout(150):
+            async with asyncio.timeout(650 if suffix == ".pdf" else 150):
                 while not output.exists():
                     await asyncio.sleep(0.5)
             if output.is_symlink() or output.stat().st_size > 4_000_000:
                 raise ValueError("Unsicheres Parsergebnis")
             result = json.loads(output.read_text())
             if (
-                "error" in result
+                not isinstance(result, dict)
                 or result.get("sha256") != source.sha256
                 or result.get("revision") != revision
             ):
-                raise ValueError("Parser fehlgeschlagen oder falsches Original")
+                raise ExtractionError("EXTRACTION_FAILED")
+            if "error" in result:
+                raise ExtractionError(
+                    result["error"] if isinstance(result["error"], str) else "EXTRACTION_FAILED"
+                )
         else:
             result = await asyncio.to_thread(isolated_parse, path, suffix)
         with factory() as db:
@@ -118,14 +123,19 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
 
             record_ready(db, source)
             db.commit()
-    except (ValueError, OSError, TimeoutError):
+    except (ValueError, OSError, TimeoutError, KeyError, TypeError) as error:
+        diagnostic = (
+            ExtractionError("PARSER_TIMEOUT")
+            if isinstance(error, TimeoutError)
+            else classify_error(error, suffix)
+        )
         with factory() as db:
             ownership_lock(db)
             lock(db)
             source = db.get(Source, source_id)
             if source and source.revision == revision:
                 source.status = "failed"
-                source.error = "Extraktion fehlgeschlagen; Format, Schutz, OCR und Limits prüfen"
+                source.error = str(diagnostic)
                 db.commit()
 
 

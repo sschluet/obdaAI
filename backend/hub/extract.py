@@ -3,6 +3,7 @@
 import csv
 import io
 import json
+import os
 import resource
 import subprocess
 import sys
@@ -11,6 +12,8 @@ import warnings
 import zipfile
 from pathlib import Path
 from typing import Any
+
+from hub.extraction_errors import ExtractionError, classify_error
 
 # Original-file size is independent of decompressed content, text and page limits.
 MAX_BYTES = 40 * 1024 * 1024
@@ -53,15 +56,34 @@ def safe_archive(path: Path) -> None:
                 raise ValueError("Aktive, verschlüsselte oder gefährliche Archiv-Inhalte")
 
 
-def ocr(path: Path, cwd: Path) -> str:
-    # Fixed local binary, no model/shell/network. No language pack download.
-    result = subprocess.run(
-        ["tesseract", str(path), "stdout", "-l", "deu+eng"],
-        cwd=cwd,
-        capture_output=True,
-        timeout=30,
-        check=True,
-    )
+def ocr(path: Path, cwd: Path, timeout: int = 30) -> str:
+    from hub.ocr_local import prepare
+
+    prepared = cwd / "ocr-prepared.png"
+    prepare(path, prepared)
+    # One CPU thread prevents OpenMP oversubscription and memory spikes within
+    # the parser's existing sandbox. PSM 1 adds right-angle orientation detection.
+    env = {**os.environ, "OMP_THREAD_LIMIT": "1", "OMP_NUM_THREADS": "1"}
+    try:
+        result = subprocess.run(
+            ["tesseract", str(prepared), "stdout", "-l", "deu+eng", "--dpi", "300", "--psm", "1"],
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            timeout=timeout,
+            check=True,
+        )
+    except FileNotFoundError:
+        raise ExtractionError("OCR_RUNTIME_MISSING") from None
+    except subprocess.TimeoutExpired:
+        raise ExtractionError("OCR_TIMEOUT") from None
+    except subprocess.CalledProcessError as error:
+        code = (
+            "OCR_RUNTIME_MISSING"
+            if b"Failed loading language" in (error.stderr or b"")
+            else "OCR_FAILED"
+        )
+        raise ExtractionError(code) from None
     if len(result.stdout) > MAX_TEXT:
         raise ValueError("OCR-Ausgabe zu groß")
     return result.stdout.decode("utf-8")
@@ -169,6 +191,8 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
     elif suffix == ".pdf":
         from pypdf import PdfReader
 
+        from hub.ocr_local import needs_ocr, raster_edge
+
         reader = PdfReader(path, strict=True)
         if reader.is_encrypted:
             raise ValueError("Passwortgeschütztes PDF")
@@ -176,29 +200,47 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
             raise ValueError("PDF-Seitenlimit überschritten")
         for i, page in enumerate(reader.pages, 1):
             text = page.extract_text() or ""
-            if not text.strip():
+            if needs_ocr(text, has_images=bool(page.images)):
                 with tempfile.TemporaryDirectory() as tmp:
                     target = Path(tmp)
-                    subprocess.run(
-                        [
-                            "pdftoppm",
-                            "-f",
-                            str(i),
-                            "-l",
-                            str(i),
-                            "-scale-to",
-                            "2200",
-                            "-singlefile",
-                            "-png",
-                            str(path),
-                            str(target / "page"),
-                        ],
-                        check=True,
-                        capture_output=True,
-                        timeout=30,
-                    )
-                    text = ocr(target / "page.png", target)
-                notes.append(f"Seite {i}: lokale OCR, Erkennung kann fehlerhaft sein")
+                    try:
+                        subprocess.run(
+                            [
+                                "pdftoppm",
+                                "-f",
+                                str(i),
+                                "-l",
+                                str(i),
+                                "-r",
+                                "300",
+                                "-scale-to",
+                                str(
+                                    raster_edge(
+                                        float(page.mediabox.width), float(page.mediabox.height)
+                                    )
+                                ),
+                                "-singlefile",
+                                "-png",
+                                str(path),
+                                str(target / "page"),
+                            ],
+                            check=True,
+                            capture_output=True,
+                            timeout=30,
+                        )
+                    except FileNotFoundError:
+                        raise ExtractionError("OCR_RUNTIME_MISSING") from None
+                    except subprocess.TimeoutExpired:
+                        raise ExtractionError("OCR_TIMEOUT") from None
+                    except subprocess.CalledProcessError:
+                        raise ExtractionError("OCR_FAILED") from None
+                    recognized = ocr(target / "page.png", target, 120)
+                    if recognized.strip():
+                        text = recognized
+                notes.append(
+                    f"Seite {i}: lokale OCR (bis 300 dpi, Ausrichtung und Kontrast); "
+                    "Erkennung kann fehlerhaft sein"
+                )
             if not text.strip():
                 text = (
                     f"PDF-Seite {i}: {float(page.mediabox.width):g} × "
@@ -217,8 +259,7 @@ def parse(path: Path, suffix: str) -> dict[str, Any]:
             with Image.open(path) as image:
                 with tempfile.TemporaryDirectory() as tmp:
                     target = Path(tmp)
-                    image.convert("RGB").save(target / "image.png")
-                    text = ocr(target / "image.png", target)
+                    text = ocr(path, target)
                     if text.strip():
                         add("Bild · lokale OCR", text)
                     else:
@@ -249,17 +290,49 @@ def isolated_parse(path: Path, suffix: str) -> dict[str, Any]:
                 },
                 cwd=work,
                 capture_output=True,
-                timeout=120,
+                timeout=600 if suffix == ".pdf" else 120,
             )
     except subprocess.TimeoutExpired:
-        raise ValueError("Extraktionszeit überschritten") from None
-    if result.returncode or len(result.stdout) > 4_000_000:
-        raise ValueError("Extraktion fehlgeschlagen; Format, Schutz, OCR und Limits prüfen")
-    return json.loads(result.stdout)  # type: ignore[no-any-return]
+        raise ExtractionError("PARSER_TIMEOUT") from None
+    if result.returncode:
+        raise ExtractionError(
+            "PARSER_RESOURCE_LIMIT" if result.returncode < 0 else "EXTRACTION_FAILED"
+        )
+    if len(result.stdout) > 4_000_000:
+        raise ExtractionError("TEXT_LIMIT")
+    try:
+        decoded = json.loads(result.stdout)
+        if not isinstance(decoded, dict):
+            raise ValueError
+        if "error" in decoded:
+            raise ExtractionError(
+                decoded["error"] if isinstance(decoded["error"], str) else "EXTRACTION_FAILED"
+            )
+        chunks, notes = decoded["chunks"], decoded["notes"]
+        if not isinstance(chunks, list) or not isinstance(notes, list) or not chunks:
+            raise ValueError
+        if len(chunks) > MAX_UNITS or any(not isinstance(note, str) for note in notes):
+            raise ValueError
+        total = 0
+        for chunk in chunks:
+            if not isinstance(chunk, dict) or set(chunk) != {"locator", "content", "structured"}:
+                raise ValueError
+            if (
+                any(not isinstance(value, str) for value in chunk.values())
+                or len(chunk["locator"]) > 240
+            ):
+                raise ValueError
+            total += len(chunk["content"])
+        if total > MAX_TEXT:
+            raise ExtractionError("TEXT_LIMIT")
+        return decoded
+    except (ValueError, KeyError, TypeError) as error:
+        raise classify_error(error) from None
 
 
 if __name__ == "__main__":
-    resource.setrlimit(resource.RLIMIT_CPU, (90, 90))
+    suffix = sys.argv[2]
+    resource.setrlimit(resource.RLIMIT_CPU, (480, 480) if suffix == ".pdf" else (90, 90))
     resource.setrlimit(resource.RLIMIT_FSIZE, (32 * 1024 * 1024, 32 * 1024 * 1024))
     resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
     if sys.platform == "linux":
@@ -267,6 +340,10 @@ if __name__ == "__main__":
     from hub.parser_sandbox import restrict
 
     source = Path(sys.argv[1])
-    workdir = Path(__import__("os").environ["HUB_PARSER_WORKDIR"])
-    restrict(source, workdir)
-    print(json.dumps(parse(source, sys.argv[2]), ensure_ascii=False))
+    workdir = Path(os.environ["HUB_PARSER_WORKDIR"])
+    try:
+        restrict(source, workdir)
+        output = parse(source, suffix)
+    except Exception as error:
+        output = {"error": classify_error(error, suffix).code}
+    print(json.dumps(output, ensure_ascii=False))
