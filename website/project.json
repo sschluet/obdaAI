@@ -44,13 +44,13 @@
     {
       "id": "files",
       "title": "Aus Gedanken werden Dateien.",
-      "description": "Format und Vorlage direkt als Auswahlkarten wählen. KI-Entwurf und manuelle Eingabe wechseln; Inhalte und Originalversionen bleiben erhalten.",
+      "description": "Word, PowerPoint, Excel, PDF und Bilder als Auswahlkarten. Geprüfte Skills mit echten Dokumentvorlagen ergänzen den KI-Auftrag. Ausschließlich synthetischer Projektraum und generierter Word-Master.",
       "image": "assets/files.png"
     },
     {
       "id": "chatfiles",
       "title": "Dateien direkt im Gespräch.",
-      "description": "Word und PowerPoint im freien Chat erstellen, ohne ein Projekt anzulegen. KI-Auftrag, Format und Folienanzahl sind direkt bearbeitbar; Vorschauprüfung bleibt vor dem Download erforderlich. Ausschließlich synthetische Initiative Aurora.",
+      "description": "Dateien im freien Chat ohne Hilfsprojekt erstellen. Geprüften Folienmaster, Format, Auftrag und Folienanzahl wählen. Vorschauprüfung bleibt vor dem Download erforderlich. Ausschließlich synthetische Initiative Aurora und generierter Folienmaster.",
       "image": "assets/chatfiles.png"
     },
     {
@@ -435,6 +435,11 @@
           "status": "live"
         },
         {
+          "title": "Native Excel-Dateien",
+          "description": "Lokale KI-Planung erzeugt echte XLSX-Arbeitsmappen mit benannten Tabellenblättern, Spalten und festen typisierten Werten. Vorschau und Freigabe vor Download. Keine Formelausführung oder importierten Skripte. Synthetisch einschließlich Dateierstellung und Inhaltsbelegen geprüft; releasegebundene VM-Abnahme folgt.",
+          "status": "local"
+        },
+        {
           "title": "PDF-Seitenoperationen",
           "description": "Seiten auswählen, umordnen, drehen und weglassen. Neue Inhalts-PDFs aus Text, Tabellen und Bildern sind möglich.",
           "status": "live"
@@ -471,7 +476,7 @@
         },
         {
           "title": "Word- und PowerPoint-Vorlagen",
-          "description": "Leere Gliederungen für Projektübersicht, Besprechungsnotiz, Entscheidungsvorlage und vierteiligen Projektstatus. Vorhandene Inhalte brauchen eine Ersetzungsbestätigung. Lokal geprüft; CI bestanden und auf der Test-VM installiert.",
+          "description": "Originale Word- und PowerPoint-Master aus geprüften Skill-Paketen bei der Dateierstellung verwenden; Folienlayouts, Kopf-/Fußzeilen und Formatvorlagen erhalten. Optionale Präsentationsgestaltung ergänzt die Basis. Vorlage, Skillrevision und Hash sind an Entwurf und Folgeversion gebunden. Leere Gliederungen bleiben als zusätzlicher Startpunkt verfügbar. Synthetische native Dateien und Folgeversionen geprüft; releasegebundene VM-Abnahme folgt.",
           "status": "local"
         }
       ]

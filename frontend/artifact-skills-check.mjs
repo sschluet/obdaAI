@@ -23,11 +23,13 @@ sys.stdout.buffer.write(out.getvalue())`,name,kind])}
 async function install(name,kind){const bytes=packageData(name,kind);const r=await page.request.post(base+'/api/skills/import-package',{headers:{Origin:base,'X-CSRF-Token':csrf,'X-File-Name':'synthetic.skill','Content-Type':'application/octet-stream'},data:bytes});if(!r.ok())throw Error('Synthetic package '+r.status()+' '+await r.text());let s=await r.json();skills.push(s.id);s=await api('/skills/'+s.id+'/trust','POST',{expected_revision:s.revision,sha256:s.sha256,enabled:true});return s}
 try{
  await page.goto(base);csrf=(await loginFixture(page)).csrf;
+ const plain=await api('/skills','POST',{document:'---\n'+JSON.stringify({format:'obdaai-skill-1',name:'Synthetic plain Markdown',description:'Plain Markdown instruction without package assets',usage:'mention',cloud_allowed:false})+'\n---\nUse this instruction only when explicitly requested.',activate:true});skills.push(plain.id);
  const doc=await install('Synthetic document master','docx');await install('avendis-praesentation','pptx');const modern=await install('avendis-praesentation-modern','style');
  project=await api('/projects','POST',{name:'Synthetic template binding '+Date.now()});
  await page.goto(base+'/?view=Projekte&project='+project.id+'&projectTab=files');await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).waitFor();
  for(const [kind,chosen] of [['docx',doc],['pptx',modern],['xlsx',null]]){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});await dialog.getByRole('radio',{name:({docx:'Word-Dokument',pptx:'PowerPoint-Präsentation',xlsx:'Excel-Tabelle'})[kind],exact:true}).check();
+  await dialog.getByRole('checkbox',{name:'Datei-Skill Synthetic plain Markdown',exact:true}).waitFor();
   if(chosen)await dialog.getByRole('checkbox',{name:'Datei-Skill '+chosen.name,exact:true}).check();
   await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Create a synthetic '+kind+' file with short verifiable example content.');await dialog.getByRole('button',{name:'Lokal entwerfen',exact:true}).click();await dialog.getByText(/Lokaler Entwurf bereit/).waitFor();
   if(chosen)await dialog.getByText(/Gebundene Originalvorlage:/).waitFor();
@@ -40,5 +42,5 @@ with zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())) as z:
    await page.locator('.citation').filter({hasText:row.title}).getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();const edit=page.getByRole('dialog',{name:'Datei erstellen',exact:true});await edit.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).click();await edit.waitFor({state:'hidden'});const versions=await api('/projects/'+project.id+'/artifacts');const next=versions.find(r=>r.artifact_id===row.artifact_id&&r.revision===2);if(next?.spec.template?.asset_sha256!==row.spec.template.asset_sha256)throw Error('Manual revision lost original template');
   }
  }
- console.log('Synthetic artifact skills UX passed: active master choice, exact revision receipts, real Word header preservation, manual revision retains master, optional modern presentation with base dependency, Excel sheet content, review.');
+ console.log('Synthetic artifact skills UX passed: mixed plain-Markdown/package library, active master choice, exact revision receipts, real Word header preservation, manual revision retains master, optional modern presentation with base dependency, Excel sheet content, review.');
 }finally{for(const id of skills){const list=await api('/skills');const s=list.find(s=>s.id===id);if(s)await api('/skills/'+id,'DELETE',{expected_revision:s.revision,sha256:s.sha256})}await browser.close()}
