@@ -2899,3 +2899,18 @@ Skillrevision gebunden. Die Freigabesicherung blockierte den Download. Neu
 gerenderter eigener Plan verwendet die aktuell aktive geprüfte Revision mit
 identischem Masterhash; keine Skill-Einstellungen verändert. Beide nativen
 Downloads und berechnete Zusammenfassungen bestätigt.
+
+
+### 13.10.2026: Tailscale-Zugang eingerichtet
+
+Tailscale aus der offiziellen signierten Debian-Paketquelle installiert; Node nach
+Benutzeranmeldung online. Serve im Hintergrund mit gültigem HTTPS-Zertifikat,
+separater Nginx-Listener ausschließlich auf Loopback. Exakter Origin wird auf
+die bestehende App-Origin abgebildet; unbekannte Origins bleiben unverändert.
+Serverseitig HTTPS-Startseite 200, Healthcheck gesund, /api/me ohne Anmeldung 401.
+Bestehender LAN-HTTPS-Zugang 200; DNS-Annahme und Routenannahme ausgeschaltet,
+LAN-Standardroute erhalten, keine beworbenen Subnetze, kein Exit Node oder Funnel.
+Kein App-Rollout nötig; App bleibt f95768a / Schema 0042. Nginx-Syntaxprüfung
+bestanden. Privater Beleg unter .local/deployment; keine Tailnet-Adressen in Git.
+Realer Zugriff von einem zweiten Gerät und vollständiger authentifizierter
+Schreibtest über den neuen Zugang stehen noch aus; Mac-Client derzeit gestoppt.
