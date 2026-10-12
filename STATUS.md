@@ -2868,3 +2868,34 @@ Kategorie-B-Zusammenfassung benötigt eine manuelle Korrektur in der Vorschau;
 Strukturprüfung ersetzt keine fachliche Abnahme. Gesamter Linux-CI-Smoke:
 neun Pläne und fünfzehn Vorschauen bestanden. Vollständige CI und aktive
 App-Auslieferung noch in Abnahme.
+
+
+### 13.10.2026: Office-Erweiterung ausgeliefert
+
+Release f95768a auf der Test-VM aktiv, Schema 0042; beide APIs gesund.
+Vollständige CI 38307459850 erfolgreich: 1308 Backend-/PostgreSQLtests bestanden,
+vier umgebungsabhängige Fälle übersprungen, 39 Browserchecks, Container- und
+Offline-Runnersmokes. Neun Offline-Pläne / fünfzehn Vorschauen. Ein zuvor
+fehlgeschlagener Browser-Fixture-Lauf benötigte Calc im UI-Job; die synthetische
+UI-Prüfung ist jetzt vom tatsächlichen Offline-Calc-Smoke getrennt.
+
+Reale lokale Sechs-Folien-Planung über deploytes HTTPS: Originalmaster,
+Prozess, Swimlane, benannte Roadmap, native Datenchart, adaptive Schlussfolie;
+alle Seiten visuell geprüft. Excel-Dateirunner über deploytes HTTPS mit dem
+bereits unter Linux geprüften Modellplan, einer bewusst korrigierten
+SUMIF-Kriterienreferenz, nativen Formeln/Charts und berechneten Summen geprüft.
+Downloads vor Freigabe gesperrt, nach Prüfung SHA256 und native Inhalte geprüft.
+Der erneute automatische Excel-Liveentwurf wurde mit 422 abgefangen; automatische
+Excel-Planung ist noch nicht durchgehend zuverlässig. Keine vollständige
+SDK-Parität oder fehlerfreie fachliche Modellleistung behauptet.
+
+Verschlüsseltes Off-VM-Backup geprüft; Nachrichten, Profil, Use Cases,
+Bestandsdateien, Compose-Overlays und Netzwerkregeln beim Rollout erhalten.
+Eigene Testobjekte wurden über den exakten Löschbeleg dauerhaft bereinigt. Öffentliche
+Galerie ergänzt zwei ausschließlich synthetische Office-Editor-Screenshots.
+
+Nach Unterbrechung am 13.10. war der Präsentationstest an eine überholte
+Skillrevision gebunden. Die Freigabesicherung blockierte den Download. Neu
+gerenderter eigener Plan verwendet die aktuell aktive geprüfte Revision mit
+identischem Masterhash; keine Skill-Einstellungen verändert. Beide nativen
+Downloads und berechnete Zusammenfassungen bestätigt.
