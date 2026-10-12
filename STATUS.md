@@ -1,6 +1,6 @@
 # obdaAI — Status 12.10.2026
 
-## Einzelne Projektquellen löschen – lokal geprüft, 12.10.2026
+## Einzelne Projektquellen löschen – Test-VM geprüft, 12.10.2026
 
 Quellenliste und Chat-Arbeitsbereich bieten je Quelle eine kompakte Löschaktion.
 Vorschau/Bestätigung binden Quelle, Projekt und aktuelle Daten per expected_state.
@@ -19,8 +19,24 @@ Bereinigungsstruktur verwendet, keine Migration nötig.17 neue SQLitefälle best
 TypeScript/Build und neue Browserprüfung für reale synthetische Löschung in beiden
 UIs, Abbruch/Escape/Fokus,320px,409-Neuprüfung, Zähler/Original404/andereQuelle sowie
 globalen Bereinigungsstatus erfolgreich. Source-Scan521 Dateien. Website74 Features/
-36 synthetische Ansichten einschließlich Quellenbestätigung. CI, Test-VM und exakte
-öffentliche Veröffentlichung folgen; bestehender aktiver Release9a53d8a/Schema0040.
+36 synthetische Ansichten einschließlich Quellenbestätigung.
+
+Aktiver App-Code `336b32a`, Schema0040. Vollständige CI38215854174 erfolgreich:
+1126 Backend-/PostgreSQLtests inklusive beider neuen FK-Fälle,37 synthetische
+Browserprüfungen, alle App-Jobs und Geheimnisprüfung. Frisches verschlüsseltes
+Off-VM-Backup geprüft; Nachrichten, Profil, bisherige Use Cases/Revisionen/Ergebnisse,
+Compose-Overlays, Nginx und bestehende Netzwerkregeln erhalten. Beide APIs gesund,
+gepinntes HTTPS sowie neue Lösch-UI/API-Verträge bestätigt. Keine Schemaänderung.
+
+Reale bestätigte HTTPS-Löschung auf exakt ausgeliefertem Release mit eigenen
+synthetischen Quellen: ausgewählte Quelle/Chunks/Original einschließlich dauerhafter
+Bereinigung entfernt, OriginalGET404. Zweite Quelle bleibt SHA256-identisch;
+gespeicherte Antwort und eingefrorener Belegsnapshot unverändert, Beleg sichtbar mit
+nicht mehr verfügbarem Originaldownload. Eigene Testquellen/Projekt/Sitzung der
+Abnahme entfernt, keine Modellanfrage und keine Nutzerquelle probeweise gelöscht.
+Leichter Metadatenabschluss verwendet unveränderten App-Fingerprint; exakte Website-CI,
+Veröffentlichung und öffentlicher Hashabgleich werden mit dieser Lieferung protokolliert.
+V1 bleibt partiell.
 
 
 ## Projektquellen-Upload und 40 MiB – Test-VM geprüft, 11.10.2026
