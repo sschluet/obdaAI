@@ -1,5 +1,32 @@
 # obdaAI — Status 12.10.2026
 
+## Projektfragen mit großen Quellen – lokale Prüfung, 12.10.2026
+
+Ursache: bis zu acht6k-Zeichen-Passagen wurden unabhängig vom verbleibenden
+Modellfenster angefügt. Die bisherige Kandidatenbegrenzung vor Bewertung konnte
+neue passende Dateien hinter10.000Chunks ausblenden; Funktionswörter wie „der“
+verzerrten die Trefferauswahl. Dateinamen und Text werden jetzt im gesamten
+Projekt vor Trefferbegrenzung bewertet, deutsche Funktionswörter ignoriert.
+Generische Übersichten verteilen Anfangspassagen auf verschiedene Quellen;
+spezifische Fragen ohne Treffer erhalten keine beliebigen Ersatzbelege.
+
+Quellenkontext erhält ein UTF-8-Budget einschließlich Header/Metadaten und
+Nachrichtenoverhead. API reserviert Profil, Antwortvorgaben, Skills sowie spätere
+Web-/Integrationsbelege anhand der vorhandenen lokalen Providergrenzen. Bei
+Projektchats wird ältere Historie begrenzt, aktuelle Frage bleibt vollständig
+und ausgelassene geschützte Historie weiterhin privat. Dynamische Projektbelege
+werden auf verbleibenden Platz begrenzt, gespeicherte Forschung/Originale nicht.
+Fundstellen-Codes, Revisionen, SHA256 und Vertraulichkeit bleiben erhalten;
+gekürzte Passagen ausdrücklich markiert. Keine Schema- oder Infrastrukturänderung.
+
+Deterministische Dateinamen-/Textsuche, keine semantische Vollanalyse sämtlicher
+Dateien. Bestehende Upload-/Parser-/Speichergrenzen bleiben erhalten. 14 neue Retrieval-/API-/Executionfälle lokal bestanden, einschließlich10.001
+älterer Chunks vor passender Datei, UTF-8, großer Quellen mit Historie und
+dynamischer Webbelege. Weitere106 Chat-/Profil-/Skills-/Vorgabenprüfungen bestanden;
+Ruff/Mypy86, Source-Scan523 und Websitebuild erfolgreich. Matching-CI,
+Test-VM-Abnahme und öffentliche Veröffentlichung stehen für diese Lieferung noch aus.
+
+
 ## Einzelne Projektquellen löschen – Test-VM geprüft, 12.10.2026
 
 Quellenliste und Chat-Arbeitsbereich bieten je Quelle eine kompakte Löschaktion.

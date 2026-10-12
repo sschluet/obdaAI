@@ -36,10 +36,24 @@ als verstanden behauptet. Office-Formeln werden erhalten, nicht ausgeführt. ZIP
 und eingebettete aktive Office-Inhalte werden abgewiesen; kein Dokumentcode läuft.
 
 Recherche begrenzt Fundstellen vor dem Modellkontext und wendet den Projektscope im
-Datenbankquery an. Die Oberfläche zeigt die tatsächlich verwendeten Quellen getrennt
-vom Modelltext. Zeilenbasierte Tabellenprüfungen summieren mittels Decimal, mit jeder
-Originalzelle und ausgelassenen Überschriften/Formeln als überprüfbarem Beleg.
-Diese Prüfung ersetzt keine Fachprüfung komplexer Tabellen oder Rechnungen.
+Datenbankquery an. Die Originaldateien bleiben vollständig gespeichert; eine Antwort
+bekommt ausgewählte Auszüge statt aller Dokumenttexte. Die Auswahl berücksichtigt
+die aktuelle Frage und das verfügbare Kontextbudget. Suchbegriffe werden mit Dateinamen
+und Fundstellentexten im gesamten Projektscope abgeglichen, bevor die Treffer begrenzt
+werden. Häufige Fragewörter bestimmen die Relevanz nicht allein. Größere Fundstellen werden als
+begrenzte Textfenster übernommen, wobei Quellen-ID, Extraktionsrevision, Dateiname und
+Fundstelle erhalten bleiben. Das Antwortmodell erhält einen Hinweis, wenn nur Auszüge
+oder eine Auswahl vorliegen, und darf daraus keine vollständige Dokumentprüfung ableiten.
+
+Die Oberfläche zeigt die tatsächlich verwendeten Quellen getrennt vom Modelltext.
+Das ermöglicht Fragen in Projekten mit vielen Dateien innerhalb der bestehenden
+Upload- und Speichergrenzen; es erweitert weder das Modellfenster noch die Parsergrenzen.
+Allgemeine Fragen oder Übersichtswünsche erhalten eine begrenzte Quellenauswahl und
+können weitere gezielte Nachfragen erfordern. Die Suche ist textbasiert; semantische
+Embeddings und eine erschöpfende Gesamtauswertung aller Dateien werden nicht behauptet.
+Zeilenbasierte Tabellenprüfungen summieren mittels Decimal, mit jeder Originalzelle und
+ausgelassenen Überschriften/Formeln als überprüfbarem Beleg. Diese Prüfung ersetzt keine
+Fachprüfung komplexer Tabellen oder Rechnungen.
 
 ## Web
 

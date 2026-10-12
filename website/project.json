@@ -14,7 +14,7 @@
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
+      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat anhand ausgewählter Fundstellen verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
       "image": "assets/projects.png"
     },
     {
@@ -333,7 +333,7 @@
         },
         {
           "title": "Fundstellen und lokale OCR",
-          "description": "Quellenbasierte Antworten, technische Fundstellen und lokale Texterkennung. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
+          "description": "Quellenbasierte Antworten, technische Fundstellen und lokale Texterkennung. Die aktuelle Frage steuert eine textbasierte Auswahl begrenzter Dokumentauszüge innerhalb des Modellkontexts. Große Fundstellen behalten Quellen-ID und Fundstelle; Originaldateien bleiben unverändert. Eine Auswahl ersetzt keine vollständige Dokumentprüfung. Die Korrektur für umfangreiche Projektquellen ist lokal geprüft; ihre Live-Abnahme steht noch aus. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
           "status": "live"
         },
         {

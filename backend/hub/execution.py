@@ -167,6 +167,35 @@ async def execute_run(
             current = db.get(Run, run_id)
             return bool(current and current.cancel_requested)
 
+    def bounded_project_evidence(evidence: list[ContextPart]) -> list[ContextPart]:
+        """Bound model excerpts without changing originals or stored web results."""
+        budget = snapshot.get("project_context_budget")
+        if not budget:
+            return evidence  # Existing ordinary-chat and workflow contracts are unchanged.
+        remaining = max(
+            0,
+            budget["capacity_bytes"]
+            - budget["late_instruction_bytes"]
+            - sum(len(part.content.encode()) + 64 for part in parts),
+        )
+        selected_evidence: list[ContextPart] = []
+        marker = "\n[Auszug für das aktuelle Kontextfenster gekürzt.]"
+        for part in evidence:
+            if remaining < 256:
+                break
+            encoded = part.content.encode()
+            if len(encoded) + 64 > remaining:
+                content = (
+                    encoded[: remaining - 64 - len(marker.encode())].decode(
+                        "utf-8", errors="ignore"
+                    )
+                    + marker
+                )
+                part = part.model_copy(update={"content": content})
+            selected_evidence.append(part)
+            remaining -= len(part.content.encode()) + 64
+        return selected_evidence
+
     async def research(latest: Message | None) -> None:
         if not latest or not snapshot.get("web_search_allowed"):
             raise ExecutionLimitError(
@@ -221,6 +250,7 @@ async def execute_run(
             )
             for index, item in enumerate(results[:8])
         ]
+        web_parts = bounded_project_evidence(web_parts)
         if public_cloud:
             grants.extend(
                 CloudGrant(source_id=p.source_id, revision=p.revision, provider_id=c.cloud_provider)
@@ -297,6 +327,7 @@ async def execute_run(
                     archive_parts = await collect_context(factory, cfg, selection, question)
                 except HTTPException as error:
                     raise ExecutionLimitError(str(error.detail)) from error
+                archive_parts = bounded_project_evidence(archive_parts)
                 parts.extend(archive_parts)
                 roles.extend("user" for _ in archive_parts)
                 label = Privacy.LOCAL_ONLY

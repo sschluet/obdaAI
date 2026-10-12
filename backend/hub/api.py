@@ -38,6 +38,7 @@ from hub.db import (
     Memory,
     Message,
     Project,
+    ProviderConfig,
     Run,
     RunEvent,
     Source,
@@ -693,6 +694,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             from hub.chat_context import recent_context
 
             history_context = recent_context(messages, local_only=local_only)
+            skill_parts, skill_audit = select_skills(db, c, messages[-1].content)
+            project_budget: dict[str, int] | None = None
             web_options = read_options(db)
             if web_search_allowed and not web_options["enabled"]:
                 raise HTTPException(409, "Webrecherche ist in den Einstellungen deaktiviert")
@@ -717,6 +720,66 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "model_cloud_only": model_cloud_only,
                 **history_context,
             }
+            if c.project_id:
+                from hub.personal_profile import (
+                    PERSONAL_RELEVANCE_INSTRUCTION,
+                    context_for_provider,
+                )
+                from hub.preferences import instruction as preference_instruction
+
+                # Budget against the selected local model before retrieving documents.
+                # Projects remain private even when Auto permits ordinary cloud chats.
+                capacity = cfg.context_limit
+                local = db.scalar(
+                    select(ProviderConfig).where(
+                        ProviderConfig.kind == "local", ProviderConfig.is_default.is_(True)
+                    )
+                )
+                if local:
+                    limits = json.loads(local.config)
+                    capacity = min(
+                        capacity,
+                        limits["context_chars"],
+                        limits["context_tokens"] - 4096 - min(1024, limits["output_tokens"]),
+                    )
+                profile_parts, _, _ = context_for_provider(
+                    personal_profile,
+                    external=False,
+                    provider_id="local",
+                    question=messages[-1].content,
+                )
+                style = preference_instruction(snapshot["response_preferences"]) or ""
+                reserved = (
+                    len(PERSONAL_RELEVANCE_INSTRUCTION.encode())
+                    + 64
+                    + (len(style.encode()) + 64 if style else 0)
+                    + sum(len(p.content.encode()) + 64 for p in profile_parts)
+                )
+                skill_size = sum(len(p.content.encode()) + 64 for p in skill_parts)
+                # Reserve an evidence allowance for later integrations or web research.
+                dynamic = min(4096, max(0, capacity // 4))
+                history_budget = min(
+                    4000, max(0, capacity - reserved - skill_size - dynamic - 1024)
+                )
+                history_context = recent_context(
+                    messages,
+                    local_only=local_only,
+                    byte_budget=history_budget,
+                )
+                snapshot.update(history_context)
+                history_size = sum(len(p["content"].encode()) + 64 for p in snapshot["parts"])
+                source_budget = capacity - reserved - skill_size - dynamic - history_size
+                if source_budget <= 0:
+                    raise HTTPException(
+                        413, "Aktuelle Frage oder gewählte Vorgaben überschreiten die Modellgrenze"
+                    )
+                project_budget = {
+                    "capacity_bytes": capacity,
+                    "late_instruction_bytes": reserved,
+                    "dynamic_evidence_bytes": dynamic,
+                    "source_bytes": source_budget,
+                }
+                snapshot["project_context_budget"] = project_budget
             try:
                 needs_vault = c.memory_scope or (
                     c.project_id
@@ -729,14 +792,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if needs_vault and cfg.vault_fs_type:
                     validate_mount(Path(cfg.vault_dir), cfg.vault_fs_type)
                 sources = project_context(
-                    db, c.project_id, messages[-1].content, global_memory=c.memory_scope == "global"
+                    db,
+                    c.project_id,
+                    messages[-1].content,
+                    global_memory=c.memory_scope == "global",
+                    **({"max_bytes": project_budget["source_bytes"]} if project_budget else {}),
                 )
             except ValueError as error:
                 raise HTTPException(409, str(error)) from None
             snapshot["sources"] = [p.model_dump(mode="json") for p in sources]
             snapshot["parts"].extend(p.model_dump(mode="json") for p in sources)
             snapshot["roles"].extend("user" for _ in sources)
-            skill_parts, skill_audit = select_skills(db, c, messages[-1].content)
             snapshot["skills"] = skill_audit
             snapshot["integration_selection"] = freeze_bindings(db, "conversation", c.id)
             snapshot["integration_scope"] = {"scope": "conversation", "owner_id": c.id}

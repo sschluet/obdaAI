@@ -6,14 +6,20 @@ from hub.db import Message
 from hub.policy import ContextPart, Privacy
 
 
-def recent_context(messages: list[Message], *, local_only: bool = False) -> dict[str, Any]:
+def recent_context(
+    messages: list[Message], *, local_only: bool = False, byte_budget: int = 15700
+) -> dict[str, Any]:
     # Leave room within the existing 24k history boundary for a profile and
     # context annotations. Source and skill boundaries remain independently enforced.
-    budget = 15700  # Reserve room for the optional privacy marker as well.
+    budget = byte_budget
+    # The default ordinary-chat window stays unchanged. Project assembly supplies
+    # a smaller window to make room for relevant evidence, never cutting the request.
+    marker = "Ältere geschützte Gesprächsteile sind außerhalb dieses Kontextfensters."
+    marker_budget = len(marker.encode()) + 64 if byte_budget != 15700 else 0
     selected: dict[str, str] = {}
     latest = messages[-1]
     selected[latest.id] = latest.content
-    remaining = max(0, budget - len(latest.content.encode()) - 64)
+    remaining = max(0, budget - marker_budget - len(latest.content.encode()) - 64)
     previous = messages[:-1]
     # Preserve the question behind the immediately preceding answer when possible,
     # then its tail: this supports an explicit continuation of a long partial answer.
@@ -24,7 +30,7 @@ def recent_context(messages: list[Message], *, local_only: bool = False) -> dict
             selected[question.id] = question.content
             remaining -= len(question.content.encode()) + 64
         if remaining > 64:
-            selected[assistant.id] = assistant.content.encode()[-(remaining - 64):].decode(
+            selected[assistant.id] = assistant.content.encode()[-(remaining - 64) :].decode(
                 "utf-8", errors="ignore"
             )
             remaining -= len(selected[assistant.id].encode()) + 64
@@ -39,26 +45,40 @@ def recent_context(messages: list[Message], *, local_only: bool = False) -> dict
     omitted = [m.id for m in messages if m.id not in selected]
     truncated = [
         {"id": m.id, "original_chars": len(m.content), "included_chars": len(selected[m.id])}
-        for m in messages if m.id in selected and selected[m.id] != m.content
+        for m in messages
+        if m.id in selected and selected[m.id] != m.content
     ]
     parts, roles = [], []
     # Omitted private history must still block cloud processing of its derivatives.
     private_omitted = any(m.id not in selected and m.label == Privacy.LOCAL_ONLY for m in messages)
     if private_omitted:
-        parts.append(ContextPart(
-            content="Ältere geschützte Gesprächsteile sind außerhalb dieses Kontextfensters.",
-            label=Privacy.LOCAL_ONLY, source_id="history-window:private", revision=1,
-        ).model_dump(mode="json"))
+        parts.append(
+            ContextPart(
+                content=marker,
+                label=Privacy.LOCAL_ONLY,
+                source_id="history-window:private",
+                revision=1,
+            ).model_dump(mode="json")
+        )
         roles.append("system")
     for message in messages:
         if message.id in selected:
-            parts.append(ContextPart(
-                content=selected[message.id],
-                label=Privacy.LOCAL_ONLY if local_only else Privacy(message.label),
-                source_id=message.id, revision=message.revision,
-            ).model_dump(mode="json"))
+            parts.append(
+                ContextPart(
+                    content=selected[message.id],
+                    label=Privacy.LOCAL_ONLY if local_only else Privacy(message.label),
+                    source_id=message.id,
+                    revision=message.revision,
+                ).model_dump(mode="json")
+            )
             roles.append(message.role)
-    return {"parts": parts, "roles": roles, "context_window": {
-        "omitted_message_ids": omitted, "truncated_messages": truncated,
-        "private_history_retained": private_omitted, "byte_budget": budget,
-    }}
+    return {
+        "parts": parts,
+        "roles": roles,
+        "context_window": {
+            "omitted_message_ids": omitted,
+            "truncated_messages": truncated,
+            "private_history_retained": private_omitted,
+            "byte_budget": budget,
+        },
+    }
