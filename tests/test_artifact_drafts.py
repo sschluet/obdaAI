@@ -442,3 +442,70 @@ def test_manual_version_preserves_original_model_receipt_without_new_model_call(
     assert revised["draft"]["inherited_from"]["revision"] == 1
     assert revised["draft"]["raw_output_sha256"] == row["draft"]["raw_output_sha256"]
     assert provider.calls == 1
+
+
+def test_slide_count_retry_is_bounded_and_never_clones_content(setup):
+    app, c, h, cfg, pid, _ = setup
+    one = '{"title":"Deck","slides":[{"title":"First","bullets":["A"]}]}'
+    two = (
+        '{"title":"Deck","slides":[{"title":"First","bullets":["A"]},'
+        '{"title":"Second","bullets":["B"]}]}'
+    )
+
+    class CorrectingProvider(DraftProvider):
+        async def stream(self, parts, roles, *, external, grants):
+            assert not external and not grants
+            self.calls += 1
+            self.parts = parts
+            if self.calls == 2:
+                assert "CORRECTION" in parts[0].content
+            yield one if self.calls == 1 else two
+
+    provider = CorrectingProvider(one)
+    app.state.providers = provider
+    response = c.post(
+        "/api/projects/" + pid + "/artifact-drafts",
+        headers=h,
+        json={"goal": "Create two distinct slides", "kind": "pptx", "slide_count": 2},
+    )
+    assert response.status_code == 200, response.text
+    assert provider.calls == 2
+    result = response.json()
+    assert [s["title"] for s in result["spec"]["plan"]["slides"]] == ["First", "Second"]
+    from hub.artifact_drafts import verify_token
+    from hub.artifact_specs import ArtifactSpec
+
+    with app.state.sessions() as db:
+        receipt = json.loads(
+            verify_token(
+                db, cfg, result["draft_token"], pid, ArtifactSpec.model_validate(result["spec"])
+            )
+        )
+    assert receipt["draft_attempts"] == 2 and receipt["first_output_sha256"]
+
+    bad = DraftProvider(one)
+    app.state.providers = bad
+    rejected = c.post(
+        "/api/projects/" + pid + "/artifact-drafts",
+        headers=h,
+        json={"goal": "Create two slides", "kind": "pptx", "slide_count": 2},
+    )
+    assert rejected.status_code == 422 and bad.calls == 2
+
+
+@pytest.mark.parametrize("ambiguous", [False, True])
+def test_known_bullets_key_typo_never_drops_conflicting_content(setup, ambiguous):
+    app, c, h, cfg, pid, _ = setup
+    slide = {"title": "First", "bulles": ["Original content"]}
+    if ambiguous:
+        slide["bullets"] = ["Different content"]
+    provider = DraftProvider(json.dumps({"title": "Deck", "slides": [slide]}))
+    app.state.providers = provider
+    response = c.post(
+        "/api/projects/" + pid + "/artifact-drafts",
+        headers=h,
+        json={"goal": "Create one slide", "kind": "pptx", "slide_count": 1},
+    )
+    assert response.status_code == (422 if ambiguous else 200)
+    if not ambiguous:
+        assert response.json()["spec"]["plan"]["slides"][0]["bullets"] == ["Original content"]

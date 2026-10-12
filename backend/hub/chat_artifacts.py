@@ -288,9 +288,13 @@ def requests_project_sources(goal: str) -> bool:
 
 
 def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
-    if not requests_revision(goal) and not re.search(
+    imperative = re.search(
         r"\b(erstelle|erzeuge|generiere|schreibe|mach|mache|create|generate|make)\b", goal, re.I
-    ):
+    )
+    polite_infinitive = re.match(
+        r"^\s*(?:bitte\b|ich\s+möchte\b|kannst\s+du\b|würdest\s+du\b)", goal, re.I
+    ) and re.search(r"\b(?:erstellen|erzeugen|generieren|schreiben|machen)\b", goal, re.I)
+    if not requests_revision(goal) and not (imperative or polite_infinitive):
         raise ValueError("Eine konkrete Bitte zur Dateierstellung fehlt")
     formats = []
     for kind, pattern in [
@@ -302,7 +306,7 @@ def request_format(goal: str, default_slide_count: int = 3) -> tuple[str, int]:
         if re.search(pattern, goal, re.I):
             formats.append(kind)
     if len(formats) != 1:
-        raise ValueError("Ein Dateiformat auswählen: Word, PowerPoint oder PDF")
+        raise ValueError("Ein Dateiformat auswählen: Word, PowerPoint, Excel oder PDF")
     words = {
         "eine": 1,
         "eins": 1,

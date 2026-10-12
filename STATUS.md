@@ -1,5 +1,22 @@
 # obdaAI — Status 12.10.2026
 
+## Dateianfragen mit Skill-Aufruf – Korrektur in Prüfung, 12.10.2026
+
+Der Screenshotauftrag „Bitte Präsentation über Blumenzucht über 8 Slides erstellen“
+wurde wegen der nicht erkannten Infinitivform abgewiesen. Höfliche Infinitivformen
+werden jetzt als konkrete Dateianfragen erkannt; Erklärungsfragen bleiben ausgenommen.
+Die lokale Planung erhält ein echtes Array mit der gewünschten Folienzahl und einen
+höchstens einmaligen begrenzten Korrekturversuch. Keine künstliche Folienauffüllung.
+Feste Datenfeld-Tippfehler werden mit Beleg normalisiert, widersprüchliche Werte abgewiesen.
+
+75 gezielte Tests bestanden. Reale isolierte lokale Planung erstellt acht verschiedene
+Folien mit Basisvorlage und optionalem modernen Skill. Der exakt zuvor erzeugte eigene
+Briefplan wurde einmal unter unveränderten Linux-/Landlockgrenzen erneut gerendert:
+Anrede/Gruß/Unterschrift einmalig, kein generischer Brieftext-Titel, kein überflüssiger
+Unterzeichnerplatzhalter. Funktionsplatzhalter und Namensnennungen im Text bleiben erhalten.
+Aktive App bc12946/0042 enthält die Skillpakete; diese Korrekturen noch nicht ausgerollt.
+Matching CI und produktive Abnahme folgen. Private Pakete und Prüfdateien bleiben privat.
+
 ## Skill-Pakete und echte Office-Vorlagen – Entwicklung, 12.10.2026
 
 Private ZIP/.skill-Pakete mit unveränderten Originalen, revisionierten Manifesten,

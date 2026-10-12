@@ -391,3 +391,30 @@ def test_unknown_named_file_is_rejected_before_router(setup):
     assert provider.calls == 1
     rows = c.get("/api/projects/" + pid + "/artifacts").json()
     assert len(rows) == 1 and rows[0]["artifact_id"] == first["artifact"]["artifact_id"]
+
+
+@pytest.mark.parametrize(
+    "goal",
+    [
+        "Bitte Präsentation über Blumenzucht über 8 Slides erstellen",
+        "Ich möchte eine PowerPoint mit acht Folien erstellen",
+        "Kannst du eine Präsentation mit 8 Folien erzeugen?",
+    ],
+)
+def test_polite_infinitive_creation_preserves_requested_slide_count(goal):
+    assert request_format(goal) == ("pptx", 8)
+
+
+def test_skill_prefix_and_infinitive_request():
+    from hub.skill_api import request_without_skill_prefix
+
+    goal = (
+        "/avendis-praesentation-modern Bitte Präsentation über Blumenzucht über 8 Slides erstellen"
+    )
+    current = request_without_skill_prefix(goal, [{"name": "avendis-praesentation-modern"}])
+    assert request_format(current) == ("pptx", 8)
+
+
+def test_explanation_is_not_a_file_creation_request():
+    with pytest.raises(ValueError, match="konkrete Bitte"):
+        request_format("Bitte erkläre mir die Präsentation")

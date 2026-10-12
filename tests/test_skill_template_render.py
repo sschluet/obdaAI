@@ -295,3 +295,73 @@ def test_letter_fills_addresses_subject_and_removes_samplebody(tmp_path):
     assert check.tables[1].cell(1, 2).text == "12.10.2026"
     assert "Lorem ipsum" not in "\n".join(p.text for p in check.paragraphs)
     assert "Dear reader," in "\n".join(p.text for p in check.paragraphs)
+
+
+def test_letter_boundary_cleanup_preserves_substantive_body_and_missing_role(tmp_path):
+    document = Document()
+    document.add_table(rows=6, cols=2)
+    document.add_table(rows=2, cols=3)
+    original = tmp_path / "original.docx"
+    document.save(original)
+    template = as_template(original, tmp_path / "letter.dotx")
+    plan = {
+        "kind": "docx",
+        "title": "Einladung zum Workshop",
+        "letter": {
+            "recipient": ["Beispiel GmbH"],
+            "sender": ["Beispiel Absender"],
+            "subject": "Einladung zum Workshop",
+            "date": "12.10.2026",
+            "salutation": "Sehr geehrte Damen und Herren,",
+            "signature": ["Beispiel Absender", "Unterzeichner ergänzen", "Funktion ergänzen"],
+        },
+        "sections": [
+            {
+                "heading": "Brieftext",
+                "paragraphs": [
+                    "Sehr geehrte Damen und Herren,",
+                    "Wir laden Sie herzlich zu einem Workshop ein.",
+                    "Beispiel Absender",
+                    "Dieser Name gehört hier ausdrücklich zum Inhalt.",
+                ],
+            },
+            {
+                "heading": "Organisatorisches",
+                "paragraphs": [
+                    "Der genaue Termin ist noch offen.",
+                    "Mit freundlichen Grüßen\nBeispiel Absender",
+                    "Unterzeichner ergänzen",
+                    "Funktion ergänzen",
+                ],
+            },
+        ],
+    }
+    render(ArtifactSpec(plan=plan, template=binding(template)), [template], tmp_path / "out")
+    paragraphs = [p.text for p in Document(tmp_path / "out/artifact.docx").paragraphs]
+    assert "Brieftext" not in paragraphs
+    assert "Organisatorisches" in paragraphs
+    assert paragraphs.count("Sehr geehrte Damen und Herren,") == 1
+    assert paragraphs.count("Mit freundlichen Grüßen") == 1
+    assert (
+        paragraphs.count("Beispiel Absender") == 2
+    )  # One substantive body line plus one signature.
+    assert paragraphs.count("Funktion ergänzen") == 1
+    assert "Unterzeichner ergänzen" not in paragraphs
+    assert "Dieser Name gehört hier ausdrücklich zum Inhalt." in paragraphs
+    assert "Der genaue Termin ist noch offen." in paragraphs
+
+
+def test_letter_missing_signer_placeholder_remains_explicit():
+    from hub.template_render import _letter_parts
+
+    plan = document_plan()
+    plan["letter"] = {
+        "recipient": ["Beispiel"],
+        "subject": "Demo",
+        "date": "12.10.2026",
+        "salutation": "Hallo,",
+        "signature": ["Unterzeichner ergänzen"],
+    }
+    parts, signature = _letter_parts(ArtifactSpec(plan=plan).plan)
+    assert signature == ["Unterzeichner ergänzen"]
+    assert parts[0][0] == "Goals"

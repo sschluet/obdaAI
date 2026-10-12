@@ -393,14 +393,18 @@ async def preview(
                     }
                 )
     shape = (
-        (
-            '{"title":"Titel","sections":[{"heading":"Überschrift",'
-            '"paragraphs":["Absatz"],"table":[]}]}'
-        )
+        '{"title":"Titel","sections":[{"heading":"Überschrift",'
+        '"paragraphs":["Absatz"],"table":[]}]}'
         if body.kind in {"docx", "pdf"}
-        else (
-            '{"title":"Titel","slides":[{"title":"Folientitel",'
-            '"bullets":["Stichpunkt"],"notes":"Sprechernotiz"}]}'
+        else json.dumps(
+            {
+                "title": "Titel",
+                "slides": [
+                    {"title": "Folie " + str(index + 1), "bullets": ["Stichpunkt"], "notes": ""}
+                    for index in range(body.slide_count)
+                ],
+            },
+            ensure_ascii=False,
         )
     )
     if body.kind == "xlsx":
@@ -416,7 +420,7 @@ async def preview(
         shape = (
             '{"title":"Betreff","letter":{"recipient":["Name","Straße","PLZ Ort"],'
             '"sender":[],"subject":"Betreff","date":"Datum","salutation":"Anrede",'
-            '"signature":["[Unterzeichner ergänzen]"]},"sections":[{"heading":"Brieftext",'
+            '"signature":["Unterzeichner aus dem Auftrag"]},"sections":[{"heading":"Brieftext",'
             '"paragraphs":["Text"],"table":[]}]}'
         )
     if transform:
@@ -446,7 +450,9 @@ async def preview(
         "XLSX sheets1..10, each rows1..200 and columns1..20, cell textmax1000 or finite number; "
         "no macros or formula code. Letter fields must come from the user; "
         "never copy sample addresses or invent recipients/signatures. Missing required data "
-        "must remain explicit placeholders. "
+        "must remain explicit placeholders. Letter paragraphs contain only the body: "
+        "never repeat the salutation, closing, sender or signature in paragraphs; "
+        "those are rendered from the separate letter fields. "
         "Do not add a kind, sources, provenance or command field. "
         + ("Exactly " + str(body.slide_count) + " slides." if body.kind == "pptx" else "")
         + (
@@ -505,23 +511,72 @@ async def preview(
         > configuration.get("context_tokens", 32768)
     ):
         raise ValueError("Dateientwurf überschreitet die lokalen Kontextgrenzen")
-    answer = ""
-    # Provider timeout bounds a stalled HTTP read; an actively progressing file
-    # stream uses the bounded operation deadline, like normal chat generation.
-    try:
-        async with asyncio.timeout(min(120, cfg.run_timeout)):
-            async with aclosing(provider.stream(parts, roles, external=False, grants=[])) as stream:
-                async for chunk in stream:
-                    answer += chunk
-                    if len(answer) > 24000:
-                        raise ValueError("Dateientwurf überschreitet die Ausgabegrenze")
-    except TimeoutError:
-        raise ValueError(
-            "Lokaler Dateientwurf hat sein Zeitlimit erreicht; keine Datei gespeichert"
-        ) from None
+    deadline = time.monotonic() + min(120, cfg.run_timeout)
+    draft_attempts = 0
+    first_output_sha256 = None
+
+    async def generate(active_parts: list[ContextPart]) -> str:
+        result = ""
+        try:
+            async with asyncio.timeout(max(0.001, deadline - time.monotonic())):
+                async with aclosing(
+                    provider.stream(active_parts, roles, external=False, grants=[])
+                ) as stream:
+                    async for chunk in stream:
+                        result += chunk
+                        if len(result) > 24000:
+                            raise ValueError("Dateientwurf überschreitet die Ausgabegrenze")
+        except TimeoutError:
+            raise ValueError(
+                "Lokaler Dateientwurf hat sein Zeitlimit erreicht; keine Datei gespeichert"
+            ) from None
+        return result
+
+    answer = await generate(parts)
+    draft_attempts = 1
     value, syntax_repair = parse_plan(answer)
     if not isinstance(value, dict) or "kind" in value:
         raise ValueError("Ungültiger Datenplan")
+    if (
+        body.kind == "pptx"
+        and isinstance(value.get("slides"), list)
+        and len(value["slides"]) != body.slide_count
+    ):
+        # One bounded corrective local draft, never fabricate or clone slides.
+        first_output_sha256 = digest(answer)
+        policy += (
+            " CORRECTION: the previous draft returned "
+            + str(len(value["slides"]))
+            + " slides. Return EXACTLY "
+            + str(body.slide_count)
+            + " distinct slides matching every array entry in the supplied shape. "
+            "The total includes cover/end slides. Do not stop after one slide. "
+            "No additional facts, duplicated filler, code or permissions."
+        )
+        retry_parts = [
+            ContextPart(source_id="artifact-draft-policy", revision=1, content=policy),
+            *parts[1:],
+        ]
+        if sum(len(p.content) for p in retry_parts) > cfg.context_limit or (
+            sum(len(p.content.encode()) + 64 for p in retry_parts) + 256 + cfg.local_max_tokens
+            > configuration.get("context_tokens", 32768)
+        ):
+            raise ValueError("Dateientwurf überschreitet die lokalen Kontextgrenzen")
+        answer = await generate(retry_parts)
+        draft_attempts = 2
+        value, syntax_repair = parse_plan(answer)
+        if not isinstance(value, dict) or "kind" in value:
+            raise ValueError("Ungültiger Datenplan")
+    if body.kind == "pptx" and isinstance(value.get("slides"), list):
+        # A known model spelling defect changes only the key, never slide content.
+        for slide in value["slides"]:
+            if isinstance(slide, dict) and "bulles" in slide and "bullets" not in slide:
+                slide["bullets"] = slide.pop("bulles")
+                syntax_repair = (
+                    "bullets_key_typo"
+                    if syntax_repair == "none"
+                    else syntax_repair + "+bullets_key_typo"
+                )
     command_binding = None
     if transform and len(body.sources) == 1:
         from hub import media_intent
@@ -672,6 +727,8 @@ async def preview(
         "goal_sha256": digest(body.goal),
         "raw_output_sha256": digest(answer),
         "syntax_repair": syntax_repair,
+        "draft_attempts": draft_attempts,
+        "first_output_sha256": first_output_sha256,
         "command_binding": command_binding,
         "proposal_sha256": digest(canonical(spec)),
         "created": time.time(),

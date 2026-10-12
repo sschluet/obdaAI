@@ -110,3 +110,13 @@ lokale Modelltests sowie neue releasegebundene Abnahmen sind in STATUS dokumenti
 Der dedizierte Uploadendpunkt `/api/skills/import-package` erhält in den beiden
 Nginx-Vorlagen ein eigenes 20-MiB-Limit. Die allgemeine 1-MiB-Grenze und die
 separate 40-MiB-Grenze für Projektquellen bleiben bestehen.
+
+Dateiwünsche akzeptieren auch höfliche Infinitivformen wie „Bitte Präsentation
+über ein Thema mit acht Folien erstellen“. Die verlangte Folienanzahl wird
+als konkrete JSON-Struktur vorgegeben. Ein falscher Modellumfang erhält höchstens
+einen lokalen Korrekturversuch innerhalb der gemeinsamen 120-Sekunden-Frist;
+es werden keine Folien dupliziert oder erfunden. Ein eindeutig fehlgeschriebener
+`bulles`-Schlüssel wird als `bullets` übernommen und im Beleg vermerkt;
+widersprüchliche Felder bleiben ungültig. Briefvorlagen geben strukturierte
+Anrede, Gruß und Unterschrift einmal aus, ohne doppelte abschließende Modellabsätze.
+Fehlende Funktionsangaben bleiben sichtbar; die Originalvorlagen bleiben unverändert.

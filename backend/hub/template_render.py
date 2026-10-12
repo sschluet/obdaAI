@@ -221,6 +221,83 @@ def _document_anchor(document: Any, plan: DocumentPlan) -> tuple[Any, bool]:
     return anchor, False
 
 
+def _letter_parts(plan: DocumentPlan) -> tuple[list[tuple[str | None, list[str]]], list[str]]:
+    """Render structured letter boundaries once; do not rewrite substantive body text."""
+    fields = plan.letter
+    assert fields is not None
+
+    def key(text: str) -> str:
+        return " ".join(text.split()).casefold().rstrip(",.")
+
+    closings = {
+        "mit freundlichen grüßen",
+        "freundliche grüße",
+        "beste grüße",
+        "kind regards",
+        "best regards",
+        "sincerely",
+    }
+    signer_placeholder = "unterzeichner ergänzen"
+    missing_role = {"funktion ergänzen", "position ergänzen", "titel ergänzen", "[funktion]"}
+    actual_signer = any(
+        key(line) not in closings | missing_role | {signer_placeholder} for line in fields.signature
+    )
+    signature = [
+        line for line in fields.signature if not (actual_signer and key(line) == signer_placeholder)
+    ]
+    removable = {key(line) for line in signature} | closings
+    if actual_signer:
+        removable.add(signer_placeholder)
+    parts: list[tuple[str | None, list[str]]] = []
+    for index, section in enumerate(plan.sections):
+        heading: str | None = section.heading
+        if index == 0 and key(section.heading) in {
+            "brieftext",
+            "brief",
+            "anschreiben",
+            "betreff",
+            key(fields.subject),
+            key(plan.title),
+        }:
+            heading = None
+        parts.append((heading, list(section.paragraphs)))
+    first = next((paragraphs for _, paragraphs in parts if paragraphs), None)
+    if first:
+        lines = first[0].splitlines()
+        if lines and key(lines[0]) == key(fields.salutation):
+            first[0] = "\n".join(lines[1:]).strip()
+            if not first[0]:
+                first.pop(0)
+    body_closing = ""
+    for _, paragraphs in reversed(parts):
+        while paragraphs:
+            lines = paragraphs[-1].splitlines()
+            changed = False
+            while lines and key(lines[-1]) in removable:
+                line = lines.pop()
+                if key(line) in closings:
+                    body_closing = line
+                changed = True
+            if not changed:
+                break
+            if lines:
+                paragraphs[-1] = "\n".join(lines)
+                break
+            paragraphs.pop()
+        if paragraphs:
+            break
+    if body_closing and not any(key(line) in closings for line in signature):
+        signature.insert(0, body_closing)
+    # Exact duplicate signature lines are artifacts, never a request for a second signer.
+    unique_signature = []
+    seen: set[str] = set()
+    for line in signature:
+        if key(line) not in seen:
+            unique_signature.append(line)
+            seen.add(key(line))
+    return parts, unique_signature
+
+
 def document(plan: DocumentPlan, path: Path, template: Path, inputs: list[Path]) -> None:
     from docx import Document
     from docx.shared import Inches
@@ -266,14 +343,20 @@ def document(plan: DocumentPlan, path: Path, template: Path, inputs: list[Path])
         move(doc.add_paragraph(plan.letter.salutation)._p)
     elif not covered:
         move(doc.add_paragraph(plan.title, style=_style(doc, "Titel", "Title"))._p)
-    for item in plan.sections:
-        move(
-            doc.add_paragraph(
-                item.heading,
-                style=_style(doc, "Highlights" if plan.letter else "berschrift1", "Heading 1"),
-            )._p
-        )
-        for text in item.paragraphs:
+    parts, signature = (
+        _letter_parts(plan)
+        if plan.letter
+        else ([(item.heading, list(item.paragraphs)) for item in plan.sections], [])
+    )
+    for item, (heading, paragraphs) in zip(plan.sections, parts, strict=True):
+        if heading:
+            move(
+                doc.add_paragraph(
+                    heading,
+                    style=_style(doc, "Highlights" if plan.letter else "berschrift1", "Heading 1"),
+                )._p
+            )
+        for text in paragraphs:
             move(doc.add_paragraph(text, style=_style(doc, "Standard", "Normal"))._p)
         if item.table:
             table = doc.add_table(rows=0, cols=len(item.table[0]))
@@ -298,14 +381,14 @@ def document(plan: DocumentPlan, path: Path, template: Path, inputs: list[Path])
                     )._p
                 )
     if plan.letter:
-        for line in plan.letter.signature:
+        for line in signature:
             move(doc.add_paragraph(line)._p)
     doc.core_properties.title = plan.title
     doc.core_properties.author = "obdaAI"
     doc.save(str(path))
     check = Document(str(path))
     if not all(
-        item.heading in "\n".join(p.text for p in check.paragraphs) for item in plan.sections
+        heading in "\n".join(p.text for p in check.paragraphs) for heading, _ in parts if heading
     ):
         raise ValueError("Word-Vorlagenprüfung fehlgeschlagen")
 
