@@ -18,7 +18,9 @@ class ChatSource(BaseModel):
     revision: int = Field(ge=1)
 
 
-def binding(db: Any, project_id: str, source: ChatSource) -> tuple[ContextPart, dict[str, Any]]:
+def binding(
+    db: Any, project_id: str | None, source: ChatSource, *, conversation_id: str | None = None
+) -> tuple[ContextPart, dict[str, Any]]:
     chat = db.scalar(
         select(Conversation).where(Conversation.id == str(source.conversation_id)).with_for_update()
     )
@@ -26,10 +28,15 @@ def binding(db: Any, project_id: str, source: ChatSource) -> tuple[ContextPart, 
         select(Message).where(Message.id == str(source.message_id)).with_for_update()
     )
     if (
-        not chat
+        (bool(project_id) == bool(conversation_id))
+        or not chat
         or chat.purpose != "chat"
         or chat.archived
         or chat.memory_scope
+        or (
+            conversation_id is not None
+            and (chat.id != conversation_id or chat.project_id is not None)
+        )
         or (chat.project_id and chat.project_id != project_id)
         or not message
         or message.conversation_id != chat.id
@@ -58,12 +65,14 @@ def binding(db: Any, project_id: str, source: ChatSource) -> tuple[ContextPart, 
     ), receipt
 
 
-def verify(db: Any, project_id: str, receipt: dict[str, Any]) -> None:
+def verify(
+    db: Any, project_id: str | None, receipt: dict[str, Any], *, conversation_id: str | None = None
+) -> None:
     source = ChatSource(
         conversation_id=receipt["conversation_id"],
         message_id=receipt["message_id"],
         revision=receipt["revision"],
     )
-    _, actual = binding(db, project_id, source)
+    _, actual = binding(db, project_id, source, conversation_id=conversation_id)
     if actual != receipt:
         raise ValueError("Ausgewählte Chatantwort wurde verändert")

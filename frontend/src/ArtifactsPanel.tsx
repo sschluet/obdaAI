@@ -29,12 +29,15 @@ const fileFormats=[
 const status:Record<string,string> = {queued:'In Warteschlange', rendering:'Datei und Vorschau werden erstellt',
   needs_review:'Vorschau prüfen', published:'Freigegeben', failed:'Fehlgeschlagen', cancelled:'Abgebrochen'};
 
-export function ArtifactsPanel({api, project, sources, seed, embedded=false, contextLabel, initialArtifactId}:{api:API;initialArtifactId?:string|null;seed?:ArtifactSeed|null;embedded?:boolean;contextLabel?:string;
-  project:{id:string; archived:boolean}; sources:Source[]}) {
+export function ArtifactsPanel({api, project, conversation, sources, seed, embedded=false, contextLabel, initialArtifactId, initialArtifactRevision}:{api:API;initialArtifactId?:string|null;initialArtifactRevision?:number|null;seed?:ArtifactSeed|null;embedded?:boolean;contextLabel?:string;
+  project?:{id:string; archived:boolean}; conversation?:{id:string;archived?:boolean}; sources:Source[]}) {
   const appliedTarget=useRef<string|null>(null);
   const targetRow=useRef<HTMLElement|null>(null);
   const [highlighted,setHighlighted]=useState<string|null>(null);
-  const storageKey='hub-ui-draft:artifact:'+project.id;
+  const scopeId=project?.id||conversation!.id;
+  const archived=project?.archived||conversation?.archived||false;
+  const ownerPrefix=project?'/projects/'+project.id:'/conversations/'+conversation!.id;
+  const storageKey='hub-ui-draft:artifact:'+(project?'':'conversation:')+scopeId;
   const [savedDraft,setSavedDraft] = useState<any|null>(null);
   const [resumeNotice,setResumeNotice] = useState('');
   const [resumeNeedsReview,setResumeNeedsReview] = useState(false);
@@ -56,7 +59,7 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
   const [chatSource,setChatSource] = useState<any|null>(null);
   const [goal,setGoal] = useState(''), [draftToken,setDraftToken] = useState<string|null>(null), [draftInfo,setDraftInfo] = useState<any|null>(null), [slideCount,setSlideCount] = useState(3);
   const [preview,setPreview] = useState<Row|null>(null), [reviewed,setReviewed] = useState(false);
-  const prefix = '/projects/'+project.id+'/artifacts';
+  const prefix = ownerPrefix+'/artifacts';
   const pdfs = sources.filter(s=>/\.pdf$/i.test(s.name));
   const images = sources.filter(s=>/\.(png|jpe?g|webp)$/i.test(s.name));
   const base = (r:Row)=>prefix+'/'+r.artifact_id+'/versions/'+r.revision;
@@ -71,24 +74,24 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     void refresh().catch(e=>{if(alive)setError(e.message)});
     const timer=setInterval(()=>void refresh().catch(()=>{}),3000);
     return()=>{alive=false;clearInterval(timer)};
-  },[project.id]);
+  },[ownerPrefix]);
   useEffect(()=>{
-    if(!initialArtifactId||appliedTarget.current===initialArtifactId||editing)return;
-    const latest=rows.filter(r=>r.artifact_id===initialArtifactId).sort((a,b)=>b.revision-a.revision)[0];
+    if(!initialArtifactId||appliedTarget.current===initialArtifactId+':'+(initialArtifactRevision||'latest')||editing)return;
+    const latest=rows.filter(r=>r.artifact_id===initialArtifactId&&(!initialArtifactRevision||r.revision===initialArtifactRevision)).sort((a,b)=>b.revision-a.revision)[0];
     if(!latest)return;
-    appliedTarget.current=initialArtifactId;setHighlighted(latest.artifact_id+'-'+latest.revision);setReviewed(false);setError('');
+    appliedTarget.current=initialArtifactId+':'+(initialArtifactRevision||'latest');setHighlighted(latest.artifact_id+'-'+latest.revision);setReviewed(false);setError('');
     if(['needs_review','published'].includes(latest.status))setPreview(latest);
-  },[initialArtifactId,rows,editing]);
+  },[initialArtifactId,initialArtifactRevision,rows,editing]);
   useEffect(()=>{if(!highlighted)return;targetRow.current?.scrollIntoView({block:'center'});targetRow.current?.focus({preventScroll:true})},[highlighted]);
   useEffect(()=>{
     try { const raw=sessionStorage.getItem(storageKey);const value=raw?JSON.parse(raw):null;
-      setSavedDraft(value?.schema===1&&value.projectId===project.id?value:null);
+      setSavedDraft(value?.schema===1&&value.projectId===(project?.id||null)&&(value.conversationId||null)===(conversation?.id||null)?value:null);
     } catch { setSavedDraft(null); }
   },[storageKey]);
   useEffect(()=>{
     if(!editing)return;
     const sourceIds=Array.from(new Set([...boundIds,...pages.map(p=>p.sourceId),...tiles.map(t=>t.sourceId),...sections.flatMap(s=>(s.images||[]).map(i=>i.sourceId))])).filter(Boolean);
-    const value={schema:1,templateId,requiresReview:resumeNeedsReview,projectId:project.id,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,
+    const value={schema:1,templateId,requiresReview:resumeNeedsReview,projectId:project?.id||null,conversationId:conversation?.id||null,kind,title,sections,boundIds,pdfExport,pdfMode,slides,pages,tiles,columns,width,height,format,goal,slideCount,
       original:original?{artifact_id:original.artifact_id,revision:original.revision,spec_sha256:original.spec_sha256}:null,
       chatSource,sourceBindings:sourceIds.map(id=>sources.find(s=>s.id===id)).filter(Boolean)};
     try { sessionStorage.setItem(storageKey,JSON.stringify(value));setSavedDraft(value); } catch { /* Storage can be disabled or full. In-memory editing stays available. */ }
@@ -122,7 +125,7 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     setResumeNeedsReview(false);setResumeNotice('');setMode(row?'manual':'model');setContentOpen(!!row);
     setError('');setChatSource(null);setDraftToken(null);setDraftInfo(null);setGoal('');setOriginal(row);setTitle(row?.title||'');setKind(row?.kind||'docx');
     const plan=row?.spec.plan;
-    setPdfExport(plan?.pdf_export||false);setPdfMode(plan?.sections?.length?'text':'pages');
+    setPdfExport(plan?.pdf_export||false);setPdfMode(!project||plan?.sections?.length?'text':'pages');
     setSections(plan?.sections?.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[],images:(s.images||[]).map((image:any)=>({sourceId:row!.spec.sources[image.source].id,caption:image.caption||'',width:image.width_inches}))}))||[{heading:'Ergebnis',paragraphs:'',table:[]}]);
     setBoundIds(row?.spec.sources?.map((s:any)=>s.id)||[]);
     setSlides(plan?.slides?.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''}))||[{title:'',bullets:'',notes:''}]);
@@ -191,7 +194,7 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
     if(busy||!goal.trim())return;setBusy(true);setError('');
     try{
       const bindings=boundIds.map(id=>{const s=sources.find(s=>s.id===id);if(!s)throw Error('Ausgewählte Quelle fehlt');return{id:s.id,revision:s.revision,sha256:s.sha256}});
-      const draft=await api('/projects/'+project.id+'/artifact-drafts','POST',{goal,kind,pdf_mode:kind==='pdf'&&pdfMode==='pages'?'pages':'content',slide_count:slideCount,sources:bindings,...(chatSource?{chat_source:chatSource}:{}),...(original?{base_artifact_id:original.artifact_id,base_revision:original.revision}:{})});
+      const draft=await api(ownerPrefix+'/artifact-drafts','POST',{goal,kind,pdf_mode:kind==='pdf'&&pdfMode==='pages'?'pages':'content',slide_count:slideCount,sources:bindings,...(chatSource?{chat_source:chatSource}:{}),...(original?{base_artifact_id:original.artifact_id,base_revision:original.revision}:{})});
       const plan=draft.spec.plan;setTitle(plan.title);
       if(kind==='docx'||(kind==='pdf'&&pdfMode==='text'))setSections(plan.sections.map((s:any)=>({heading:s.heading,paragraphs:s.paragraphs.join('\n\n'),table:s.table||[]})));
       else if(kind==='pptx')setSlides(plan.slides.map((s:any)=>({title:s.title,bullets:s.bullets.join('\n'),notes:s.notes||''})));
@@ -207,20 +210,20 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
   }
   return <section className={"setting-card artifacts-panel"+(embedded?" artifacts-embedded":"")}>
     <div className="artifact-panel-heading"><div><span className="artifact-eyebrow">Ergebnisse · Lokal</span><h2>Dateien erstellen und bearbeiten</h2></div><span className="artifact-count">{rows.length} Versionen</span></div>
-    {contextLabel&&<p className="artifact-context">Projekt: {contextLabel}</p>}
+    {contextLabel&&<p className="artifact-context">{project?'Projekt':'Gespräch'}: {contextLabel}</p>}
     {!embedded&&<p>Vom gewünschten Ergebnis zur bearbeitbaren Datei. Word, PowerPoint, PDF und Bilder mit erhaltenen Originalen und geprüfter Vorschau.</p>}
     {!configured&&<p className="hint">Der lokale Dateirunner ist noch nicht eingerichtet. Vorhandene Originale kannst du weiterhin im Bereich Dokumente verwenden.</p>}
     {error&&!editing&&!preview&&<p className="error" role="alert">{error}</p>}
-    <button className="primary" disabled={!configured||project.archived} onClick={()=>start()}>Neue Datei erstellen</button>
-    {seed&&(!seed.project_id||seed.project_id===project.id)&&<button disabled={!configured||project.archived} onClick={()=>{start();setMode('manual');setContentOpen(true);setTitle('Antwort als Dokument');setSections([{heading:'Antwort',paragraphs:seed.content.match(/[\s\S]{1,4000}/g)?.join('\n\n')||seed.content,table:[]}]);setChatSource({conversation_id:seed.conversation_id,message_id:seed.message_id,revision:seed.revision})}}>Chatantwort als Word übernehmen</button>}
-    {savedDraft&&!editing&&<div className="artifact-context" role="status"><b>Gespeicherter Dateientwurf</b><p>{savedDraft.title||savedDraft.goal||'Noch ohne Titel'} · nur in dieser Browsersitzung</p><button disabled={busy||project.archived} onClick={()=>void resumeDraft()}>Entwurf fortsetzen</button><button disabled={busy} onClick={discardDraft}>Entwurf verwerfen</button></div>}
-    {!rows.length&&<p className="muted">Noch keine erzeugten Dateien in diesem Projektraum.</p>}
+    <button className="primary" disabled={!configured||archived} onClick={()=>start()}>Neue Datei erstellen</button>
+    {seed&&(!seed.project_id||seed.project_id===project?.id)&&<button disabled={!configured||archived} onClick={()=>{start();setMode('manual');setContentOpen(true);setTitle('Antwort als Dokument');setSections([{heading:'Antwort',paragraphs:seed.content.match(/[\s\S]{1,4000}/g)?.join('\n\n')||seed.content,table:[]}]);setChatSource({conversation_id:seed.conversation_id,message_id:seed.message_id,revision:seed.revision})}}>Chatantwort als Word übernehmen</button>}
+    {savedDraft&&!editing&&<div className="artifact-context" role="status"><b>Gespeicherter Dateientwurf</b><p>{savedDraft.title||savedDraft.goal||'Noch ohne Titel'} · nur in dieser Browsersitzung</p><button disabled={busy||archived} onClick={()=>void resumeDraft()}>Entwurf fortsetzen</button><button disabled={busy} onClick={discardDraft}>Entwurf verwerfen</button></div>}
+    {!rows.length&&<p className="muted">Noch keine erzeugten Dateien in diesem {project?'Projektraum':'Gespräch'}.</p>}
     {rows.map(row=><article key={row.artifact_id+'-'+row.revision} className="citation" tabIndex={-1} ref={highlighted===row.artifact_id+'-'+row.revision?targetRow:undefined} data-search-target={highlighted===row.artifact_id+'-'+row.revision||undefined}>
       {highlighted===row.artifact_id+'-'+row.revision&&<small className="status-chip">Suchergebnis</small>}<b>{row.title} · Version {row.revision}</b>{row.chat&&<p className="hint">Aus Chatantwort · Revision {row.chat.revision} · lokal gespeichert</p>}{row.draft&&<details><summary>Modell und verwendete Quellen</summary><p>{row.draft.provider.model} · lokales Modell · {row.draft.user_edited?'Entwurf anschließend bearbeitet':'Entwurf übernommen'}</p>{row.draft.inherited_from&&<p>Ursprünglicher Modellentwurf: Version {row.draft.inherited_from.revision} · diese Folgeversion wurde manuell bearbeitet.</p>}{row.draft.citations.map((c:any,i:number)=><p key={i}>{c.reference} · Revision {c.revision}</p>)}{row.draft.web_research&&<><p>Verwendete Websuchauszüge · lokal verarbeitet</p>{row.draft.web_research.citations.map((c:any,i:number)=><p key={'web-'+i}>{c.reference}</p>)}</>}<p className="hint">Quellenbelege zeigen verwendete Auszüge. Die sachliche Richtigkeit wurde nicht automatisch bestätigt.</p></details>}<p>{status[row.status]||row.status} · {row.kind==='image'?'Bild':row.kind.toUpperCase()} · Lokal</p>
       {row.error&&<p className="error">{row.error}</p>}
       {['needs_review','published'].includes(row.status)&&<button onClick={()=>{setError('');setReviewed(false);setPreview(row)}}>Vorschau öffnen</button>}
       {row.status==='published'&&<><a href={'/api'+base(row)+'/download'} download>{row.output?.parts?.length?'Alle PDF-Teile als ZIP herunterladen':'Datei herunterladen'}</a>{row.output?.parts?.map((part:any,i:number)=><a key={part.filename} href={'/api'+base(row)+'/download?part='+(i+1)} download>PDF-Teil {i+1} herunterladen · {part.pages} Seiten</a>)}{row.output?.pdf_export&&<a href={'/api'+base(row)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}
-      {configured&&!project.archived&&row.revision===Math.max(...rows.filter(r=>r.artifact_id===row.artifact_id).map(r=>r.revision))&&<button onClick={()=>start(row)}>Neue Version bearbeiten</button>}
+      {configured&&!archived&&row.revision===Math.max(...rows.filter(r=>r.artifact_id===row.artifact_id).map(r=>r.revision))&&<button onClick={()=>start(row)}>Neue Version bearbeiten</button>}
       {['queued','rendering','needs_review','failed'].includes(row.status)&&<button disabled={busy} onClick={async()=>{setBusy(true);try{await api(base(row)+'/cancel','POST');setRows(await api(prefix))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Diese Version abbrechen</button>}
     </article>)}
     {editing&&<div className="modal"><div className="artifact-editor" role="dialog" aria-modal="true" aria-label="Datei erstellen">
@@ -234,22 +237,22 @@ export function ArtifactsPanel({api, project, sources, seed, embedded=false, con
       {resumeNotice&&<p className="artifact-context" role="status">{resumeNotice}</p>}
       {resumeNeedsReview&&<div className="artifact-context"><p>Vor dem Erstellen musst du mit aktuell ausgewählten Quellen neu entwerfen oder den erhaltenen Text ausdrücklich als manuelle Kopie verwenden.</p><button type="button" disabled={busy} onClick={()=>{setOriginal(null);setChatSource(null);setResumeNeedsReview(false);setMode('manual');setContentOpen(true)}}>Als manuelle Kopie ohne frühere Herkunft verwenden</button></div>}
       <form onSubmit={save}>
-        <fieldset className="artifact-choice-field" disabled={busy}><legend>Dateiformat</legend><div className="artifact-format-options" role="radiogroup" aria-label="Dateiformat">{fileFormats.map(option=><label key={option.id} className={'artifact-format-card'+(kind===option.id?' is-selected':'')}><input type="radio" name={'artifact-format-'+project.id} aria-label={option.label} value={option.id} checked={kind===option.id} onChange={()=>{setKind(option.id);setTemplateId('');setPendingTemplate(null);setTemplateNotice('');setDraftToken(null);setDraftInfo(null);setError('')}}/><option.icon size={20}/><strong>{option.short}</strong><small>{option.description}</small>{kind===option.id&&<Check className="artifact-choice-check" size={13}/>}</label>)}</div></fieldset>
+        <fieldset className="artifact-choice-field" disabled={busy}><legend>Dateiformat</legend><div className="artifact-format-options" role="radiogroup" aria-label="Dateiformat">{fileFormats.filter(option=>project||option.id!=='image').map(option=><label key={option.id} className={'artifact-format-card'+(kind===option.id?' is-selected':'')}><input type="radio" name={'artifact-format-'+scopeId} aria-label={option.label} value={option.id} checked={kind===option.id} onChange={()=>{setKind(option.id);setTemplateId('');setPendingTemplate(null);setTemplateNotice('');setDraftToken(null);setDraftInfo(null);setError('')}}/><option.icon size={20}/><strong>{option.short}</strong><small>{option.description}</small>{kind===option.id&&<Check className="artifact-choice-check" size={13}/>}</label>)}</div></fieldset>
         {(kind==='docx'||kind==='pptx')&&<div className="artifact-template">
-          <fieldset className="artifact-choice-field" disabled={busy}><legend>Startpunkt wählen</legend><div className="artifact-template-options" role="radiogroup" aria-label="Vorlage"><label className={'artifact-template-card'+(!templateId?' is-selected':'')}><input type="radio" name={'artifact-template-'+project.id} aria-label="Ohne Vorlage" value="" checked={!templateId} onChange={()=>{setTemplateId('');setPendingTemplate(null);setTemplateNotice('')}}/><span><strong>Ohne Vorlage</strong><small>Eigene Struktur und Inhalte</small></span>{!templateId&&<Check size={14}/>}</label>{fileTemplates.filter(t=>t.kind===kind).map(template=><label key={template.id} className={'artifact-template-card'+(templateId===template.id?' is-selected':'')}><input type="radio" name={'artifact-template-'+project.id} aria-label={template.name} value={template.id} checked={templateId===template.id} onChange={()=>{setTemplateId(template.id);setPendingTemplate(null);setTemplateNotice('')}}/><span><strong>{template.name}</strong><small>{template.headings.length} {kind==='pptx'?'Folien':'Abschnitte'} · leere Gliederung</small></span>{templateId===template.id&&<Check size={14}/>}</label>)}</div></fieldset>
+          <fieldset className="artifact-choice-field" disabled={busy}><legend>Startpunkt wählen</legend><div className="artifact-template-options" role="radiogroup" aria-label="Vorlage"><label className={'artifact-template-card'+(!templateId?' is-selected':'')}><input type="radio" name={'artifact-template-'+scopeId} aria-label="Ohne Vorlage" value="" checked={!templateId} onChange={()=>{setTemplateId('');setPendingTemplate(null);setTemplateNotice('')}}/><span><strong>Ohne Vorlage</strong><small>Eigene Struktur und Inhalte</small></span>{!templateId&&<Check size={14}/>}</label>{fileTemplates.filter(t=>t.kind===kind).map(template=><label key={template.id} className={'artifact-template-card'+(templateId===template.id?' is-selected':'')}><input type="radio" name={'artifact-template-'+scopeId} aria-label={template.name} value={template.id} checked={templateId===template.id} onChange={()=>{setTemplateId(template.id);setPendingTemplate(null);setTemplateNotice('')}}/><span><strong>{template.name}</strong><small>{template.headings.length} {kind==='pptx'?'Folien':'Abschnitte'} · leere Gliederung</small></span>{templateId===template.id&&<Check size={14}/>}</label>)}</div></fieldset>
           <p className="hint">Vorlagen liefern eine leere Gliederung. Sie ergänzen keine Fakten und ändern weder Quellen noch Freigaben.</p>
           <button type="button" disabled={busy||!templateId} onClick={requestTemplate}>Gliederung einsetzen</button><button type="button" disabled={busy||!templateId} onClick={addTemplateGoal}>Vorlagenziel in KI-Auftrag übernehmen</button>
           {pendingTemplate&&<div className="artifact-template-confirm" role="group" aria-label="Vorlagenwechsel bestätigen"><p>Die Gliederung „{pendingTemplate.name}“ ersetzt die Abschnitte bzw. Folien dieses Entwurfs einschließlich Text, Tabellen und Bildern. Gespeicherte Versionen bleiben erhalten. Dein Dateititel, KI-Auftrag und ausgewählte Quellen bleiben bestehen.</p><button type="button" disabled={busy} onClick={()=>applyTemplate(pendingTemplate)}>Entwurfsinhalt durch leere Gliederung ersetzen</button><button type="button" disabled={busy} onClick={()=>setPendingTemplate(null)}>Inhalt behalten</button></div>}
           {templateNotice&&<p role="status" className="hint">{templateNotice}</p>}
         </div>}
         {<details className="artifact-draft" open={mode==='model'}><summary onClick={e=>{e.preventDefault();setMode('model')}}>Mit dem lokalen Modell entwerfen</summary>
-          <p className="hint">Beschreibe das Ergebnis. Es werden nur die ausdrücklich ausgewählten Projektquellen verwendet. Textentwürfe nutzen bis zu vier Quellen mit Auszügen; Seiten- und Bildoperationen verwenden die ausgewählten Originale. Danach Text, Fakten und Quellen selbst prüfen. Es entsteht noch keine Datei.</p>
+          <p className="hint">Beschreibe das Ergebnis. {project?'Es werden nur die ausdrücklich ausgewählten Projektquellen verwendet.':'Der Auftrag und eine ausdrücklich gewählte Chatantwort bilden den Kontext.'} Textentwürfe nutzen bis zu vier Quellen mit Auszügen; Seiten- und Bildoperationen verwenden die ausgewählten Originale. Danach Text, Fakten und Quellen selbst prüfen. Es entsteht noch keine Datei.</p>
           <label>Gewünschtes Ergebnis<textarea aria-label="Gewünschtes Ergebnis" maxLength={4000} rows={3} value={goal} onChange={e=>setGoal(e.target.value)}/></label>
           {kind==='pptx'&&<label>Gewünschte Folienanzahl<input type="number" min={1} max={30} value={slideCount} onChange={e=>setSlideCount(Number(e.target.value))}/></label>}
           <button type="button" disabled={busy||!goal.trim()||boundIds.length>((kind==='image'||(kind==='pdf'&&pdfMode==='pages'))?20:4)||(!!chatSource&&(kind==='image'||(kind==='pdf'&&pdfMode==='pages')))} onClick={()=>void generate()}>{busy?'Lokaler Entwurf läuft…':'Lokal entwerfen'}</button>
           {chatSource&&<p className="hint">Die übernommene Antwort kannst du hier bearbeiten. KI-Folgeänderungen sind nach Erstellung der ersten Dateiversion verfügbar.</p>}
         </details>}
-        {kind==='pdf'&&<label>PDF erstellen aus<select aria-label="PDF erstellen aus" value={pdfMode} onChange={e=>{setPdfMode(e.target.value);setDraftToken(null);setDraftInfo(null)}}><option value="pages">Seiten vorhandener PDF-Dateien</option><option value="text">Text, Tabellen und Bilder</option></select></label>}
+        {kind==='pdf'&&project&&<label>PDF erstellen aus<select aria-label="PDF erstellen aus" value={pdfMode} onChange={e=>{setPdfMode(e.target.value);setDraftToken(null);setDraftInfo(null)}}><option value="pages">Seiten vorhandener PDF-Dateien</option><option value="text">Text, Tabellen und Bilder</option></select></label>}
         {draftInfo&&<p className="artifact-feedback" role="status">Lokaler Entwurf bereit · {draftInfo.provider.model}. Inhalt bearbeiten, anschließend Datei und Vorschau erstellen.</p>}
         {sources.length>0&&<details className="artifact-source-selection"><summary>Gebundene Quelldateien</summary><p className="hint">Nur ausgewählte Quellen werden an das lokale Modell übergeben. Textentwürfe nutzen bis zu vier Quellen mit Auszügen. Jede Auswahl wird an Revision und Hash gebunden.</p>{(kind==='image'?images:kind==='pdf'&&pdfMode==='pages'?pdfs:sources).map(source=><label key={source.id}><input type="checkbox" checked={boundIds.includes(source.id)} onChange={e=>{setBoundIds(e.target.checked?[...boundIds,source.id]:boundIds.filter(id=>id!==source.id));setDraftToken(null);setDraftInfo(null)}}/>{source.name}</label>)}</details>}
         <details className="artifact-content" open={contentOpen} onToggle={e=>setContentOpen(e.currentTarget.open)}><summary>Inhalt bearbeiten{original?' · neue Version':''}</summary>

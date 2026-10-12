@@ -269,7 +269,19 @@ class SourceReadyEvent(Base):
 class Artifact(Base):
     __tablename__ = "artifacts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("projects.id"), nullable=True, index=True
+    )
+    conversation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("conversations.id"), nullable=True, index=True
+    )
+    __table_args__ = (
+        CheckConstraint(
+            "(project_id IS NOT NULL AND conversation_id IS NULL) OR "
+            "(project_id IS NULL AND conversation_id IS NOT NULL)",
+            name="artifact_owner_scope",
+        ),
+    )
     revision: Mapped[int] = mapped_column(Integer, default=1)
     created: Mapped[float] = mapped_column(Float, default=time.time)
 

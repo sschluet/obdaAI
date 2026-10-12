@@ -1,5 +1,29 @@
 # obdaAI — Status 12.10.2026
 
+## PowerPoint/Word aus normalen Chats – lokale Prüfung, 12.10.2026
+
+Die bisherige Dateierstellung war an Projektgespräche gebunden. Normale Chats
+haben jetzt einen eigenen Dateiarbeitsraum mit Entwurf, unveränderlichen Versionen,
+Vorschau/Freigabe und Download. Kein Hilfsprojekt wird angelegt. Fehlendes Thema
+führt zu einer servergebundenen Rückfrage; die folgende Inhaltseingabe übernimmt
+Format und Folienanzahl. Änderungen an Originalnachricht/Rückfrage während der
+Generierung verhindern veraltete Dateierstellung. Bestehende Projektabläufe erhalten.
+
+Schema0041 ergänzt genau einen Dateibesitzer (Projekt XOR normales Gespräch), FK,
+Scopeprüfung und Downgrade-Sperre bei vorhandenen Chatdateien. Entwurfstoken,
+Chatantworten, Recherche und Revisionen bleiben exakt gebunden und LOCAL_ONLY.
+Chatlöschung berücksichtigt Renderjobs sowie Dateiversionen und dauerhafte
+Dateibereinigung. Globale Suche findet aktive Chatdateien ohne Inhalte auszugeben.
+
+Neue Browsertests prüfen PowerPoint/Word im freien Chat, fünf Folien, Vorschaupflicht,
+Download, Reload und mobile Ansicht. Bestehende Dateibrowsertests angepasst und
+bestanden. Öffentliche Galerie mit neuer ausschließlich synthetischer Chatdateiansicht.
+157 gezielte Backend-/Scope-/Datei-/Lösch-/Suchtests bestanden, ein neuer
+PostgreSQLfall für CI. Ruff/Mypy87, Source-Scan530, TypeScript/Build und beide
+Dateibrowserprüfungen erfolgreich. Matching-CI, Schema-/App-Rollout und reale
+Office-/Downloadabnahme stehen noch aus.
+
+
 ## Projektfragen mit großen Quellen – Test-VM geprüft, 12.10.2026
 
 Ursache: bis zu acht6k-Zeichen-Passagen wurden unabhängig vom verbleibenden

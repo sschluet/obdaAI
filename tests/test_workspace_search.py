@@ -212,3 +212,45 @@ def test_paused_knowledge_metadata_remains_discoverable(setup):
     assert len(results) == 1 and results[0]["kind"] == "knowledge"
     for query in ("addressmarker", "configmarker"):
         assert client.get("/api/workspace/search", params={"q": query}).json()["results"] == []
+
+
+def test_standalone_chat_files_are_searchable_in_their_exact_active_chat(setup):
+    app, client, _, _ = setup
+    with app.state.sessions() as db:
+        active = Conversation(title="Active file chat")
+        archived = Conversation(title="Archived file chat", archived=True)
+        db.add_all([active, archived])
+        db.flush()
+        active_id = active.id
+        for chat in [active, archived]:
+            file = Artifact(conversation_id=chat.id)
+            db.add(file)
+            db.flush()
+            db.add(
+                ArtifactRevision(
+                    artifact_id=file.id,
+                    revision=1,
+                    request_key=file.id,
+                    spec=json.dumps(
+                        {
+                            "sources": [],
+                            "plan": {
+                                "kind": "docx",
+                                "title": "ChatReport",
+                                "sections": [
+                                    {"heading": "Private", "paragraphs": ["PRIVATE_BODY"]}
+                                ],
+                            },
+                        }
+                    ),
+                    spec_sha256="a" * 64,
+                )
+            )
+        db.commit()
+    result = client.get(
+        "/api/workspace/search", params={"q": "ChatReport", "kind": "artifact"}
+    ).json()
+    assert len(result["results"]) == 1
+    assert result["results"][0]["project_id"] is None
+    assert result["results"][0]["conversation_id"] == active_id
+    assert "PRIVATE_BODY" not in json.dumps(result)

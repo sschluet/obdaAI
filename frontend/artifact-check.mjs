@@ -2,12 +2,14 @@ import {loginFixture} from './fixture-login.mjs';
 // Focused synthetic UI check. Actual Office layout has a separate offline smoke.
 import {chromium} from 'playwright';
 import {mkdir,readFile} from 'node:fs/promises';
+const base=process.env.ARTIFACT_FIXTURE_ORIGIN||'http://127.0.0.1:18765';
+if(!['http://127.0.0.1:18765','http://127.0.0.1:18767'].includes(base))throw Error('Synthetic fixtures only');
 const output='../.local/browser';await mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto('http://127.0.0.1:18765');
+ await page.goto(base);
  await loginFixture(page);
  await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
  await page.getByRole('button',{name:'Projekte',exact:true}).click();
@@ -196,10 +198,11 @@ try{
  await page.getByRole('button',{name:'Neues Projektgespräch',exact:true}).click();
  await page.getByLabel('Nachricht',{exact:true}).fill('Erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
- await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
- await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true}).click();
  await page.getByRole('complementary',{name:'Arbeitsbereich neben dem Chat',exact:true}).waitFor();
  await page.getByText('Synthetic local document draft · Version 1',{exact:true}).first().waitFor();
+ await page.getByRole('dialog',{name:'Dateivorschau',exact:true}).getByRole('button',{name:'Schließen',exact:true}).click();
  await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();
  await page.getByRole('button',{name:name+' · Projektraum öffnen',exact:true}).click();
  await page.getByRole('tab',{name:/Gespräche ·/}).click();
@@ -207,8 +210,9 @@ try{
  await page.getByLabel('Nachricht',{exact:true}).fill('Recherchiere und erstelle eine Word-Datei. SYNTHETIC_FILE_REQUEST SYNTHETIC_WEB_QUERY');
  await page.getByRole('button',{name:'Websuche aktiviert',exact:true}).waitFor();
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
- await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).waitFor();
- await page.getByRole('button',{name:'Datei im Projekt öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Datei im Arbeitsbereich öffnen',exact:true}).click();
+ await page.getByRole('dialog',{name:'Dateivorschau',exact:true}).getByRole('button',{name:'Schließen',exact:true}).click();
  const researchCard=page.locator('article').filter({hasText:'Synthetic local document draft · Version 1'}).filter({hasText:'Verwendete Websuchauszüge'});
  await researchCard.locator('summary').click();
  await researchCard.getByText('Verwendete Websuchauszüge · lokal verarbeitet',{exact:true}).waitFor();
@@ -220,7 +224,7 @@ try{
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).waitFor();
  await page.getByRole('button',{name:'Chatantwort als Datei übernehmen',exact:true}).click();
- await page.getByLabel(/Datei in Projekt speichern/).selectOption({label:name});
+ if(await page.getByLabel(/Datei in Projekt speichern/).count())throw Error('Free chat export still requires a project');
  await page.getByRole('button',{name:'Chatantwort als Word übernehmen',exact:true}).click();
  dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();

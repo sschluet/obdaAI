@@ -18,6 +18,89 @@ from hub.artifacts import digest, spec_for
 from hub.db import Artifact, ArtifactRevision, Conversation, Message, Run, Source
 
 
+def artifact_clarification(goal: str) -> str | None:
+    """Ask for content when the request contains only format and layout details."""
+    try:
+        kind, count = request_format(goal)
+    except ValueError:
+        return None
+    remainder = re.sub(
+        r"\b(?:bitte|please|erstelle|erzeuge|generiere|schreibe|mach|mache|create|generate|make|"
+        r"eine[nmrs]?|ein[nmrs]?|a|an|the|mir|me|für|for|mich|uns|us|mit|with|und|and|"
+        r"word|docx|powerpoint|pptx|präsentation|presentation|pdf|datei|file|dokument|document|"
+        r"folien?|slides?|seiten?|pages?|abschnitte?|sections?|editable|editierbar[e]?|"
+        r"eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|one|two|three|four|five|six|seven|eight|nine|ten)\b|\d+",
+        " ",
+        goal,
+        flags=re.I,
+    )
+    if re.search(r"\w", remainder):
+        return None
+    if kind == "pptx":
+        return (
+            f"Zu welchem Thema soll ich die PowerPoint-Präsentation mit {count} Folien erstellen? "
+            "Du kannst auch Zielgruppe, wichtige Inhalte und den gewünschten Stil nennen."
+        )
+    name = "Word-Dokument" if kind == "docx" else "PDF-Dokument"
+    return (
+        f"Welches Thema oder welchen Inhalt soll das {name} haben? "
+        "Du kannst auch Zielgruppe und den gewünschten Stil nennen."
+    )
+
+
+def clarification_receipt(message: Message, question: str) -> dict[str, Any]:
+    return {
+        "message_id": message.id,
+        "message_revision": message.revision,
+        "message_sha256": digest(message.content),
+        "goal": message.content,
+        "question_sha256": digest(question),
+    }
+
+
+def resolved_chat_goal(db: Session, chat: Conversation, message: Message) -> str:
+    """Resolve only a server-owned, still-active, immediate clarification turn."""
+    active = list(
+        db.scalars(
+            select(Message)
+            .where(Message.conversation_id == chat.id, Message.active.is_(True))
+            .order_by(Message.created, Message.id)
+        )
+    )
+    position = next((i for i, row in enumerate(active) if row.id == message.id), -1)
+    if position < 2 or active[position - 1].role != "assistant":
+        return message.content
+    reply = active[position - 1]
+    prior = db.get(Run, reply.run_id) if reply.run_id else None
+    if not prior or prior.status != "succeeded" or prior.conversation_id != chat.id:
+        return message.content
+    receipt = json.loads(prior.context_snapshot or "{}").get("artifact_clarification")
+    if not isinstance(receipt, dict):
+        return message.content
+    origin = active[position - 2]
+    if (
+        origin.role != "user"
+        or origin.id != receipt.get("message_id")
+        or origin.revision != receipt.get("message_revision")
+        or digest(origin.content) != receipt.get("message_sha256")
+        or origin.content != receipt.get("goal")
+        or digest(reply.content) != receipt.get("question_sha256")
+        or artifact_clarification(origin.content) != reply.content
+    ):
+        return message.content
+    # A new explicit file command replaces the pending request; do not combine
+    # incompatible formats or silently override a fresh instruction.
+    try:
+        request_format(message.content)
+    except ValueError:
+        pass
+    else:
+        return message.content
+    if re.match(r"^\s*(?:abbrechen|vergiss|cancel|never mind|stopp|stop)\b", message.content, re.I):
+        return message.content
+    return origin.content + "\nThema und Inhalt: " + message.content
+
+
 def requests_revision(goal: str) -> bool:
     return bool(
         re.search(
@@ -130,7 +213,7 @@ def explicit_revision_target(goal: str) -> bool:
     )
 
 
-def chat_base(db: Session, chat_id: str, project_id: str, run: Run) -> ArtifactRevision:
+def chat_base(db: Session, chat_id: str, project_id: str | None, run: Run) -> ArtifactRevision:
     # Only a file linked by a successful run in this exact conversation. Neither
     # arbitrary project files nor model-selected IDs establish an editing target.
     previous = db.scalars(
@@ -154,6 +237,7 @@ def chat_base(db: Session, chat_id: str, project_id: str, run: Run) -> ArtifactR
             link["project_id"] != project_id
             or not artifact
             or artifact.project_id != project_id
+            or (project_id is None and artifact.conversation_id != chat_id)
             or not row
             or row.revision != artifact.revision
             or row.status in {"failed", "cancelled"}
@@ -288,11 +372,12 @@ async def create_from_chat(
             )
             .order_by(Message.created.desc(), Message.id.desc())
         )
-        if not chat or not chat.project_id or chat.memory_scope or chat.archived or not message:
-            raise ValueError("Dateien im aktiven Projektgespräch erstellen")
+        if not chat or chat.purpose != "chat" or chat.memory_scope or chat.archived or not message:
+            raise ValueError("Dateien im aktiven Gespräch erstellen")
         project_id, chat_id, message_id = chat.project_id, chat.id, message.id
+        goal = resolved_chat_goal(db, chat, message)
         answer_source = None
-        if requests_answer_source(message.content) and not requests_revision(message.content):
+        if requests_answer_source(goal) and not requests_revision(goal):
             active = list(
                 db.scalars(
                     select(Message)
@@ -310,10 +395,10 @@ async def create_from_chat(
                 conversation_id=chat.id, message_id=answer.id, revision=answer.revision
             )
 
-        revision, goal, sha = message.revision, message.content, digest(message.content)
+        revision, sha = message.revision, digest(message.content)
         if len(goal) > 4000:
             raise ValueError("Dateiwunsch darf höchstens 4000 Zeichen enthalten")
-        named = named_originals(db, project_id, goal)
+        named = named_originals(db, project_id, goal) if project_id else []
         operation = media_operation(goal, named)
         revising = requests_revision(goal) and not operation
         if revising and not explicit_revision_target(goal):
@@ -331,6 +416,8 @@ async def create_from_chat(
         if named and not original:
             sources = [SourceBinding(id=s.id, revision=s.revision, sha256=s.sha256) for s in named]
         elif requests_project_sources(goal):
+            if project_id is None:
+                raise ValueError("Projektquellen benötigen ein Gespräch in diesem Projekt")
             originals = list(db.scalars(select(Source).where(Source.project_id == project_id)))
             if not originals or len(originals) > 4 or any(s.status != "ready" for s in originals):
                 raise ValueError(
@@ -388,7 +475,15 @@ async def create_from_chat(
         base_artifact_id=base.artifact_id if base else None,
         base_revision=base.revision if base else None,
     )
-    proposal = await preview(factory, cfg, project_id, body, provider, research_id=research_id)
+    proposal = await preview(
+        factory,
+        cfg,
+        project_id,
+        body,
+        provider,
+        research_id=research_id,
+        conversation_id=chat_id if project_id is None else None,
+    )
     proposed = ArtifactSpec.model_validate(proposal["spec"])
     if targets and original and original.plan.kind == "pptx" and proposed.plan.kind == "pptx":
         target = int(next(iter(targets))) - 1
@@ -428,6 +523,7 @@ async def create_from_chat(
             or latest != message_id
             or current_message.revision != revision
             or digest(current_message.content) != sha
+            or resolved_chat_goal(db, current_chat, current_message) != goal
         ):
             raise ValueError("Gespräch oder Dateiwunsch wurde inzwischen geändert oder abgebrochen")
 
@@ -437,6 +533,7 @@ async def create_from_chat(
         snapshot = json.loads(current.context_snapshot or "{}")
         snapshot["artifact"] = {
             "project_id": project_id,
+            "conversation_id": chat_id if project_id is None else None,
             "artifact_id": row.artifact_id,
             "revision": row.revision,
             "kind": kind,
@@ -464,4 +561,5 @@ async def create_from_chat(
             draft_token=proposal["draft_token"],
             chat_source=answer_source,
         ),
+        conversation_id=chat_id if project_id is None else None,
     )

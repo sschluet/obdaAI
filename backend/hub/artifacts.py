@@ -12,13 +12,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, object_session, sessionmaker
 
 from hub.artifact_render import MAX_INPUT, MAX_OUTPUT
 from hub.artifact_runner import canonical
+from hub.artifact_scope import owner
 from hub.artifact_specs import ArtifactSpec
 from hub.config import Settings
-from hub.db import Artifact, ArtifactRevision, Project, Source
+from hub.db import Artifact, ArtifactRevision, Source
+from hub.db_locks import ownership_lock
 from hub.knowledge import original
 
 
@@ -92,10 +94,17 @@ def spec_for(row: ArtifactRevision) -> ArtifactSpec:
     return ArtifactSpec.model_validate_json(row.spec)
 
 
-def bind_sources(db: Session, cfg: Settings, project_id: str, spec: ArtifactSpec) -> list[Path]:
-    project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
-    if not project or project.archived:
-        raise ValueError("Aktiver Projektraum fehlt")
+def bind_sources(
+    db: Session,
+    cfg: Settings,
+    project_id: str | None,
+    spec: ArtifactSpec,
+    *,
+    conversation_id: str | None = None,
+) -> list[Path]:
+    owner(db, project_id, conversation_id)
+    if conversation_id and spec.sources:
+        raise ValueError("Projektquellen benötigen ihren Projektraum")
     paths = []
     total = 0
     for binding in spec.sources:
@@ -119,7 +128,9 @@ def job_name(row: ArtifactRevision) -> str:
 def spool(db: Session, cfg: Settings, artifact: Artifact, row: ArtifactRevision) -> None:
     requests, _ = roots(cfg)
     spec = spec_for(row)
-    inputs = bind_sources(db, cfg, artifact.project_id, spec)
+    inputs = bind_sources(
+        db, cfg, artifact.project_id, spec, conversation_id=artifact.conversation_id
+    )
     target = requests / job_name(row)
     if target.exists():
         path = target / "spec.json"
@@ -285,7 +296,9 @@ def reconcile(db: Session, cfg: Settings, row: ArtifactRevision) -> None:
         artifact = db.get(Artifact, row.artifact_id)
         if not artifact:
             raise ValueError("Artefakt fehlt")
-        bind_sources(db, cfg, artifact.project_id, spec_for(row))
+        bind_sources(
+            db, cfg, artifact.project_id, spec_for(row), conversation_id=artifact.conversation_id
+        )
         row.manifest = manifest.model_dump_json()
         row.status = "needs_review"
     except (ValueError, OSError, KeyError, TypeError):
@@ -297,10 +310,10 @@ async def execute_artifact(
     factory: sessionmaker[Session], cfg: Settings, artifact_id: str, revision: int
 ) -> None:
     with factory() as db:
+        ownership_lock(db)
         artifact = db.get(Artifact, artifact_id)
         if not artifact:
             return
-        db.scalar(select(Project).where(Project.id == artifact.project_id).with_for_update())
         row = db.scalar(
             select(ArtifactRevision)
             .where(
@@ -312,6 +325,7 @@ async def execute_artifact(
         if not row or row.status not in {"queued", "rendering"}:
             return
         try:
+            owner(db, artifact.project_id, artifact.conversation_id)
             if row.status == "queued":
                 spool(db, cfg, artifact, row)
                 row.status, row.started = "rendering", time.time()
@@ -326,10 +340,10 @@ async def execute_artifact(
             return
     for _ in range(180):
         with factory() as db:
+            ownership_lock(db)
             artifact = db.get(Artifact, artifact_id)
             if not artifact:
                 return
-            db.scalar(select(Project).where(Project.id == artifact.project_id).with_for_update())
             row = db.scalar(
                 select(ArtifactRevision)
                 .where(
@@ -340,7 +354,11 @@ async def execute_artifact(
             )
             if not row or row.status != "rendering":
                 return
-            reconcile(db, cfg, row)
+            try:
+                owner(db, artifact.project_id, artifact.conversation_id)
+                reconcile(db, cfg, row)
+            except ValueError:
+                row.status, row.error = "failed", "Datei-Arbeitsraum inzwischen geändert"
             db.commit()
             if row.status != "rendering":
                 return
@@ -349,7 +367,11 @@ async def execute_artifact(
 
 def info(row: ArtifactRevision) -> dict[str, Any]:
     spec = spec_for(row)
+    db = object_session(row)
+    artifact = db.get(Artifact, row.artifact_id) if db else None
     return {
+        "project_id": artifact.project_id if artifact else None,
+        "conversation_id": artifact.conversation_id if artifact else None,
         "artifact_id": row.artifact_id,
         "revision": row.revision,
         "title": spec.plan.title,

@@ -1,9 +1,13 @@
 # Datei aus einer ausgewählten Chatantwort
 
 „Mach daraus eine Word-Datei“ oder „Erstelle daraus eine Präsentation mit drei
-Folien“ in einem Projektgespräch wählt genau die letzte vorherige aktive
+Folien“ in einem freien Chat oder Projektgespräch wählt genau die letzte vorherige aktive
 Assistentenantwort. Keine Antwort vorhanden: keine Modellplanung und keine Datei.
-Eine Antwort aus einem anderen Projekt oder aus einem Memory-Chat wird abgewiesen.
+Eine Antwort aus einem anderen Gespräch oder aus einem Memory-Chat wird abgewiesen.
+Freie Chats speichern Dateien unmittelbar am Gespräch, ohne ein Projekt anzulegen.
+Ein Auftrag ohne Thema fragt nach dem Inhalt, statt eine leere Präsentation zu erzeugen.
+Dateikarten öffnen die erzeugte Datei im Arbeitsbereich des Chats. Dort bleiben
+Bearbeitung, neue Versionen und die Prüfung aller Vorschauseiten verfügbar.
 Der normale Chatexport-Dialog kann dieselbe ausdrücklich gewählte Antwort als
 Quelle eines lokalen Word-, PowerPoint- oder Inhalts-PDF-Entwurfs verwenden.
 

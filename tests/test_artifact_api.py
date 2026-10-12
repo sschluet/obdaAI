@@ -257,10 +257,10 @@ def test_waiting_artifact_transaction_does_not_freeze_health(setup, monkeypatch)
     entered, release = threading.Event(), threading.Event()
     original = api.bind_sources
 
-    def waiting(*args):
+    def waiting(*args, **kwargs):
         entered.set()
         assert release.wait(3)
-        return original(*args)
+        return original(*args, **kwargs)
 
     monkeypatch.setattr(api, "bind_sources", waiting)
     with ThreadPoolExecutor(max_workers=1) as pool:

@@ -40,6 +40,10 @@ class ArtifactCompleted(Exception):
     pass
 
 
+class ArtifactClarificationCompleted(Exception):
+    pass
+
+
 class ChatProvider(Protocol):
     async def title(self, parts: list[ContextPart], roles: list[str]) -> str: ...
     async def route(self, parts: list[ContextPart], roles: list[str]) -> Route: ...
@@ -299,6 +303,39 @@ async def execute_run(
             },
         )
         try:
+            latest_request = next((m for m in reversed(messages) if m.role == "user"), None)
+            confirmed_file_goal = False
+            if (
+                latest_request
+                and not workflow_generation
+                and not c.project_id
+                and not c.memory_scope
+            ):
+                from hub.chat_artifacts import (
+                    artifact_clarification,
+                    clarification_receipt,
+                    resolved_chat_goal,
+                )
+
+                with factory() as db:
+                    goal = resolved_chat_goal(db, c, latest_request)
+                confirmed_file_goal = goal != latest_request.content
+                question = artifact_clarification(goal)
+                if question:
+                    if cancelled():
+                        raise asyncio.CancelledError
+                    snapshot["artifact_clarification"] = clarification_receipt(
+                        latest_request, question
+                    )
+                    output = question
+                    label = Privacy.LOCAL_ONLY
+                    update(
+                        context_snapshot=json.dumps(snapshot, ensure_ascii=False),
+                        reason="Thema für Dateierstellung fehlt",
+                        first_content_seconds=time.monotonic() - started,
+                        capabilities=json.dumps(["chat"]),
+                    )
+                    raise ArtifactClarificationCompleted
             check_integration_context()
             selection = snapshot.get("integration_selection", {})
             if any(item.get("kind") == "paperless" for item in selection.get("bindings", [])):
@@ -448,7 +485,15 @@ async def execute_run(
             async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
                     raise asyncio.CancelledError
-                if workflow_generation:
+                if confirmed_file_goal:
+                    from hub.routing import Route
+
+                    route = Route(
+                        capabilities=[Capability.ARTIFACT],
+                        model_class="local",
+                        reason="Thema für den vorherigen Dateiwunsch ausdrücklich angegeben",
+                    )
+                elif workflow_generation:
                     from hub.routing import Route
 
                     route = Route(
@@ -522,10 +567,9 @@ async def execute_run(
                             "Dateierstellung bitte getrennt von Aufgaben und Systemwerkzeugen "
                             "im Projektgespräch anfordern. Es wurde kein Werkzeug ausgeführt."
                         )
-                    if not c.project_id or c.memory_scope or c.archived:
+                    if c.memory_scope or c.archived:
                         raise ExecutionLimitError(
-                            "Es wurde kein Werkzeug ausgeführt. "
-                            "Dateien im aktiven Projektgespräch erstellen"
+                            "Dateien in einem aktiven normalen Chat oder Projektgespräch erstellen"
                         )
                     if Capability.WEB in route.capabilities:
                         yield ("status", {"message": "Freigegebene Webrecherche wird ausgeführt"})
@@ -566,8 +610,13 @@ async def execute_run(
                             if base
                             else "Die " + artifact["kind"].upper() + "-Datei wird lokal erstellt. "
                         )
-                        + "Öffne den Dateibereich dieses Projekts, prüfe alle Vorschauseiten "
-                        "und gib die Version anschließend zum Download frei. "
+                        + (
+                            "Öffne den Dateibereich dieses Projekts, "
+                            if c.project_id
+                            else "Öffne den Arbeitsbereich dieses Chats unter Dateien, "
+                        )
+                        + "prüfe alle Vorschauseiten und gib die Version "
+                        "anschließend zum Download frei. "
                         + (
                             "Verwendet wurden dein Dateiwunsch und die ausdrücklich freigegebenen "
                             "Websuchauszüge, mit URLs und Abrufzeiten in der Datei. "
@@ -581,6 +630,9 @@ async def execute_run(
                             if base
                             else "Verwendet wurde nur dein konkreter Dateiwunsch; Projektquellen "
                             "kannst du im Dateidialog ausdrücklich ergänzen."
+                            if c.project_id
+                            else "Verwendet wurde dein ausdrücklich angegebener "
+                            "Dateiwunsch mit Inhalt."
                         )
                     )
                     update(first_content_seconds=time.monotonic() - started)
@@ -588,6 +640,7 @@ async def execute_run(
                         "artifact",
                         {
                             "project_id": c.project_id,
+                            "conversation_id": None if c.project_id else c.id,
                             "artifact_id": artifact["artifact_id"],
                             "revision": artifact["revision"],
                             "requires_review": True,
@@ -942,6 +995,19 @@ async def execute_run(
                             "Rohtext bleibt erhalten"
                         ) from error
                 status = "succeeded"
+        except ArtifactClarificationCompleted:
+            status = "succeeded"
+            update(provider="local", model="", answer_model_used=False)
+            yield (
+                "provider",
+                {
+                    "name": "local",
+                    "model": None,
+                    "model_used": False,
+                    "reason": "Rückfrage zur Dateierstellung",
+                },
+            )
+            yield ("delta", {"text": output})
         except (MemoryCompleted, ArtifactCompleted):
             status = "succeeded"
             update(provider="local", model="", answer_model_used=False)

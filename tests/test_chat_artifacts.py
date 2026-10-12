@@ -179,7 +179,7 @@ def test_final_chat_binding_denies_mutation_before_dispatch(setup, effect):
         assert "artifact" not in json.loads(db.scalar(select(Run)).context_snapshot)
 
 
-def test_private_chat_and_ambiguous_format_do_not_create_files(setup):
+def test_missing_topic_asks_and_ambiguous_format_does_not_create_files(setup):
     app, c, h, cfg, pid, _ = setup
     provider = FileProvider(DOCUMENT)
     app.state.providers = provider
@@ -190,7 +190,10 @@ def test_private_chat_and_ambiguous_format_do_not_create_files(setup):
     ]:
         chat = c.post("/api/conversations", headers=h, json={"project_id": project}).json()["id"]
         r = c.post("/api/conversations/" + chat + "/messages", headers=h, json={"content": goal})
-        assert "succeeded" not in r.text
+        if project is None:
+            assert "succeeded" in r.text and "Welches Thema" in r.text
+        else:
+            assert "succeeded" not in r.text
     assert provider.calls == 0
     assert c.get("/api/projects/" + pid + "/artifacts").json() == []
 

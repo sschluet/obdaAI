@@ -42,6 +42,12 @@
       "image": "assets/files.png"
     },
     {
+      "id": "chatfiles",
+      "title": "Dateien direkt im Gespräch.",
+      "description": "Word und PowerPoint im freien Chat erstellen, ohne ein Projekt anzulegen. KI-Auftrag, Format und Folienanzahl sind direkt bearbeitbar; Vorschauprüfung bleibt vor dem Download erforderlich. Ausschließlich synthetische Initiative Aurora.",
+      "image": "assets/chatfiles.png"
+    },
+    {
       "id": "tasks",
       "title": "Aufgaben mit Überblick.",
       "description": "Name und Ziel im Vordergrund, dazu ein nachvollziehbarer Aufgabenplan. Quellen und Ablaufdetails sind optional erreichbar.",
@@ -439,7 +445,7 @@
         },
         {
           "title": "Dateien aus der letzten Chatantwort",
-          "description": "„Mach daraus …“ bindet genau die aktive vorherige Antwort samt Revision und Hashes. Änderung oder Drift verhindert das Speichern.",
+          "description": "Word und PowerPoint direkt in freien Chats oder Projektgesprächen erstellen. Freie Chats benötigen kein Projekt. Bei fehlendem Thema wird nachgefragt. „Mach daraus …“ bindet die aktive vorherige Antwort samt Revision und Hashes; Änderung oder Drift verhindert das Speichern. Dateikarten öffnen den Arbeitsbereich zur Vorschauprüfung vor dem Download.",
           "status": "live"
         },
         {

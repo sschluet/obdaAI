@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from hub.artifact_chat import ChatSource
 from hub.artifact_runner import canonical
+from hub.artifact_scope import matches, owner
 from hub.artifact_specs import ArtifactSpec, SourceBinding
 from hub.artifacts import bind_sources, digest, spec_for
 from hub.db import Artifact, ArtifactRevision, Project, ProviderConfig, Source, SourceChunk
@@ -78,20 +79,22 @@ def verify_token(
     db: Any,
     cfg: Any,
     encoded: str,
-    project_id: str,
+    project_id: str | None,
     spec: ArtifactSpec,
     artifact_id: str | None = None,
     expected_revision: int | None = None,
+    *,
+    conversation_id: str | None = None,
 ) -> str:
     blob = base64.b64decode(encoded, altchars=b"-_", validate=True)
     metadata = json.loads(cipher(cfg).decrypt(blob[:12], blob[12:], AAD))
-    project = db.get(Project, project_id)
+    project = owner(db, project_id, conversation_id)
     if (
         metadata["expires"] < time.time()
         or metadata["project_id"] != project_id
-        or not project
-        or project.archived
-        or metadata["project_revision"] != project.revision
+        or metadata.get("conversation_id") != conversation_id
+        or metadata["project_revision"]
+        != (project.revision if isinstance(project, Project) else None)
         or metadata["kind"] != spec.plan.kind
         or metadata["sources"] != [s.model_dump(mode="json") for s in spec.sources]
     ):
@@ -99,11 +102,11 @@ def verify_token(
     if metadata.get("web_research"):
         from hub.artifact_research import verify
 
-        verify(db, metadata["web_research"], project_id)
+        verify(db, metadata["web_research"], project_id, conversation_id=conversation_id)
     if metadata.get("chat_source"):
         from hub.artifact_chat import verify as verify_chat
 
-        verify_chat(db, project_id, metadata["chat_source"])
+        verify_chat(db, project_id, metadata["chat_source"], conversation_id=conversation_id)
     provider = metadata["provider"]
     base = metadata.get("base")
     if base:
@@ -113,7 +116,7 @@ def verify_token(
             artifact_id != base["artifact_id"]
             or expected_revision != base["revision"]
             or not artifact
-            or artifact.project_id != project_id
+            or not matches(artifact, project_id, conversation_id)
             or not row
             or artifact.revision != base["revision"]
             or row.spec_sha256 != base["spec_sha256"]
@@ -172,11 +175,12 @@ def verify_token(
 async def preview(
     factory: Any,
     cfg: Any,
-    project_id: str,
+    project_id: str | None,
     body: DraftInput,
     provider: Any = None,
     *,
     research_id: str | None = None,
+    conversation_id: str | None = None,
 ) -> dict[str, Any]:
     transform = body.kind == "image" or (body.kind == "pdf" and body.pdf_mode == "pages")
     if body.pdf_mode == "pages" and body.kind != "pdf":
@@ -207,7 +211,9 @@ async def preview(
         if transform or body.base_artifact_id:
             raise ValueError("Recherche-Dateien benötigen einen neuen Inhaltsentwurf")
         with factory() as db:
-            source_parts, web_research = research_binding(db, research_id, project_id, body.goal)
+            source_parts, web_research = research_binding(
+                db, research_id, project_id, body.goal, conversation_id=conversation_id
+            )
     chat_receipt = None
     if body.chat_source:
         from hub.artifact_chat import binding as bind_chat
@@ -215,14 +221,16 @@ async def preview(
         if transform or body.base_artifact_id:
             raise ValueError("Chatantwort für einen neuen Inhaltsentwurf verwenden")
         with factory() as db:
-            part, chat_receipt = bind_chat(db, project_id, body.chat_source)
+            part, chat_receipt = bind_chat(
+                db, project_id, body.chat_source, conversation_id=conversation_id
+            )
             source_parts.append(part)
     base = None
     original = None
     with factory() as db:
-        bind_sources(db, cfg, project_id, binding_spec)
-        project = db.get(Project, project_id)
-        project_revision = project.revision
+        bind_sources(db, cfg, project_id, binding_spec, conversation_id=conversation_id)
+        project = owner(db, project_id, conversation_id)
+        project_revision = project.revision if isinstance(project, Project) else None
         if bool(body.base_artifact_id) != bool(body.base_revision):
             raise ValueError("Ausgangsversion vollständig angeben")
         if body.base_artifact_id:
@@ -230,7 +238,7 @@ async def preview(
             row = db.get(ArtifactRevision, (body.base_artifact_id, body.base_revision))
             if (
                 not artifact
-                or artifact.project_id != project_id
+                or not matches(artifact, project_id, conversation_id)
                 or not row
                 or artifact.revision != body.base_revision
             ):
@@ -550,16 +558,17 @@ async def preview(
         ):
             raise ValueError("Entwurf verändert nicht ausgewählte Folien")
     with factory() as db:
-        bind_sources(db, cfg, project_id, spec)
+        bind_sources(db, cfg, project_id, spec, conversation_id=conversation_id)
         if chat_receipt:
             from hub.artifact_chat import verify as verify_chat
 
-            verify_chat(db, project_id, chat_receipt)
+            verify_chat(db, project_id, chat_receipt, conversation_id=conversation_id)
         if web_research:
             from hub.artifact_research import verify
 
-            verify(db, web_research, project_id)
-        if db.get(Project, project_id).revision != project_revision:
+            verify(db, web_research, project_id, conversation_id=conversation_id)
+        current_owner = owner(db, project_id, conversation_id)
+        if isinstance(current_owner, Project) and current_owner.revision != project_revision:
             raise ValueError("Projekt inzwischen geändert")
         if row:
             actual = db.get(ProviderConfig, row.id)
@@ -575,6 +584,7 @@ async def preview(
         "kind": body.kind,
         "pdf_mode": body.pdf_mode,
         "project_id": project_id,
+        "conversation_id": conversation_id,
         "project_revision": project_revision,
         "sources": [s.model_dump(mode="json") for s in body.sources],
         "citations": citations,
@@ -625,4 +635,18 @@ def install_artifact_drafts(app: FastAPI, cfg: Any, factory: Any) -> None:
                     422,
                     "Lokaler Dateientwurf ungültig oder nicht verfügbar; "
                     "nichts gespeichert. Quellen prüfen oder manuell entwerfen.",
+                ) from None
+
+    @app.post("/api/conversations/{conversation_id}/artifact-drafts")
+    async def chat_draft(conversation_id: str, body: DraftInput, auth: Auth) -> dict[str, Any]:
+        if slot.locked():
+            raise HTTPException(409, "Ein lokaler Dateientwurf wird bereits erstellt")
+        async with slot:
+            try:
+                return await preview(
+                    factory, cfg, None, body, app.state.providers, conversation_id=conversation_id
+                )
+            except Exception:
+                raise HTTPException(
+                    422, "Lokaler Dateientwurf ungültig oder nicht verfügbar; nichts gespeichert."
                 ) from None

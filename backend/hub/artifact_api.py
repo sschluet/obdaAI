@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.artifact_chat import ChatSource
 from hub.artifact_runner import canonical
+from hub.artifact_scope import matches, owner
 from hub.artifact_specs import ArtifactSpec
 from hub.artifacts import (
     bind_sources,
@@ -32,7 +33,7 @@ from hub.artifacts import (
 )
 from hub.auth import require_session
 from hub.config import Settings
-from hub.db import Artifact, ArtifactRevision, Conversation, LoginSession, Message, Project
+from hub.db import Artifact, ArtifactRevision, Conversation, LoginSession, Message
 from hub.db_locks import ARTIFACT_STORAGE, ownership_lock
 
 Auth = Annotated[LoginSession, Depends(require_session)]
@@ -60,7 +61,7 @@ def artifact_service(
     *,
     guard: Callable[[Session], None] | None = None,
     on_created: Callable[[Session, ArtifactRevision], None] | None = None,
-) -> Callable[[str, str | None, CreateArtifact], Awaitable[dict[str, Any]]]:
+) -> Callable[..., Awaitable[dict[str, Any]]]:
     """The same transaction, limits and dispatch for authenticated UI and chat."""
 
     def enabled() -> None:
@@ -76,7 +77,12 @@ def artifact_service(
             enqueue_artifact(db, cfg, row.artifact_id, row.revision)
 
     def create_row(
-        db: Session, project_id: str, artifact_id: str | None, body: CreateArtifact
+        db: Session,
+        project_id: str | None,
+        artifact_id: str | None,
+        body: CreateArtifact,
+        *,
+        conversation_id: str | None = None,
     ) -> tuple[ArtifactRevision, bool]:
         ownership_lock(db)
         if guard:
@@ -84,6 +90,10 @@ def artifact_service(
         document = canonical(body.spec)
         if len(document.encode()) > 800_000:
             raise HTTPException(413, "Dateiplan ist zu groß")
+        try:
+            owner(db, project_id, conversation_id)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
         replay = db.scalar(
             select(ArtifactRevision).where(ArtifactRevision.request_key == str(body.request_id))
         )
@@ -91,18 +101,15 @@ def artifact_service(
             artifact = db.get(Artifact, replay.artifact_id)
             if (
                 not artifact
-                or artifact.project_id != project_id
+                or not matches(artifact, project_id, conversation_id)
                 or (artifact_id is not None and replay.artifact_id != artifact_id)
                 or replay.spec_sha256 != digest(document)
                 or (artifact_id is None and replay.revision != 1)
             ):
                 raise HTTPException(409, "Anfragekennung gehört zu einer anderen Dateiversion")
             return replay, False
-        project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
-        if not project or project.archived:
-            raise HTTPException(404, "Aktiver Projektraum nicht gefunden")
         try:
-            bind_sources(db, cfg, project_id, body.spec)
+            bind_sources(db, cfg, project_id, body.spec, conversation_id=conversation_id)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
         chat_metadata = ""
@@ -116,7 +123,9 @@ def artifact_service(
             if (
                 not chat
                 or chat.purpose != "chat"
+                or chat.archived
                 or chat.memory_scope
+                or (conversation_id is not None and (chat.id != conversation_id or chat.project_id))
                 or (chat.project_id and chat.project_id != project_id)
                 or not message
                 or message.conversation_id != chat.id
@@ -150,6 +159,7 @@ def artifact_service(
                     body.spec,
                     artifact_id,
                     body.expected_revision,
+                    conversation_id=conversation_id,
                 )
             except (ValueError, InvalidTag, KeyError, TypeError):
                 raise HTTPException(
@@ -187,7 +197,7 @@ def artifact_service(
             artifact = db.scalar(
                 select(Artifact).where(Artifact.id == artifact_id).with_for_update()
             )
-            if not artifact or artifact.project_id != project_id:
+            if not artifact or not matches(artifact, project_id, conversation_id):
                 raise HTTPException(404, "Artefakt nicht gefunden")
             if body.expected_revision != artifact.revision:
                 raise HTTPException(409, "Artefakt wurde inzwischen geändert")
@@ -213,7 +223,7 @@ def artifact_service(
         else:
             if body.expected_revision is not None:
                 raise HTTPException(422, "Erste Dateiversion benötigt keine alte Revision")
-            artifact = Artifact(project_id=project_id)
+            artifact = Artifact(project_id=project_id, conversation_id=conversation_id)
             db.add(artifact)
             db.flush()
         row = ArtifactRevision(
@@ -231,7 +241,11 @@ def artifact_service(
         return row, True
 
     async def save(
-        project_id: str, artifact_id: str | None, body: CreateArtifact
+        project_id: str | None,
+        artifact_id: str | None,
+        body: CreateArtifact,
+        *,
+        conversation_id: str | None = None,
     ) -> dict[str, Any]:
         enabled()
 
@@ -239,7 +253,9 @@ def artifact_service(
             with factory() as db:
                 ownership_lock(db)
                 try:
-                    row, created = create_row(db, project_id, artifact_id, body)
+                    row, created = create_row(
+                        db, project_id, artifact_id, body, conversation_id=conversation_id
+                    )
                     if created and on_created:
                         on_created(db, row)
                     db.commit()
@@ -269,10 +285,17 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
         except ValueError as exc:
             raise HTTPException(503, str(exc)) from exc
 
-    def row_for(db: Session, project_id: str, artifact_id: str, revision: int) -> ArtifactRevision:
-        project = db.scalar(select(Project).where(Project.id == project_id).with_for_update())
-        if not project:
-            raise HTTPException(404, "Projekt nicht gefunden")
+    def row_for(
+        db: Session,
+        project_id: str | None,
+        artifact_id: str,
+        revision: int,
+        conversation_id: str | None = None,
+    ) -> ArtifactRevision:
+        try:
+            owner(db, project_id, conversation_id, allow_archived_project=True)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
         artifact = db.get(Artifact, artifact_id)
         row = db.scalar(
             select(ArtifactRevision)
@@ -282,7 +305,7 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             )
             .with_for_update()
         )
-        if not artifact or artifact.project_id != project_id or not row:
+        if not artifact or not matches(artifact, project_id, conversation_id) or not row:
             raise HTTPException(404, "Artefaktversion nicht gefunden")
         return row
 
@@ -307,15 +330,21 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
         return await save(project_id, artifact_id, body)
 
     @app.get("/api/projects/{project_id}/artifacts")
-    def listing(project_id: str, auth: Auth) -> list[dict[str, Any]]:
+    def listing(
+        project_id: str | None, auth: Auth, conversation_id: str | None = None
+    ) -> list[dict[str, Any]]:
         with factory() as db:
             ownership_lock(db)
-            if not db.scalar(select(Project).where(Project.id == project_id).with_for_update()):
-                raise HTTPException(404, "Projekt nicht gefunden")
+            try:
+                owner(db, project_id, conversation_id, allow_archived_project=True)
+            except ValueError as exc:
+                raise HTTPException(404, str(exc)) from exc
             rows = db.scalars(
                 select(ArtifactRevision)
                 .join(Artifact)
-                .where(Artifact.project_id == project_id)
+                .where(
+                    Artifact.project_id == project_id, Artifact.conversation_id == conversation_id
+                )
                 .order_by(ArtifactRevision.created.desc())
                 .limit(200)
                 .with_for_update()
@@ -333,18 +362,23 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
 
     @app.post("/api/projects/{project_id}/artifacts/{artifact_id}/versions/{revision}/accept")
     def accept(
-        project_id: str, artifact_id: str, revision: int, body: AcceptArtifact, auth: Auth
+        project_id: str | None,
+        artifact_id: str,
+        revision: int,
+        body: AcceptArtifact,
+        auth: Auth,
+        conversation_id: str | None = None,
     ) -> dict[str, Any]:
         enabled()
         with factory() as db:
             ownership_lock(db)
-            row = row_for(db, project_id, artifact_id, revision)
+            row = row_for(db, project_id, artifact_id, revision, conversation_id)
             reconcile(db, cfg, row)
             if row.status not in {"needs_review", "published"} or not row.manifest:
                 raise HTTPException(409, "Dateiversion ist noch nicht vollständig prüfbar")
             try:
                 manifest = checked_manifest(cfg, row, row.manifest)
-                bind_sources(db, cfg, project_id, spec_for(row))
+                bind_sources(db, cfg, project_id, spec_for(row), conversation_id=conversation_id)
             except (ValueError, OSError) as exc:
                 raise HTTPException(409, "Dateiversion oder Quellen wurden verändert") from exc
             if (
@@ -359,10 +393,16 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             return info(row)
 
     @app.post("/api/projects/{project_id}/artifacts/{artifact_id}/versions/{revision}/cancel")
-    def cancel(project_id: str, artifact_id: str, revision: int, auth: Auth) -> dict[str, Any]:
+    def cancel(
+        project_id: str | None,
+        artifact_id: str,
+        revision: int,
+        auth: Auth,
+        conversation_id: str | None = None,
+    ) -> dict[str, Any]:
         with factory() as db:
             ownership_lock(db)
-            row = row_for(db, project_id, artifact_id, revision)
+            row = row_for(db, project_id, artifact_id, revision, conversation_id)
             if row.status == "published":
                 raise HTTPException(409, "Freigegebene Dateiversion bleibt erhalten")
             row.status = "cancelled"
@@ -373,12 +413,17 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
         "/api/projects/{project_id}/artifacts/{artifact_id}/versions/{revision}/preview/{page}"
     )
     def preview(
-        project_id: str, artifact_id: str, revision: int, page: int, auth: Auth
+        project_id: str | None,
+        artifact_id: str,
+        revision: int,
+        page: int,
+        auth: Auth,
+        conversation_id: str | None = None,
     ) -> FileResponse:
         enabled()
         with factory() as db:
             ownership_lock(db)
-            row = row_for(db, project_id, artifact_id, revision)
+            row = row_for(db, project_id, artifact_id, revision, conversation_id)
             if row.status not in {"needs_review", "published"} or not row.manifest:
                 raise HTTPException(409, "Vorschau ist noch nicht bereit")
             try:
@@ -393,17 +438,18 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
 
     @app.get("/api/projects/{project_id}/artifacts/{artifact_id}/versions/{revision}/download")
     def download(
-        project_id: str,
+        project_id: str | None,
         artifact_id: str,
         revision: int,
         auth: Auth,
         pdf: bool = False,
         part: int | None = None,
+        conversation_id: str | None = None,
     ) -> FileResponse:
         enabled()
         with factory() as db:
             ownership_lock(db)
-            row = row_for(db, project_id, artifact_id, revision)
+            row = row_for(db, project_id, artifact_id, revision, conversation_id)
             if row.status != "published" or not row.manifest:
                 raise HTTPException(409, "Vorschau erst prüfen und Dateiversion freigeben")
             try:
@@ -431,3 +477,54 @@ def install_artifact_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                     "X-Content-Type-Options": "nosniff",
                 },
             )
+
+    @app.post("/api/conversations/{conversation_id}/artifacts")
+    async def chat_create(conversation_id: str, body: CreateArtifact, auth: Auth) -> dict[str, Any]:
+        return await save(None, None, body, conversation_id=conversation_id)
+
+    @app.post("/api/conversations/{conversation_id}/artifacts/{artifact_id}/versions")
+    async def chat_version(
+        conversation_id: str, artifact_id: str, body: CreateArtifact, auth: Auth
+    ) -> dict[str, Any]:
+        return await save(None, artifact_id, body, conversation_id=conversation_id)
+
+    @app.get("/api/conversations/{conversation_id}/artifacts")
+    def chat_listing(conversation_id: str, auth: Auth) -> list[dict[str, Any]]:
+        return listing(None, auth, conversation_id)
+
+    @app.post(
+        "/api/conversations/{conversation_id}/artifacts/{artifact_id}/versions/{revision}/accept"
+    )
+    def chat_accept(
+        conversation_id: str, artifact_id: str, revision: int, body: AcceptArtifact, auth: Auth
+    ) -> dict[str, Any]:
+        return accept(None, artifact_id, revision, body, auth, conversation_id)
+
+    @app.post(
+        "/api/conversations/{conversation_id}/artifacts/{artifact_id}/versions/{revision}/cancel"
+    )
+    def chat_cancel(
+        conversation_id: str, artifact_id: str, revision: int, auth: Auth
+    ) -> dict[str, Any]:
+        return cancel(None, artifact_id, revision, auth, conversation_id)
+
+    @app.get(
+        "/api/conversations/{conversation_id}/artifacts/{artifact_id}/versions/{revision}/preview/{page}"
+    )
+    def chat_preview(
+        conversation_id: str, artifact_id: str, revision: int, page: int, auth: Auth
+    ) -> FileResponse:
+        return preview(None, artifact_id, revision, page, auth, conversation_id)
+
+    @app.get(
+        "/api/conversations/{conversation_id}/artifacts/{artifact_id}/versions/{revision}/download"
+    )
+    def chat_download(
+        conversation_id: str,
+        artifact_id: str,
+        revision: int,
+        auth: Auth,
+        pdf: bool = False,
+        part: int | None = None,
+    ) -> FileResponse:
+        return download(None, artifact_id, revision, auth, pdf, part, conversation_id)

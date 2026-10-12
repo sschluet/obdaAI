@@ -114,6 +114,17 @@ try{
   await page.setViewportSize({width:1440,height:1400});await capture('projects');await captureSourceDeletion();
   if(errors.length)throw Error(errors.join('\n'));
   console.log('Project sources screenshot captured with synthetic documents only.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='chatfiles'){
+  await page.locator('button.new').click();
+  await page.getByRole('button',{name:'Arbeitsbereich öffnen',exact:true}).click();
+  await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
+  await dialog.getByRole('radio',{name:'PowerPoint-Präsentation',exact:true}).check();
+  await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Erstelle eine Präsentation über die fiktive Initiative Aurora: Ziele, Ideen und nächste Schritte. Verwende ausschließlich synthetische Beispielinhalte.');
+  await dialog.getByLabel('Gewünschte Folienanzahl',{exact:true}).fill('5');
+  await page.setViewportSize({width:1440,height:1600});await page.evaluate(()=>[...document.querySelectorAll('*')].forEach(node=>{if(node.scrollTop)node.scrollTop=0}));await dialog.getByRole('heading',{name:'Neue Datei',exact:true}).scrollIntoViewIfNeeded();await capture('chatfiles');
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Free chat file dialog captured with synthetic content only.');
  }else if(process.env.SHOWCASE_CAPTURE_ONLY==='openroutercosts'){
   await captureOpenRouterCosts();
   if(errors.length)throw Error(errors.join('\n'));

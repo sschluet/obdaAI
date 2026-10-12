@@ -12,12 +12,19 @@ from hub.policy import ContextPart, Privacy
 
 
 def binding(
-    db: Any, identifier: str, project_id: str, goal: str | None = None
+    db: Any,
+    identifier: str,
+    project_id: str | None,
+    goal: str | None = None,
+    *,
+    conversation_id: str | None = None,
 ) -> tuple[list[ContextPart], dict[str, Any]]:
     row = db.get(Research, identifier)
-    if not row or row.project_id != project_id:
+    if (bool(project_id) == bool(conversation_id)) or not row or row.project_id != project_id:
         raise ValueError("Recherche gehört nicht zum aktuellen Datei-Auftrag")
     run = db.get(Run, identifier)
+    if conversation_id and (not run or run.conversation_id != conversation_id):
+        raise ValueError("Recherche gehört nicht zum aktuellen Gespräch")
     snapshot = json.loads(run.context_snapshot or "{}") if run else {}
     if goal is not None and (
         not run
@@ -80,6 +87,7 @@ def binding(
     return parts, {
         "id": row.id,
         "project_id": project_id,
+        **({"conversation_id": conversation_id} if conversation_id else {}),
         "sha256": hashlib.sha256((row.query + "\n" + row.results).encode()).hexdigest(),
         "citations": citations,
         "label": "LOCAL_ONLY",
@@ -87,7 +95,9 @@ def binding(
     }
 
 
-def verify(db: Any, receipt: dict[str, Any], project_id: str) -> None:
-    _, current = binding(db, receipt["id"], project_id)
+def verify(
+    db: Any, receipt: dict[str, Any], project_id: str | None, *, conversation_id: str | None = None
+) -> None:
+    _, current = binding(db, receipt["id"], project_id, conversation_id=conversation_id)
     if current != receipt:
         raise ValueError("Gebundene Recherche wurde verändert")

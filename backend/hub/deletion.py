@@ -96,10 +96,13 @@ def plan(
         if kind == "project"
         else []
     )
-    artifacts = (
-        list(db.scalars(select(models.Artifact).where(models.Artifact.project_id == identifier)))
-        if kind == "project"
-        else []
+    artifacts = list(
+        db.scalars(
+            select(models.Artifact).where(
+                ((models.Artifact.project_id == identifier) & (kind == "project"))
+                | models.Artifact.conversation_id.in_(chat_ids)
+            )
+        )
     )
     skills = (
         list(db.scalars(select(models.Skill).where(models.Skill.project_id == identifier)))
@@ -474,17 +477,17 @@ def permanently_delete(
         db.execute(
             delete(models.ResponsePreference).where(models.ResponsePreference.key.in_(p["_keys"]))
         )
+        artifact_ids = [a.id for a in p["_artifacts"]]
+        db.execute(
+            delete(models.ArtifactRevision).where(
+                models.ArtifactRevision.artifact_id.in_(artifact_ids)
+            )
+        )
+        db.execute(delete(models.Artifact).where(models.Artifact.id.in_(artifact_ids)))
         db.execute(delete(models.Conversation).where(models.Conversation.id.in_(chat_ids)))
         if kind == "project":
             source_ids = [s.id for s in p["_sources"]]
-            artifact_ids = [a.id for a in p["_artifacts"]]
             skill_ids = [s.id for s in p["_skills"]]
-            db.execute(
-                delete(models.ArtifactRevision).where(
-                    models.ArtifactRevision.artifact_id.in_(artifact_ids)
-                )
-            )
-            db.execute(delete(models.Artifact).where(models.Artifact.id.in_(artifact_ids)))
             db.execute(
                 delete(models.SkillRevision).where(models.SkillRevision.skill_id.in_(skill_ids))
             )

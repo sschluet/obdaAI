@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 from typing import cast as typed_cast
 
 from fastapi import Depends, FastAPI, Query
-from sqlalchemy import JSON, case, cast, func, or_, select
+from sqlalchemy import JSON, and_, case, cast, func, literal, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.auth import require_session
@@ -66,14 +66,21 @@ def install_workspace_search(app: FastAPI, factory: sessionmaker[Session]) -> No
                 return field.as_string()
 
             def collect(
-                group: str, statement: Any, title: Any, content: Any, subtitle: str
+                group: str,
+                statement: Any,
+                title: Any,
+                content: Any,
+                subtitle: str,
+                conversation: Any = None,
             ) -> None:
                 title_hit = match(title)
-                statement = statement.where(or_(title_hit, content)).add_columns(title_hit)
+                statement = statement.where(or_(title_hit, content)).add_columns(
+                    literal(None) if conversation is None else conversation, title_hit
+                )
                 statement = statement.order_by(
                     case((title_hit, 0), else_=1), lower(title), statement.selected_columns[0]
                 ).limit(LIMIT + 1)
-                for item_id, item_title, project_id, hit in db.execute(statement):
+                for item_id, item_title, project_id, conversation_id, hit in db.execute(statement):
                     results.append(
                         {
                             "kind": group,
@@ -81,6 +88,7 @@ def install_workspace_search(app: FastAPI, factory: sessionmaker[Session]) -> No
                             "title": item_title,
                             "subtitle": subtitle,
                             "project_id": project_id,
+                            **({"conversation_id": conversation_id} if conversation_id else {}),
                             "matched_in": "title" if hit else "content",
                         }
                     )
@@ -142,11 +150,24 @@ def install_workspace_search(app: FastAPI, factory: sessionmaker[Session]) -> No
                         (ArtifactRevision.artifact_id == Artifact.id)
                         & (ArtifactRevision.revision == Artifact.revision),
                     )
-                    .join(Project)
-                    .where(Project.archived.is_(False)),
+                    .outerjoin(Project, Project.id == Artifact.project_id)
+                    .outerjoin(Conversation, Conversation.id == Artifact.conversation_id)
+                    .where(
+                        or_(
+                            and_(Artifact.project_id.is_not(None), Project.archived.is_(False)),
+                            and_(
+                                Artifact.conversation_id.is_not(None),
+                                Conversation.archived.is_(False),
+                                Conversation.purpose == "chat",
+                                Conversation.project_id.is_(None),
+                                Conversation.memory_scope.is_(None),
+                            ),
+                        )
+                    ),
                     title,
                     False,
                     "Datei",
+                    Artifact.conversation_id,
                 )
             if kind in ("all", "task"):
                 title = json_field(TaskRevision.spec, "title")

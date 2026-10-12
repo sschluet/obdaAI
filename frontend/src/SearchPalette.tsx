@@ -4,7 +4,7 @@ import {Search,X,MessageSquare,Folder,FileText,BookOpen,ListChecks,Library,Arrow
 import './search-palette.css';
 
 export type SearchKind='conversation'|'project'|'artifact'|'source'|'task'|'knowledge';
-export type SearchResult={kind:SearchKind;id:string;title:string;subtitle:string;project_id?:string|null;matched_in:'title'|'content'};
+export type SearchResult={kind:SearchKind;id:string;title:string;subtitle:string;project_id?:string|null;conversation_id?:string|null;matched_in:'title'|'content'};
 type SearchResponse={query:string;results:SearchResult[];has_more:boolean;limit:number};
 type Props={api:(path:string,method?:string,body?:unknown)=>Promise<any>;onClose:()=>void;onSelect:(result:SearchResult)=>void};
 const filters:Array<{kind:SearchKind|'all';label:string}>=[{kind:'all',label:'Alles'},{kind:'conversation',label:'Gespräche'},{kind:'project',label:'Projekte'},{kind:'artifact',label:'Dateien'},{kind:'source',label:'Quellen'},{kind:'task',label:'Aufgaben'},{kind:'knowledge',label:'Wissen'}];
