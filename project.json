@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-12",
-  "applicationCommit": "336b32a",
+  "applicationCommit": "9963308",
   "schema": "0040",
-  "tests": 1126,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38215854174",
+  "tests": 1140,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38219462937",
   "screenshots": [
     {
       "id": "chat",
@@ -14,7 +14,7 @@
     {
       "id": "projects",
       "title": "Ein Raum für dein Projekt.",
-      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
+      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat anhand ausgewählter Fundstellen verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
       "image": "assets/projects.png"
     },
     {
@@ -333,7 +333,7 @@
         },
         {
           "title": "Fundstellen und lokale OCR",
-          "description": "Quellenbasierte Antworten, technische Fundstellen und lokale Texterkennung. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
+          "description": "Quellenbasierte Antworten, technische Fundstellen und lokale Texterkennung. Die aktuelle Frage steuert eine textbasierte Auswahl begrenzter Dokumentauszüge innerhalb des Modellkontexts. Große Fundstellen behalten Quellen-ID und Fundstelle; Originaldateien bleiben unverändert. Eine Auswahl ersetzt keine vollständige Dokumentprüfung. Die Auswahl für umfangreiche Projektquellen ist auf der Test-VM mit einem großen synthetischen Vertrag und zwölf weiteren Dateien sowie echter lokaler Antwort geprüft. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
           "status": "live"
         },
         {
@@ -683,15 +683,15 @@
     "schema": "0040",
     "browserChecks": 37,
     "serverDeployment": true,
-    "commit": "336b32a",
-    "ciTests": 1126,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38215854174",
-    "deployedCommit": "336b32a",
+    "commit": "9963308",
+    "ciTests": 1140,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38219462937",
+    "deployedCommit": "9963308",
     "deployedSchema": "0040",
-    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft. Profilrelevanz inf78e06d: konservative Feldauswahl anhand der aktuellen Frage, sachliche Recherche/Gerätelisten ohne Profil. Auf dem exakt ausgelieferten Release liefert das echte lokale Modell mit ausschließlich fiktiven Daten eine Geräteübersicht ohne persönliche Empfehlungen trotz früherem COO-Kontext. Gespeichertes Profil und Chats unverändert, keine Cloudmodell-Abnahme für diese Korrektur. Quellenupload in9a53d8a:40MiB für Originaldateien und lokalen Parser, begrenzte Uploadlocation in beiden App-Vhosts. Reale HTTPS-Abnahme mit ausschließlich synthetischen2MiB/40MiB PDFs: gespeichert, verarbeitet und bytegenau/SHA256-gleich heruntergeladen. Überschreitung verworfen, bestehende1MiB-Grenzen anderer Routen und Host/Origin/TLS/Freigaben erhalten. Eigene Daten/Sitzung bereinigt, bestehende Quellen unverändert. NAS-eigene Regeln nicht geprüft; Seiten-/Text-/Archivgrenzen und getrennte Dateioperationsgrenzen bleiben bestehen. Einzelquellen-Löschung in336b32a auf der Test-VM geprüft: bestätigte HTTPS-Mutation nur einer eigenen synthetischen Quelle, Original-/Indexbereinigung abgeschlossen und Original404; andere Quelle bytegenau erhalten. Gespeicherte Antwort und Belegsnapshot unverändert. Testprojekt/Sitzung bereinigt, keine Nutzerdokumente gelöscht oder Modellanfrage. PostgreSQL-FK- und Abhängigkeitsfälle durch vollständige CI bestätigt.",
+    "liveScope": "Test-VM installiert und mit echten lokalen Modellen gezielt geprüft: KI-Erstellungsdialog erzeugt einen validierten Vorschlag ohne automatische Anlage; eigenständiger Use Case verarbeitet Paperless als Eingabe- und Bearbeitungskontext lokal. Eigene Testobjekte vollständig bereinigt, vorhandene Chats/Use Cases und Archivoriginale erhalten. SMTP-Konfiguration, Vorschau und einmaliger Versand einschließlich unklarer Übergabe, Netzwerk-Retry und bewusster Wiederaufnahme sind synthetisch geprüft; keine echte SMTP-Verbindung oder externe Testmail. Oberfläche und mobile Ansichten in synthetischen Browserprüfungen; reale Geräte, weitere Werkzeugadapter, Webrecherche im Use Case und frei programmierbare BI-Abläufe bleiben offen. Der unveränderte Modellcode wurde mit09ab7f7 live geprüft. SMTP-Drahtformat inb7ab319: CRLF, Unicode als7-Bit-kompatibles Quoted-Printable, Date und Message-ID gezielt geprüft; kein externer Mailversand. Cloudstatus inb668eec: ausgelieferte HTTPS-Module und reale OpenRouter-Schlüsselnutzung bestätigt. Ohne eingerichteten Management Key bleibt Kontoguthaben unbekannt. Profilanzeige und mobile Details synthetisch geprüft; keine Modellanfrage oder Zugangsdatenänderung für diesen Statuscheck. Integrationsseite ina0b64de bereinigt: redundante Linksektion und alter MCP-Bereich entfernt, zentrale Verbindungen und Systemaktionen erhalten. Ausgelieferte HTTPS-Module und bestehende API-Verträge bestätigt; mobile Bedienung und Aktionsabläufe synthetisch geprüft. Profilrelevanz inf78e06d: konservative Feldauswahl anhand der aktuellen Frage, sachliche Recherche/Gerätelisten ohne Profil. Auf dem exakt ausgelieferten Release liefert das echte lokale Modell mit ausschließlich fiktiven Daten eine Geräteübersicht ohne persönliche Empfehlungen trotz früherem COO-Kontext. Gespeichertes Profil und Chats unverändert, keine Cloudmodell-Abnahme für diese Korrektur. Quellenupload in9a53d8a:40MiB für Originaldateien und lokalen Parser, begrenzte Uploadlocation in beiden App-Vhosts. Reale HTTPS-Abnahme mit ausschließlich synthetischen2MiB/40MiB PDFs: gespeichert, verarbeitet und bytegenau/SHA256-gleich heruntergeladen. Überschreitung verworfen, bestehende1MiB-Grenzen anderer Routen und Host/Origin/TLS/Freigaben erhalten. Eigene Daten/Sitzung bereinigt, bestehende Quellen unverändert. NAS-eigene Regeln nicht geprüft; Seiten-/Text-/Archivgrenzen und getrennte Dateioperationsgrenzen bleiben bestehen. Einzelquellen-Löschung in336b32a auf der Test-VM geprüft: bestätigte HTTPS-Mutation nur einer eigenen synthetischen Quelle, Original-/Indexbereinigung abgeschlossen und Original404; andere Quelle bytegenau erhalten. Gespeicherte Antwort und Belegsnapshot unverändert. Testprojekt/Sitzung bereinigt, keine Nutzerdokumente gelöscht oder Modellanfrage. PostgreSQL-FK- und Abhängigkeitsfälle durch vollständige CI bestätigt. Projektkontext in9963308: gezielte UTF-8-budgetierte Auszüge im gesamten Projektscope. Reale lokale HTTPS-Abnahme mit eigenem synthetischem81KB-Vertrag und12weiteren Dateien: Frage angenommen, Antwort erfolgreich mit belegter Miete,19KB-Modellkontext und erhaltenem Original-SHA256. Fremde Dateien ausgeschlossen, Testobjekte/Sitzung bereinigt. Erster Liveversuch meldete einen Provider-ValueError; identische Wiederholung erfolgreich, genaue Erstursache nicht belegt. Keine Vollanalyse aller Dateien und keine Cloud-Abnahme privater Projektquellen.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "336b32a",
+    "lastSuccessfulCICommit": "9963308",
     "lastSuccessfulCIUI": 37
   }
 }
