@@ -677,6 +677,11 @@
           "title": "Oberfläche persönlich gestalten",
           "description": "Unter Einstellungen → Allgemein einen eigenen App-Namen, persönlichen Anzeigenamen und ein Foto speichern. Kompakte oder komfortable Abstände und vier Akzentfarben gestalten den gesamten Arbeitsraum. Anzeigeeinstellungen bleiben serverseitig gespeichert und sind vom persönlichen KI-Kontext getrennt. Auf der Testinstanz mit synthetischem Namen und Bild, Reload und Mobilansichten geprüft. Ursprüngliche Anzeigeoptionen anschließend wiederhergestellt.",
           "status": "live"
+        },
+        {
+          "title": "Privater Fernzugriff über Tailscale",
+          "description": "Separater HTTPS-Zugang im eigenen Tailnet mit gültigem Zertifikat. Startseite, App-Healthcheck und Anmeldeschutz auf dem Server geprüft; bestehender LAN-Zugriff bleibt erhalten. Zugriff von einem zweiten Gerät steht noch zur Abnahme aus. Keine Subnetz- oder Exit-Node-Freigabe.",
+          "status": "limited"
         }
       ]
     }
