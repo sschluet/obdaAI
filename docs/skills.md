@@ -143,6 +143,18 @@ auf die Datenblätter begrenzt; Zirkelbezüge, externe Arbeitsmappen und unbekan
 Funktionen werden abgewiesen. Die Offline-Berechnung übernimmt nur berechnete
 Zellwerte zurück in die originale XLSX: Formeln, Charts und Tabellenstile bleiben
 erhalten. Nicht berechenbare Formeln erhalten keine erfolgreiche Dateivorschau.
+Neue Pläne werden zusätzlich auf
+vollständige Ausdrücke, unterstützte Funktionsargumente, passende Bereichsgrößen,
+Suchindizes und endliche Zahlen geprüft. Eine manuelle Aggregatzeile darf nicht
+zusammen mit einer automatischen Ergebniszeile dieselben Daten doppelt zählen.
+Entweder `totals` oder eine manuelle Gesamtsumme wählen. Echte verschachtelte
+SUBTOTAL-Ergebnisse bleiben ausgeschlossen; Detail- und Steuerformeln sind erlaubt.
+Die Prüfung kann fachliche Absichten nicht vollständig aus Zellformeln ableiten.
+
+Gespeicherte ältere Versionen bleiben nach Integritätsprüfung unverändert lesbar.
+Erfüllen sie die neuen Regeln nicht, erscheint ein Prüfhinweis. Korrekturen erzeugen
+eine neue, strikt geprüfte Version; bestehende Vorgaben und Dateien werden nicht
+rückwirkend umgeschrieben.
 
 Währungs-/Prozent-/Datumsformate, Tabellenstil, Eingabe-/Formelfarben,
 Ergebniszeilen, gelbe Eingabemarkierungen und einklappbare Detailspalten sind
@@ -155,9 +167,11 @@ Gestaltungsvorgaben behandelt. Sie sind keine fachlichen Quellen zum Thema der
 Präsentation. Numerische Grafiken brauchen vorgegebene Daten oder ausdrücklich
 als synthetisch angeforderte Beispiele.
 
-Bei falschen Grafik-/Formelstrukturen ist höchstens ein lokaler Korrekturversuch
-innerhalb der gemeinsamen Zeitgrenze möglich. Er benennt nur Validierungspfade;
+Bei falschen Grafik-/Formelstrukturen ist höchstens ein Korrekturversuch mit dem
+gewählten Modell innerhalb der gemeinsamen Zeitgrenze möglich. Er benennt nur Validierungspfade;
 ungültige Felder werden nicht still entfernt und Quellenwerte nicht verändert.
+Bei Cloud-Planung gelten dieselben Freigaben und Kostenlimits; beide Versuche
+werden in der Nutzung berücksichtigt.
 
 XLOOKUP unterstützt genaue Treffer in gleich großen eindimensionalen Bereichen
 und einen optionalen Wert für fehlende Treffer. Abweichende Suchmodi sind nicht

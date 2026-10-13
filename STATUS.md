@@ -3006,7 +3006,7 @@ Dateibereinigung entfernt; eigene Sitzungen entfernt. Belege ausschließlich pri
 unter .local/cloud-files-live und .local/deployment. Keine Nutzerchats gelöscht.
 
 
-### 13.10.2026: Doppelte Excel-Aggregate und Formelprüfung – in Abnahme
+### 13.10.2026: Doppelte Excel-Aggregate und Formelprüfung – deployed und live geprüft
 
 Neue Datenpläne lehnen eine manuelle Aggregatzeile mit überlappenden Zellbereichen
 in derselben automatisch aggregierten Spalte ab; einfache Detail-/Steuerformeln
@@ -3030,3 +3030,24 @@ Lokale verbundene Abnahme: 162 Tests, 40 Render-/APItests, zusätzliche Audit-/
 Korrekturtests und echte offline berechnete Beispiele bestanden. TypeScript/Build,
 Ruff/Mypy sowie Artefakt-/Workbench-Browserchecks bestanden. Neue öffentliche
 Warnungsillustration ausschließlich aus synthetischer Loopback-Fixture.
+
+Vollständige CI für 68877a4 erfolgreich: 1409 Tests, sechs umgebungsabhängige
+Fälle übersprungen, 39 synthetische Browserchecks und Container-/Runnerprüfungen.
+Zwei der zusätzlichen Skip-Fälle betreffen die Offline-Calc-Installation im
+Python-CI-Job; die betreffenden Berechnungen wurden lokal und im isolierten
+Linux-Image auf dem Testsystem tatsächlich durchgeführt.
+
+Release 68877a4 / Schema 0042 über den vorhandenen Fallback-Transport installiert.
+Beide APIs gesund; Datenfingerprints, Overlays, Nginx und unabhängige Netzwerkregeln
+unverändert, verschlüsseltes Off-VM-Backup verifiziert. Reale Cloud-Planung für
+synthetische Rosen/Tulpen-XLSX über openai/gpt-4.1-mini: Anzahlwerte 10, 5, 15;
+genau eine Formel =SUM(B2:B3), keine zusätzliche 30. Nativer direkter Download
+vor optionaler Freigabe, Hash, ZIP und Vorschau geprüft. Kosten laut Provider
+0,000978 USD innerhalb bestehender Limits. Eigener Chat, Dateien und eigene
+Sitzung vollständig bereinigt, Nutzerobjekte unverändert. Native VM-Berechnung:
+ROUND(2.675,2)=2.68, ROUND(-1.5,0)=-2, SUMIF=200, IFERROR=0, signed total=176.
+Doppelaggregat-Plan vor Berechnung abgewiesen. Belege nur unter .local.
+
+Die öffentliche Warnungsillustration bleibt eine synthetische Loopback-Fixture,
+kein Bildschirmfoto aus der Test-VM. Die öffentliche Abnahmemetadaten nennen den
+bestätigten Excel-Stand; fachliche Modellprüfung bleibt erforderlich.

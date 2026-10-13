@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-13",
-  "applicationCommit": "7dc5de6",
+  "applicationCommit": "68877a4",
   "schema": "0042",
-  "tests": 1356,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38355451263",
+  "tests": 1409,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
   "screenshots": [
     {
       "id": "chat",
@@ -696,13 +696,13 @@
         },
         {
           "title": "Echte Office-Dateien aus Cloud-Anfragen",
-          "description": "Cloud plant freigegebene Dateiwünsche; der isolierte lokale Renderer erzeugt native PowerPoint-, Word- und Excel-Dateien. Alle drei Formate mit echter Cloud-Planung und direkten Downloads vor optionaler Freigabe auf dem Testsystem geprüft. Private Originale und ungeteilte Skills bleiben geschützt. Fachliche Modellqualität ist weiterhin zu prüfen: automatische Summenzeilen können redundant sein.",
+          "description": "Cloud plant freigegebene Dateiwünsche; der isolierte lokale Renderer erzeugt native PowerPoint-, Word- und Excel-Dateien. Alle drei Formate mit echter Cloud-Planung und direkten Downloads vor optionaler Freigabe auf dem Testsystem geprüft. Private Originale und ungeteilte Skills bleiben geschützt. Die neue Formelprüfung verhindert überlappende doppelte Aggregate; fachliche Modellinhalte bleiben zu prüfen.",
           "status": "live"
         },
         {
           "title": "Excel-Formeln vor der Dateierstellung prüfen",
-          "description": "Doppelte Aggregation zwischen manueller Summenzeile und automatischer Ergebniszeile wird abgefangen. Syntax, Argumentzahl, Zellgrenzen, Bereichsgrößen, Suchindizes, Zirkelbezüge und nicht berechenbare Ergebnisse werden geprüft. Ein begrenzter Modell-Korrekturversuch; ältere Originalversionen bleiben lesbar mit Prüfhinweis. Lokale Tests bestanden, Test-VM-Abnahme noch offen.",
-          "status": "local"
+          "description": "Doppelte Aggregation zwischen manueller Summenzeile und automatischer Ergebniszeile wird abgefangen. Syntax, Argumentzahl, Zellgrenzen, Bereichsgrößen, Suchindizes, Zirkelbezüge und nicht berechenbare Ergebnisse werden geprüft. Ein begrenzter Modell-Korrekturversuch; ältere Originalversionen bleiben lesbar mit Prüfhinweis. Echte Cloud-XLSX mit genau einer korrekten Gesamtsumme und direkte native Downloads auf dem Testsystem geprüft. Fachliche Absichten bleiben zu beurteilen.",
+          "status": "live"
         }
       ]
     }
@@ -738,15 +738,15 @@
     "schema": "0042",
     "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "7dc5de6",
-    "ciTests": 1356,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38355451263",
-    "deployedCommit": "7dc5de6",
+    "commit": "68877a4",
+    "ciTests": 1409,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
+    "deployedCommit": "68877a4",
     "deployedSchema": "0042",
-    "liveScope": "Release 7dc5de6 / Schema 0042 aktiv auf dem Testsystem. Vollständige CI: 1356 Backend-/PostgreSQLtests bestanden, vier umgebungsabhängige Fälle übersprungen und 39 synthetische Browserchecks. Privates Tailnet-HTTPS und normales SSH vom echten Peer geprüft. Reale Auto-Antworten lokal beziehungsweise über Cloud; echte Cloud-Dateipläne für PPTX, DOCX und XLSX mit direkten nativen Downloads vor optionaler Freigabe, korrekten Datei-Hashes und visueller Vorschau geprüft. Bestehende Daten, Einstellungen, Overlays und unabhängige Netzwerkregeln beim Rollout erhalten; verschlüsseltes Off-VM-Backup geprüft. Eigene Testchats und Dateien vollständig bereinigt. Fachliche Modellqualität bleibt zu prüfen: eine zusätzliche Excel-Gesamtzeile zählte eine bereits vorhandene Summaryzeile doppelt. Keine fehlerfreie Modellleistung oder vollständige V1-Abnahme behauptet. Frühere lokale Excel-Planung war weiterhin uneinheitlich; dieser Nachweis betrifft die neue Cloud-Dateistrecke.",
+    "liveScope": "Release 68877a4 / Schema 0042 aktiv auf dem Testsystem. Vollständige CI: 1409 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängige Fälle übersprungen und 39 synthetische Browserchecks. Reale Cloud-XLSX-Planung mit direktem Download geprüft: 10 + 5 ergibt genau eine Formel-Gesamtsumme von 15, keine doppelte 30. Native Offline-Berechnung auf dem Testsystem bestätigt Rundung, bedingte Summe und Fehlerbehandlung; ungültiger Doppelaggregat-Plan abgewiesen. Vorhandene Versionen bleiben unverändert lesbar mit Prüfhinweis bei neuen Regelabweichungen. Bestehende Daten, Einstellungen, Overlays und unabhängige Netzwerkregeln erhalten, verschlüsseltes Off-VM-Backup geprüft. Eigener Testchat und Dateien vollständig bereinigt. Zuvor echte Auto-Routen und direkte PPTX-/DOCX-/XLSX-Cloud-Downloads sowie privates HTTPS und SSH geprüft. Formelvalidierung ersetzt keine fachliche Prüfung des Modellinhalts; vollständige V1-Abnahme bleibt offen.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "7dc5de6",
+    "lastSuccessfulCICommit": "68877a4",
     "lastSuccessfulCIUI": 39
   }
 }
