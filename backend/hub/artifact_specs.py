@@ -6,11 +6,13 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PrivateAttr,
     SerializerFunctionWrapHandler,
     StrictBool,
     StrictFloat,
     StrictInt,
     StringConstraints,
+    ValidationInfo,
     model_serializer,
     model_validator,
 )
@@ -405,14 +407,14 @@ class SpreadsheetPlan(StrictPlan):
     sheets: list[SpreadsheetSheet] = Field(min_length=1, max_length=10)
 
     @model_validator(mode="after")
-    def workbook_shape(self) -> "SpreadsheetPlan":
+    def workbook_shape(self, info: ValidationInfo) -> "SpreadsheetPlan":
         if len({sheet.name.casefold() for sheet in self.sheets}) != len(self.sheets):
             raise ValueError("Tabellenblattnamen müssen eindeutig sein")
         if sum((len(sheet.rows) + 1) * len(sheet.columns) for sheet in self.sheets) > 10000:
             raise ValueError("Tabelle überschreitet das Zellenlimit")
         from .spreadsheet_features import validate_workbook
 
-        validate_workbook(self)
+        validate_workbook(self, strict=not bool((info.context or {}).get("legacy_formula_read")))
         return self
 
 
@@ -448,6 +450,7 @@ class TemplateBinding(StrictPlan):
 
 
 class ArtifactSpec(StrictPlan):
+    _legacy_formula_warning: bool = PrivateAttr(default=False)
     version: Literal[1] = 1
     label: Literal["LOCAL_ONLY"] = "LOCAL_ONLY"
     sources: list[SourceBinding] = Field(default_factory=list, max_length=20)

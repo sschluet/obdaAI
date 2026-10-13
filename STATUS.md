@@ -3004,3 +3004,29 @@ bestanden. Keine privaten Quellen oder ungeteilten Skills an Cloud übertragen.
 Alle fünf eigenen synthetischen Testchats mit exakten Löschbelegen und vollständiger
 Dateibereinigung entfernt; eigene Sitzungen entfernt. Belege ausschließlich privat
 unter .local/cloud-files-live und .local/deployment. Keine Nutzerchats gelöscht.
+
+
+### 13.10.2026: Doppelte Excel-Aggregate und Formelprüfung – in Abnahme
+
+Neue Datenpläne lehnen eine manuelle Aggregatzeile mit überlappenden Zellbereichen
+in derselben automatisch aggregierten Spalte ab; einfache Detail-/Steuerformeln
+bleiben erlaubt. Echte verschachtelte SUBTOTAL-Zeilen werden entsprechend Excel
+nicht nochmals in der automatischen Ergebniszeile berücksichtigt. Die Planung
+erklärt die Alternative totals oder manuelle Summenzeile; genau ein gebundener
+Korrekturversuch, weiterhin Kosten-/Kontextgrenzen und Abrechnung beider Versuche.
+
+Zusätzliche frühe Prüfung des unterstützten Formel-Subsets: vollständige Operanden,
+Funktionsargumentzahl, Bereichsgrößen für bedingte Aggregation/SUMPRODUCT, konkrete
+Suchindizes, SUBTOTAL-Funktionsnummern, endliche Literale. Vorhandene Zellgrenzen,
+Zirkel-/Ressourcenprüfung und Offline-Calc-Fehlerwerte bleiben verbindlich. Keine
+Codeausführung oder externen Formelverweise. Bewusst keine Behauptung, beliebige
+fachliche Absichten aus Formeln vollständig ableiten zu können.
+
+Historische versionierte Vorgaben bleiben nach SHA-Prüfung lesbar unter ihren
+bisherigen Sicherheitsregeln; bei neuer Formelabweichung erscheint ein Hinweis.
+Keine Änderung bestehender Datei-/Vorgabe-/Freigabehashes. Neue Eingaben, Versionen
+und der Offline-Renderer bleiben strikt; der Lesekontext ist kein API-Eingabefeld.
+Lokale verbundene Abnahme: 162 Tests, 40 Render-/APItests, zusätzliche Audit-/
+Korrekturtests und echte offline berechnete Beispiele bestanden. TypeScript/Build,
+Ruff/Mypy sowie Artefakt-/Workbench-Browserchecks bestanden. Neue öffentliche
+Warnungsillustration ausschließlich aus synthetischer Loopback-Fixture.

@@ -238,6 +238,12 @@
       "title": "Formeln und Werte im Blick.",
       "description": "Formelzellen ausdrücklich kennzeichnen und Werte bearbeiten. Ausschließlich synthetischer Finanzplan; die Galerie verwendet lokale Testantworten.",
       "image": "assets/officeformulas.png"
+    },
+    {
+      "id": "excelformulaaudit",
+      "title": "Formeln prüfen, Originale bewahren.",
+      "description": "Ältere Excel-Versionen erhalten einen sichtbaren Prüfhinweis, wenn sie die erweiterten Formelregeln nicht erfüllen. Die gespeicherte Vorgabe bleibt unverändert und kann als neue Version korrigiert werden. Ausschließlich synthetisches Projekt Aurora und abgebrochener älterer Entwurf; kein Live-Downloadbeleg.",
+      "image": "assets/excelformulaaudit.png"
     }
   ],
   "groups": [
@@ -692,6 +698,11 @@
           "title": "Echte Office-Dateien aus Cloud-Anfragen",
           "description": "Cloud plant freigegebene Dateiwünsche; der isolierte lokale Renderer erzeugt native PowerPoint-, Word- und Excel-Dateien. Alle drei Formate mit echter Cloud-Planung und direkten Downloads vor optionaler Freigabe auf dem Testsystem geprüft. Private Originale und ungeteilte Skills bleiben geschützt. Fachliche Modellqualität ist weiterhin zu prüfen: automatische Summenzeilen können redundant sein.",
           "status": "live"
+        },
+        {
+          "title": "Excel-Formeln vor der Dateierstellung prüfen",
+          "description": "Doppelte Aggregation zwischen manueller Summenzeile und automatischer Ergebniszeile wird abgefangen. Syntax, Argumentzahl, Zellgrenzen, Bereichsgrößen, Suchindizes, Zirkelbezüge und nicht berechenbare Ergebnisse werden geprüft. Ein begrenzter Modell-Korrekturversuch; ältere Originalversionen bleiben lesbar mit Prüfhinweis. Lokale Tests bestanden, Test-VM-Abnahme noch offen.",
+          "status": "local"
         }
       ]
     }

@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, object_session, sessionmaker
 
@@ -91,7 +91,15 @@ def storage_bytes(cfg: Settings) -> int:
 def spec_for(row: ArtifactRevision) -> ArtifactSpec:
     if digest(row.spec) != row.spec_sha256:
         raise ValueError("Artefaktvorgabe wurde verändert")
-    return ArtifactSpec.model_validate_json(row.spec)
+    try:
+        return ArtifactSpec.model_validate_json(row.spec)
+    except ValidationError:
+        # Preserve immutable saved versions. Only the new mathematical audit may
+        # be relaxed for reading; original safety constraints remain enforced.
+        # New input and the offline renderer use strict validation by default.
+        spec = ArtifactSpec.model_validate_json(row.spec, context={"legacy_formula_read": True})
+        spec._legacy_formula_warning = True
+        return spec
 
 
 def bind_sources(
@@ -399,6 +407,13 @@ def info(row: ArtifactRevision) -> dict[str, Any]:
         "spec_sha256": row.spec_sha256,
         "status": row.status,
         "error": row.error,
+        "formula_warnings": [
+            "Diese gespeicherte Version erfüllt die neue Formelprüfung nicht. "
+            "Die Originaldatei bleibt unverändert; Formeln prüfen und eine korrigierte "
+            "Version erstellen."
+        ]
+        if spec._legacy_formula_warning
+        else [],
         "created": row.created,
         "accepted": row.accepted,
         "draft": json.loads(row.draft_metadata) if row.draft_metadata else None,

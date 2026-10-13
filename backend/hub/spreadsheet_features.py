@@ -176,7 +176,7 @@ def bounded_reference(
 
 
 def formula_references(
-    formula: str, current: str, dimensions: dict[str, tuple[int, int]]
+    formula: str, current: str, dimensions: dict[str, tuple[int, int]], *, strict: bool = True
 ) -> set[tuple[str, int, int]]:
     if not formula.startswith("=") or len(formula) > 2000:
         raise ValueError("Formel muss mit = beginnen und begrenzt sein")
@@ -186,7 +186,15 @@ def formula_references(
         raise ValueError("Ungültige Excel-Formel") from exc
     if not tokens or len(tokens) > 500:
         raise ValueError("Formel ist leer oder zu komplex")
+    from .spreadsheet_formula_checks import validate_syntax
+
+    if strict:
+        validate_syntax(tokens)
     for index, token in enumerate(tokens):
+        if strict and token.type == "FUNC" and token.subtype == "OPEN":
+            name = token.value[:-1].upper()
+            arguments, _ = _function_arguments(tokens, index)
+            check_function_ranges(name, arguments, current, dimensions)
         if (
             token.type == "FUNC"
             and token.subtype == "OPEN"
@@ -233,6 +241,8 @@ def formula_references(
                 )
             elif sub not in {"NUMBER", "TEXT", "LOGICAL"}:
                 raise ValueError("Ungültiger Formelausdruck")
+            elif strict and sub == "NUMBER" and not math.isfinite(float(value)):
+                raise ValueError("Formelzahl muss endlich sein")
         elif kind == "SEP":
             if sub != "ARG" or value != "," or "FUNC" not in stack:
                 raise ValueError("Nur englische Formeln mit Komma als Argumenttrenner erlaubt")
@@ -251,7 +261,137 @@ def formula_references(
     return references
 
 
-def validate_workbook(plan: SpreadsheetPlan) -> None:
+def check_function_ranges(
+    name: str, arguments: list[list[Any]], current: str, dimensions: dict[str, tuple[int, int]]
+) -> None:
+    def shape(argument: list[Any]) -> tuple[int, int] | None:
+        values = [item for item in argument if item.type != "WHITE-SPACE"]
+        if len(values) != 1 or values[0].type != "OPERAND" or values[0].subtype != "RANGE":
+            return None
+        _, left, top, right, bottom = bounded_reference(values[0].value, current, dimensions)
+        return right - left + 1, bottom - top + 1
+
+    indexes: list[int] = []
+    if name in {"SUMIF", "AVERAGEIF"} and len(arguments) == 3:
+        indexes = [0, 2]
+    elif name in {"SUMIFS", "AVERAGEIFS"}:
+        indexes = [0, *range(1, len(arguments), 2)]
+    elif name == "COUNTIFS":
+        indexes = list(range(0, len(arguments), 2))
+    elif name == "SUMPRODUCT":
+        indexes = list(range(len(arguments)))
+    shapes = [shape(arguments[index]) for index in indexes]
+    known = [value for value in shapes if value is not None]
+    if known and any(value != known[0] for value in known[1:]):
+        raise ValueError("Funktionsbereiche müssen gleich groß sein: " + name)
+
+    if name in {"VLOOKUP", "HLOOKUP"}:
+        bounds = shape(arguments[1])
+        values = [item for item in arguments[2] if item.type != "WHITE-SPACE"]
+        if bounds and len(values) == 1 and values[0].subtype == "NUMBER":
+            number = float(values[0].value)
+            maximum = bounds[0] if name == "VLOOKUP" else bounds[1]
+            if not number.is_integer() or not 1 <= number <= maximum:
+                raise ValueError("Suchindex außerhalb des Tabellenbereichs: " + name)
+    if name == "SUBTOTAL":
+        values = [item for item in arguments[0] if item.type != "WHITE-SPACE"]
+        if len(values) == 1 and values[0].subtype == "NUMBER":
+            number = float(values[0].value)
+            if not number.is_integer() or number not in {*range(1, 12), *range(101, 112)}:
+                raise ValueError("SUBTOTAL benötigt eine gültige Funktionsnummer")
+
+
+def contains_subtotal(formula: str) -> bool:
+    return any(
+        token.type == "FUNC" and token.subtype == "OPEN" and token.value[:-1].upper() == "SUBTOTAL"
+        for token in Tokenizer(formula).items
+    )
+
+
+def aggregate_references(
+    formula: str, current: str, dimensions: dict[str, tuple[int, int]]
+) -> set[tuple[str, int, int]]:
+    """Unambiguous summary formulas, not taxes/derived per-row calculations.
+
+    SUM(B2:B3) and ROUND(SUM(B2:B3),2) summarize the same data. In contrast,
+    SUM(B2:B3)*0.2 may be an explicitly requested tax line in a valid total.
+    We cannot infer business intent and must not reject that arithmetic.
+    """
+    tokens = [token for token in Tokenizer(formula).items if token.type != "WHITE-SPACE"]
+    result: set[tuple[str, int, int]] = set()
+    functions = {
+        "SUM",
+        "AVERAGE",
+        "MIN",
+        "MAX",
+        "COUNT",
+        "COUNTA",
+        "MEDIAN",
+        "COUNTBLANK",
+        "SUMPRODUCT",
+        "LARGE",
+        "SMALL",
+        "NPV",
+        "IRR",
+        "SUMIF",
+        "SUMIFS",
+        "AVERAGEIF",
+        "AVERAGEIFS",
+        "COUNTIF",
+        "COUNTIFS",
+    }
+    while tokens and tokens[0].type == "PAREN" and tokens[-1].type == "PAREN":
+        depth = 0
+        for _index, token in enumerate(tokens):
+            if token.type in {"PAREN", "FUNC"}:
+                depth += 1 if token.subtype == "OPEN" else -1
+            if depth == 0:
+                break
+        if _index != len(tokens) - 1:
+            break
+        tokens = tokens[1:-1]
+    if not tokens or tokens[0].type != "FUNC" or tokens[0].subtype != "OPEN":
+        return result
+    name = tokens[0].value[:-1].upper()
+    arguments, end = _function_arguments(tokens, 0)
+    if end != len(tokens) - 1:
+        return result
+    if name in {"ROUND", "ROUNDUP", "ROUNDDOWN"}:
+        return aggregate_references(
+            "=" + "".join(token.value for token in arguments[0]), current, dimensions
+        )
+    if name in functions:
+        if name in {"SUMIF", "AVERAGEIF"}:
+            arguments = [arguments[2] if len(arguments) == 3 else arguments[0]]
+        elif name in {"SUMIFS", "AVERAGEIFS"}:
+            arguments = arguments[:1]
+        elif name == "COUNTIF":
+            arguments = arguments[:1]
+        elif name == "COUNTIFS":
+            arguments = arguments[::2]
+        elif name == "NPV":
+            arguments = arguments[1:]
+        elif name in {"IRR", "LARGE", "SMALL"}:
+            arguments = arguments[:1]
+        for argument in arguments:
+            # A reduction over explicit ranges is a summary. An expression such
+            # as SUM(B2*0.2) instead computes a derived detail value.
+            if len(argument) != 1 or argument[0].type != "OPERAND":
+                return set()
+            for value in argument:
+                if value.type == "OPERAND" and value.subtype == "RANGE":
+                    sheet, left, top, right, bottom = bounded_reference(
+                        value.value, current, dimensions
+                    )
+                    result.update(
+                        (sheet, column, row)
+                        for column in range(left, right + 1)
+                        for row in range(top, bottom + 1)
+                    )
+    return result
+
+
+def validate_workbook(plan: SpreadsheetPlan, *, strict: bool = True) -> None:
     from .artifact_specs import FormulaCell
 
     dimensions = {
@@ -265,7 +405,7 @@ def validate_workbook(plan: SpreadsheetPlan) -> None:
             for column, cell in enumerate(row, 1):
                 if isinstance(cell, FormulaCell):
                     graph[(sheet.name, column, row_number)] = formula_references(
-                        cell.formula, sheet.name, dimensions
+                        cell.formula, sheet.name, dimensions, strict=strict
                     )
                     dependency_count += len(graph[(sheet.name, column, row_number)])
                     if dependency_count > 200_000:
@@ -279,9 +419,31 @@ def validate_workbook(plan: SpreadsheetPlan) -> None:
             if not sheet.rows or ord(column_name) - ord("A") + 1 > len(sheet.columns):
                 raise ValueError("Ergebniszeile benötigt Daten und vorhandene Spalten")
             column_number = ord(column_name) - ord("A") + 1
-            graph[(sheet.name, column_number, len(sheet.rows) + 2)] = {
+            covered = {
                 (sheet.name, column_number, number) for number in range(2, len(sheet.rows) + 2)
             }
+            # SUBTOTAL ignores nested SUBTOTAL cells. SUM/AVERAGE/etc summary
+            # rows are not ignored, and would count already summarized data twice.
+            ignored = set()
+            for row_number, row in enumerate(sheet.rows, 2):
+                cell = row[column_number - 1]
+                if not isinstance(cell, FormulaCell):
+                    continue
+                node = (sheet.name, column_number, row_number)
+                if contains_subtotal(cell.formula):
+                    ignored.add(node)
+                elif (
+                    strict and aggregate_references(cell.formula, sheet.name, dimensions) & covered
+                ):
+                    raise ValueError(
+                        "Doppelte Aggregation: automatische Ergebniszeile in "
+                        + sheet.name
+                        + "!"
+                        + column_name
+                        + " enthält bereits aggregierte Daten. Entweder totals oder eine "
+                        "manuelle Aggregatzeile verwenden; Detailformeln bleiben erlaubt."
+                    )
+            graph[(sheet.name, column_number, len(sheet.rows) + 2)] = covered - ignored
         for coordinate in sheet.highlight_cells:
             bounded_reference(coordinate, sheet.name, dimensions)
         for group in sheet.column_groups:

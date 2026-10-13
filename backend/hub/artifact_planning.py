@@ -26,9 +26,9 @@ def office_policy(kind: str, goal: str, slide_count: int) -> str:
                     "columns": ["Kategorie", "Wert", "Ergebnis"],
                     "rows": [
                         ["A", 10, {"formula": "=B2*2"}],
-                        ["B", 20, {"formula": "=SUM(B2:B3)"}],
+                        ["B", 20, {"formula": "=B3*2"}],
                     ],
-                    "number_formats": {"B": "currency"},
+                    "number_formats": {"B": "integer", "C": "integer"},
                     "charts": [
                         {
                             "type": "bar",
@@ -55,11 +55,22 @@ def office_policy(kind: str, goal: str, slide_count: int) -> str:
             "Optional fields directly on each sheet (NEVER an optional/options wrapper): "
             "number_formats {B:'currency'} with currency|percent|integer|decimal|date; "
             "totals {B:'sum'} with sum|average|count|min|max; no_stripes boolean; "
+            "Choose EITHER automatic sheet totals OR a manual aggregate row for a column, "
+            "never both. Automatic totals aggregate every data row: a manual SUM/COUNT/"
+            "AVERAGE/MIN/MAX/SUBTOTAL row would be counted again. Never add a subtotal to "
+            "its own underlying values in another aggregate; keep summary calculations "
+            "separate from detail rows. Check exact range endpoints and exclude headers, "
+            "summary rows and the result cell. Preserve supplied values during corrections; "
+            "remove the duplicate aggregation, not its source data. Use currency only for "
+            "money, integer for counts and percent for ratios; examples do not choose units. "
             "highlight_cells ['B2']; column_groups [{start:'C',end:'D'}]; charts. "
             "Charts type bar|line|pie|area|scatter. Categories one column of data cells; "
             "series each one column: either row1 header plus matching data rows, or data-only "
             "rows starting at row2 or later with exactly the category count; titles use row1. "
-            "Do not copy example values; create formulas and charts only from supplied data."
+            "Use exact MATCH(...,0) and VLOOKUP/HLOOKUP(...,FALSE) unless the goal "
+            "explicitly requests approximate lookup. Check that all conditional aggregate "
+            "ranges have identical dimensions. Do not copy example values; create formulas "
+            "and charts only from supplied data."
         )
     examples = {
         "process": {"kind": "process", "items": [{"label": "Schritt A"}, {"label": "Schritt B"}]},
