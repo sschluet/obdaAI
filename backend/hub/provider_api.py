@@ -24,6 +24,7 @@ from hub.db import (
     new_id,
 )
 from hub.policy import CloudGrant, ContextPart, Privacy
+from hub.provider_account import install_account_api
 from hub.provider_settings import (
     ProviderInput,
     decrypt,
@@ -47,8 +48,10 @@ class ProbeInput(BaseModel):
 
 def adapter(row: ProviderConfig, cfg: Settings) -> Providers:
     data = json.loads(row.config)
-    external = row.kind == "openrouter"
-    if not row.enabled or (external and not cfg.cloud_enabled):
+    external = row.kind != "local"
+    if not row.enabled or (
+        external and (not cfg.cloud_enabled or row.kind not in cfg.external_provider_kinds)
+    ):
         raise PermissionError("Provider disabled by server policy")
     body = ProviderInput.model_validate(
         {k: v for k, v in data.items() if k not in ("pricing", "use_server_secret")}
@@ -82,7 +85,7 @@ def adapter(row: ProviderConfig, cfg: Settings) -> Providers:
         openrouter_max_tokens=min(data["output_tokens"], 128),
         local_disable_thinking=data["disable_thinking"],
     )
-    return Providers(settings, keys=keys)
+    return Providers(settings, keys=keys, external_kind=row.kind if external else "openrouter")
 
 
 async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: str) -> None:
@@ -106,7 +109,7 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
     result, state, measured = "Modelltest fehlgeschlagen; kein Fallback", "failed", None
     try:
         p = adapter(row, cfg)
-        external = row.kind == "openrouter"
+        external = row.kind != "local"
         part = ContextPart(
             content="What is 2 plus 2? Answer with the number only.",
             label=Privacy.CLOUD_ALLOWED if external else Privacy.LOCAL_ONLY,
@@ -131,19 +134,29 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
                             ["user"],
                             external=True,
                             grants=[
-                                CloudGrant(source_id=test_id, revision=1, provider_id="openrouter")
+                                CloudGrant(source_id=test_id, revision=1, provider_id=row.kind)
                             ],
                         )
                     ]
                 )
                 measured = p.measured_cost
             else:
-                decision = await p.route([part], ["user"])
-                text = decision.answer or ""
+                # Exercise both structured routing and actual answer generation.
+                # The classifier intentionally never answers the arithmetic prompt.
+                await p.route([part], ["user"])
+                text = "".join(
+                    [
+                        chunk
+                        async for chunk in p.stream(
+                            [part], ["user"], external=False, grants=[]
+                        )
+                    ]
+                )
             if text.strip() != "4":
                 raise ValueError("Synthetic model check failed")
             result, state = (
-                f"Modelltest bestanden · {time.monotonic() - started:.2f} s",
+                f"Modelltest bestanden · {time.monotonic() - started:.2f} s"
+                + (" · Kosten aus Usage geschätzt" if p.cost_basis == "usage_estimate" else ""),
                 "succeeded",
             )
     except asyncio.CancelledError:
@@ -161,6 +174,8 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
 
 
 def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    install_account_api(app, cfg, factory)
+
     @app.get("/api/providers")
     def list_providers(session: Authenticated) -> dict[str, object]:
         with factory() as db:
@@ -206,6 +221,7 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 ],
                 "local_endpoints": list(local_endpoints(cfg)),
                 "cloud_enabled": cfg.cloud_enabled,
+                "external_provider_kinds": list(cfg.external_provider_kinds),
                 "encrypted_secrets_available": bool(cfg.secrets_key_file),
             }
 
@@ -313,7 +329,10 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             row = db.get(ProviderConfig, provider_id)
             if not row:
                 raise HTTPException(404, "Provider nicht gefunden")
-            if not row.enabled or (row.kind == "openrouter" and not cfg.cloud_enabled):
+            if not row.enabled or (
+                row.kind != "local"
+                and (not cfg.cloud_enabled or row.kind not in cfg.external_provider_kinds)
+            ):
                 raise HTTPException(409, "Provider deaktiviert oder Cloud am Server gesperrt")
             if body.mode == "model":
                 if not body.request_id:
@@ -338,7 +357,7 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 return {"id": probe.id, "status": "queued"}
             revision = row.revision
         try:
-            catalog = await adapter(row, cfg).models(external=row.kind == "openrouter")
+            catalog = await adapter(row, cfg).models(external=row.kind != "local")
             data = json.loads(row.config)
             selected = next((m for m in catalog if m["id"] == data["model"]), None)
             if not selected:
@@ -348,6 +367,8 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                     "message": "Verbindung hergestellt; konfiguriertes Modell fehlt im Katalog",
                     "models": [m["id"] for m in catalog][:200],
                 }
+            if row.kind in ("openai", "anthropic"):
+                row = await fresh_cloud_prices(factory, row, adapter(row, cfg))
             if row.kind == "openrouter":
                 rates = selected["pricing"]
                 assert isinstance(rates, dict)

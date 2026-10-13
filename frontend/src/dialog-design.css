@@ -1,0 +1,136 @@
+/* Visual layer for artifact and task dialogs. Uses the shared design palette;
+   no visibility, dialog state, permission or form behavior is changed here. */
+:is(.artifact-editor,.task-dialog,[aria-label="Dateivorschau"]) {
+  color:inherit;
+  border:1px solid var(--border);
+  background:var(--panel);
+  border-radius:24px;
+  box-shadow:0 28px 90px rgb(24 28 44 / 18%);
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+}
+.modal .artifact-editor { width:min(820px,94vw);padding:30px; }
+.modal .task-dialog { width:min(760px,94vw);padding:30px; }
+.modal [aria-label="Dateivorschau"] { width:min(920px,94vw);padding:30px; }
+:is(.artifact-editor,.task-dialog,[aria-label="Dateivorschau"])>h2 {
+  font-size:clamp(21px,2.5vw,28px);font-weight:650;letter-spacing:-.65px;
+  line-height:1.25;margin:0 0 14px;
+}
+:is(.artifact-editor,.task-dialog)>p { line-height:1.65; }
+:is(.artifact-editor,.task-dialog) label {
+  color:var(--muted);font-size:12px;font-weight:600;line-height:1.55;gap:8px;
+}
+:is(.artifact-editor,.task-dialog) :is(input:not([type=checkbox]),textarea,select) {
+  color:var(--text,CanvasText);font-weight:400;font-size:14px;line-height:1.6;
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:11px 13px;min-width:0;max-width:100%;
+  transition:border-color .15s,box-shadow .15s;
+}
+:is(.artifact-editor,.task-dialog) textarea { resize:vertical;min-height:88px; }
+:is(.artifact-editor,.task-dialog) :is(input,textarea,select):focus-visible {
+  outline:2px solid var(--accent);outline-offset:3px;
+}
+:is(.artifact-editor,.task-dialog) button { border-radius:10px;min-height:38px;line-height:1.4; }
+:is(.artifact-editor,.task-dialog) .primary { min-height:44px;padding:11px 18px;margin-top:16px; }
+:is(.artifact-editor,.task-dialog) .hint { font-weight:400;line-height:1.6;font-size:12px; }
+
+/* Primary working mode is a real segmented control; both buttons retain labels. */
+.artifact-editor .artifact-mode { padding:5px;gap:5px;border:1px solid var(--border);background:var(--soft);border-radius:14px;margin:20px 0 12px; }
+.artifact-editor .artifact-mode button { padding:11px 14px;border:1px solid transparent;border-radius:10px;font-size:13px;font-weight:500; }
+.artifact-editor .artifact-mode button[aria-pressed=true] { background:var(--panel);color:var(--accent);border-color:var(--border);box-shadow:0 2px 6px rgb(24 28 44 / 6%);font-weight:650; }
+.artifact-editor .artifact-mode button[aria-pressed=false]:hover { background:var(--active); }
+.artifact-editor :is(.artifact-draft,.artifact-content,.artifact-source-selection) {
+  padding:18px;border-radius:16px;border-color:var(--border);background:var(--panel);margin:16px 0;
+}
+.artifact-editor :is(.artifact-draft,.artifact-content,.artifact-source-selection)>summary {
+  font-size:14px;font-weight:650;line-height:1.5;letter-spacing:-.15px;
+}
+.artifact-editor summary::marker,.task-dialog summary::marker { color:var(--accent);font-size:.9em; }
+.artifact-editor details[open]>summary { margin-bottom:16px; }
+.artifact-editor .artifact-draft { background:var(--soft); }
+.artifact-editor .artifact-draft>button { margin-top:8px; }
+.artifact-editor .artifact-content>fieldset {
+  border:1px solid var(--border);border-radius:16px;padding:18px;margin:20px 0;background:var(--panel);min-width:0;
+}
+.artifact-editor legend { padding:0 7px;font-size:12px;font-weight:650;color:var(--muted); }
+.artifact-editor .artifact-advanced { padding:14px;border-radius:12px;background:var(--soft);margin-top:16px; }
+.artifact-editor .artifact-advanced>summary { font-size:12px;color:var(--muted);font-weight:550; }
+.artifact-editor .artifact-advanced>fieldset {
+  padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);min-width:0;
+}
+.artifact-editor .artifact-advanced>fieldset:has(legend:first-child) { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));column-gap:12px; }
+.artifact-editor .artifact-advanced>fieldset>button { grid-column:1 / -1;justify-self:start; }
+.artifact-editor .artifact-template { border:1px solid var(--border);background:var(--soft);border-radius:16px;padding:18px;margin:18px 0; }
+.artifact-editor .artifact-template>label { margin:0 0 12px; }
+.artifact-editor .artifact-template>button { border:1px solid var(--border);background:var(--panel);padding:9px 12px;font-size:12px; }
+.artifact-editor .artifact-template>button:hover:not(:disabled) { border-color:var(--accent);color:var(--accent); }
+.artifact-editor .artifact-template-confirm { margin-top:16px;padding:14px;border-radius:12px;background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent); }
+.artifact-editor .artifact-template-confirm p { font-size:12px;line-height:1.65;margin-top:0; }
+.artifacts-panel .artifact-context,.artifact-editor .artifact-feedback { border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:13px 15px;line-height:1.6;font-size:12px;background:var(--soft); }
+.artifact-eyebrow { font-size:10px;font-weight:650;letter-spacing:.14em; }
+.artifact-count { background:var(--soft);padding:6px 10px;font-size:11px;font-weight:600; }
+.artifacts-panel .citation { border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 3px 14px rgb(24 28 44 / 3%); }
+.artifacts-panel .citation>b { display:block;font-size:14px;line-height:1.5;letter-spacing:-.15px; }
+.artifacts-panel .citation>p { font-size:12px;color:var(--muted);line-height:1.6; }
+.artifacts-panel .citation button { border-radius:9px;padding:8px 10px;min-height:36px;font-size:12px; }
+.artifacts-panel .citation>a { display:inline-block;padding:7px 0;font-size:12px;line-height:1.6; }
+.artifacts-panel .citation>details { border-top:1px solid var(--border);padding-top:12px; }
+.artifacts-panel .citation summary { color:var(--muted);font-size:12px; }
+[aria-label="Dateivorschau"] figure { margin:24px 0;padding:14px;border:1px solid var(--border);border-radius:16px;background:var(--soft); }
+[aria-label="Dateivorschau"] .artifact-preview { background:white;border-radius:6px;box-shadow:0 5px 20px rgb(10 25 20 / 10%); }
+[aria-label="Dateivorschau"] figcaption { margin-top:12px;font-size:11px;color:var(--muted);text-align:center;letter-spacing:.03em; }
+
+/* Reviewable task plan, progressive settings and schedule fields. */
+.task-dialog>.hint { margin-bottom:20px; }
+.task-plan-summary { background:var(--soft);border:1px solid var(--border);border-radius:18px;padding:20px;margin:24px 0; }
+.task-plan-summary h3 { font-size:15px;letter-spacing:-.2px;margin-bottom:14px; }
+.task-plan-summary dl>div { padding:14px 0;column-gap:16px; }
+.task-plan-summary dl>div:last-child { border-bottom:0; }
+.task-plan-summary dt { font-size:11px;font-weight:650;letter-spacing:.03em;color:var(--muted); }
+.task-plan-summary dd { font-size:13px;line-height:1.65; }
+.task-plan-summary button { background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;min-height:32px; }
+.task-options { padding:18px;margin:18px 0;border:1px solid var(--border);border-radius:16px;background:var(--panel); }
+.task-options>summary { font-size:14px;letter-spacing:-.15px; }
+.task-options>summary span { padding-left:18px;line-height:1.6;font-size:11px; }
+.task-options fieldset { border:1px solid var(--border);border-radius:12px;padding:14px;margin:16px 0;min-width:0; }
+.task-options fieldset legend { color:var(--muted);font-size:11px;padding:0 6px; }
+.task-options label:has(input[type=checkbox]) { padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--soft);font-weight:450; }
+.task-options label:has(input[type=checkbox]:checked) { border-color:var(--accent);background:var(--active); }
+.task-dialog .schedule-fields { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;padding:20px;margin:22px 0;border-radius:16px;background:var(--soft); }
+.task-dialog .schedule-fields>legend { padding:0 8px;font-size:12px;font-weight:650;color:var(--muted); }
+.task-dialog .schedule-fields>label { margin:0; }
+.task-dialog .schedule-fields>label:has([aria-label="Ausführung"]),.task-dialog .schedule-fields>.hint,.task-dialog .schedule-fields>.weekday-grid { grid-column:1 / -1; }
+.task-dialog .weekday-grid { border:0;padding:6px 0;gap:8px;background:transparent; }
+.task-dialog .weekday-grid legend { font-size:11px;color:var(--muted);padding:0; }
+.task-dialog .weekday-grid label { min-height:42px;border:1px solid var(--border);background:var(--panel);border-radius:10px;font-size:12px; }
+.task-dialog .weekday-grid label:has(input:checked) { border-color:var(--accent);background:var(--active); }
+.task-write-notice,.task-readiness,.task-recovery { padding:16px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:14px;background:var(--soft);line-height:1.65;font-size:12px; }
+.task-readiness ul { padding-left:19px; }
+.task-embedded .task-dialog { padding:4px 0;border:0;box-shadow:none;background:transparent; }
+.task-embedded .task-plan-summary { padding:16px; }
+.task-embedded .schedule-fields { padding:16px; }
+
+[data-theme=dark] :is(.artifact-editor,.task-dialog,[aria-label="Dateivorschau"]) { box-shadow:0 28px 90px rgb(0 0 0 / 40%); }
+[data-theme=dark] .artifact-editor .artifact-mode button[aria-pressed=true] { box-shadow:0 2px 8px rgb(0 0 0 / 20%); }
+[data-theme=dark] .artifacts-panel .citation { box-shadow:0 3px 14px rgb(0 0 0 / 10%); }
+@media(max-width:700px) {
+  .modal :is(.artifact-editor,.task-dialog,[aria-label="Dateivorschau"]) { width:min(100%,94vw);padding:20px;border-radius:20px; }
+  .artifact-editor .artifact-mode button { padding:10px;font-size:12px; }
+  .artifact-editor :is(.artifact-draft,.artifact-content,.artifact-source-selection),.artifact-editor .artifact-template,.task-options { padding:14px; }
+  .artifact-editor .artifact-content>fieldset { padding:13px; }
+  .task-dialog .schedule-fields { padding:14px;column-gap:12px; }
+  .task-plan-summary { padding:15px; }
+  .artifacts-panel .citation { padding:16px; }
+  [aria-label="Dateivorschau"] figure { padding:9px;margin:18px 0; }
+}
+@media(max-width:430px) {
+  .artifact-editor .artifact-mode { gap:4px;padding:4px; }
+  .artifact-editor .artifact-mode button { padding:9px 7px;font-size:11px; }
+  .task-dialog .schedule-fields { grid-template-columns:minmax(0,1fr); }
+  .task-plan-summary dl>div { column-gap:10px; }
+  .artifact-editor .artifact-advanced>fieldset:has(legend:first-child) { grid-template-columns:minmax(0,1fr); }
+  .artifact-editor .artifact-template>button { width:100%;margin-right:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  :is(.artifact-editor,.task-dialog) :is(input,textarea,select) { transition:none; }
+}

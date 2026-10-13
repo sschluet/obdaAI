@@ -1,0 +1,4 @@
+.chat-scroll{min-height:0;overflow-anchor:none;overscroll-behavior:contain;scroll-behavior:auto}
+.composer-area{position:relative}
+.chat-jump-end{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);z-index:2;padding:9px 15px;border:1px solid var(--border);border-radius:999px;background:var(--panel);box-shadow:0 4px 16px rgb(0 0 0 / 10%);font-size:12px;white-space:nowrap;color:var(--accent)}
+.chat-jump-end:hover{background:var(--active)}

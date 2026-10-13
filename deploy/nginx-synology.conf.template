@@ -1,0 +1,66 @@
+# Exact HTTPS alias for an explicitly reviewed reverse proxy.
+# Install alongside the existing private-IP vhost; nginx.conf includes this at http scope.
+# Preserve unrecognized/missing Origins so the application's CSRF check still rejects them.
+map $http_origin $obdaai_synology_origin {
+    default $http_origin;
+    "https://__PUBLIC_HOST__" "https://__PRIVATE_IP__";
+}
+server {
+    listen __PRIVATE_IP__:443 ssl;
+    server_name __PUBLIC_HOST__;
+    ssl_certificate /etc/obdaai/tls/server.crt;
+    ssl_certificate_key /etc/obdaai/tls/server.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_tickets off;
+    server_tokens off;
+    access_log off;
+    error_log /var/log/nginx/obdaai-error.log warn;
+    client_max_body_size 1m;
+    # Only the reviewed NAS and VM-local diagnostics may use the domain vhost.
+    allow __PROXY_IP__;
+    allow __PRIVATE_IP__;
+    deny all;
+    if ($host != "__PUBLIC_HOST__") { return 444; }
+    location ~ "^/api/projects/[0-9a-fA-F-]{36}/sources$" {
+        # Raw document uploads match the bounded 40 MiB application limit.
+        client_max_body_size 40m;
+        proxy_pass http://127.0.0.1:8766;
+        proxy_http_version 1.1;
+        proxy_set_header Host __PRIVATE_IP__;
+        proxy_set_header Origin $obdaai_synology_origin;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 600s;
+        proxy_next_upstream off;
+    }
+    location = /api/skills/import-package {
+        client_max_body_size 20m;
+        proxy_pass http://127.0.0.1:8766;
+        proxy_http_version 1.1;
+        proxy_set_header Host __PRIVATE_IP__;
+        proxy_set_header Origin $obdaai_synology_origin;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 600s;
+        proxy_next_upstream off;
+    }
+    location / {
+        proxy_pass http://127.0.0.1:8766;
+        proxy_http_version 1.1;
+        proxy_set_header Host __PRIVATE_IP__;
+        proxy_set_header Origin $obdaai_synology_origin;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 600s;
+        proxy_next_upstream off;
+    }
+}

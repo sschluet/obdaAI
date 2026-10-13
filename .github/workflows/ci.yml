@@ -7,8 +7,43 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      app: ${{ steps.scope.outputs.app }}
+      validated_run: ${{ steps.scope.outputs.validated_run }}
+      validated_sha: ${{ steps.scope.outputs.validated_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check CI scope and cancellation safety
+        run: python -m unittest discover -s tests -p test_ci_changes.py
+      - id: scope
+        name: Find matching completed full application proof
+        env:
+          CI_GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/ci_changes.py
+  lightweight:
+    needs: changes
+    if: needs.changes.outputs.app != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python scripts/scan_secrets.py
+      - name: Record reused application validation
+        env:
+          VALIDATED_RUN: ${{ needs.changes.outputs.validated_run }}
+          VALIDATED_SHA: ${{ needs.changes.outputs.validated_sha }}
+        run: |
+          echo "Application tree unchanged; reusing full CI run $VALIDATED_RUN ($VALIDATED_SHA)." >> "$GITHUB_STEP_SUMMARY"
+
   python:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -32,6 +67,7 @@ jobs:
       - run: uv sync --locked --all-extras
       - run: uv run ruff check .
       - run: uv run mypy backend/hub
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-liberation poppler-utils
       - run: uv run pytest
       - run: uv run python scripts/scan_secrets.py
       - run: uv build
@@ -44,6 +80,8 @@ jobs:
       - run: docker run --rm -v "$PWD:/src:ro" zricethezav/gitleaks:v8.24.3@sha256:e1b35e12a8c6fa8901f060459cfb6b2fc4c484d3afbe3b029733a3bbfab07055 git /src --redact --no-banner
 
   frontend:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,10 +108,91 @@ jobs:
             if curl --fail --silent http://127.0.0.1:18765/api/health > /dev/null; then break; fi
             sleep 1
           done
+          uv run python scripts/artifact_ui_inputs.py
           cd frontend
+          node fixture-login-check.mjs
           node browser-check.mjs
+          node integrations-check.mjs
+          node project-upload-check.mjs
+          node source-deletion-check.mjs
+          node generic-integrations-check.mjs
+          PAPERLESS_FIXTURE_URL=http://127.0.0.1:18765 node paperless-explorer-check.mjs
+          USE_CASES_URL=http://127.0.0.1:18765 node use-case-stages-check.mjs
+          node use-cases-check.mjs
+          node appearance-check.mjs
+          node openrouter-status-check.mjs
+          CLOUD_BALANCE_FIXTURE_URL=http://127.0.0.1:18765 node cloud-balances-check.mjs
+          node deletion-check.mjs
+          node project-icons-check.mjs
+          node artifact-check.mjs
+          node chat-artifact-check.mjs
+          node source-retry-check.mjs
+          node native-provider-check.mjs
+          node workspace-check.mjs
+          node search-check.mjs
+          node search-navigation-check.mjs
+          node composer-ux-check.mjs
+          node web-preference-check.mjs
+          node web-settings-check.mjs
+          node routing-check.mjs
+          node profile-check.mjs
+          node skills-library-check.mjs
+          node chat-skills-check.mjs
+          node processing-check.mjs
+          node run-error-check.mjs
+          node answer-limit-check.mjs
+          node chat-scroll-check.mjs
+          node pipeline-check.mjs
+          node workbench-check.mjs
+          node task-ux-check.mjs
+          node preference-ux-check.mjs
+          node template-check.mjs
+          node password-check.mjs
+          cd ..
+          HUB_BROWSER_FIXTURE_DIR=.local/browser uv run python scripts/seed_showcase.py
+          cd frontend
+          HUB_DESIGN_ORIGIN=http://127.0.0.1:18765 node design-check.mjs
   container:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker build --tag obdaai-ci .
+
+  browser-runner:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build --tag obdaai-browser-ci browser-runner
+      - run: bash browser-runner/smoke.sh
+
+  artifact-runner:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build --file artifact-runner/Dockerfile --tag obdaai-artifacts-ci .
+      - run: bash artifact-runner/smoke.sh
+
+  app-proof:
+    needs: [changes, python, secrets, frontend, container, browser-runner, artifact-runner]
+    if: >-
+      always() && !cancelled() && needs.changes.outputs.app == 'true' &&
+      needs.python.result == 'success' && needs.secrets.result == 'success' &&
+      needs.frontend.result == 'success' && needs.container.result == 'success' &&
+      needs.browser-runner.result == 'success' && needs.artifact-runner.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python scripts/ci_changes.py --record app-check-proof.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-check-proof
+          path: app-check-proof.json
+          retention-days: 90
+          archive: true
+          if-no-files-found: error

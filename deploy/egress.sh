@@ -17,11 +17,13 @@ iptables -N OBDAAI_APP 2>/dev/null || true
 iptables -F OBDAAI_APP
 iptables -A OBDAAI_APP -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A OBDAAI_APP -d 127.0.0.1/32 -p tcp -m multiport --dports 5432,8765,8766,11444 -j ACCEPT
-if ((${#cloud_ips[@]} > 0)); then
+if ((${#cloud_ips[@]} > 0)) || [[ -f /etc/obdaai/integration-egress.enabled ]]; then
   # The existing host resolver is the only DNS destination for the app UID.
   for proto in udp tcp; do
     iptables -A OBDAAI_APP -d 127.0.0.53/32 -p "$proto" --dport 53 -j ACCEPT
   done
+fi
+if ((${#cloud_ips[@]} > 0)); then
   for ip in "${cloud_ips[@]}"; do
     iptables -A OBDAAI_APP -d "$ip/32" -p tcp --dport 443 -j ACCEPT
   done

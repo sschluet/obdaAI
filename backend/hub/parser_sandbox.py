@@ -20,7 +20,7 @@ class PathRule(ctypes.Structure):
     _fields_ = [("allowed_access", ctypes.c_uint64), ("parent_fd", ctypes.c_int32)]
 
 
-def restrict(source: Path, workdir: Path) -> None:
+def restrict(source: Path, workdir: Path, *, office: bool = False) -> None:
     if sys.platform != "linux":
         return  # Development only; deployment parser is Linux with network_mode:none.
     libc = ctypes.CDLL(None, use_errno=True)
@@ -40,11 +40,28 @@ def restrict(source: Path, workdir: Path) -> None:
             (Path("/etc/ld.so.cache"), 1 << 2),
             (Path("/etc/mime.types"), 1 << 2),
             (Path("/etc/fonts"), READ),
+            (Path("/etc/passwd"), 1 << 2),
+            (Path("/dev/null"), (1 << 2) | WRITE),
+            (Path("/dev/urandom"), 1 << 2),
             (Path(sys.prefix), READ | EXEC),
             (Path(sys.base_prefix), READ | EXEC),
-            (source, 1 << 2),
+            (source, READ if source.is_dir() else 1 << 2),
             (workdir, ALL_FS),
         ]
+        if office:
+            # Debian's runtime directories are symlinks outside /usr. They hold
+            # the immutable Office registry and bundled extension cache only.
+            grants += [
+                (Path("/etc/libreoffice"), READ),
+                (Path("/var/lib/libreoffice"), READ),
+                (Path("/var/spool/libreoffice"), READ),
+                (Path("/etc/nsswitch.conf"), 1 << 2),
+                (Path("/etc/group"), 1 << 2),
+                # Only Unix socket entries, not arbitrary temporary files. The
+                # private container tmpfs is short enough for sun_path and has
+                # no input, credential or host socket mounts.
+                (Path("/run/ipc"), READ | (1 << 9) | (1 << 5)),
+            ]
         for path, access in grants:
             if not path.exists():
                 continue

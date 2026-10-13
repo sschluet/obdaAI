@@ -1,0 +1,784 @@
+"""Durable task contracts and atomic local reads/writes; no model-executed code."""
+
+import asyncio
+import json
+import time
+from typing import Any, Literal
+from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from fastapi import FastAPI, HTTPException
+from pydantic import Field, ValidationError, field_validator, model_serializer, model_validator
+from sqlalchemy import func, select, text
+from sqlalchemy.orm import Session, load_only, sessionmaker
+
+from hub.action_api import TOOLS, ArchiveParameters, StrictInput, digest, encode
+from hub.config import Settings
+from hub.db import (
+    Project,
+    ScheduleOccurrence,
+    Skill,
+    SkillRevision,
+    Source,
+    SourceReadyEvent,
+    Task,
+    TaskEventOccurrence,
+    TaskRevision,
+    TaskRun,
+    TaskSchedule,
+    TaskStep,
+    TaskWriteGrant,
+)
+from hub.db_locks import ownership_lock
+from hub.knowledge_api import Auth
+from hub.n8n_drafts import connection_draft
+from hub.skill_api import eligible, sha
+
+
+class Binding(StrictInput):
+    id: UUID
+    revision: int = Field(ge=1)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ReadStep(StrictInput):
+    tool_id: Literal["hub.inspect", "ha.inspect", "ha.backups.inspect", "ha.maintenance.plan"] = (
+        "hub.inspect"
+    )
+    tool_revision: Literal[1] = 1
+    parameters: StrictInput = Field(default_factory=StrictInput)
+
+
+class AnalyzeStep(StrictInput):
+    tool_id: Literal["ai.analyze"]
+    tool_revision: Literal[1] = 1
+    parameters: StrictInput = Field(default_factory=StrictInput)
+
+
+class WriteStep(StrictInput):
+    tool_id: Literal["project.archive"]
+    tool_revision: Literal[1] = 1
+    parameters: ArchiveParameters
+
+
+def default_steps() -> list[ReadStep | AnalyzeStep | WriteStep]:
+    return [ReadStep()]
+
+
+class TaskSpec(StrictInput):
+    title: str = Field(min_length=1, max_length=160)
+    goal: str = Field(min_length=1, max_length=4000)
+    project_id: UUID | None = None
+    sources: list[Binding] = Field(default_factory=list, max_length=8)
+    skills: list[Binding] = Field(default_factory=list, max_length=3)
+    timezone: str = Field(default="Europe/Berlin", max_length=80)
+    trigger: Literal["manual"] = "manual"
+    autonomy: Literal["analyze_only", "confirm_each", "bounded_autonomous"] = "analyze_only"
+    label: Literal["LOCAL_ONLY"] = "LOCAL_ONLY"
+    steps: list[ReadStep | AnalyzeStep | WriteStep] = Field(
+        default_factory=default_steps, min_length=1, max_length=5
+    )
+    success_criterion: Literal["all_reads_completed", "all_steps_completed"] = "all_reads_completed"
+    output: Literal["task_center"] = "task_center"
+    max_cost_usd: Literal[0] = 0
+    timeout_seconds: int = Field(default=15, ge=1, le=30)
+    include_system_reports: bool = False
+    analysis_condition: Literal["always", "ha_updates_available"] = "always"
+    workflow_wait: bool = False
+
+    @model_serializer(mode="wrap")
+    def compatible_spec(self, handler: Any) -> dict[str, Any]:
+        value: dict[str, Any] = handler(self)
+        if not self.include_system_reports:
+            value.pop("include_system_reports", None)
+        if self.analysis_condition == "always":
+            value.pop("analysis_condition", None)
+        if not self.workflow_wait:
+            value.pop("workflow_wait", None)
+        return value
+
+    @model_validator(mode="after")
+    def model_step_last(self) -> "TaskSpec":
+        analyses = [i for i, step in enumerate(self.steps) if step.tool_id == "ai.analyze"]
+        if analyses and analyses != [len(self.steps) - 1]:
+            raise ValueError("At most one local analysis, as the final step")
+        external = [s for s in self.steps if s.tool_id.startswith("ha.")]
+        if external and analyses and not self.include_system_reports:
+            raise ValueError("One fixed HA report per task; no implicit model context transfer")
+        if len(external) > 3:
+            raise ValueError("At most three bounded system reports")
+        if self.include_system_reports and (not external or not analyses):
+            raise ValueError(
+                "Explicit report context needs bounded HA reads and final local analysis"
+            )
+        if self.analysis_condition != "always" and (
+            not self.include_system_reports
+            or not any(s.tool_id in {"ha.inspect", "ha.maintenance.plan"} for s in self.steps)
+        ):
+            raise ValueError("Update condition requires a selected local HA status report")
+        writes = [i for i, step in enumerate(self.steps) if step.tool_id == "project.archive"]
+        if writes:
+            if (
+                writes != [len(self.steps) - 1]
+                or self.autonomy == "analyze_only"
+                or analyses
+                or external
+                or self.sources
+                or self.skills
+                or self.project_id
+                or self.success_criterion != "all_steps_completed"
+            ):
+                raise ValueError(
+                    "One reversible archive at the end, explicit write profile, no model/context"
+                )
+        elif self.autonomy != "analyze_only" or self.success_criterion != "all_reads_completed":
+            raise ValueError("Write profiles require an explicit supported write")
+        return self
+
+    @field_validator("timezone")
+    @classmethod
+    def valid_zone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Unknown IANA timezone") from None
+        return value
+
+
+class EditInput(StrictInput):
+    spec: TaskSpec
+    expected_revision: int = Field(ge=1)
+    expected_control_revision: int = Field(ge=1)
+
+
+class ControlInput(StrictInput):
+    expected_revision: int = Field(ge=1)
+    expected_control_revision: int = Field(ge=1)
+    paused: bool
+    archived: bool = False
+
+
+class RunInput(StrictInput):
+    request_id: UUID
+    expected_revision: int = Field(ge=1)
+    expected_control_revision: int = Field(ge=1)
+    spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+def lock(db: Session) -> None:
+    # Independent namespace: neither Vault nor Skill mutations are held here.
+    if db.bind is not None and db.bind.dialect.name == "sqlite":
+        db.execute(text("BEGIN IMMEDIATE"))
+    else:
+        db.execute(text("SELECT pg_advisory_xact_lock(791103045)"))
+
+
+def current(db: Session, task_id: str) -> tuple[Task, TaskRevision, TaskSpec]:
+    task = db.get(Task, task_id)
+    if task is None:
+        raise HTTPException(404, "Aufgabe nicht gefunden")
+    revision = db.get(TaskRevision, (task.id, task.revision))
+    spec = revision_spec(task, revision)
+    assert revision is not None
+    return task, revision, spec
+
+
+def revision_spec(task: Task, revision: TaskRevision | None) -> TaskSpec:
+    if (
+        revision is None
+        or revision.task_id != task.id
+        or revision.revision != task.revision
+        or digest(revision.spec) != revision.sha256
+    ):
+        raise HTTPException(409, "Aufgabenvorgabe beschädigt")
+    try:
+        spec = TaskSpec.model_validate_json(revision.spec)
+    except ValidationError:
+        raise HTTPException(409, "Aufgabenvorgabe nicht mehr unterstützt") from None
+    return spec
+
+
+def task_integrations(db: Session, task_id: str, spec: TaskSpec) -> dict[str, Any]:
+    from hub.integration_api import Scope, freeze_bindings
+    from hub.integrations import IntegrationBinding
+
+    scope: Scope = "task"
+    owner = task_id
+    if db.get(IntegrationBinding, (scope, owner)) is None and spec.project_id:
+        scope, owner = "project", str(spec.project_id)
+    return {"scope": scope, "owner_id": owner, **freeze_bindings(db, scope, owner)}
+
+
+def freeze_task_integrations(db: Session, run: TaskRun, spec: TaskSpec) -> None:
+    selection = task_integrations(db, run.task_id, spec)
+    if any(item["kind"] == "paperless" for item in selection["bindings"]):
+        db.add(
+            TaskStep(
+                run_id=run.id,
+                sequence=0,
+                tool_id="paperless.context",
+                result=encode({"selection": selection, "label": "LOCAL_ONLY", "state": "selected"}),
+            )
+        )
+
+
+def validate_task_integrations(
+    db: Session, task_id: str, spec: TaskSpec, selection: dict[str, Any]
+) -> None:
+    from hub.paperless_api import validate_selection
+
+    if encode(task_integrations(db, task_id, spec)) != encode(selection):
+        raise HTTPException(409, "Aufgabenintegrationen inzwischen geändert")
+    validate_selection(db, selection)
+
+
+def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
+    project_id = str(spec.project_id) if spec.project_id else None
+    if project_id:
+        project = db.get(Project, project_id)
+        if project is None or project.archived:
+            raise HTTPException(409, "Aufgabenprojekt fehlt oder archiviert")
+    for group in (spec.sources, spec.skills):
+        if len({b.id for b in group}) != len(group):
+            raise HTTPException(422, "Doppelte Kontextbindung")
+    for binding in spec.sources:
+        source = db.get(Source, str(binding.id))
+        if (
+            source is None
+            or not project_id
+            or source.project_id != project_id
+            or source.status != "ready"
+            or source.revision != binding.revision
+            or source.sha256 != binding.sha256
+            or source.label != "LOCAL_ONLY"
+        ):
+            raise HTTPException(409, "Quellenbindung geändert oder außerhalb des Projekts")
+    checked = []
+    for binding in spec.skills:
+        skill = db.get(Skill, str(binding.id))
+        revision = db.get(SkillRevision, (str(binding.id), binding.revision))
+        if (
+            skill is None
+            or revision is None
+            or skill.revision != binding.revision
+            or revision.sha256 != binding.sha256
+            or revision.sha256 != sha(revision.document)
+            or not eligible(skill, revision, project_id)
+        ):
+            raise HTTPException(
+                409, "Skillbindung geändert, deaktiviert oder außerhalb des Projekts"
+            )
+        checked.append({**binding.model_dump(mode="json"), "document": revision.document})
+    for step in spec.steps:
+        if step.tool_id == "ai.analyze":
+            continue  # Fixed local text analysis; never a model-selected external tool.
+        if step.tool_id == "project.archive":
+            target = db.get(Project, str(step.parameters.project_id))
+            if (
+                target is None
+                or target.archived
+                or target.revision != step.parameters.expected_revision
+            ):
+                raise HTTPException(409, "Archivierungsziel fehlt oder wurde geändert")
+            continue
+        tool = TOOLS.get(step.tool_id)
+        if (
+            tool is None
+            or tool["revision"] != step.tool_revision
+            or tool["effect"] != "read"
+            or (
+                tool["external"]
+                and step.tool_id not in ("ha.inspect", "ha.backups.inspect", "ha.maintenance.plan")
+            )
+        ):
+            raise HTTPException(409, "Lesewerkzeugrevision nicht mehr verfügbar")
+    return {
+        "spec": spec.model_dump(mode="json"),
+        "skills_checked": checked,
+        "model": None,
+        "cost_usd": 0,
+        "label": "LOCAL_ONLY",
+    }
+
+
+def task_info(
+    db: Session,
+    task_id: str,
+    loaded: tuple[Task, TaskRevision, TaskRun | None, TaskSchedule | None, TaskWriteGrant | None]
+    | None = None,
+) -> dict[str, Any]:
+    if loaded is None:
+        task, revision, spec = current(db, task_id)
+        last = db.scalar(
+            select(TaskRun)
+            .where(TaskRun.task_id == task.id)
+            .order_by(TaskRun.created.desc(), TaskRun.id.desc())
+            .limit(1)
+        )
+        plan, grant = db.get(TaskSchedule, task.id), db.get(TaskWriteGrant, task.id)
+    else:
+        task, revision, last, plan, grant = loaded
+        spec = revision_spec(task, revision)
+    from hub.schedule_api import schedule_summary
+    from hub.task_writes import grant_summary
+
+    return {
+        "write_grant": grant_summary(grant),
+        "id": task.id,
+        "revision": task.revision,
+        "control_revision": task.control_revision,
+        "paused": task.paused,
+        "archived": task.archived,
+        "spec": spec.model_dump(mode="json"),
+        "spec_sha256": revision.sha256,
+        "created": task.created,
+        "schedule": schedule_summary(task, plan),
+        "next_run": plan.next_due if plan else None,
+        "last_run": {"id": last.id, "status": last.status, "created": last.created}
+        if last
+        else None,
+    }
+
+
+def task_listing(db: Session) -> list[dict[str, Any]]:
+    tasks = list(db.scalars(select(Task).order_by(Task.created.desc())))
+    if not tasks:
+        return []
+    ids = [task.id for task in tasks]
+    revisions = {
+        r.task_id: r
+        for r in db.scalars(
+            select(TaskRevision)
+            .join(
+                Task, (Task.id == TaskRevision.task_id) & (Task.revision == TaskRevision.revision)
+            )
+            .where(Task.id.in_(ids))
+        )
+    }
+    plans = {
+        p.task_id: p for p in db.scalars(select(TaskSchedule).where(TaskSchedule.task_id.in_(ids)))
+    }
+    grants = {
+        g.task_id: g
+        for g in db.scalars(select(TaskWriteGrant).where(TaskWriteGrant.task_id.in_(ids)))
+    }
+    ranked = (
+        select(
+            TaskRun.id.label("run_id"),
+            func.row_number()
+            .over(
+                partition_by=TaskRun.task_id, order_by=[TaskRun.created.desc(), TaskRun.id.desc()]
+            )
+            .label("rank"),
+        )
+        .where(TaskRun.task_id.in_(ids))
+        .subquery()
+    )
+    lasts = {
+        r.task_id: r
+        for r in db.scalars(
+            select(TaskRun)
+            .join(ranked, TaskRun.id == ranked.c.run_id)
+            .where(ranked.c.rank == 1)
+            .options(load_only(TaskRun.id, TaskRun.task_id, TaskRun.status, TaskRun.created))
+        )
+    }
+    if any(task.id not in revisions for task in tasks):
+        raise HTTPException(409, "Aufgabenliste inzwischen geändert; erneut laden")
+    return [
+        task_info(
+            db,
+            task.id,
+            (task, revisions[task.id], lasts.get(task.id), plans.get(task.id), grants.get(task.id)),
+        )
+        for task in tasks
+    ]
+
+
+def run_info(db: Session, run: TaskRun) -> dict[str, Any]:
+    from hub.task_writes import approval_info
+
+    return {
+        "approval": approval_info(db, run),
+        "id": run.id,
+        "task_id": run.task_id,
+        "task_revision": run.task_revision,
+        "control_revision": run.control_revision,
+        "status": run.status,
+        "error": run.error,
+        "created": run.created,
+        "finished": run.finished,
+        "snapshot": json.loads(run.snapshot),
+        "steps": [
+            {
+                "sequence": s.sequence,
+                "tool_id": s.tool_id,
+                "result": json.loads(s.result),
+                "finished": s.finished,
+            }
+            for s in db.scalars(
+                select(TaskStep).where(TaskStep.run_id == run.id).order_by(TaskStep.sequence)
+            )
+        ],
+    }
+
+
+def check_schedule(db: Session, run: TaskRun) -> None:
+    occurrence = db.scalar(select(ScheduleOccurrence).where(ScheduleOccurrence.run_id == run.id))
+    event_occurrence = db.scalar(
+        select(TaskEventOccurrence).where(TaskEventOccurrence.run_id == run.id)
+    )
+    if occurrence is None and event_occurrence is None:
+        return  # Manual task runs retain their existing authorization path.
+    plan = db.get(TaskSchedule, run.task_id)
+    if occurrence:
+        schedule_revision = occurrence.schedule_revision
+    else:
+        assert event_occurrence is not None
+        schedule_revision = event_occurrence.schedule_revision
+    if plan is None or plan.paused or plan.revision != schedule_revision:
+        raise HTTPException(409, "Zeitplan pausiert oder geändert")
+    if event_occurrence:
+        from hub.source_events import check_event, validate_subscription
+
+        _, _, spec = current(db, run.task_id)
+        validate_subscription(spec)
+        if event_occurrence.event_id is None:
+            raise HTTPException(
+                409, "Historisches Dokumentereignis wurde gelöscht; neuen Auslöser wählen"
+            )
+        event = db.get(SourceReadyEvent, event_occurrence.event_id)
+        if event is None or json.loads(plan.definition)["kind"] != "source_ready":
+            raise HTTPException(409, "Dokumentereignis fehlt oder Auslöser geändert")
+        check_event(db, event, str(spec.project_id))
+
+
+def execute_task_read(
+    factory: sessionmaker[Session], run_id: str, cfg: Settings | None = None
+) -> None:
+    with factory() as db:
+        lock(db)
+        run = db.get(TaskRun, run_id)
+        if run is None or run.status != "queued":
+            return  # Persisted receipt or cancellation wins, including duplicate delivery.
+        try:
+            with db.begin_nested():
+                check_schedule(db, run)
+                task, revision, spec = current(db, run.task_id)
+                if (
+                    task.paused
+                    or task.archived
+                    or task.revision != run.task_revision
+                    or task.control_revision != run.control_revision
+                ):
+                    raise HTTPException(
+                        409, "Aufgabe pausiert, archiviert oder inzwischen geändert"
+                    )
+                try:
+                    snapshot = json.loads(run.snapshot)
+                    valid_snapshot = digest(
+                        encode(snapshot["spec"])
+                    ) == revision.sha256 and snapshot == check_bindings(db, spec)
+                except (ValueError, KeyError, TypeError):
+                    valid_snapshot = False
+                if not valid_snapshot:
+                    raise HTTPException(409, "Laufvorgabe verändert")
+                if any(step.tool_id == "ai.analyze" for step in spec.steps):
+                    raise HTTPException(409, "Modellschritt benötigt den lokalen Analyseworker")
+                started = time.monotonic()
+                for sequence, step in enumerate(spec.steps, 1):
+                    if time.monotonic() - started > spec.timeout_seconds:
+                        raise HTTPException(409, "Aufgabenzeitgrenze erreicht")
+                    # Fixed read adapter. Goal, documents and metadata never become code.
+                    if step.tool_id == "project.archive":
+                        from hub.task_writes import archive_step
+
+                        result = archive_step(db, run, spec, sequence)
+                    elif step.tool_id.startswith("ha."):
+                        from hub.ha_backups import inspect as backups
+                        from hub.ha_maintenance import inspect as maintenance
+                        from hub.home_assistant import inspect as health
+
+                        adapter = {
+                            "ha.inspect": health,
+                            "ha.backups.inspect": backups,
+                            "ha.maintenance.plan": maintenance,
+                        }[step.tool_id]
+                        result = adapter(cfg or Settings.from_env())
+                    else:
+                        result = {
+                            "projects": db.scalar(select(func.count()).select_from(Project)),
+                            "sources": db.scalar(select(func.count()).select_from(Source)),
+                            "label": "LOCAL_ONLY",
+                        }
+                    if time.monotonic() - started > spec.timeout_seconds:
+                        raise HTTPException(409, "Aufgabenzeitgrenze nach Leseprüfung erreicht")
+                    db.add(
+                        TaskStep(
+                            run_id=run.id,
+                            sequence=sequence,
+                            tool_id=step.tool_id,
+                            result=encode(result),
+                        )
+                    )
+                run.status = "succeeded"
+        except HTTPException as error:
+            run.status, run.error = "failed", str(error.detail)
+        run.finished = time.time()
+        db.commit()  # Local effects, authority and receipts commit together.
+
+
+def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]) -> None:
+    @app.get("/api/tasks/{task_id}/plan")
+    def pipeline(task_id: str, auth: Auth) -> dict[str, Any]:
+        from hub.task_pipeline import plan
+
+        with factory() as db:
+            task, revision, spec = current(db, task_id)
+            return {
+                "task_id": task.id,
+                "revision": task.revision,
+                "spec_sha256": revision.sha256,
+                **plan(spec),
+            }
+
+    @app.post("/api/task-examples")
+    def examples(body: StrictInput, auth: Auth) -> list[dict[str, Any]]:
+        import uuid
+
+        from hub.schedule_api import ScheduleDefinition, next_due
+
+        definitions = [
+            (
+                "workspace",
+                TaskSpec(
+                    title="Beispiel: Arbeitsraumüberblick",
+                    goal="Zeige die Anzahl meiner Projekte und Dokumente. "
+                    "Es werden keine Dokumentinhalte ausgewertet.",
+                    steps=[ReadStep()],
+                ),
+                None,
+            ),
+            (
+                "daily",
+                TaskSpec(
+                    title="Beispiel: tägliche Kurzfassung",
+                    goal="Prüfe den Arbeitsraum und fasse den gespeicherten Status "
+                    "kurz auf Deutsch zusammen.",
+                    steps=[ReadStep(), AnalyzeStep(tool_id="ai.analyze")],
+                    timeout_seconds=30,
+                ),
+                ScheduleDefinition(kind="daily", time="09:00"),
+            ),
+        ]
+        ids = []
+        with factory() as db:
+            ownership_lock(db)
+            lock(db)
+            for key, spec, definition in definitions:
+                tid = str(uuid.uuid5(uuid.NAMESPACE_URL, "obdaai-task-example-v1:" + key))
+                ids.append(tid)
+                if db.get(Task, tid):
+                    continue  # Never reset an example that its owner has edited.
+                document = encode(spec.model_dump(mode="json"))
+                db.add(Task(id=tid, paused=True))
+                db.flush()
+                db.add(
+                    TaskRevision(task_id=tid, revision=1, spec=document, sha256=digest(document))
+                )
+                if definition:
+                    db.add(
+                        TaskSchedule(
+                            task_id=tid,
+                            revision=1,
+                            task_revision=1,
+                            control_revision=1,
+                            spec_sha256=digest(document),
+                            definition=encode(definition.model_dump(mode="json")),
+                            paused=True,
+                            next_due=next_due(definition, time.time()),
+                        )
+                    )
+            db.commit()
+            return [task_info(db, tid) for tid in ids]
+
+    @app.get("/api/tasks")
+    def listing(auth: Auth) -> list[dict[str, Any]]:
+        with factory() as db:
+            return task_listing(db)
+
+    @app.post("/api/tasks")
+    def create(spec: TaskSpec, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            ownership_lock(db)
+            lock(db)
+            check_bindings(db, spec)
+            task = Task()
+            db.add(task)
+            db.flush()
+            document = encode(spec.model_dump(mode="json"))
+            db.add(
+                TaskRevision(task_id=task.id, revision=1, spec=document, sha256=digest(document))
+            )
+            db.commit()
+            return task_info(db, task.id)
+
+    @app.patch("/api/tasks/{task_id}")
+    def edit(task_id: str, body: EditInput, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            ownership_lock(db)
+            lock(db)
+            task, _, _ = current(db, task_id)
+            if (
+                task.revision != body.expected_revision
+                or task.control_revision != body.expected_control_revision
+            ):
+                raise HTTPException(409, "Aufgabe inzwischen geändert; Entwurf bleibt erhalten")
+            if task.archived:
+                raise HTTPException(409, "Archivierte Aufgabe zuerst wiederherstellen")
+            check_bindings(db, body.spec)
+            task.revision += 1
+            task.control_revision += 1
+            task.paused = True
+            document = encode(body.spec.model_dump(mode="json"))
+            db.add(
+                TaskRevision(
+                    task_id=task.id, revision=task.revision, spec=document, sha256=digest(document)
+                )
+            )
+            db.commit()
+            return task_info(db, task_id)
+
+    @app.patch("/api/tasks/{task_id}/control")
+    def control(task_id: str, body: ControlInput, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            ownership_lock(db)
+            lock(db)
+            task, _, spec = current(db, task_id)
+            if (
+                task.revision != body.expected_revision
+                or task.control_revision != body.expected_control_revision
+            ):
+                raise HTTPException(409, "Aufgabenstatus inzwischen geändert")
+            if body.archived and not body.paused:
+                raise HTTPException(422, "Archivierte Aufgaben bleiben pausiert")
+            if not body.paused:
+                check_bindings(db, spec)
+            if task.paused != body.paused or task.archived != body.archived:
+                task.paused, task.archived = body.paused, body.archived
+                task.control_revision += 1
+            db.commit()
+            return task_info(db, task_id)
+
+    @app.post("/api/tasks/{task_id}/runs")
+    async def start(task_id: str, body: RunInput, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            ownership_lock(db)
+            lock(db)
+            request_digest = digest(encode({"task_id": task_id, **body.model_dump(mode="json")}))
+            previous = db.scalar(select(TaskRun).where(TaskRun.request_key == str(body.request_id)))
+            if previous:
+                if previous.request_digest != request_digest:
+                    raise HTTPException(409, "Anfrage-ID gehört zu anderem Aufgabenlauf")
+                return run_info(db, previous)
+            task, revision, spec = current(db, task_id)
+            if (
+                task.paused
+                or task.archived
+                or task.revision != body.expected_revision
+                or task.control_revision != body.expected_control_revision
+                or revision.sha256 != body.spec_sha256
+            ):
+                raise HTTPException(409, "Geprüfte Aufgabe nicht aktuell oder pausiert")
+            if db.scalar(
+                select(TaskRun.id).where(
+                    TaskRun.task_id == task_id,
+                    TaskRun.status.in_(["queued", "running", "awaiting_approval"]),
+                )
+            ):
+                raise HTTPException(409, "Für diese Aufgabe läuft bereits ein Lauf")
+            snapshot = check_bindings(db, spec)
+            run = TaskRun(
+                task_id=task_id,
+                task_revision=task.revision,
+                control_revision=task.control_revision,
+                request_key=str(body.request_id),
+                request_digest=request_digest,
+                snapshot=encode(snapshot),
+            )
+            db.add(run)
+            db.flush()
+            freeze_task_integrations(db, run, spec)
+            from hub.task_writes import prepare_run
+
+            prepare_run(db, run, spec)
+            if run.status == "queued" and not cfg.database_url.startswith("sqlite"):
+                from hub.jobs import enqueue_task_read
+
+                enqueue_task_read(db, cfg, run.id)
+            db.commit()
+            result = run_info(db, run)
+        if cfg.database_url.startswith("sqlite"):
+            from hub.task_model import execute_task
+
+            job = asyncio.create_task(execute_task(factory, cfg, run.id, app.state.providers))
+            app.state.tasks.add(job)
+            job.add_done_callback(app.state.tasks.discard)
+        return result
+
+    @app.get("/api/tasks/{task_id}/runs")
+    def runs(task_id: str, auth: Auth) -> list[dict[str, Any]]:
+        with factory() as db:
+            current(db, task_id)
+            return [
+                run_info(db, r)
+                for r in db.scalars(
+                    select(TaskRun)
+                    .where(TaskRun.task_id == task_id)
+                    .order_by(TaskRun.created.desc(), TaskRun.id.desc())
+                    .limit(100)
+                )
+            ]
+
+    @app.post("/api/task-runs/{run_id}/cancel")
+    def cancel(run_id: str, body: StrictInput, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            ownership_lock(db)
+            lock(db)
+            run = db.get(TaskRun, run_id)
+            if run is None:
+                raise HTTPException(404, "Aufgabenlauf fehlt")
+            if run.status in ("queued", "awaiting_approval"):
+                run.status, run.finished = "cancelled", time.time()
+                db.commit()
+            elif run.status == "running":
+                run.error = "Abbruch angefordert"
+                db.commit()
+            elif run.status != "cancelled":
+                raise HTTPException(409, "Aufgabenlauf bereits abgeschlossen")
+            return run_info(db, run)
+
+    @app.get("/api/tasks/{task_id}/revisions")
+    def revisions(task_id: str, auth: Auth) -> list[dict[str, Any]]:
+        with factory() as db:
+            current(db, task_id)
+            return [
+                {"revision": r.revision, "sha256": r.sha256, "spec": json.loads(r.spec)}
+                for r in db.scalars(
+                    select(TaskRevision)
+                    .where(TaskRevision.task_id == task_id)
+                    .order_by(TaskRevision.revision)
+                )
+            ]
+
+    @app.get("/api/tasks/{task_id}/n8n-check-draft")
+    def draft(task_id: str, auth: Auth) -> dict[str, Any]:
+        with factory() as db:
+            task, revision, _ = current(db, task_id)
+            return {
+                "workflow": connection_draft(task.id, task.revision, revision.sha256),
+                "purpose": "connection_check_only",
+                "executes_task": False,
+                "contains_private_context": False,
+                "label": "LOCAL_ONLY",
+            }

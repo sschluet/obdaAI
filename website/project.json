@@ -1,0 +1,752 @@
+{
+  "updated": "2026-10-13",
+  "applicationCommit": "68877a4",
+  "schema": "0042",
+  "tests": 1409,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
+  "screenshots": [
+    {
+      "id": "chat",
+      "title": "Ein Gespräch. Viele Möglichkeiten.",
+      "description": "Direkte Gesprächsleiste mit Plus-Aktionen, sofort umschaltbarer Websuche und kompakter Modellwahl. Antwortstil als sichtbare Auswahl neben dem Chat.",
+      "image": "assets/chat.png"
+    },
+    {
+      "id": "projects",
+      "title": "Ein Raum für dein Projekt.",
+      "description": "Unterlagen bis 40 MiB je Datei lokal zusammenführen, im Projektchat anhand ausgewählter Fundstellen verwenden und einzelne Quellen mit einer sichtbaren Löschaktion verwalten. Ausschließlich fiktive Unterlagen im Raum Aurora.",
+      "image": "assets/projects.png"
+    },
+    {
+      "id": "sourcedelete",
+      "title": "Quellen gezielt entfernen.",
+      "description": "Eine klare Bestätigung zeigt, welche Projektquelle entfernt wird. Uploadoriginal und Suchindex werden gelöscht; bereits gespeicherte Chatantworten bleiben erhalten. Ausschließlich synthetisches Dokument.",
+      "image": "assets/sourcedelete.png"
+    },
+    {
+      "id": "sourceocr",
+      "title": "Gescannten Quellen eine zweite Chance geben.",
+      "description": "Eine verständliche Fehlermeldung und erneute lokale Verarbeitung direkt an der Quelle. Das Original bleibt erhalten. Ausschließlich synthetische Quellen; der OCR-Fehler ist für diese UI-Illustration simuliert.",
+      "image": "assets/sourceocr.png"
+    },
+    {
+      "id": "projecticons",
+      "title": "Ein Zeichen für jedes Projekt.",
+      "description": "Ein persönliches Projektsymbol aus 32 frei nutzbaren Lucide-Icons suchen und als eigenes Projektlogo wählen. Ausschließlich fiktives Projekt Aurora.",
+      "image": "assets/projecticons.png"
+    },
+    {
+      "id": "answermodes",
+      "title": "Du entscheidest, wer antwortet.",
+      "description": "Auto, Nur lokal oder Cloud direkt im Gespräch wählen. Auto berücksichtigt deine Routingregeln; Cloud fordert den konfigurierten Anbieter an. Ausschließlich synthetisches gewöhnliches Gespräch.",
+      "image": "assets/answermodes.png"
+    },
+    {
+      "id": "files",
+      "title": "Aus Gedanken werden Dateien.",
+      "description": "Native Office-Dateien mit Vorschau, direktem Download und optionaler fachlicher Freigabe. Geprüfte Skills verwenden echte Dokumentvorlagen. Ausschließlich fiktiver Projektraum Aurora und synthetisches Word-Dokument.",
+      "image": "assets/files.png"
+    },
+    {
+      "id": "chatfiles",
+      "title": "Dateien direkt im Gespräch.",
+      "description": "Eine echte Datei direkt im Chat herunterladen, sobald der Renderer fertig ist. Status und genaue Version bleiben sichtbar; fachliche Freigabe ist optional. Ausschließlich synthetisches Gespräch und Word-Dokument.",
+      "image": "assets/chatfiles.png"
+    },
+    {
+      "id": "tasks",
+      "title": "Aufgaben mit Überblick.",
+      "description": "Name und Ziel im Vordergrund, dazu ein nachvollziehbarer Aufgabenplan. Quellen und Ablaufdetails sind optional erreichbar.",
+      "image": "assets/tasks.png"
+    },
+    {
+      "id": "knowledge",
+      "title": "Wissen mit einer Quelle.",
+      "description": "Externe Wissensquellen frei konfigurieren, prüfen und lokal indexieren.",
+      "image": "assets/knowledge.png"
+    },
+    {
+      "id": "security",
+      "title": "Dein Zugang bleibt in deiner Hand.",
+      "description": "Passwort unter Einstellungen → Sicherheit ändern: aktuelles Passwort bestätigen, neues Passwort prüfen und anschließend neu anmelden. Synthetische Demo mit leeren Feldern.",
+      "image": "assets/security.png"
+    },
+    {
+      "id": "appearance",
+      "title": "Dein Arbeitsraum, dein Stil.",
+      "description": "Kompakte oder komfortable Abstände, eigene Akzentfarbe und ein eigener App-Name. Anzeigename und Foto gestalten die persönliche Karte unten links. Ausschließlich synthetische Angaben; diese Anzeigeeinstellungen werden nicht als KI-Profil verwendet.",
+      "image": "assets/appearance.png"
+    },
+    {
+      "id": "generic-integrations",
+      "title": "Deine Verbindungen. Ein klarer Überblick.",
+      "description": "Eine zentrale Übersicht ohne doppelte Einstellungsbereiche: fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
+      "image": "assets/genericintegrations.png"
+    },
+    {
+      "id": "paperless",
+      "title": "Dein Archiv. Direkt im Arbeitsraum.",
+      "description": "Synthetische Paperless-Ansicht: Dokumente suchen, OCR-Text lesen, Original herunterladen und eine private Kopie in ein Projekt übernehmen. Die Galerie simuliert Dienstantworten und enthält keine realen Dokumente.",
+      "image": "assets/paperless.png"
+    },
+    {
+      "id": "use-cases-overview",
+      "title": "Deine Use Cases. Ein eigener Bereich.",
+      "description": "Ein eigener Platz zwischen Projekte und Aufgaben: KI-Aufträge mit Formularen und echten Dialogen, eigenständig oder optional projektbezogen. Suche und Projektfilter; ausschließlich fiktive Beispiele.",
+      "image": "assets/usecasesoverview.png"
+    },
+    {
+      "id": "use-cases",
+      "title": "Datei hinein. KI-Ergebnis heraus.",
+      "description": "Ein fiktiver Angebotsvergleich verbindet Formular und Eingabedatei mit einem definierten KI-Auftrag. Die Oberfläche zeigt synthetische Empfehlungen, unabhängige Ergebnis-Spalten und CSV-/Excel-Downloads. Die Galerie simuliert Modellantworten und enthält keine realen Angebote oder Providerdaten.",
+      "image": "assets/usecases.png"
+    },
+    {
+      "id": "usecasedialogue",
+      "title": "Die KI fragt nach. Du behältst den Überblick.",
+      "description": "Ein synthetischer KI-Dialog klärt die benötigten Angaben zum fiktiven Servicekonzept. Erfasste Parameter bleiben sichtbar und korrigierbar; das finale Ergebnis wird ausdrücklich angefordert. Die Galerie simuliert Modellantworten und enthält keine privaten Gespräche.",
+      "image": "assets/usecasedialogue.png"
+    },
+    {
+      "id": "use-case-builder",
+      "title": "Dein Auftrag. Deine Eingaben. Dein Format.",
+      "description": "Verbindlicher Prompt und Kontext, Formular oder KI-Dialog, Dateifelder und ein eigenständiges Ausgabeformat. Ein Projekt bleibt optional. Ausschließlich synthetischer Auftrag für Aurora; interne Spaltenschlüssel erzeugt die Anwendung.",
+      "image": "assets/usecasebuilder.png"
+    },
+    {
+      "id": "integrations",
+      "title": "Bestehende Aktionen bleiben erreichbar.",
+      "description": "Zusätzlich zur generischen Übersicht bleiben geprüfte Systemaktionen eingeklappt erreichbar: Arbeitsraum lesen, Home Assistant prüfen und Projektarchivierung gezielt vorbereiten. Ausschließlich synthetische Beispieldaten.",
+      "image": "assets/integrations.png"
+    },
+    {
+      "id": "processing",
+      "title": "Die Herkunft jeder Antwort.",
+      "description": "Kleiner Hinweis direkt unter der Antwort: lokale Verarbeitung oder Cloud-Anbieter und die erfasste Modellkennung. Hier eine isolierte synthetische Testantwort.",
+      "image": "assets/processing.png"
+    },
+    {
+      "id": "search",
+      "title": "Finden. Öffnen. Weiterarbeiten.",
+      "description": "Ein Suchfeld für den lokalen Arbeitsraum, mit klaren Objektfiltern und direkter Navigation. Ausschließlich synthetische Beispieldaten.",
+      "image": "assets/search.png"
+    },
+    {
+      "id": "run-error",
+      "title": "Ein Fehler. Eine klare Rückmeldung.",
+      "description": "Ein fehlgeschlagener Recherchelauf zeigt eine einzige Meldung. Die Laufhistorie und der erneute Versuch bleiben erreichbar. Ausschließlich synthetische Antwortdaten zur Prüfung der Darstellung.",
+      "image": "assets/runerror.png"
+    },
+    {
+      "id": "websettings",
+      "title": "Recherche nach deinen Vorgaben.",
+      "description": "Eigener Einstellungsbereich für Webrecherche: zentrale Aktivierung, Suchsprache, SafeSearch, Trefferanzahl und Zeitlimit. Die Verbindung lässt sich mit einer festen öffentlichen Beispielsuche prüfen. Synthetische Demo.",
+      "image": "assets/websettings.png"
+    },
+    {
+      "id": "chatreading",
+      "title": "Lange Antworten in deinem Tempo.",
+      "description": "Beim Hochscrollen bleibt die Leseposition erhalten. Über „Zum Ende“ wieder an die neueste Antwort springen; der Chat bleibt per Tastatur und mobil bedienbar. Ausschließlich synthetischer langer Beispieltext.",
+      "image": "assets/chatreading.png"
+    },
+    {
+      "id": "partial",
+      "title": "Ein langes Konzept bewusst fortsetzen.",
+      "description": "Gespeicherte Teilantwort am Antwortlimit mit Modellherkunft und ruhigem Hinweis. „Antwort fortsetzen“ startet nur auf deinen Klick einen neuen Lauf mit normalen Datenschutz- und Kostenprüfungen. Ausschließlich synthetischer Beispieltext und simulierter Limitstatus.",
+      "image": "assets/partial.png"
+    },
+    {
+      "id": "routing",
+      "title": "Verstehen, welches Modell übernimmt.",
+      "description": "Routingstrategie wählen und einen synthetischen Aurora-Testprompt lokal prüfen. Die Vorschau erklärt Regeln und Grenzen ohne Cloud- oder Modellaufruf. Ausschließlich isolierte Beispieldaten.",
+      "image": "assets/routing.png"
+    },
+    {
+      "id": "profile",
+      "title": "Dein persönlicher Hintergrund",
+      "description": "Freiwillige Profilangaben für Fragen mit persönlichem Bezug; allgemeine Recherchen und Gerätelisten bleiben sachlich. Bewusste Cloudfreigabe pro Feld. Alex Beispiel und alle Angaben sind ausschließlich synthetisch.",
+      "image": "assets/profile.png"
+    },
+    {
+      "id": "skills",
+      "title": "Deine Skill-Bibliothek",
+      "description": "Anleitungen und Skill-Pakete mit Vorlagen organisieren und gezielt einsetzen. Ausschließlich synthetische Beispielskills.",
+      "image": "assets/skills.png"
+    },
+    {
+      "id": "skilleditor",
+      "title": "Vorlagen und Ressourcen im Skill",
+      "description": "Paketdateien, Word-Vorlage und archivierte Helfer im Editor prüfen. Ausschließlich ein generiertes synthetisches Beispielpaket.",
+      "image": "assets/skilleditor.png"
+    },
+    {
+      "id": "skillchat",
+      "title": "Skills direkt im Chat aufrufen",
+      "description": "Eine aktivierte Anleitung auswählen und ihren Aufruf in die Nachricht übernehmen. Ausschließlich synthetische Beispielskills.",
+      "image": "assets/skillchat.png"
+    },
+    {
+      "id": "deleteproject",
+      "title": "Projekte bewusst endgültig entfernen.",
+      "description": "Bestätigung mit Inhaltsübersicht und klarer Abgrenzung zu Archivieren. Ausschließlich fiktiver Projektraum Atlas.",
+      "image": "assets/deleteproject.png"
+    },
+    {
+      "id": "deletechat",
+      "title": "Chats löschen, auch aus dem Archiv.",
+      "description": "Direkte Gesprächsaktionen und ein gemeinsamer Bestätigungsdialog. Ausschließlich synthetische Gesprächsdaten.",
+      "image": "assets/deletechat.png"
+    },
+    {
+      "id": "openroutercosts",
+      "title": "Cloudkosten auf einen Blick.",
+      "description": "Kontoguthaben, API-Schlüssellimit und lokales Monatsbudget klar unterscheiden. Ausschließlich synthetische USD-Werte; kein reales OpenRouter-Konto und keine Zugangsdaten.",
+      "image": "assets/openroutercosts.png"
+    },
+    {
+      "id": "usecaseintegrations",
+      "title": "Quellen, Verarbeitung und Versand verbinden.",
+      "description": "Synthetischer Use Case mit eigenständiger Auswahl für Paperless-Eingaben, privaten Bearbeitungskontext und Mailausgabe. Keine realen Dokumente, Server oder Zugangsdaten.",
+      "image": "assets/usecaseintegrations.png"
+    },
+    {
+      "id": "usecasedesigner",
+      "title": "Beschreibe deinen Ablauf. Die KI entwirft ihn.",
+      "description": "Synthetischer Erstellungsdialog mit Rückfragen, Modellstatus und prüfbarem Vorschlag. Erst die bewusste Übernahme in den Editor und Speichern legt den Use Case an; keine echte Modellausgabe in dieser Galerie.",
+      "image": "assets/usecasedesigner.png"
+    },
+    {
+      "id": "usecasemail",
+      "title": "Ein Ergebnis. Ein bewusster Versand.",
+      "description": "Synthetische Mailvorschau mit sichtbarer Verbindung, Absender, Empfänger, Betreff und Ergebnis. Der ausdrückliche Senden-Schritt ist separat; keine echten Mails oder Kontakte.",
+      "image": "assets/usecasemail.png"
+    },
+    {
+      "id": "cloudbalances",
+      "title": "Cloudguthaben direkt am Profil.",
+      "description": "Dauerhafte kompakte Provideranzeige neben dem Profil mit klar getrenntem Kontoguthaben, Schlüsselverbrauch und App-Nutzung. Alle Werte und Verbindungen dieser Darstellung sind synthetisch.",
+      "image": "assets/cloudbalances.png"
+    },
+    {
+      "id": "officegraphics",
+      "title": "Grafiken gezielt gestalten.",
+      "description": "Strukturierte Foliengrafiken im Dateidialog bearbeiten. Ausschließlich synthetischer Prozess und lokale Testantwort.",
+      "image": "assets/officegraphics.png"
+    },
+    {
+      "id": "officeformulas",
+      "title": "Formeln und Werte im Blick.",
+      "description": "Formelzellen ausdrücklich kennzeichnen und Werte bearbeiten. Ausschließlich synthetischer Finanzplan; die Galerie verwendet lokale Testantworten.",
+      "image": "assets/officeformulas.png"
+    },
+    {
+      "id": "excelformulaaudit",
+      "title": "Formeln prüfen, Originale bewahren.",
+      "description": "Ältere Excel-Versionen erhalten einen sichtbaren Prüfhinweis, wenn sie die erweiterten Formelregeln nicht erfüllen. Die gespeicherte Vorgabe bleibt unverändert und kann als neue Version korrigiert werden. Ausschließlich synthetisches Projekt Aurora und abgebrochener älterer Entwurf; kein Live-Downloadbeleg.",
+      "image": "assets/excelformulaaudit.png"
+    }
+  ],
+  "groups": [
+    {
+      "id": "chat",
+      "name": "Chat & Modelle",
+      "symbol": "↗",
+      "intro": "Von der ersten Frage bis zur nachvollziehbaren Antwort.",
+      "features": [
+        {
+          "title": "Persistenter Streaming-Chat",
+          "description": "Antworten erscheinen schrittweise. Gespräche, Laufzustände und Historie bleiben gespeichert; Bearbeiten, erneut Antworten und Abbrechen sind unterstützt.",
+          "status": "live"
+        },
+        {
+          "title": "Auto, Nur lokal oder Cloud",
+          "description": "Drei klare Antwortmodi im bestehenden Gespräch: Auto wählt lokal oder Cloud nach den Routingregeln, Nur lokal schließt Cloud und Websuche aus, Cloud fordert den konfigurierten Cloudanbieter direkt an. Private Projekt- und Wissenskontexte bleiben lokal; die Cloudoption erklärt ihre Sperre. Anbieter werden in den Einstellungen verwaltet. Die bisherige doppelte Auswahl „Auto + OpenRouter“ entfällt. Implementiert; reale Abnahme dieser neuen Auswahl steht noch aus.",
+          "status": "live"
+        },
+        {
+          "title": "Titel, Suche und Verlauf",
+          "description": "Lokale automatische Titel, manuelle Umbenennung, deutsche Volltextsuche und Archivierung sorgen für Orientierung.",
+          "status": "live"
+        },
+        {
+          "title": "OpenRouter",
+          "description": "Echte Anbieter- und Chatabnahme dokumentiert. Gewöhnlicher Auto-Chat darf aktuelle Eingaben und laufgebundene öffentliche Treffer über konfigurierte Cloudmodelle verarbeiten. Server-, Kosten- und Datenschutzgrenzen bleiben verbindlich.",
+          "status": "live"
+        },
+        {
+          "title": "OpenRouter-Guthaben und Cloudkosten",
+          "description": "Kontoguthaben über einen optionalen separaten Kontostatus-Schlüssel, Nutzung und Restlimit des Inferenzschlüssels sowie lokales UTC-Monatsbudget mit offenen Reservierungen. Übersicht in Modelleinstellungen und Chat; manuelle Aktualisierung, Zeitstempel und sichtbare unbekannte Werte. Implementiert; echte Kontostatus- und Testinstanzabnahme stehen noch aus. Reale Schlüsselnutzung und Chatanzeige auf Testinstanz bestätigt; gesamtes Kontoguthaben bleibt ohne separat eingerichteten Management Key unbekannt.",
+          "status": "limited"
+        },
+        {
+          "title": "Direkte OpenAI- und Anthropic-Anbieter",
+          "description": "Responses-/Messages-Adapter, Streaming, Budgetreservierung und verschlüsselte Konfiguration sind implementiert. Eigene native Livezugänge fehlen.",
+          "status": "implemented"
+        },
+        {
+          "title": "Modell- und Verbindungseinstellungen",
+          "description": "Feste Endpunkte, konfigurierbare Modelle, Verbindungstests, Limits und revisionierte Einstellungen. Zusatzanbieter benötigen eine konkrete Freigabe.",
+          "status": "implemented"
+        },
+        {
+          "title": "Integrierter Chat-Arbeitsbereich",
+          "description": "Dateien, Quellen, Antwortvorgaben und Aufgaben neben dem Gespräch öffnen. Projektkontext bleibt erhalten; Desktop nebeneinander, mobile Bedienung über Tabs. Lokal mit synthetischen Daten geprüft; auf der Test-VM installiert und gezielt mit lokalem Modell geprüft.",
+          "status": "local"
+        },
+        {
+          "title": "Anbieter und Modell direkt unter der Antwort",
+          "description": "Dezenter Hinweis pro Antwort aus fest zugeordneten Laufdaten, bereits im Stream und nach Reload. Lokal, OpenRouter oder direkte Anbieter; Systemantworten und fehlende ältere Belege werden ausdrücklich unterschieden. Modellkennung ist die gespeicherte Anfragekennung, Anbieter-Aliase werden nicht geraten. Schema 0027 installiert; echte lokale Antwort und Reload auf der Test-VM geprüft. Cloudbelege weiterhin synthetisch.",
+          "status": "local"
+        },
+        {
+          "title": "Durchgehende lokale Arbeitsraumsuche",
+          "description": "Gespräche, Projekte, Dateititel, Quellen, Aufgaben und Wissensverbindungen über Suchknopf oder ⌘K/Strg+K finden. Inhaltsabgleich für Gespräche, Projektbeschreibungen und Aufgabenziele; direkte Objektöffnung, Filter und Tastaturbedienung. Keine Modellaufrufe, keine Zugangsdaten oder Konfigurationen in Suchtreffern. Auf der Test-VM installiert und an eigenem synthetischen Gespräch direkt geprüft.",
+          "status": "local"
+        },
+        {
+          "title": "Nachvollziehbare Recherche und Fehler",
+          "description": "Klare textliche Recherchewünsche werden von Datei-, Aufgaben- und Systemaktionen getrennt. Der dauerhafte Webschalter bestimmt die Sucherlaubnis ohne erneute Bestätigungsdialoge. Ein Lauffehler erscheint einmal und bleibt beim erneuten Öffnen nachvollziehbar. Die Rechercheeinordnung und einzelne Fehleranzeige sind auf der Test-VM geprüft; freigegebene Suchtreffer wurden synthetisch getestet.",
+          "status": "live"
+        },
+        {
+          "title": "Leseposition bei langen Streaming-Antworten",
+          "description": "Neue Antwortteile folgen am Gesprächsende automatisch. Eigenes Hochscrollen unterbricht das Folgen und bewahrt die Leseposition; „Zum Ende“ setzt es fort. Der Gesprächsbereich ist per Tastatur erreichbar und bleibt auch mobil lesbar. Mit zeitversetzter synthetischer Ausgabe und tatsächlicher lokaler Antwort auf der Test-VM geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "Lange Antworten und erhaltene Teilantworten",
+          "description": "Separates Zeitbudget für Einordnung und Antwortgenerierung: standardmäßig zehn Minuten für die Antwort. Tatsächliche Zeit-, Inaktivitäts- und Ausgabegrenzen bleiben sichtbar. Empfangener Text, Modellbeleg, Quellen und Laufhistorie bleiben erhalten; abgebrochene Antworten sind direkt als unvollständig gekennzeichnet. Tatsächliche lokale Antwort mit 5.749 Zeichen nach 138 Sekunden vollständig abgeschlossen und nach Reload geprüft. Die öffentliche UI-Illustration enthält ausschließlich synthetische Inhalte. Vorbereitung optimiert: reine lokale Einordnung mit kompakter älterer Antwortdarstellung; die eigentliche Antwort behält den vollständigen Kontext. Schrittbezogene Timeoutmeldungen. Auf der Test-VM bestätigt: Folgefrage nach 11.081 Zeichen früherer Antwort in27,31s erfolgreich, vollständiger Antwortkontext und Reload geprüft. Neu implementiert: adaptiver Ausgabeumfang für ausführliche Konzepte innerhalb von Kontext- und Kostengrenzen; ein erreichtes Antwortlimit mit Text wird als gespeicherte Teilantwort dargestellt. Manuelle Fortsetzung erhält einen eigenen Lauf. Kosten- und Monatsbudgets werden nicht automatisch erhöht. Die neue Funktion ist lokal geprüft; ihre Live-Abnahme steht noch aus.",
+          "status": "live"
+        },
+        {
+          "title": "Routing verstehen und beeinflussen",
+          "description": "Einstellungen → Routing: Auswahlkarten für Ausgewogen, Lokal bevorzugen und Cloud bevorzugen, mit eigener Komplexitätsoption. Sichtbare Cloudmodelle, Antwort-/Kostenlimits und Testprompt-Vorschau ohne Provideraufruf, revisionierte Regeln und tatsächliche Entscheidung in der Laufhistorie. Einstellungen, lokale Vorschau und tatsächliche Cloudentscheidung auf der Test-VM geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "Persönliches Profil mit gezielter Feldfreigabe",
+          "description": "Einstellungen → Über mich: freiwillige Angaben zu Name, Beruf, Familie, Herausforderungen, Zielen und Interessen. Das aktive Profil liefert nur zur aktuellen Frage passende Angaben bei persönlichem Bezug; allgemeine Recherchen und Gerätelisten erhalten keinen zusätzlichen persönlichen Hintergrund. Cloudantworten dürfen ausschließlich ausdrücklich freigegebene passende Felder erhalten. Konflikt- und Entwurfschutz, bewusstes Leeren und eingefrorene Laufrevisionen. Auf der Test-VM installiert; Laden der Einstellungen live geprüft, Profilkontext und Cloudfeldgrenzen mit synthetischen Angaben getestet. Freigaben gelten auch für die erlaubte Weiterverwendung; private Angaben und „Nur lokal“ behalten Vorrang. Kontextauswahl und neutraler Gerätefall mit tatsächlichem lokalen Modell und fiktiven Daten auf der Test-VM geprüft. Bestehende gespeicherte Angaben unverändert; positive persönliche und Cloudfälle synthetisch geprüft.",
+          "status": "implemented"
+        },
+        {
+          "title": "Dauerhafter Cloudstatus neben dem Profil",
+          "status": "local",
+          "description": "Kompakte Provideranzeige dauerhaft neben dem Profil, mit getrenntem Kontoguthaben, Schlüsselverbrauch und App-Nutzung. Fehlende Management-Berechtigung und veraltete Werte sind erklärbar. Sichtbare Aktualisierung alle fünf Minuten. Weitere Anbieter ohne Guthabenadapter bleiben erkennbar; Kontosalden werden nicht addiert. Auf Testinstanz installiert; reale OpenRouter-Nutzung bestätigt, Kontoguthaben wartet auf den Management Key. Oberfläche und mobile Details synthetisch geprüft."
+        }
+      ]
+    },
+    {
+      "id": "projects",
+      "name": "Projekte & Quellen",
+      "symbol": "▧",
+      "intro": "Ein gemeinsamer Kontext für Unterlagen, Fragen und Ergebnisse.",
+      "features": [
+        {
+          "title": "Eigene Projekträume",
+          "description": "Getrennte Gespräche, Quellen und erstellte Dateien. Projektdaten werden nicht automatisch mit fremden Räumen vermischt.",
+          "status": "live"
+        },
+        {
+          "title": "Konfigurierbare Projektsymbole",
+          "description": "Projekte mit einem eigenen Symbol schneller wiedererkennen. Suchbare Auswahl aus 32 lokal eingebundenen, frei verwendbaren Lucide-Icons; die Wahl bleibt gespeichert und erscheint in Projektübersicht und Projektchat.",
+          "status": "live"
+        },
+        {
+          "title": "Dokumentuploads",
+          "description": "PDF, DOCX, PPTX, CSV, XLSX, Markdown, Text und Bilder bis 40 MiB je Datei. Originale werden unverändert mit Hashes aufbewahrt und asynchron eingelesen. Browser und Server stimmen die Uploadgrenze ab; verständliche Meldungen grenzen zu große Dateien und vorgeschaltete Uploadbeschränkungen ab. Auf der Test-VM über HTTPS mit gültigen synthetischen PDFs bis exakt40MiB, Textextraktion und unverändertem Originalhash geprüft. PDF-Extraktion bleibt bis100 Seiten; andere Verarbeitungsgrenzen gelten weiterhin.",
+          "status": "live"
+        },
+        {
+          "title": "Einzelne Projektquellen löschen",
+          "description": "Dateiuploads und gespeicherte Webseiten einzeln mit einer verständlichen Bestätigung dauerhaft aus dem Projekt entfernen. Lokales Original und Suchindex werden gelöscht, vorhandene Chatantworten bleiben gespeichert. Bei synchronisierten Wissensquellen bleibt das externe Original erhalten; ein erneuter Abgleich kann die lokale Kopie wieder importieren. Auf der Test-VM über HTTPS mit eigenen synthetischen Daten geprüft: Original-/Indexbereinigung, erhaltene andere Quelle und unveränderte gespeicherte Belege.",
+          "status": "live"
+        },
+        {
+          "title": "Fundstellen und lokale OCR",
+          "description": "Quellenbasierte Antworten und lokale Deutsch-/Englisch-OCR für gescannte PDFs und Bilder. Scanvorbereitung mit 300 dpi für übliche Papiergrößen, Kontrastanpassung, Schräglagen- und Orientierungserkennung innerhalb fester Pixelgrenzen. Verständliche Fehler unterscheiden Verarbeitung, Schutz und Limits; eine fehlgeschlagene Quelle lässt sich direkt im Projekt oder Chat-Arbeitsbereich erneut lokal verarbeiten. Originaldateien bleiben unverändert. Die textbasierte Auswahl begrenzter Dokumentauszüge erhält Quellen-ID und Fundstelle; sie ersetzt keine vollständige Dokumentprüfung. Strukturierte Zahlenprüfung verwendet exakte Dezimalwerte.",
+          "status": "live"
+        },
+        {
+          "title": "Lange Textdateien",
+          "description": "Begrenzte zusammenhängende Textfenster erhalten Zeilen und Überschriften. Zwei Dateien mit je 2.200 Zeilen wurden unter Mischlast vollständig indexiert.",
+          "status": "live"
+        },
+        {
+          "title": "Öffentliche Webseiten als Quellen",
+          "description": "Ausdrücklich hinzugefügte HTTPS-Seiten werden als gebundene Quellensnapshots gespeichert. Netzwerk- und Zielprüfungen begrenzen den Zugriff.",
+          "status": "live"
+        },
+        {
+          "title": "Use Cases mit eigenen Eingaben und Ausgaben",
+          "description": "Wiederverwendbare KI-Aufträge mit verpflichtendem Prompt/Kontext. Formulare oder KI-geführte Rückfragen erfassen Parameter und Eingabedateien; Ergebnisse entstehen per Modell in vorgegebenen Text-, Tabellen-, CSV-, Excel- oder Diagrammformaten. Ergebnis-Spalten sind unabhängig von Eingabefeldern. Versionierte Durchläufe, Korrekturen, Status, Modellherkunft und Originaldateibelege bleiben nachvollziehbar. Ältere deterministische Vorlagen und Ergebnisse bleiben erhalten. Allgemeine Integrationsaktionen und Webrecherche im Use Case sind separate Ausbauschritte.",
+          "status": "live"
+        },
+        {
+          "title": "Integrationen in Use-Case-Eingabe und Bearbeitung",
+          "status": "live",
+          "description": "Paperless-Quellen pro Phase auswählen, auch ohne Projekt. Revisionen und Kontext bleiben an den Lauf gebunden und private Archivdaten lokal."
+        },
+        {
+          "title": "KI-Erstellungsdialog für Use Cases",
+          "status": "live",
+          "description": "Ablauf per Prompt beschreiben, Rückfragen beantworten und den validierten Vorschlag im Editor prüfen. Kein automatisches Speichern oder Ausführen."
+        },
+        {
+          "title": "Use-Case-Ergebnisse bewusst per Mail versenden",
+          "status": "implemented",
+          "description": "Verbindung, Empfänger und Inhalt in einer festen Vorschau prüfen und ausdrücklich senden. Eindeutige Quittungen verhindern automatische Wiederholung bei unklarer Übergabe."
+        },
+        {
+          "title": "Konfigurierbare SMTP-Verbindungen und primärer Mailversand",
+          "status": "local",
+          "description": "Mailprofile mit TLS unter Integrationen verwalten und primäre Verbindung festlegen. Use Case oder definierter Auftrag können sie gezielt überschreiben."
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Wissen & Memory",
+      "symbol": "◎",
+      "intro": "Bestehendes Wissen verwenden und gezielt ergänzen.",
+      "features": [
+        {
+          "title": "Obsidian und kanonisches Memory",
+          "description": "Allgemeiner Vault-Zugriff ist lesend; Schreiben bleibt auf einen ausdrücklich freigegebenen Memory-Bereich begrenzt. Versionen und Konflikte sind nachvollziehbar.",
+          "status": "live"
+        },
+        {
+          "title": "Synchronisation und Reconciliation",
+          "description": "Vorhandener Sync bleibt erhalten. Umbenennung, Archivierung, Hashkonflikte und Wiederaufnahme nach Neustarts sind dokumentiert geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "SMB, NFS und PostgreSQL",
+          "description": "Frei konfigurierbare Quellenadapter mit lesender Prüfung und lokaler Indexierung. PostgreSQL wurde separat getestet; echte NAS-Zielabnahmen stehen aus.",
+          "status": "implemented"
+        },
+        {
+          "title": "Quellenbezogener Wissenschat",
+          "description": "Ausgewählte, indexierte Verbindungen dienen als begrenzter lokaler Gesprächskontext; Quellenwahl ist sichtbar.",
+          "status": "implemented"
+        },
+        {
+          "title": "Paperless-Dokumente als privater KI-Kontext",
+          "description": "Suche und Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Gewählte Archive werden in Chats, Aufgaben und projektbezogenen Use Cases lokal gelesen; Auswahl- und Profiländerungen stoppen den Zugriff. Gekürzte Auszüge bleiben gekennzeichnet. Paperless-Schreiboperationen sind nicht umgesetzt.",
+          "status": "live"
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "name": "Dateien & Gestaltung",
+      "symbol": "◇",
+      "intro": "Editierbare Ergebnisse mit Vorschau und erhaltenen Originalen.",
+      "features": [
+        {
+          "title": "Word-Dokumente",
+          "description": "Native editierbare Abschnitte, Tabellen und Bilder; optionaler PDF-Export. Lokale Modellplanung und Linux-Vorschauen sind live geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "PowerPoint-Präsentationen",
+          "description": "Native editierbare Folien, Notizen, zwölf Schaubildtypen und sechs Chartvarianten. Moderne Masterlayouts, Raster, Farben und Arial-Profil; benannte Roadmap-Phasen und adaptive Titel-/Schlussfolien. Auf der Test-VM mit realer lokaler Planung einer Sechs-Folien-Präsentation, Originalmaster, Vorschauen und nativen Downloads geprüft. Spezielle freie SDK-Kompositionen und Bildauswahl bleiben begrenzt.",
+          "status": "live"
+        },
+        {
+          "title": "Native Excel-Dateien",
+          "description": "XLSX mit geprüften Formeln, Blattverweisen, fünf nativen Charttypen, Zahlenformaten, Ergebniszeilen und Detailspalten. Offline-Calc erhält Formeln, Charts und Stile; genaue XLOOKUP-Treffer sind mit Calc 7.4 kompatibel. Auf der Test-VM mit berechneten Werten, Vorschau/Freigabe und nativen Downloads geprüft. Lokale KI-Planung ist strukturgeprüft, aber noch nicht durchgehend zuverlässig; eine fehlerhafte Demo-Formel wurde manuell korrigiert. Fachliche Prüfung bleibt erforderlich.",
+          "status": "live"
+        },
+        {
+          "title": "PDF-Seitenoperationen",
+          "description": "Seiten auswählen, umordnen, drehen und weglassen. Neue Inhalts-PDFs aus Text, Tabellen und Bildern sind möglich.",
+          "status": "live"
+        },
+        {
+          "title": "PDF-Aufteilung und ZIP",
+          "description": "Bis zu 20 echte Einzeldateien mit festen Namen, eigenen Hashes und einem ZIP mit identischen PDF-Mitgliedern.",
+          "status": "live"
+        },
+        {
+          "title": "Bilder und Collagen",
+          "description": "Originalgebundener Zuschnitt, Skalierung und Collagen, PNG/JPEG-Export und Unicode-Beschriftungen. Transparenz und Pixeloperationen sind gezielt geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "Dateien aus der letzten Chatantwort",
+          "description": "Word und PowerPoint direkt in freien Chats oder Projektgesprächen erstellen. Freie Chats benötigen kein Projekt. Bei fehlendem Thema wird nachgefragt. „Mach daraus …“ bindet die aktive vorherige Antwort samt Revision und Hashes; Änderung oder Drift verhindert das Speichern. Dateikarten öffnen den Arbeitsbereich zur Vorschauprüfung vor dem Download. Auf der Test-VM mit echter lokal erzeugter Fünf-Folien-PPTX und DOCX einschließlich vollständiger Vorschau, Freigabe, Download und Bereinigung geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "Versionen und Herkunft",
+          "description": "Originale bleiben erhalten. Manuelle Folgeversionen können Quellen- und Modellursprung übernehmen, ohne einen neuen Modelllauf auszuführen.",
+          "status": "live"
+        },
+        {
+          "title": "Vorschau vor Download",
+          "description": "Planung, Erzeugung, Validierung und Vorschau sind getrennte Schritte. Download erst nach Prüfung aller Vorschauseiten der exakten Version.",
+          "status": "live"
+        },
+        {
+          "title": "Einfacher Dateidialog und sichere Entwurfwiederaufnahme",
+          "description": "KI-Entwurf oder manuelle Inhaltseingabe mit erhaltenem Ziel und Inhalt. Neue Entwürfe im Browser-Tab fortsetzen; veraltete Quellen-, Chat- oder Versionsbindungen blockieren das Speichern. Keine Tokens oder Freigaben im Entwurf.",
+          "status": "local"
+        },
+        {
+          "title": "Word- und PowerPoint-Vorlagen",
+          "description": "Originale Word- und PowerPoint-Master aus geprüften Skill-Paketen bei der Dateierstellung verwenden; Folienlayouts, Kopf-/Fußzeilen und Formatvorlagen erhalten. Optionale Präsentationsgestaltung ergänzt die Basis. Vorlage, Skillrevision und Hash sind an Entwurf und Folgeversion gebunden. Leere Gliederungen bleiben als zusätzlicher Startpunkt verfügbar. Reale lokale Planung und native DOCX/PPTX-Ausgaben auf der Test-VM geprüft. Briefangaben werden einmalig gesetzt. Höfliche Infinitivaufträge und konkrete Folienzahl werden unterstützt; ein begrenzter Korrekturversuch ergänzt fehlende Modellentwürfe, ohne Folien zu duplizieren.",
+          "status": "live"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Recherche",
+      "symbol": "⌕",
+      "intro": "Öffentlich recherchieren, direkt aus dem Gespräch.",
+      "features": [
+        {
+          "title": "Websuche ohne Bestätigungsdialog",
+          "description": "Standardmäßig aktiv, direkt im Chat umschaltbar und als Browserstandard einstellbar. Aktuelle Frage als Suchtext; Gesprächshistorie und Dokumente werden nicht automatisch übertragen. „Nur lokal“ schaltet die Suche aus.",
+          "status": "live"
+        },
+        {
+          "title": "Recherche zu lokalen Dateien",
+          "description": "Aktive Websuche kann einen lokalen Word-, PowerPoint- oder Inhalts-PDF-Entwurf unterstützen. Query, Treffer und Quellenreferenzen sind am Lauf gebunden.",
+          "status": "live"
+        },
+        {
+          "title": "Domain-Grenzen und Belege",
+          "description": "Explizite site:-Grenzen filtern fremde Treffer. Quellen enthalten URLs und Abrufzeiten; Suchauszüge sind als solche gekennzeichnet. Keine Behauptung vollständig gelesener Webseiten.",
+          "status": "live"
+        },
+        {
+          "title": "Webrecherche zentral konfigurieren",
+          "description": "Unter Einstellungen → Webrecherche die serverseitige Verfügbarkeit, Suchsprache, SafeSearch, Trefferanzahl (1–8) und Zeitlimit (5–30 Sekunden) festlegen. Revisionierte Speicherung und feste Verbindungstest-Suche; Suchdienstadresse bleibt durch den Betreiber gebunden. Persönlicher Webstandard im Browser und „Nur lokal“ bleiben eigenständige Entscheidungen. Auf der Test-VM mit echtem Verbindungstest, Reload und Mobilansicht geprüft; tatsächliche Konfiguration bewahrt.",
+          "status": "live"
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "name": "Aufgaben & n8n",
+      "symbol": "⇢",
+      "intro": "Nachvollziehbare Abläufe statt unsichtbarer Automatismen.",
+      "features": [
+        {
+          "title": "Task-Center",
+          "description": "Getrennte Übersicht und Aufgabeneditor mit Status, Ergebnissen und Historie. Aufgaben können erstellt, bearbeitet, pausiert, ausgeführt, abgebrochen und archiviert werden.",
+          "status": "live"
+        },
+        {
+          "title": "Natürliche Aufgabenentwürfe",
+          "description": "Chatwünsche können geprüfte Entwürfe mit bis zu fünf editierbaren festen Schritten erzeugen. Keine Ausführung beliebigen Modellcodes.",
+          "status": "live"
+        },
+        {
+          "title": "Termine und Dokumentauslöser",
+          "description": "Einmalige, tägliche und wöchentliche Termine sowie neue bereitgestellte Dokumente können Aufgaben auslösen. Bestehende Quellen und Doppeltrigger werden abgegrenzt.",
+          "status": "live"
+        },
+        {
+          "title": "Geordnete lokale Analyse",
+          "description": "Leseergebnisse können als ausdrücklich gebundene LOCAL_ONLY-Daten in einen folgenden lokalen Analyseschritt eingehen.",
+          "status": "live"
+        },
+        {
+          "title": "Begrenzter n8n-Abschlussgraph",
+          "description": "Eine geprüfte achtknotige Vorlage verbindet Start, Status, Warten, Bedingungen, Erfolg und Fehlerstopp. Echte Ausführung und idempotenter Replay sind dokumentiert.",
+          "status": "live"
+        },
+        {
+          "title": "Schreibfreigaben und globale Pause",
+          "description": "Einzelfreigabe und befristete begrenzte Autonomie sind für eine konkrete lokale Projektarchivierung geprüft. Weitere externe Schreibadapter bleiben offen.",
+          "status": "limited"
+        },
+        {
+          "title": "Aufgabenplanung mit Ziel, Termin und Zusammenfassung",
+          "description": "Einfacher Standarddialog, optionale Quellen und Ablaufdetails sowie sichere Wiederaufnahme neuer Entwürfe. Aufgaben werden pausiert gespeichert; Drift braucht eine ausdrückliche Entscheidung. Lokal im Browser geprüft.",
+          "status": "local"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "Integrationen & Skills",
+      "symbol": "⊞",
+      "intro": "Anleitungen und verbundene Funktionen passend einsetzen.",
+      "features": [
+        {
+          "title": "Versionierte Skills",
+          "description": "Skill-Bibliothek mit Suche, Markdown-Editor und geprüften Revisionen. Einzelne SKILL.md-Dateien sowie ZIP-/Skill-Pakete mit Office-Vorlagen, Bildern und Referenzen importieren. Paketdateien, Abhängigkeiten und Importhinweise im Editor prüfen; Originale bleiben lokal und unverändert. Verwendung Immer, Bei Erwähnung oder Nach Stichwort; Cloudfreigabe je Anleitung. Skripte werden archiviert und nicht ausgeführt. Vorlagen für die Dateierstellung sind an die geprüfte Skillrevision gebunden. Paketimport, unveränderte Originalhashes, reale lokale Vorlagenausgaben und Dateidialog mit gemischten Markdown-/Paketbibliotheken auf der Test-VM geprüft.",
+          "status": "live"
+        },
+        {
+          "title": "Home Assistant lesen",
+          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Produktive Wartung und Restore bleiben offen.",
+          "status": "limited"
+        },
+        {
+          "title": "MCP-Verbindungen",
+          "description": "MCP-Profile in der zentralen Integrationsübersicht mit revisionierter Konfiguration, Katalogprüfung und begrenzten parameterfreien Text-Lesewerkzeugen. Echte Drittanbieterziele sind noch nicht abgenommen.",
+          "status": "implemented"
+        },
+        {
+          "title": "Passive Browserprüfung",
+          "description": "Freigegebene Webseiten als isolierter Snapshot mit Bild und Text. Chromium ohne JavaScript oder Netzwerk im Runner. Interaktives Login/2FA ist noch offen.",
+          "status": "limited"
+        },
+        {
+          "title": "Integrationen mit verständlichen Aktionen",
+          "description": "Bestehende Arbeitsraum-, Home-Assistant-, Browser- und Archivierungsaktionen bleiben unter Einstellungen → Integrationen eingeklappt erreichbar. Prüfergebnisse erscheinen direkt am passenden System; Archivierung braucht Zielprüfung und konkrete Freigabe. Globale Schreibpause und Ausführungsbelege bleiben erhalten. Die vorherige Ausführung ist geprüft; die neue generische Zuordnung verleiht diesen Aktionen keine zusätzlichen Rechte.",
+          "status": "implemented"
+        },
+        {
+          "title": "Skills direkt im Chat einsetzen",
+          "description": "Chat → + → Skill einsetzen zeigt aktivierte Anleitungen und fügt ihren /Aufruf in die aktuelle Nachricht ein. Auch @Aufrufe sind möglich. Explizite Gesprächsauswahlen und „Keine Skills“ bleiben vorrangig; alte Antworten behalten ihre Skillrevision und ihren Hash. Auf der Test-VM mit realer Word-Dateierstellung und einer modernen Acht-Folien-Präsentation einschließlich gebundener Basisabhängigkeit geprüft. Führende aktivierte Skillaufrufe bleiben mit reiner Textrecherche kompatibel; die Fokusrückgabe wartet auf das Schließen des Dialogs.",
+          "status": "live"
+        },
+        {
+          "title": "Generische Integrationsübersicht",
+          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi und SSH mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüf-/Adapterzuständen. Aktivierte konfigurierte Ziele erhalten dynamische Serverfreigaben. HA/Paperless/MCP haben Zugangstests; UniFi-/SSH-Ausführungsadapter bleiben in Entwicklung.",
+          "status": "implemented"
+        },
+        {
+          "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
+          "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Allgemeine KI-Aktionen anderer Profile bleiben offen.",
+          "status": "limited"
+        }
+      ]
+    },
+    {
+      "id": "privacy",
+      "name": "Datenschutz & Betrieb",
+      "symbol": "◈",
+      "intro": "Lokale Kontrolle als Grundlage der Architektur.",
+      "features": [
+        {
+          "title": "Private Kontexte behalten LOCAL_ONLY",
+          "description": "Private Quellen, ältere lokale Nachrichten und ihre Ableitungen werden durch den neuen Auto-Standard nicht nachträglich für Cloud freigegeben. „Nur lokal“ sperrt Cloud und Websuche für den gewählten Lauf; finale Ausgangsprüfungen bleiben erhalten.",
+          "status": "implemented"
+        },
+        {
+          "title": "Login und verschlüsselte Secrets",
+          "description": "Persistente Sitzungen, CSRF-/Origin-Prüfung, Loginlimits und verschlüsselte Anbieter-/Verbindungssecrets. Separater HTTPS-Domainzugang über einen freigegebenen Reverse Proxy serverseitig vorbereitet; Anmeldung und strikte Origin-/CSRF-Grenzen geprüft. Proxy-, DNS- und externe Routing-Einrichtung erfolgen separat.",
+          "status": "live"
+        },
+        {
+          "title": "Isolierte Dateirunner",
+          "description": "Linux-Runner ohne Netzwerk, Datenbank, Vault, Providersecrets oder Docker-Socket; feste Operationen und Ressourcenlimits.",
+          "status": "live"
+        },
+        {
+          "title": "Dauerhafte Hintergrundjobs",
+          "description": "PostgreSQL und Procrastinate für App-Jobs. Wiederkehrende Aufgaben nutzen das bestehende n8n; kein zweiter allgemeiner Scheduler.",
+          "status": "live"
+        },
+        {
+          "title": "Verschlüsseltes Backup und isolierter Restore",
+          "description": "Dokumentierter eigener App-Restore auf Schema 0024 mit 55 Originalen und 34 Dateiversionen. Externe HA-/n8n-Recovery und RTO/RPO bleiben offen.",
+          "status": "limited"
+        },
+        {
+          "title": "Responsive Oberfläche",
+          "description": "Helles und dunkles Design, mobile Navigation und Chromium-Browserchecks. Reale Safari-/Mobilgeräteabnahme steht aus.",
+          "status": "implemented"
+        },
+        {
+          "title": "Serverseitige Antwortvorgaben mit sichtbarer Herkunft",
+          "description": "Sprache, Länge, Ton und Gliederung direkt als sichtbare Optionen wählen. Persönliche, Projekt- und Gesprächsvorgaben mit Herkunft, revisionierter Speicherung und eingefrorenen Werten je Chatlauf. Keine vererbten Cloud-, Web- oder Schreibrechte. Schema 0025.",
+          "status": "local"
+        },
+        {
+          "title": "Modernes Design mit Hell- und Dunkelmodus",
+          "description": "Neutrale Weiß-/Grauoberfläche mit klarer Sans-Serif-Typografie, heller Navigation und zurückhaltenden Indigo-Akzenten. Dunkelmodus in Anthrazit, gemeinsame Farb-/Fokusregeln für Chat, Skills, Profil und Dialoge. Textkontrast und Layouts von320 bis1440Pixeln lokal geprüft; alle20öffentlichen Beispielbilder neu erfasst. Auf der Test-VM bestätigt: Hell-/Dunkelmodus, Profil-/Skill-Dialoge und mobile Navigation; bestehende Einstellungen unverändert.",
+          "status": "local"
+        },
+        {
+          "title": "Direkte Gesprächsaktionen statt Formularauswahl",
+          "description": "Plus-Menü für Dateien, Projektquellen, Aufgaben und Antwortstil. Modellwahl mit erklärten Optionen, direkter Webschalter mit gespeichertem Standard und mitwachsendes Eingabefeld. Formate/Vorlagen als Auswahlkarten, lokale Dateiablage per Drag-and-drop. Tastatur und mobile Ansichten werden gezielt geprüft.",
+          "status": "local"
+        },
+        {
+          "title": "Anmeldepasswort in den Einstellungen ändern",
+          "description": "Aktuelles Passwort bestätigen, neues Passwort mit mindestens 12 Zeichen doppelt eingeben und Änderung freigeben. Hash bleibt dauerhaft am Server; alle bestehenden Sitzungen werden widerrufen. Auf der Test-VM installiert; Formular und bestehender Login bestätigt. Echter Passwortwechsel wurde dem Benutzer überlassen.",
+          "status": "local"
+        },
+        {
+          "title": "Projekte und Chats endgültig löschen",
+          "description": "Projekte inklusive ihrer App-Dateien, Quellen, Chats und Projektskills dauerhaft entfernen. Chats direkt über Gesprächsaktionen auch im Archiv löschen. Bestätigung mit Inhaltsübersicht und Zustandsnachweis; Abbrechen, laufende Vorgänge und aktuelle Abhängigkeiten berücksichtigt. Dauerhafte Dateibereinigung über vorhandene isolierte Verarbeiter, sichtbarer Fortschritt, Aufgabenhistorie und Kostenbuch erhalten. Auf der Test-VM mit synthetischen Chats, Quelle und tatsächlich erzeugter Word-Datei geprüft; Inhalte und App-Dateien nach Neuladen entfernt.",
+          "status": "live"
+        },
+        {
+          "title": "Oberfläche persönlich gestalten",
+          "description": "Unter Einstellungen → Allgemein einen eigenen App-Namen, persönlichen Anzeigenamen und ein Foto speichern. Kompakte oder komfortable Abstände und vier Akzentfarben gestalten den gesamten Arbeitsraum. Anzeigeeinstellungen bleiben serverseitig gespeichert und sind vom persönlichen KI-Kontext getrennt. Auf der Testinstanz mit synthetischem Namen und Bild, Reload und Mobilansichten geprüft. Ursprüngliche Anzeigeoptionen anschließend wiederhergestellt.",
+          "status": "live"
+        },
+        {
+          "title": "Privater Fernzugriff über Tailscale",
+          "description": "Separater HTTPS-Zugang im eigenen Tailnet mit gültigem Zertifikat. HTTPS und SSH vom echten zweiten Gerät erfolgreich geprüft; bestehender Deployment-Schlüssel und gepinnte Serveridentität bleiben erforderlich. Zugriff gezielt für den eigenen Benutzer und die zwei Dienstports freigegeben. Bestehender LAN-Zugang bleibt erhalten; keine Subnetz- oder Exit-Node-Freigabe.",
+          "status": "live"
+        },
+        {
+          "title": "Auto bevorzugt Cloud, einfache Fragen bleiben lokal",
+          "description": "Kurze Begrüßungen, einzelne einfache Rechen- und ausgewählte Hauptstadtfragen können lokal beantwortet werden. Andere freigegebene Fragen gehen bevorzugt an Cloud. Reale lokale und Cloud-Antworten auf dem Testsystem geprüft. Bei technischem Cloud-Ausfall kann Auto vor Antwortbeginn lokal einspringen; private Kontexte und Nur lokal bleiben geschützt.",
+          "status": "live"
+        },
+        {
+          "title": "Echte Office-Dateien aus Cloud-Anfragen",
+          "description": "Cloud plant freigegebene Dateiwünsche; der isolierte lokale Renderer erzeugt native PowerPoint-, Word- und Excel-Dateien. Alle drei Formate mit echter Cloud-Planung und direkten Downloads vor optionaler Freigabe auf dem Testsystem geprüft. Private Originale und ungeteilte Skills bleiben geschützt. Die neue Formelprüfung verhindert überlappende doppelte Aggregate; fachliche Modellinhalte bleiben zu prüfen.",
+          "status": "live"
+        },
+        {
+          "title": "Excel-Formeln vor der Dateierstellung prüfen",
+          "description": "Doppelte Aggregation zwischen manueller Summenzeile und automatischer Ergebniszeile wird abgefangen. Syntax, Argumentzahl, Zellgrenzen, Bereichsgrößen, Suchindizes, Zirkelbezüge und nicht berechenbare Ergebnisse werden geprüft. Ein begrenzter Modell-Korrekturversuch; ältere Originalversionen bleiben lesbar mit Prüfhinweis. Echte Cloud-XLSX mit genau einer korrekten Gesamtsumme und direkte native Downloads auf dem Testsystem geprüft. Fachliche Absichten bleiben zu beurteilen.",
+          "status": "live"
+        }
+      ]
+    }
+  ],
+  "roadmap": [
+    {
+      "title": "Den integrierten Arbeitsraum erweitern",
+      "text": "Weitere Auftrags-/Modelloptionen, Versionsvergleich und objektübergreifende Suche. Vertiefte Bedienoptimierung auf der Test-VM installiert; breite Modell-/Geräteabnahme bleibt offen."
+    },
+    {
+      "title": "Interaktiver Browser",
+      "text": "Getrennte Sitzungen sowie sichere menschliche Login- und 2FA-Übergabe."
+    },
+    {
+      "title": "Weitere Aktionen und Graphen",
+      "text": "Zusätzliche feste Aktionsadapter und breitere geprüfte Workflowabdeckung."
+    },
+    {
+      "title": "Breitere Datei-QA",
+      "text": "Komplexere Dateiänderungen sowie ein größerer Fakten- und Layoutkorpus; echte PDF-Schwärzung und KI-Bilder sind noch nicht umgesetzt."
+    },
+    {
+      "title": "Betrieb und echte Geräte",
+      "text": "Dauer-/Kapazitätslast, native Anbieterzugänge, reale Safari-/Mobilgeräte und gemessene Wiederherstellungszeiten."
+    },
+    {
+      "title": "Externe Wiederherstellung",
+      "text": "Vollständige HA-/n8n-Sicherung und Restore-Nachweise vor produktiven Wartungsaktionen."
+    }
+  ],
+  "development": {
+    "mode": "local",
+    "schema": "0042",
+    "browserChecks": 39,
+    "serverDeployment": true,
+    "commit": "68877a4",
+    "ciTests": 1409,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
+    "deployedCommit": "68877a4",
+    "deployedSchema": "0042",
+    "liveScope": "Release 68877a4 / Schema 0042 aktiv auf dem Testsystem. Vollständige CI: 1409 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängige Fälle übersprungen und 39 synthetische Browserchecks. Reale Cloud-XLSX-Planung mit direktem Download geprüft: 10 + 5 ergibt genau eine Formel-Gesamtsumme von 15, keine doppelte 30. Native Offline-Berechnung auf dem Testsystem bestätigt Rundung, bedingte Summe und Fehlerbehandlung; ungültiger Doppelaggregat-Plan abgewiesen. Vorhandene Versionen bleiben unverändert lesbar mit Prüfhinweis bei neuen Regelabweichungen. Bestehende Daten, Einstellungen, Overlays und unabhängige Netzwerkregeln erhalten, verschlüsseltes Off-VM-Backup geprüft. Eigener Testchat und Dateien vollständig bereinigt. Zuvor echte Auto-Routen und direkte PPTX-/DOCX-/XLSX-Cloud-Downloads sowie privates HTTPS und SSH geprüft. Formelvalidierung ersetzt keine fachliche Prüfung des Modellinhalts; vollständige V1-Abnahme bleibt offen.",
+    "designModernized": true,
+    "interactionModernized": true,
+    "lastSuccessfulCICommit": "68877a4",
+    "lastSuccessfulCIUI": 39
+  }
+}

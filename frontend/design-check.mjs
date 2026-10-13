@@ -1,0 +1,49 @@
+import {chromium} from 'playwright';
+import {mkdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {loginFixture} from './fixture-login.mjs';
+const output=fileURLToPath(new URL('../.local/design-qa/',import.meta.url));await mkdir(output,{recursive:true});
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+const base=process.env.HUB_DESIGN_ORIGIN||'http://127.0.0.1:18767';
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+async function checkContrast(){
+ for(const selector of ['body','.sidebar .new']){
+  const ratio=await page.locator(selector).evaluate(e=>{
+   const st=getComputedStyle(e),rgb=x=>x.match(/[\d.]+/g).slice(0,3).map(Number),lum=x=>rgb(x).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0);
+   const a=lum(st.color),b=lum(st.backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+  });
+  if(ratio<4.5)throw Error('Insufficient text contrast for '+selector+': '+ratio);
+ }
+}
+try{
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto(base);await page.screenshot({path:output+'/login.png'});
+ await loginFixture(page);
+ await page.getByRole('heading',{name:'Womit möchtest du beginnen?',exact:true}).waitFor();
+ await checkContrast();await page.screenshot({path:output+'/welcome-light.png'});
+ await page.getByRole('button',{name:'Ideen werden Ergebnisse',exact:true}).click();
+ await page.getByRole('button',{name:'Antwortvorgaben öffnen',exact:true}).click();
+ await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).waitFor();await page.screenshot({path:output+'/chat-light.png'});
+ const ink=await page.locator('body').evaluate(e=>getComputedStyle(e).color);
+ if(ink!=='rgb(32, 36, 49)')throw Error('Design tokens not applied: '+ink);
+ await page.getByRole('button',{name:'Dunkles Design',exact:true}).click();
+ await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');await page.screenshot({path:output+'/chat-dark.png'});
+ await checkContrast();const darkInk=await page.locator('body').evaluate(e=>getComputedStyle(e).color);
+ if(darkInk!=='rgb(240, 241, 246)')throw Error('Dark foreground not applied: '+darkInk);
+ await page.getByRole('button',{name:'Helles Design',exact:true}).click();
+ for(const width of [320,390,768,1024,1440]){await page.setViewportSize({width,height:900});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow at '+width);if(width===390){if(await page.locator('.sidebar:not(.open)').evaluate(e=>e.getBoundingClientRect().right)>1)throw Error('Reduced motion exposed closed mobile navigation');await page.screenshot({path:output+'/mobile.png'});}}
+ await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();
+ await page.getByRole('button',{name:'Projekte',exact:true}).click();await page.getByRole('button',{name:'Projekt Aurora',exact:true}).click();
+ await page.getByRole('tab',{name:'Erstellte Dateien',exact:true}).click();await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
+ await page.getByRole('dialog',{name:'Datei erstellen',exact:true}).waitFor();await page.screenshot({path:output+'/dialog.png'});
+ await page.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();await page.getByLabel('Dateititel',{exact:true}).fill('Designcheck · nur synthetisch');
+ await page.getByLabel('Dokumenttext',{exact:true}).fill('Ein synthetischer Entwurf für die Designprüfung.');
+ await page.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();await page.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
+ if(await page.getByLabel('Dokumenttext',{exact:true}).inputValue()!=='Ein synthetischer Entwurf für die Designprüfung.')throw Error('Design change lost draft');
+ await page.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();await page.getByRole('button',{name:'Wissen',exact:true}).click();await page.getByRole('button',{name:'Wissensquelle hinzufügen',exact:true}).click();
+ const source=page.getByRole('dialog',{name:'Wissensquelle konfigurieren',exact:true});await source.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ if(await source.count())throw Error('Long mobile source dialog cannot be dismissed');
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('Design passed: light/dark tokens, dialog draft preservation and 320–1440px layouts. Synthetic only.');
+}finally{await browser.close();}

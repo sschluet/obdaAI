@@ -1,0 +1,5 @@
+.file-dropzone{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:25px 18px;border:1px dashed var(--border);border-radius:15px;background:var(--bg);text-align:center}
+.file-dropzone>svg{color:var(--accent)}.file-dropzone>strong{font-size:15px}.file-dropzone>p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}.file-dropzone>small{font-size:10px;line-height:1.5;color:var(--muted)}
+.file-dropzone>button{padding:10px 15px;min-height:40px;border:1px solid var(--border);border-radius:10px;background:var(--panel);font-size:12px}
+.file-dropzone.is-dragging{border-color:var(--accent);background:var(--accent-soft)}
+.file-dropzone-input{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:0!important;border:0!important;clip-path:inset(50%);overflow:hidden}

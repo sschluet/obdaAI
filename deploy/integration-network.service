@@ -1,0 +1,16 @@
+[Unit]
+Description=obdaAI enabled integration profile network endpoints
+After=docker.service obdaai-egress.service
+Requires=docker.service
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/lib/obdaai/integration-network.py
+ExecStopPost=/usr/bin/python3 /usr/local/lib/obdaai/integration-network.py --clear
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+[Install]
+WantedBy=multi-user.target

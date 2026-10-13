@@ -3,6 +3,7 @@
 import asyncio
 import json
 
+from hub.config import Settings
 from hub.db import Message, Run, RunEvent
 from hub.execution import execute_run
 from hub.routing import Route
@@ -10,6 +11,57 @@ from sqlalchemy import select
 from test_chat import FakeProviders, new_chat
 
 pytest_plugins = ["test_chat"]
+
+
+def test_stalled_worker_partial_retains_actual_answer_run_and_model(setup, monkeypatch):
+    from hub import jobs
+
+    app, client, headers, provider = setup
+    chat_id = new_chat(client, headers)
+    with app.state.sessions() as db:
+        run = Run(
+            conversation_id=chat_id,
+            status="streaming",
+            provider="openrouter",
+            model="synthetic/actual-before-crash",
+            answer_model_used=True,
+        )
+        db.add(run)
+        db.flush()
+        for sequence, text in enumerate(["Synthetic ", "crash partial"], 1):
+            db.add(
+                RunEvent(
+                    run_id=run.id,
+                    sequence=sequence,
+                    kind="delta",
+                    payload=json.dumps({"text": text}),
+                )
+            )
+        db.commit()
+        run_id = run.id
+    monkeypatch.setattr(jobs, "session_factory", lambda url: app.state.sessions)
+
+    async def forbidden(*args):
+        raise AssertionError("Recovery must not repeat a model call")
+
+    monkeypatch.setattr(jobs, "execute_run", forbidden)
+    queue = jobs.worker_app(
+        Settings(database_url="postgresql+psycopg://hub@127.0.0.1/hub_ci"),
+        include_maintenance=False,
+    )
+    # Invoke the actual recovery handler with a migrated disposable SQLite store;
+    # no queue connection or upstream model call is opened.
+    asyncio.run(queue.tasks["hub.chat"].func(run_id=run_id))
+    answer = client.get("/api/conversations/" + chat_id).json()["messages"][-1]
+    assert answer["content"] == "Synthetic crash partial"
+    assert answer["label"] == "LOCAL_ONLY"
+    assert answer["processing"] == {
+        "run_id": run_id,
+        "provider": "openrouter",
+        "model": "synthetic/actual-before-crash",
+        "model_used": True,
+        "status": "interrupted",
+    }
 
 
 def test_replay_cursor_auth_and_content_search(setup):

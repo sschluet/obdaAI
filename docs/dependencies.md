@@ -36,3 +36,12 @@ CI: ubuntu-24.04 statt wechselndem ubuntu-latest; offizielle Actions-Releases
 checkout v7.0.1 / setup-python v7.0.0 / setup-node v7.0.0 anhand GitHub Releases
 und Tag-Commitobjekten geprüft und auf Commit-SHAs gepinnt. PR-Prüfungen und
 main-Pushes laufen; doppelte Branch-Push-/PR-Prüfungen werden vermieden.
+
+HA-Backup-Leseadapter: websockets 17.1, BSD-3-Clause, gepinnt mit Lock/Hashes.
+Offizielle Herkunft https://pypi.org/project/websockets/17.1/ und API
+https://websockets.readthedocs.io/en/stable/reference/sync/client.html .
+Kein generischer WebSocketzugang; fester Host, geprüfter Socket, minimale Kommandos.
+
+Office-Dateirunner: LibreOffice Writer, Impress und Calc erstellen lokale PDF-/PNG-
+Vorschauen für DOCX, PPTX und XLSX. Calc ergänzt die bestehende isolierte Runtime;
+keine Office-Makros oder importierten Skillskripte werden ausgeführt.

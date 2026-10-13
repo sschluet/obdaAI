@@ -1,0 +1,426 @@
+"""Durable artifact dispatch and verification across the offline file boundary."""
+
+import asyncio
+import hashlib
+import json
+import os
+import re
+import time
+import uuid
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy import select
+from sqlalchemy.orm import Session, object_session, sessionmaker
+
+from hub.artifact_render import MAX_INPUT, MAX_OUTPUT
+from hub.artifact_runner import canonical
+from hub.artifact_scope import owner
+from hub.artifact_specs import ArtifactSpec
+from hub.config import Settings
+from hub.db import Artifact, ArtifactRevision, Source
+from hub.db_locks import ownership_lock
+from hub.knowledge import original
+
+
+class PreviewFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    page: int = Field(ge=1, le=100)
+    filename: str = Field(pattern=r"^previews/page-[0-9]{1,3}\.png$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    bytes: int = Field(gt=0, le=MAX_OUTPUT)
+
+
+class PdfExport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(pattern=r"^previews/artifact\.pdf$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    bytes: int = Field(gt=0, le=MAX_OUTPUT)
+
+
+class PdfPart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(pattern=r"^parts/part-[0-9]{1,2}\.pdf$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    bytes: int = Field(gt=0, le=MAX_OUTPUT)
+    first_page: int = Field(ge=1, le=100)
+    pages: int = Field(ge=1, le=100)
+
+
+class OutputManifest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(pattern=r"^artifact\.(docx|pptx|xlsx|pdf|png|jpeg|zip)$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    bytes: int = Field(gt=0, le=MAX_OUTPUT)
+    label: str = Field(pattern=r"^LOCAL_ONLY$")
+    preview_verified: bool
+    previews: list[PreviewFile] = Field(min_length=1, max_length=100)
+    spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    status: str = Field(pattern=r"^needs_review$")
+    pdf_export: PdfExport | None = None
+    parts: list[PdfPart] = Field(default_factory=list, max_length=20)
+
+
+def roots(cfg: Settings) -> tuple[Path, Path]:
+    if not cfg.artifact_request_dir or not cfg.artifact_result_dir:
+        raise ValueError("Lokaler Dateirunner ist noch nicht eingerichtet")
+    paths = Path(cfg.artifact_request_dir), Path(cfg.artifact_result_dir)
+    for path in paths:
+        if not path.is_dir() or path.is_symlink() or any(p.is_symlink() for p in path.parents):
+            raise ValueError("Privater Dateirunner-Pfad fehlt oder ist ungültig")
+    return paths
+
+
+def digest(document: str) -> str:
+    return hashlib.sha256(document.encode()).hexdigest()
+
+
+def storage_bytes(cfg: Settings) -> int:
+    used, count = 0, 0
+    for root in roots(cfg):
+        for path in root.rglob("*"):
+            count += 1
+            if count > 30000 or path.is_symlink():
+                raise ValueError("Dateispeicher benötigt eine Integritätsprüfung")
+            if path.is_file():
+                used += path.stat().st_size
+    return used
+
+
+def spec_for(row: ArtifactRevision) -> ArtifactSpec:
+    if digest(row.spec) != row.spec_sha256:
+        raise ValueError("Artefaktvorgabe wurde verändert")
+    try:
+        return ArtifactSpec.model_validate_json(row.spec)
+    except ValidationError:
+        # Preserve immutable saved versions. Only the new mathematical audit may
+        # be relaxed for reading; original safety constraints remain enforced.
+        # New input and the offline renderer use strict validation by default.
+        spec = ArtifactSpec.model_validate_json(row.spec, context={"legacy_formula_read": True})
+        spec._legacy_formula_warning = True
+        return spec
+
+
+def bind_sources(
+    db: Session,
+    cfg: Settings,
+    project_id: str | None,
+    spec: ArtifactSpec,
+    *,
+    conversation_id: str | None = None,
+) -> list[Path]:
+    owner(db, project_id, conversation_id)
+    if conversation_id and spec.sources:
+        raise ValueError("Projektquellen benötigen ihren Projektraum")
+    paths = []
+    total = 0
+    for binding in spec.sources:
+        source = db.scalar(select(Source).where(Source.id == binding.id).with_for_update())
+        if not source or source.project_id != project_id:
+            raise ValueError("Quelle gehört nicht zu diesem Projektraum")
+        if source.revision != binding.revision or source.sha256 != binding.sha256:
+            raise ValueError("Quellenrevision wurde verändert")
+        path = original(cfg, source)
+        total += path.stat().st_size
+        if total > 100 * 1024 * 1024 or path.stat().st_size > MAX_INPUT:
+            raise ValueError("Maximal 100 MiB gebundene Quellen je Artefakt")
+        paths.append(path)
+    if spec.template:
+        from hub.db import Skill
+        from hub.skill_bundles import resolve_template
+
+        skill = db.get(Skill, spec.template.skill_id)
+        if not skill or (skill.project_id is not None and skill.project_id != project_id):
+            raise ValueError("Vorlage gehört zu einem anderen Projektraum")
+        template = resolve_template(
+            db,
+            cfg,
+            spec.template.skill_id,
+            spec.template.revision,
+            spec.template.bundle_sha256,
+            spec.template.asset_path,
+        )
+        if hashlib.sha256(template.read_bytes()).hexdigest() != spec.template.asset_sha256:
+            raise ValueError("Vorlagendatei wurde verändert")
+        paths.append(template)
+    return paths
+
+
+def job_name(row: ArtifactRevision) -> str:
+    return str(uuid.UUID(row.artifact_id)) + "-" + str(row.revision)
+
+
+def spool(db: Session, cfg: Settings, artifact: Artifact, row: ArtifactRevision) -> None:
+    requests, _ = roots(cfg)
+    spec = spec_for(row)
+    inputs = bind_sources(
+        db, cfg, artifact.project_id, spec, conversation_id=artifact.conversation_id
+    )
+    target = requests / job_name(row)
+    if target.exists():
+        path = target / "spec.json"
+        if target.is_symlink() or path.is_symlink() or path.read_text() != canonical(spec):
+            raise ValueError("Abweichender Dateiauftrag existiert bereits")
+        from hub.artifact_render import verified_inputs
+
+        verified_inputs(spec, [target / ("source-" + str(i)) for i in range(len(inputs))])
+        return
+    temporary = requests / ("." + job_name(row) + "-" + str(uuid.uuid4()))
+    temporary.mkdir(mode=0o700)
+    try:
+        for number, source in enumerate(inputs):
+            destination = temporary / ("source-" + str(number))
+            with destination.open("xb") as stream:
+                stream.write(source.read_bytes())
+                stream.flush()
+                os.fsync(stream.fileno())
+            destination.chmod(0o400)
+        path = temporary / "spec.json"
+        with path.open("x") as stream:
+            stream.write(canonical(spec))
+            stream.flush()
+            os.fsync(stream.fileno())
+        path.chmod(0o400)
+        os.rename(temporary, target)
+    except Exception:
+        for path in temporary.iterdir():
+            path.unlink()
+        temporary.rmdir()
+        raise
+
+
+def output_file(cfg: Settings, row: ArtifactRevision, filename: str, sha256: str) -> Path:
+    _, results = roots(cfg)
+    pattern = (
+        r"artifact\.(docx|pptx|xlsx|pdf|png|jpeg|zip)|previews/page-[0-9]{1,3}\.png|"
+        r"previews/artifact\.pdf|parts/part-[0-9]{1,2}\.pdf"
+    )
+    if not re.fullmatch(pattern, filename):
+        raise ValueError("Ungültige Ausgabedatei")
+    path = results / job_name(row) / "version" / filename
+    if path.is_symlink() or any(p.is_symlink() for p in path.parents):
+        raise ValueError("Verknüpfte Ausgabedatei")
+    if not path.is_file() or not 0 < path.stat().st_size <= MAX_OUTPUT:
+        raise ValueError("Ausgabedatei fehlt oder ist zu groß")
+    if hashlib.sha256(path.read_bytes()).hexdigest() != sha256:
+        raise ValueError("Ausgabedatei wurde verändert")
+    return path
+
+
+def checked_manifest(cfg: Settings, row: ArtifactRevision, raw: str) -> OutputManifest:
+    manifest = OutputManifest.model_validate_json(raw)
+    spec = spec_for(row)
+    if manifest.spec_sha256 != row.spec_sha256 or manifest.preview_verified:
+        raise ValueError("Dateiauftrag passt nicht zur Vorschau")
+    split = spec.plan.kind == "pdf" and bool(spec.plan.split_after)
+    suffix = "zip" if split else spec.plan.format if spec.plan.kind == "image" else spec.plan.kind
+    if manifest.filename != "artifact." + suffix:
+        raise ValueError("Ausgabeformat passt nicht zur Vorgabe")
+    expected = (
+        len(spec.plan.slides)
+        if spec.plan.kind == "pptx"
+        else len(spec.plan.pages)
+        if spec.plan.kind == "pdf" and spec.plan.pages
+        else 1
+        if spec.plan.kind == "image"
+        else len(manifest.previews)
+    )
+    if len(manifest.previews) != expected:
+        raise ValueError("Vorschau ist unvollständig")
+    if sum(p.bytes for p in manifest.previews) > 100 * 1024 * 1024:
+        raise ValueError("Vorschauen überschreiten das Größenlimit")
+    output = output_file(cfg, row, manifest.filename, manifest.sha256)
+    if output.stat().st_size != manifest.bytes:
+        raise ValueError("Dateigröße passt nicht zum Beleg")
+    if split:
+        import zipfile
+
+        from pypdf import PdfReader
+
+        assert spec.plan.kind == "pdf"
+        edges = [0, *spec.plan.split_after, len(spec.plan.pages)]
+        if len(manifest.parts) != len(edges) - 1:
+            raise ValueError("PDF-Teile fehlen")
+        try:
+            with zipfile.ZipFile(output) as archive:
+                names = ["part-" + str(n) + ".pdf" for n in range(1, len(edges))]
+                if archive.namelist() != names:
+                    raise ValueError("PDF-Archiv enthält abweichende Dateien")
+                total = 0
+                for number, (part, start, end) in enumerate(
+                    zip(manifest.parts, edges[:-1], edges[1:], strict=True), 1
+                ):
+                    if (
+                        part.filename != "parts/part-" + str(number) + ".pdf"
+                        or part.first_page != start + 1
+                        or part.pages != end - start
+                    ):
+                        raise ValueError("PDF-Teile passen nicht zur Seitenfolge")
+                    native = output_file(cfg, row, part.filename, part.sha256)
+                    entry = archive.getinfo(names[number - 1])
+                    total += entry.file_size
+                    if (
+                        entry.file_size != part.bytes
+                        or total > MAX_OUTPUT
+                        or entry.compress_type != zipfile.ZIP_STORED
+                        or entry.flag_bits & 1
+                    ):
+                        raise ValueError("Ungültiger PDF-Archivteil")
+                    if (
+                        native.stat().st_size != part.bytes
+                        or len(PdfReader(native, strict=True).pages) != part.pages
+                        or hashlib.sha256(archive.read(entry)).hexdigest() != part.sha256
+                    ):
+                        raise ValueError("PDF-Archivteil wurde verändert")
+        except (zipfile.BadZipFile, EOFError, RuntimeError) as exc:
+            raise ValueError("Ungültiges PDF-Archiv") from exc
+    elif manifest.parts:
+        raise ValueError("PDF-Teile ohne Trennauftrag")
+    wants_pdf = spec.plan.kind == "docx" and spec.plan.pdf_export
+    if bool(manifest.pdf_export) != wants_pdf:
+        raise ValueError("PDF-Export passt nicht zur Vorgabe")
+    if manifest.pdf_export:
+        export = manifest.pdf_export
+        pdf = output_file(cfg, row, export.filename, export.sha256)
+        from pypdf import PdfReader
+
+        if pdf.stat().st_size != export.bytes or len(PdfReader(pdf, strict=True).pages) != expected:
+            raise ValueError("PDF-Export passt nicht zur Vorschau")
+    from PIL import Image
+
+    for number, preview in enumerate(manifest.previews, 1):
+        if preview.page != number or int(Path(preview.filename).stem.split("-")[-1]) != number:
+            raise ValueError("Vorschauseiten sind nicht eindeutig geordnet")
+        path = output_file(cfg, row, preview.filename, preview.sha256)
+        if path.stat().st_size != preview.bytes:
+            raise ValueError("Vorschaugröße passt nicht zum Beleg")
+        with Image.open(path) as image:
+            if image.format != "PNG" or max(image.size) > 1400:
+                raise ValueError("Ungültiges Vorschaubild")
+            image.verify()
+    return manifest
+
+
+def reconcile(db: Session, cfg: Settings, row: ArtifactRevision) -> None:
+    if row.status not in {"queued", "rendering"}:
+        return
+    _, results = roots(cfg)
+    path = results / job_name(row) / "manifest.json"
+    if not path.exists():
+        if row.started and time.time() - row.started > 180:
+            row.status, row.error = "failed", "Dateierstellung unterbrochen; neue Version anlegen"
+        return
+    try:
+        if path.is_symlink() or path.parent.is_symlink() or path.stat().st_size > 100_000:
+            raise ValueError("Ungültiger Ausgabebeleg")
+        raw = path.read_text()
+        data = json.loads(raw)
+        if data.get("status") == "failed":
+            raise ValueError("Datei oder Vorschau konnte nicht erstellt werden")
+        manifest = checked_manifest(cfg, row, raw)
+        artifact = db.get(Artifact, row.artifact_id)
+        if not artifact:
+            raise ValueError("Artefakt fehlt")
+        bind_sources(
+            db, cfg, artifact.project_id, spec_for(row), conversation_id=artifact.conversation_id
+        )
+        row.manifest = manifest.model_dump_json()
+        row.status = "needs_review"
+    except (ValueError, OSError, KeyError, TypeError):
+        row.status = "failed"
+        row.error = "Datei, Quellenbindung oder Vorschauprüfung fehlgeschlagen"
+
+
+async def execute_artifact(
+    factory: sessionmaker[Session], cfg: Settings, artifact_id: str, revision: int
+) -> None:
+    with factory() as db:
+        ownership_lock(db)
+        artifact = db.get(Artifact, artifact_id)
+        if not artifact:
+            return
+        row = db.scalar(
+            select(ArtifactRevision)
+            .where(
+                ArtifactRevision.artifact_id == artifact_id,
+                ArtifactRevision.revision == revision,
+            )
+            .with_for_update()
+        )
+        if not row or row.status not in {"queued", "rendering"}:
+            return
+        try:
+            owner(db, artifact.project_id, artifact.conversation_id)
+            if row.status == "queued":
+                spool(db, cfg, artifact, row)
+                row.status, row.started = "rendering", time.time()
+            else:
+                # A restarted worker reconciles the same immutable request; it
+                # never resets the deadline or creates another output version.
+                reconcile(db, cfg, row)
+        except (ValueError, OSError):
+            row.status, row.error = "failed", "Dateiauftrag oder Quellenbindung fehlgeschlagen"
+        db.commit()
+        if row.status != "rendering":
+            return
+    for _ in range(180):
+        with factory() as db:
+            ownership_lock(db)
+            artifact = db.get(Artifact, artifact_id)
+            if not artifact:
+                return
+            row = db.scalar(
+                select(ArtifactRevision)
+                .where(
+                    ArtifactRevision.artifact_id == artifact_id,
+                    ArtifactRevision.revision == revision,
+                )
+                .with_for_update()
+            )
+            if not row or row.status != "rendering":
+                return
+            try:
+                owner(db, artifact.project_id, artifact.conversation_id)
+                reconcile(db, cfg, row)
+            except ValueError:
+                row.status, row.error = "failed", "Datei-Arbeitsraum inzwischen geändert"
+            db.commit()
+            if row.status != "rendering":
+                return
+        await asyncio.sleep(1)
+
+
+def info(row: ArtifactRevision) -> dict[str, Any]:
+    spec = spec_for(row)
+    db = object_session(row)
+    artifact = db.get(Artifact, row.artifact_id) if db else None
+    return {
+        "project_id": artifact.project_id if artifact else None,
+        "conversation_id": artifact.conversation_id if artifact else None,
+        "artifact_id": row.artifact_id,
+        "revision": row.revision,
+        "title": spec.plan.title,
+        "kind": spec.plan.kind,
+        "label": "LOCAL_ONLY",
+        "spec": spec.model_dump(mode="json"),
+        "spec_sha256": row.spec_sha256,
+        "status": row.status,
+        "error": row.error,
+        "formula_warnings": [
+            "Diese gespeicherte Version erfüllt die neue Formelprüfung nicht. "
+            "Die Originaldatei bleibt unverändert; Formeln prüfen und eine korrigierte "
+            "Version erstellen."
+        ]
+        if spec._legacy_formula_warning
+        else [],
+        "created": row.created,
+        "accepted": row.accepted,
+        "draft": json.loads(row.draft_metadata) if row.draft_metadata else None,
+        "chat": {
+            key: value for key, value in json.loads(row.chat_metadata).items() if key != "content"
+        }
+        if row.chat_metadata
+        else None,
+        "output": json.loads(row.manifest) if row.manifest else None,
+    }

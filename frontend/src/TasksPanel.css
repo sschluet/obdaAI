@@ -1,0 +1,19 @@
+.task-simplified{max-width:780px;min-width:0}
+.task-simplified>label,.task-simplified>.schedule-fields{margin-top:16px}
+.task-plan-summary{padding:18px;margin:22px 0;background:var(--panel);border:1px solid var(--border);border-radius:14px}
+.task-plan-summary h3{margin:0 0 12px}
+.task-plan-summary dl{margin:0}
+.task-plan-summary dl>div{display:grid;grid-template-columns:85px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px 0;border-bottom:1px solid var(--border)}
+.task-plan-summary dt{font-weight:600}
+.task-plan-summary dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:140px;overflow:auto}
+.task-plan-summary button{font-size:12px;padding:5px 8px}
+.task-options{margin:16px 0;border:1px solid var(--border);border-radius:12px;padding:14px}
+.task-options>summary{cursor:pointer;font-weight:600}
+.task-options>summary span{display:block;font-size:12px;font-weight:400;color:var(--muted);padding:5px 0 0 18px}
+.task-options[open]>summary{margin-bottom:14px}
+.task-write-notice,.task-readiness{border:1px solid var(--border);border-radius:12px;padding:14px;margin:16px 0}
+.task-readiness ul{margin:8px 0 0;padding-left:20px}
+.task-embedded .task-dialog{width:100%;max-height:none;margin:0;border-radius:0;box-shadow:none}
+.task-embedded .task-plan-summary dl>div{grid-template-columns:70px minmax(0,1fr)}
+.task-embedded .task-plan-summary dl>div>button{grid-column:2;justify-self:start}
+@media(max-width:600px){.task-plan-summary dl>div{grid-template-columns:70px minmax(0,1fr)}.task-plan-summary dl>div>button{grid-column:2;justify-self:start}}

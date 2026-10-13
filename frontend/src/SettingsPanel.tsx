@@ -1,0 +1,32 @@
+import {useEffect,useState,lazy} from 'react';
+import {AppearancePanel} from './AppearancePanel';
+import type {Appearance} from './appearance';
+import {ToolsPanel} from './ToolsPanel';
+import {IntegrationRegistryPanel} from './IntegrationRegistryPanel';
+import {ProvidersPanel} from './ProvidersPanel';
+const SkillsPanel=lazy(()=>import('./SkillsPanel').then(m=>({default:m.SkillsPanel})));
+import {PreferencesPanel} from './PreferencesPanel';
+import {PersonalProfilePanel} from './PersonalProfilePanel';
+import {PasswordPanel} from './PasswordPanel';
+import {RoutingSettingsPanel} from './RoutingSettingsPanel';
+import {WebSearchSettingsPanel} from './WebSearchSettingsPanel';
+type API=(path:string,method?:string,body?:unknown)=>Promise<any>;
+type Config={local_configured:boolean;cloud_enabled:boolean;external_provider_kinds?:string[];web_search_configured?:boolean};
+type Mode='auto'|'local'|'cloud';
+export const settingsTabs=['Allgemein','Über mich','Modelle','Routing','Antwortverhalten','Skills','Webrecherche','Integrationen','Datenschutz','Sicherheit'];
+export function SettingsPanel({appearance,appearanceLoading,appearanceError,onAppearanceSave,api,csrf,config,dark,onTheme,defaultMode,onDefaultMode,webAllowed,onWebAllowed,onPasswordChanged,onWebSettingsSaved,onDirtyChange,tab,onTabChange}:{appearance:Appearance;appearanceLoading:boolean;appearanceError:string;onAppearanceSave:(value:Appearance)=>Promise<void>;api:API;csrf?:string;config:Config|null;dark:boolean;onTheme:(dark:boolean)=>void;defaultMode:Mode;onDefaultMode:(mode:Mode)=>void;webAllowed:boolean;onWebAllowed:(allowed:boolean)=>void;onPasswordChanged?:()=>void;onWebSettingsSaved?:()=>Promise<void>;onDirtyChange?:(dirty:boolean)=>void;tab:string;onTabChange:(tab:string)=>void}){
+ const [policy,setPolicy]=useState<{paused:boolean}|null>(null);
+ const setTab=(next:string)=>onTabChange(next);
+ useEffect(()=>{let stopped=false;setPolicy(null);if(tab!=='Datenschutz')return;api('/action-policy').then(value=>{if(!stopped)setPolicy(value)}).catch(()=>{if(!stopped)setPolicy(null)});return()=>{stopped=true}},[api,tab]);
+ return <><p className="muted">Dein Arbeitsraum, deine Modelle und deine Regeln.</p><nav className="settings-tabs" aria-label="Einstellungsbereiche">{settingsTabs.map(name=><button key={name} aria-pressed={tab===name} className={tab===name?'active':''} onClick={()=>setTab(name)}>{name}</button>)}</nav>
+ {tab==='Allgemein'&&<><AppearancePanel value={appearance} loading={appearanceLoading} error={appearanceError} onSave={onAppearanceSave}/><section className="setting-card"><h2>Darstellung und neue Gespräche</h2><label>Darstellung<select aria-label="Darstellung" value={dark?'dark':'light'} onChange={e=>onTheme(e.target.value==='dark')}><option value="light">Hell</option><option value="dark">Dunkel</option></select></label><label>Standard für neue Gespräche<select aria-label="Standard für neue Gespräche" value={defaultMode} onChange={e=>onDefaultMode(e.target.value as Mode)}><option value="auto">AUTO · lokal und Cloud</option><option value="local">Nur lokal</option><option value="cloud" disabled={!config?.cloud_enabled}>Cloud</option></select></label><p className="hint">Darstellung und Standardmodus werden in diesem Browser gespeichert. Im Chat kannst du den Modus für die nächste Nachricht ändern. AUTO erlaubt Cloudmodelle für aktuelle Nachrichten in gewöhnlichen Chats und entscheidet anhand deiner Routingregeln. Cloud verwendet ausdrücklich das konfigurierte Cloudmodell und fällt bei Fehlern nicht auf lokal zurück. Private Quellen und frühere lokale Nachrichten bleiben lokal; für private Gespräche gilt Auto mit lokaler Verarbeitung.</p><label className="web-preference"><input type="checkbox" checked={webAllowed} onChange={event=>onWebAllowed(event.target.checked)}/><span>Webrecherche automatisch erlauben</span></label><p className="hint">Bei Rechercheanfragen wird die aktuelle Nachricht mit bis zu 500 Zeichen als Suchtext an den eingerichteten Suchdienst übergeben. Gesprächsverlauf und Dokumente werden nicht automatisch ergänzt. Die Einstellung gilt in diesem Browser; Nur lokal schaltet die Websuche für diesen Modus aus.</p></section></>}
+ <div hidden={tab!=='Über mich'}><PersonalProfilePanel api={api} onDirtyChange={onDirtyChange}/></div>
+ {tab==='Routing'&&<RoutingSettingsPanel api={api} onOpenModels={()=>setTab('Modelle')}/>}
+ {tab==='Webrecherche'&&<WebSearchSettingsPanel api={api} webAllowed={webAllowed} onWebAllowed={onWebAllowed} onSaved={onWebSettingsSaved}/>}
+ {tab==='Sicherheit'&&<PasswordPanel api={api} onPasswordChanged={onPasswordChanged}/>}
+ {tab==='Modelle'&&<ProvidersPanel api={api}/>}
+ {tab==='Antwortverhalten'&&<><PreferencesPanel api={api}/><section className="setting-card"><h2>So soll dein Assistent antworten</h2><p>Erstelle Regeln für Sprache, Länge, Stil oder Gliederung. Aktiviere eine geprüfte Regel und wähle passende Stichwörter oder ordne sie gezielt einem Gespräch zu.</p><p className="hint">Projektspezifische Hinweise pflegst du im Projektraum. Eine Verhaltensregel erteilt keine System- oder Cloudrechte.</p></section></>}
+ {tab==='Skills'&&<SkillsPanel api={api} csrf={csrf}/>}
+ {tab==='Integrationen'&&<div className="integration-settings"><header className="integration-intro"><h2>Integrationen</h2><p>Verwalte deine Verbindungen an einem Ort und ordne sie Projekten, Aufgaben oder Gesprächen zu. Status und verfügbare Funktionen bleiben sichtbar.</p></header><IntegrationRegistryPanel api={api}/><details className="setting-card"><summary>Bestehende Systemaktionen</summary><ToolsPanel api={api}/></details></div>}
+ {tab==='Datenschutz'&&<section className="setting-card"><h2>Datenverarbeitung und Aktionen</h2><p>Projekte, Dokumente und Verhaltensregeln bleiben lokal. AUTO wählt innerhalb deiner Freigaben; Nur lokal schließt Cloudverarbeitung und externe Websuche aus.</p><p>Aktionen mit Änderungen: <b>{policy===null?'Status nicht verfügbar':policy.paused?'Pausiert':'Einzeln freigeben'}</b>. Freigaben und ausgeführte Aktionen findest du unter Integrationen.</p><button onClick={()=>setTab('Integrationen')}>Integrationen öffnen</button><p className="hint">Eine Freigabe gilt für die konkrete Aktion. Modellvorschläge erteilen keine zusätzlichen Rechte. Ergebnisse und Ausführungsverlauf bleiben bei der Aufgabe beziehungsweise dem Gespräch nachvollziehbar.</p></section>}</>;
+}

@@ -1,7 +1,9 @@
+import json
 import os
 from pathlib import Path
+from typing import Annotated, Literal
 
-from pydantic import TypeAdapter
+from pydantic import Field, TypeAdapter
 from pydantic.dataclasses import dataclass
 
 
@@ -20,6 +22,9 @@ class Settings:
     openrouter_model: str = ""
     openrouter_key_file: str = ""
     cloud_enabled: bool = False
+    external_provider_kinds: tuple[Literal["openrouter", "openai", "anthropic"], ...] = (
+        "openrouter",
+    )
     secrets_key_file: str = ""
     local_endpoints_json: str = "{}"
     local_timeout: int = 30
@@ -27,16 +32,33 @@ class Settings:
     local_max_tokens: int = 2048
     openrouter_max_tokens: int = 2048
     run_timeout: int = 90
+    generation_timeout: Annotated[int, Field(ge=30, le=900)] = 600
     context_limit: int = 24000
     source_dir: str = ".local/sources"
     parser_result_dir: str = ""
+    artifact_request_dir: str = ""
+    artifact_result_dir: str = ""
     vault_dir: str = ""
     vault_fs_type: str = ""
     vault_writable: bool = False
     web_domains_json: str = "[]"
     search_url: str = ""
     search_allowed_ip: str = ""
+    mcp_endpoints_json: str = "{}"
+    mcp_read_tools_json: str = "{}"
+    browser_targets_json: str = "{}"
+    browser_request_dir: str = ""
+    browser_result_dir: str = ""
+    ha_token_file: str = ""
+    ha_allowed_ip: str = ""
+    n8n_api_key_file: str = ""
+    n8n_allowed_ip: str = ""
+    n8n_ca_credential_id: str = ""
+    scheduler_enabled: bool = False
+    scheduler_token_file: str = ""
     static_dir: str = "frontend/dist"
+    source_network_enabled: bool = False
+    integration_targets_enabled: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -44,7 +66,11 @@ class Settings:
         for name in cls.__dataclass_fields__:
             raw = os.getenv("HUB_" + name.upper())
             if raw is not None:
-                values[name] = raw
+                values[name] = (
+                    json.loads(raw)
+                    if name in ("external_provider_kinds", "local_allowed_labels")
+                    else raw
+                )
         return TypeAdapter(cls).validate_python(values)
 
 

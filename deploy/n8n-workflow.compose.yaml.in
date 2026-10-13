@@ -1,0 +1,18 @@
+# Own obdaAI APIs only; install after reviewed integration authorization.
+# The supplied n8n key can have account-wide privileges. Application paths are
+# restricted to code-owned workflow templates, credentials and bound readbacks.
+services:
+  api:
+    environment:
+      HUB_N8N_API_KEY_FILE: /run/secrets/n8n-workflow.key
+      HUB_N8N_ALLOWED_IP: __N8N_REVIEWED_IPV4__
+      HUB_N8N_CA_CREDENTIAL_ID: __N8N_CA_ID__
+    volumes:
+      - /etc/obdaai/secrets/n8n-workflow.key:/run/secrets/n8n-workflow.key:ro
+  api_https:
+    environment:
+      HUB_N8N_API_KEY_FILE: /run/secrets/n8n-workflow.key
+      HUB_N8N_ALLOWED_IP: __N8N_REVIEWED_IPV4__
+      HUB_N8N_CA_CREDENTIAL_ID: __N8N_CA_ID__
+    volumes:
+      - /etc/obdaai/secrets/n8n-workflow.key:/run/secrets/n8n-workflow.key:ro

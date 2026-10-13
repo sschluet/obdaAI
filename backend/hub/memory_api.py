@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
 from hub.db import Memory, MemoryRevision, Project
+from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
 from hub.memory import (
     digest,
@@ -110,6 +111,7 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
         target = root()
         with factory() as db:
             serialize(db)
+            ownership_lock(db)
             previous = db.get(Memory, body.id)
             text = "# " + body.title + "\n\n" + body.content
             if previous:
@@ -144,9 +146,14 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
             raise HTTPException(409, "Schreibfreigabe oder Memory-ID ungültig")
         with factory() as db:
             serialize(db)
+            ownership_lock(db)
             row = db.scalar(select(Memory).where(Memory.id == memory_id))
             if not row or row.project_id != body.project_id:
                 raise HTTPException(404, "Memory im Scope nicht gefunden")
+            if row.project_id and db.get(Project, row.project_id) is None:
+                raise HTTPException(
+                    409, "Projekt wurde gelöscht; historisches Memory bleibt erhalten"
+                )
             if row.conflict.startswith("pending:"):
                 raise HTTPException(409, "Memory-Schreibvorgang läuft; zuerst synchronisieren")
             if body.resolve_vault_sha256:

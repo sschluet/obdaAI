@@ -10,9 +10,14 @@ Ein Projektgespräch lässt sich nicht pauschal für OpenRouter freigeben.
 ## Dateien und Nachweise
 
 DOCX/PPTX/PDF/CSV/XLSX/MD/TXT sowie PNG/JPEG/WebP/TIFF werden unverändert und mit
-SHA256 gespeichert. Alte Office- und Makroformate werden abgewiesen. Limits: 20 MiB
+SHA256 gespeichert. Alte Office- und Makroformate werden abgewiesen. Limits: 40 MiB
 pro Datei, 100 Dateien / 200 MiB pro Projekt, 2 GiB Originaldateien insgesamt;
 zusätzlich Seiten-, Tabellen-, Bildpixel-, ZIP-Verhältnis-, Text-, Zeit- und RAM-Grenzen.
+Die Dateigröße erweitert nicht die Extraktionsgrenzen: PDF bis 100 Seiten, höchstens
+800.000 Textzeichen und 2.000 Fundstellen; Office-Archive bis 80 MiB entpackter Inhalt
+und 20 MiB je Archiveintrag. Eingaben für separate Dateioperationen bleiben auf
+20 MiB je Original beschränkt; der Paperless-Download hat ebenfalls sein eigenes
+20-MiB-Limit. Diese Grenzen sind unabhängig vom Projektquellen-Upload.
 Downloads prüfen den Originalhash und autorisieren den Projektscope. Erneute Verarbeitung
 erstellt eine neue Extraktionsrevision und verwendet keine alte Ergebnis-/Fehlercachedatei.
 
@@ -25,23 +30,57 @@ unter Linux bricht ab; macOS ist ausschließlich Entwicklungsbetrieb ohne diese 
 
 Fundstellen tragen Originalhash und ID: PDF-Seite, Foliennummer, Dokumentabschnitt
 oder Tabelle, Sheet/Zellbereich, CSV-Zeile, Markdown-Überschrift/Zeile. Text wird direkt
-extrahiert; textlose PDF-Seiten und Bilder erhalten lokale Tesseract-OCR. OCR kann
-fehlerhaft sein; Bild- und Diagrammsemantik sowie komplexes Office-Layout werden nicht
-als verstanden behauptet. Office-Formeln werden erhalten, nicht ausgeführt. ZIP-Makros
+extrahiert; textlose PDF-Seiten, schwache Textschichten von Bildseiten und Bilder
+werden lokal mit Tesseract in Deutsch und Englisch verarbeitet. PDF-Seiten werden für
+gewöhnliche Papiergrößen mit 300 dpi gerastert; große Seiten bleiben unter festen
+Pixelgrenzen. Graustufen, Weißhintergrund für Transparenz, vorsichtige Kontrastanpassung
+und Korrektur kleiner Schräglagen verbessern die Scanvorbereitung. Tesseract prüft
+zusätzlich die Seitenorientierung. Weder Vorbereitung noch OCR verändern das Original.
+OCR kann fehlerhaft sein; Handschrift, Tabellenstruktur, Bild- und Diagrammsemantik
+sowie komplexes Office-Layout werden nicht als zuverlässig verstanden behauptet. Fehlschläge unterscheiden Passwortschutz, Seiten-/Textgrenzen, fehlende OCR-Runtime,
+OCR- und Parserzeitlimits sowie ungültige Dateien über feste, verständliche Meldungen
+mit Diagnosecode. Der PDF-Parser hat bis zu 600 Sekunden Gesamtzeit und 480 Sekunden
+CPU-Zeit; Rasterung bleibt je Aufruf auf 30 Sekunden begrenzt; PDF-OCR erhält bis zu
+120 Sekunden je Scan-Seite, Bild-OCR weiterhin 30 Sekunden. Andere
+Formate behalten 120 Sekunden Gesamtzeit und 90 Sekunden CPU-Zeit. Umfangreiche
+oder besonders schwierige Scans können diese Grenzen weiterhin erreichen.
+Prozessausgaben und Dokumentinhalte werden nicht als Fehlertexte
+an den Browser weitergereicht. Im Projekt und im Chat-Arbeitsbereich steht bei einer
+fehlgeschlagenen Quelle direkt „Erneut verarbeiten“ bereit. Das ist ein ausdrücklicher
+neuer lokaler Versuch, kein automatischer Retry. Originaldownload bleibt erreichbar;
+archivierte Projekte müssen zur Bearbeitung zunächst wieder geöffnet werden.
+
+Office-Formeln werden erhalten, nicht ausgeführt. ZIP-Makros
 und eingebettete aktive Office-Inhalte werden abgewiesen; kein Dokumentcode läuft.
 
 Recherche begrenzt Fundstellen vor dem Modellkontext und wendet den Projektscope im
-Datenbankquery an. Die Oberfläche zeigt die tatsächlich verwendeten Quellen getrennt
-vom Modelltext. Zeilenbasierte Tabellenprüfungen summieren mittels Decimal, mit jeder
-Originalzelle und ausgelassenen Überschriften/Formeln als überprüfbarem Beleg.
-Diese Prüfung ersetzt keine Fachprüfung komplexer Tabellen oder Rechnungen.
+Datenbankquery an. Die Originaldateien bleiben vollständig gespeichert; eine Antwort
+bekommt ausgewählte Auszüge statt aller Dokumenttexte. Die Auswahl berücksichtigt
+die aktuelle Frage und das verfügbare Kontextbudget. Suchbegriffe werden mit Dateinamen
+und Fundstellentexten im gesamten Projektscope abgeglichen, bevor die Treffer begrenzt
+werden. Häufige Fragewörter bestimmen die Relevanz nicht allein. Größere Fundstellen werden als
+begrenzte Textfenster übernommen, wobei Quellen-ID, Extraktionsrevision, Dateiname und
+Fundstelle erhalten bleiben. Das Antwortmodell erhält einen Hinweis, wenn nur Auszüge
+oder eine Auswahl vorliegen, und darf daraus keine vollständige Dokumentprüfung ableiten.
+
+Die Oberfläche zeigt die tatsächlich verwendeten Quellen getrennt vom Modelltext.
+Das ermöglicht Fragen in Projekten mit vielen Dateien innerhalb der bestehenden
+Upload- und Speichergrenzen; es erweitert weder das Modellfenster noch die Parsergrenzen.
+Allgemeine Fragen oder Übersichtswünsche erhalten eine begrenzte Quellenauswahl und
+können weitere gezielte Nachfragen erfordern. Die Suche ist textbasiert; semantische
+Embeddings und eine erschöpfende Gesamtauswertung aller Dateien werden nicht behauptet.
+Zeilenbasierte Tabellenprüfungen summieren mittels Decimal, mit jeder Originalzelle und
+ausgelassenen Überschriften/Formeln als überprüfbarem Beleg. Diese Prüfung ersetzt keine
+Fachprüfung komplexer Tabellen oder Rechnungen.
 
 ## Web
 
 Der austauschbare JSON-Adapter nutzt den dokumentierten SearXNG-Suchendpunkt.
-Nur ein eigens eingegebener und ausdrücklich freigegebener öffentlicher Suchtext wird
-übertragen; niemals automatisch aus privaten Dateien, Memory oder Historie abgeleitete
-Suchtexte. Quell-URL, Titel, Ergebnistext, Anbieter und Abrufzeit bleiben projektbezogen.
+Die dauerhaft gewählte Websuche erlaubt die aktuelle eingegebene Frage als öffentlichen
+Suchtext, ohne erneuten Bestätigungsdialog. Sie ist im Browser standardmäßig aktiv und
+in Chateingabe und Einstellungen abschaltbar. Es werden keine Suchtexte automatisch
+aus privaten Dateien, Memory oder Historie ergänzt. Quell-URL, Titel, Ergebnistext,
+Anbieter und Abrufzeit bleiben projektbezogen.
 Ohne konfigurierten/erreichbaren Anbieter wird sichtbar keine aktuelle Recherche behauptet.
 
 Gezielter HTML-Abruf benötigt zusätzlich eine konkrete URL-Freigabe und operatorseitige
@@ -80,12 +119,14 @@ Revision ergeben eine stabile Idempotenz-ID. Quellen, Modellantworten und Webtex
 können diesen Write nicht auslösen. Automatische Memory-Vorschläge/Übernahme bleiben
 deaktiviert. Allgemeiner Vault bleibt readonly; Cloudfreigaben vererben sich nicht.
 
-Webfähige Chatläufe benötigen eine Freigabe für den exakten aktuellen Nachrichtentext
-(maximal 500 Zeichen). Chatverlauf, Vault, Dateiquellen und abgeleitete Routerqueries
-werden nicht als Suchanfrage übertragen. Bearbeitung, Gesprächswechsel und Retry
-widerrufen die Freigabe. Rechercheergebnisse mit URL und Zeitpunkt werden als lokale,
-untrusted Quellen im Lauf gespeichert; der finale Antwortkontext wird erneut gegen
-Modellgrenzen geprüft. Ohne angebundenen Suchdienst bleibt die Funktion gesperrt.
+Webfähige Chatläufe binden `web_search_allowed` und den konkreten öffentlichen
+`web_query` an die aktuelle Anfrage (getrimmt, maximal die ersten 500 Zeichen).
+Die gewählte Websuche gilt auch für Bearbeitung und Retry; jeder neue Lauf erhält seine eigene aktuelle Query. Chatverlauf, Vault,
+Dateiquellen und abgeleitete Routerqueries werden nicht als Suchanfrage übertragen.
+„Nur lokal“ setzt Websuche für den Lauf aus. Rechercheergebnisse mit URL und Zeitpunkt
+werden als lokale, untrusted Quellen im Lauf gespeichert; der finale Antwortkontext
+wird erneut gegen Modellgrenzen geprüft. Ohne angebundenen Suchdienst bleibt die
+Funktion gesperrt. Diese Sucherlaubnis erteilt keine Cloud-Modellfreigabe.
 Schema 0010 ergänzt explizite globale Vault-Wissenschats, 0011 globale Rechercheläufe.
 
 Bei produktiver SSHFS-Anbindung erzwingt HUB_VAULT_FS_TYPE=fuse.sshfs den tatsächlichen
@@ -95,3 +136,27 @@ API-/Worker-Abgleiche werden durch PostgreSQL- und Dateisperren geordnet; persis
 Schreibintents bleiben vor dem atomaren Dateiaustausch erhalten. Der globale Wissenschat
 filtert passende Inhalte vor dem 500-Treffer-Limit, statt ältere Quellen zu übergehen
 oder unpassende aktuelle Notizen automatisch beizumischen.
+
+## Einzelne Projektquelle löschen
+
+Im Quellenbereich und im Chat-Arbeitsbereich hat jede Quelle eine Löschaktion.
+Die Vorschau nennt Dateiname, Quellenversionen und Indexeinträge. Erst die erneute
+Bestätigung entfernt ausschließlich diese lokale Quelle aus dem Projekt und
+Suchindex. Originaldatei und alle Parserrevisionen werden über die vorhandene
+dauerhafte Bereinigungsqueue entfernt; der Status bleibt auch nach Schließen des
+Dialogs sichtbar. Andere Quellen, gespeicherte Antworten, deren Quellenangaben
+und abgeschlossene Ausgaben bleiben erhalten. Die entfernte Originalquelle kann
+über diese alten Belege nicht mehr geöffnet werden; historische Inhalte werden
+nicht umgeschrieben.
+
+Laufende Verarbeitung/Indexierung, aktive Antworten mit diesem Projekt oder dieser
+Quelle sowie aktive abhängige Aufgaben, Freigaben und Dateierzeugung verhindern die
+Löschung. Eine geänderte Vorschau erfordert eine neue Bestätigung. Bei importierten
+Wissenskopien wird nur die lokale Zuordnung entfernt: Verbindung und externes
+Original bleiben erhalten, ein erneuter Abgleich kann die Quelle erneut importieren.
+
+Die API bietet `GET /api/projects/{project_id}/sources/{source_id}/deletion` und
+`DELETE /api/projects/{project_id}/sources/{source_id}` mit `expected_state`.
+Authentifizierung, CSRF und Projektzuordnung gelten unverändert. Die transaktionalen
+Ownership-/Aufgabenlocks serialisieren die Mutation mit Verarbeitung und Retry;
+verspätete Workeraufträge dürfen entfernte Quellen nicht neu erzeugen.

@@ -15,7 +15,7 @@ from hub.db import Conversation, Message, Run, RunEvent, session_factory
 from hub.jobs import enqueue, requeue_stalled, worker_app
 from hub.routing import Route
 from hub.titles import reserve_title
-from sqlalchemy import create_engine, inspect, select, text
+from sqlalchemy import create_engine, inspect, select, text, update
 from test_chat import FakeProviders
 
 
@@ -117,7 +117,13 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         )
     # A stalled task redispatch reconciles output without a second model call.
     with factory() as db:
-        stale = Run(conversation_id=chat_id, status="streaming")
+        stale = Run(
+            conversation_id=chat_id,
+            status="streaming",
+            provider="openrouter",
+            model="synthetic/crashed-answer-model",
+            answer_model_used=True,
+        )
         db.add(stale)
         db.flush()
         db.add(
@@ -151,6 +157,11 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         assert db.get(Run, stale_id).status == "interrupted"
         partial = db.scalar(select(Message).where(Message.content == "SYNTHETIC_CRASH_PARTIAL"))
         assert partial is not None and partial.label == "LOCAL_ONLY"
+        assert partial.run_id == stale_id
+        recovered = db.get(Run, partial.run_id)
+        assert recovered.provider == "openrouter"
+        assert recovered.model == "synthetic/crashed-answer-model"
+        assert recovered.answer_model_used is True
     with factory() as db:
         db.add(Message(conversation_id=chat_id, role="user", content="Häuser wurden gebaut"))
         db.add(
@@ -173,6 +184,8 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
         assert client.get("/api/conversations?q=Geheimbegriff").json() == []
     # Real PostgreSQL serialization prevents overlapping API/worker Vault scans
     # from importing the same canonical note twice before either commits.
+    # Scoped ownership now precedes the memory index lock, so a competing scan
+    # can wait at either protected boundary.
     import concurrent.futures
     import tempfile
     import time
@@ -203,7 +216,7 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
                             probe.scalar(
                                 text(
                                     "SELECT count(*) FROM pg_locks WHERE locktype='advisory' "
-                                    "AND objid=791103043 AND NOT granted"
+                                    "AND objid IN (791103043, 791103049) AND NOT granted"
                                 )
                             )
                         )
@@ -218,6 +231,110 @@ def test_postgres_migration_and_persistence(monkeypatch: pytest.MonkeyPatch) -> 
             with factory() as db:
                 imported = list(db.scalars(select(Memory).where(Memory.path == "synthetic.md")))
                 assert len(imported) == 1 and not imported[0].deleted
+    with pytest.raises(RuntimeError, match="Preserve message processing provenance"):
+        command.downgrade(cfg, "base")
+    # This guarded loopback hub_ci database is disposable. Explicitly remove
+    # this test's scratch provenance before exercising a destructive reset.
+    # Production must retain it and the downgrade guard remains unchanged.
+    with factory() as db:
+        db.execute(update(Message).where(Message.conversation_id == chat_id).values(run_id=None))
+        db.execute(update(Run).where(Run.conversation_id == chat_id).values(answer_model_used=None))
+        db.commit()
     engine.dispose()
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")
+
+
+@pytest.mark.skipif(not os.getenv("HUB_CI_DATABASE_URL"), reason="Disposable PostgreSQL required")
+def test_postgres_action_concurrent_receipt_and_pause(monkeypatch):
+    import concurrent.futures
+    import uuid
+
+    from hub.db import ActionGrant, ActionIntent, ActionReceipt, Project
+    from sqlalchemy import delete, func
+
+    url = os.environ["HUB_CI_DATABASE_URL"]
+    if "127.0.0.1" not in url or not url.endswith("/hub_ci"):
+        pytest.fail("Refusing any database except loopback hub_ci")
+    monkeypatch.setenv("HUB_DATABASE_URL", url)
+    command.upgrade(Config("alembic.ini"), "head")
+    settings = Settings(
+        database_url=url,
+        origin="http://testserver",
+        secure_cookie=False,
+        password_hash=password_hash("synthetic-gateway-password"),
+    )
+    app = create_app(settings)
+    with TestClient(app) as client:
+        login = client.post(
+            "/api/login",
+            json={"password": "synthetic-gateway-password"},
+            headers={"Origin": settings.origin},
+        )
+        headers = {"Origin": settings.origin, "X-CSRF-Token": login.json()["csrf"]}
+        policy = client.get("/api/action-policy").json()
+        client.patch(
+            "/api/action-policy",
+            json={"paused": False, "expected_revision": policy["revision"]},
+            headers=headers,
+        )
+        project = client.post(
+            "/api/projects", json={"name": "Synthetic concurrent gateway"}, headers=headers
+        ).json()
+        action = client.post(
+            "/api/actions",
+            json={
+                "request_id": str(uuid.uuid4()),
+                "tool_id": "project.archive",
+                "parameters": {
+                    "project_id": project["id"],
+                    "expected_revision": project["revision"],
+                },
+            },
+            headers=headers,
+        ).json()
+        assert (
+            client.post(
+                "/api/actions/" + action["id"] + "/grant",
+                json={"parameters_sha256": action["parameters_sha256"], "tool_revision": 1},
+                headers=headers,
+            ).status_code
+            == 200
+        )
+
+        def execute(_):
+            return client.post(
+                "/api/actions/" + action["id"] + "/execute", json={}, headers=headers
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            responses = list(pool.map(execute, range(2)))
+        assert all(r.status_code == 200 for r in responses)
+        assert responses[0].json()["receipt"] == responses[1].json()["receipt"]
+        with app.state.sessions() as db:
+            saved = db.get(Project, project["id"])
+            assert saved.archived and saved.revision == project["revision"] + 1
+            assert (
+                db.scalar(
+                    select(func.count())
+                    .select_from(ActionReceipt)
+                    .where(ActionReceipt.action_id == action["id"])
+                )
+                == 1
+            )
+        policy = client.get("/api/action-policy").json()
+        assert (
+            client.patch(
+                "/api/action-policy",
+                json={"paused": True, "expected_revision": policy["revision"]},
+                headers=headers,
+            ).status_code
+            == 200
+        )
+        assert execute(None).status_code == 200
+        # Only this disposable test's audit is removed; production downgrade preserves audit.
+        with app.state.sessions() as db:
+            db.execute(delete(ActionReceipt).where(ActionReceipt.action_id == action["id"]))
+            db.execute(delete(ActionGrant).where(ActionGrant.action_id == action["id"]))
+            db.execute(delete(ActionIntent).where(ActionIntent.id == action["id"]))
+            db.commit()

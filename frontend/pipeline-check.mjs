@@ -1,0 +1,38 @@
+import {loginFixture} from './fixture-login.mjs';
+import {chromium} from 'playwright';
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:390,height:844}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+try{
+ await page.goto('http://127.0.0.1:18765');
+ await loginFixture(page);
+ await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
+ await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
+ await page.getByRole('button',{name:'Neue Aufgabe',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Aufgabe bearbeiten',exact:true});
+ const title='Synthetic report pipeline '+Date.now();
+ await dialog.getByLabel('Name der Aufgabe',{exact:true}).fill(title);
+ await dialog.getByLabel('Was soll erledigt werden?',{exact:true}).fill('Read the selected Home Assistant report and analyze it locally.');
+ await dialog.locator('summary').filter({hasText:'Weitere Einstellungen'}).click();
+ await dialog.getByRole('button',{name:'Leseschritt hinzufügen',exact:true}).click();
+ await dialog.getByLabel('Schritt 1',{exact:true}).selectOption('ha.inspect');
+ const save=dialog.getByRole('button',{name:'Aufgabe anlegen',exact:true});
+ if(await save.isEnabled())throw Error('System reports reached model without explicit selection');
+ await dialog.getByLabel('Die ausgewählten Systemberichte ausdrücklich für diese lokale KI-Auswertung verwenden',{exact:true}).check();
+ await dialog.getByLabel('Wann auswerten?',{exact:true}).selectOption('ha_updates_available');
+ await dialog.getByLabel('n8n soll auf den Aufgabenabschluss warten und Fehler sichtbar melden',{exact:true}).check();
+ await save.click();
+ await page.getByRole('heading',{name:title,exact:true,level:2}).waitFor();
+ await page.getByRole('button',{name:'Aufgabe bearbeiten',exact:true}).click();
+ await dialog.locator('summary').filter({hasText:'Weitere Einstellungen'}).click();
+ if(!await dialog.getByLabel('n8n soll auf den Aufgabenabschluss warten und Fehler sichtbar melden',{exact:true}).isChecked())throw Error('Bound n8n completion option lost');
+ if(!await dialog.getByLabel('Die ausgewählten Systemberichte ausdrücklich für diese lokale KI-Auswertung verwenden',{exact:true}).isChecked())throw Error('Explicit report scope lost');
+ if(await dialog.getByLabel('Wann auswerten?',{exact:true}).inputValue()!=='ha_updates_available')throw Error('Condition lost');
+ await dialog.getByRole('button',{name:'Schließen',exact:true}).click();
+ await page.getByText('Erweiterte Automatisierung mit n8n',{exact:true}).click();
+ await page.getByRole('button',{name:'Workflowentwurf für diese Aufgabe vorbereiten',exact:true}).click();
+ await page.getByLabel('Geprüfter Aufgabenablauf',{exact:true}).waitFor();
+ if(await page.getByLabel('Geprüfter Aufgabenablauf',{exact:true}).locator('li').count()!==2)throw Error('Workflow projection did not bind both nodes');
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('Pipeline mobile UI passed: ordered editable steps, explicit local report scope, condition persistence and bounded workflow projection. Synthetic only.');
+}finally{await browser.close()}

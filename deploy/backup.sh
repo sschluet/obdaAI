@@ -20,8 +20,12 @@ if [[ -f /etc/obdaai/runtime.env ]] && grep -q '^HUB_VAULT_DIR=/vault$' /etc/obd
   vault_size=$(du -sb /mnt/obdaai-vault/AI/Memory | cut -f1)
   vault_archive=(-C /mnt/obdaai-vault AI/Memory)
 fi
+integration_archive=()
+for p in usr/local/lib/obdaai/integration-network.py etc/systemd/system/obdaai-integration-network.service; do
+  [[ ! -e "/$p" ]] || integration_archive+=("$p")
+done
 access_archive=()
-for p in var/lib/obdaai-access/.ssh etc/systemd/system/obdaai-vault-mount.service etc/systemd/system/obdaai-search-relay.service opt/obdaai/vault.compose.yaml; do
+for p in var/lib/obdaai-access/.ssh etc/systemd/system/obdaai-vault-mount.service etc/systemd/system/obdaai-search-relay.service etc/systemd/system/obdaai-source-network.service usr/local/lib/obdaai/source-network.py opt/obdaai/vault.compose.yaml opt/obdaai/scheduler.compose.yaml opt/obdaai/home-assistant.compose.yaml opt/obdaai/n8n-workflow.compose.yaml opt/obdaai/browser.compose.yaml opt/obdaai/browser-seccomp.json opt/obdaai/artifact.compose.yaml; do
   [[ ! -e /$p ]] || access_archive+=("$p")
 done
 estimate=$((size * 3 + source_size * 2 + vault_size * 2 + 52428800))
@@ -41,7 +45,7 @@ tar -C / -czf - \
   etc/systemd/system/obdaai-https-network.service \
   etc/systemd/system/docker.service.d/obdaai-egress.conf \
   etc/systemd/system/nginx.service.d/obdaai-network.conf \
-  etc/nginx/sites-enabled/obdaai "${access_archive[@]}" "${vault_archive[@]}" | age --encrypt -R "$recipients" -o "$staging/config.tar.gz.age"
+  etc/nginx/sites-enabled/obdaai "${access_archive[@]}" "${integration_archive[@]}" "${vault_archive[@]}" | age --encrypt -R "$recipients" -o "$staging/config.tar.gz.age"
 (cd "$staging" && sha256sum database.pgdump.age config.tar.gz.age > SHA256SUMS)
 printf 'format=obdaai-age-v1\nutc=%s\n' "$id" > "$staging/manifest.txt"
 mv -- "$staging" "$root/snapshot-$id"

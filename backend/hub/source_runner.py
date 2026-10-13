@@ -7,7 +7,9 @@ import time
 import uuid
 from pathlib import Path
 
+from hub.deletion_cleanup import blocked, consume_markers
 from hub.extract import EXTENSIONS, isolated_parse
+from hub.extraction_errors import classify_error
 
 
 def process(root: Path, output: Path, job: Path) -> None:
@@ -16,6 +18,8 @@ def process(root: Path, output: Path, job: Path) -> None:
     try:
         spec = json.loads(job.read_text())
         identifier = str(uuid.UUID(spec["id"]))
+        if blocked(root, "source", identifier):
+            return
         digest = spec["sha256"]
         suffix = spec["suffix"]
         revision = spec.get("revision", 1)
@@ -39,18 +43,37 @@ def process(root: Path, output: Path, job: Path) -> None:
         result = isolated_parse(original, suffix)
         result["sha256"] = digest
         result["revision"] = revision
-    except (ValueError, OSError, KeyError, TimeoutError, TypeError):
-        result = {"error": "Extraktion fehlgeschlagen; Format, Schutz, OCR und Limits prüfen"}
-        identifier = job.stem
-        revision = spec.get("revision", 1) if "spec" in locals() and isinstance(spec, dict) else 1
+    except (ValueError, OSError, KeyError, TimeoutError, TypeError) as error:
+        # Invalid envelopes have no safe destination or source identity.
+        if (
+            "identifier" not in locals()
+            or "digest" not in locals()
+            or "suffix" not in locals()
+            or "revision" not in locals()
+        ):
+            return
+        result = {
+            "error": classify_error(error, suffix).code,
+            "sha256": digest,
+            "revision": revision,
+        }
+    if blocked(root, "source", identifier):
+        return
     temporary = output / ("." + identifier + "-" + str(revision) + ".tmp")
     temporary.write_text(json.dumps(result))
+    if blocked(root, "source", identifier):
+        temporary.unlink(missing_ok=True)
+        return
     os.replace(temporary, output / (identifier + "-" + str(revision) + ".json"))
 
 
 def main() -> None:
     root, output = Path("/sources"), Path("/results")
     while True:
+        try:
+            consume_markers(root, output, "source")
+        except (ValueError, OSError, KeyError, TypeError):
+            pass  # No acknowledgement: durable owner reports/retries pending cleanup.
         for job in sorted((root / "inbox").glob("*.json"))[:10000]:
             process(root, output, job)
         time.sleep(1)

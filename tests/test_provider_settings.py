@@ -169,6 +169,12 @@ def test_connection_and_queued_local_model_test(managed, monkeypatch):
         calls.append(request.url.path)
         if request.method == "GET":
             return httpx.Response(200, json={"data": [{"id": "local-fixture"}]})
+        if json.loads(request.content).get("stream"):
+            return httpx.Response(
+                200,
+                text='data: {"choices":[{"delta":{"content":"4"}}]}\n\n'
+                'data: [DONE]\n\n',
+            )
         return httpx.Response(
             200,
             json={
@@ -357,3 +363,219 @@ def test_managed_cloud_route_usage_and_local_history_never_leaks(
                 assert reservation is None
             else:
                 assert reservation.measured == 0.0002
+
+
+@pytest.mark.parametrize(
+    "kind,url,model",
+    [
+        ("openai", "https://api.openai.com/v1", "gpt-4.1-mini"),
+        ("anthropic", "https://api.anthropic.com/v1", "claude-haiku-4-5-20251001"),
+    ],
+)
+def test_prepare_native_encrypted_connection_without_server_egress(managed, kind, url, model):
+    app, client, headers, cfg = managed
+    response = client.post(
+        "/api/providers",
+        headers=headers,
+        json={
+            **payload("openrouter"),
+            "kind": kind,
+            "base_url": url,
+            "model": model,
+            "api_key": "SYNTHETIC_NATIVE_PROVIDER_KEY",
+            "is_default": True,
+        },
+    )
+    assert response.status_code == 200, response.text
+    row = response.json()
+    assert row["secret_ref"] == "encrypted" and "SYNTHETIC_NATIVE_PROVIDER_KEY" not in response.text
+    assert (
+        client.post(
+            "/api/providers/" + row["id"] + "/test", headers=headers, json={"mode": "connection"}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            "/api/conversations",
+            headers=headers,
+            json={"cloud_allowed": True, "cloud_provider": kind},
+        ).status_code
+        == 409
+    )
+    private = client.post("/api/conversations", headers=headers, json={"cloud_provider": kind})
+    assert private.status_code == 200 and private.json()["cloud_provider"] == kind
+    assert (
+        client.patch(
+            "/api/conversations/" + private.json()["id"],
+            headers=headers,
+            json={"cloud_provider": "openrouter"},
+        ).status_code
+        == 422
+    )
+    with app.state.sessions() as db:
+        stored = db.get(ProviderConfig, row["id"])
+        assert decrypt(cfg, row["id"], stored.encrypted_secret) == "SYNTHETIC_NATIVE_PROVIDER_KEY"
+    assert kind not in client.get("/api/providers").json()["external_provider_kinds"]
+
+
+def test_native_consent_reservation_stream_and_cost_basis_end_to_end(managed, monkeypatch):
+    from hub.native_providers import REVIEWED_AT
+    from hub.providers import Providers
+    from hub.routing import Route
+
+    _, _, _, cfg = managed
+    cfg = replace(cfg, cloud_enabled=True, external_provider_kinds=("openrouter", "openai"))
+    requests = []
+    original = httpx.AsyncClient
+
+    def respond(request):
+        requests.append(request)
+        events = [
+            {"type": "response.output_text.delta", "delta": "Blue"},
+            {
+                "type": "response.completed",
+                "response": {
+                    "status": "completed",
+                    "usage": {"input_tokens": 100, "output_tokens": 20},
+                },
+            },
+        ]
+        return httpx.Response(
+            200, content="".join("data: " + json.dumps(e) + "\n\n" for e in events)
+        )
+
+    monkeypatch.setattr(
+        "hub.providers.socket.getaddrinfo",
+        lambda *a, **k: [(None, None, None, None, ("1.1.1.1", 443))],
+    )
+    monkeypatch.setattr(
+        "hub.native_providers.httpx.AsyncClient",
+        lambda **kw: original(**kw, transport=httpx.MockTransport(respond)),
+    )
+    monkeypatch.setattr("hub.native_providers.REVIEWED_AT", int(time.time()))
+
+    async def route(self, parts, roles):
+        if any(p.label == Privacy.LOCAL_ONLY for p in parts):
+            return Route(
+                capabilities=["chat"], model_class="local", reason="private", answer="Local"
+            )
+        return Route(
+            capabilities=["chat"], model_class="cloud", reason="synthetic native route", answer=None
+        )
+
+    async def title(self, parts, roles):
+        return "Synthetic native conversation"
+
+    monkeypatch.setattr(Providers, "route", route)
+    monkeypatch.setattr(Providers, "title", title)
+    app = create_app(cfg)
+    with TestClient(app) as client:
+        login = client.post(
+            "/api/login",
+            headers={"Origin": cfg.origin},
+            json={"password": "synthetic-test-password"},
+        )
+        h = {"Origin": cfg.origin, "X-CSRF-Token": login.json()["csrf"]}
+        body = {
+            **payload("openrouter"),
+            "kind": "openai",
+            "base_url": "https://api.openai.com/v1",
+            "model": "gpt-4.1-mini",
+            "api_key": "SYNTHETIC_NATIVE_PROVIDER_KEY",
+            "is_default": True,
+            "monthly_budget": 0.02,
+            "max_run_cost": 0.01,
+            "output_tokens": 128,
+        }
+        result = client.post("/api/providers", headers=h, json=body)
+        assert result.status_code == 200, result.text
+        private = client.post(
+            "/api/conversations", headers=h, json={"cloud_provider": "openai"}
+        ).json()
+        private_reply = client.post(
+            "/api/conversations/" + private["id"] + "/messages",
+            headers=h,
+            json={"content": "Private synthetic blue", "request_id": str(uuid.uuid4())},
+        )
+        assert private_reply.status_code == 200 and requests == []
+        assert (
+            client.get("/api/conversations/" + private["id"]).json()["runs"][-1]["provider"]
+            == "local"
+        )
+        # Selecting a provider alone grants no transfer. A private route stays local.
+        public = client.post(
+            "/api/conversations",
+            headers=h,
+            json={"cloud_provider": "openai", "cloud_allowed": True},
+        ).json()
+        response = client.post(
+            "/api/conversations/" + public["id"] + "/messages",
+            headers=h,
+            json={"content": "Synthetic blue", "request_id": str(uuid.uuid4())},
+        )
+        assert response.status_code == 200, response.text
+        chat = client.get("/api/conversations/" + public["id"]).json()
+        run = chat["runs"][-1]
+        assert run["status"] == "succeeded" and run["provider"] == "openai", run
+        assert run["cost_basis"] == "usage_estimate" and run["cost"] == pytest.approx(0.000072)
+        assert run["cost_estimate"] >= run["cost"]
+        assert len(requests) == 1 and json.loads(requests[0].content)["store"] is False
+        with app.state.sessions() as db:
+            reservation = db.get(BudgetReservation, run["id"])
+            assert (
+                reservation.provider_id == result.json()["id"]
+                and reservation.measured == run["cost"]
+            )
+        assert (
+            client.patch(
+                "/api/conversations/" + public["id"],
+                headers=h,
+                json={"cloud_provider": "anthropic"},
+            ).status_code
+            == 422
+        )
+        assert client.get("/api/conversations/" + private["id"]).json()["cloud_allowed"] is False
+    assert REVIEWED_AT > 0
+
+
+def test_adaptive_answer_tokens_fit_existing_budget_and_preserve_configuration(managed):
+    from hub.budgets import reserve_answer
+
+    app, client, headers, cfg = managed
+    part = ContextPart(content="A" * 1000, source_id="synthetic", revision=1,
+                       label=Privacy.CLOUD_ALLOWED)
+    with app.state.sessions() as db:
+        row = db.get(ProviderConfig, "openrouter-default")
+        data = json.loads(row.config)
+        data.update(output_tokens=8192, max_run_cost=0.005, monthly_budget=0.05,
+                    pricing={"input": 0.0000004, "output": 0.0000016,
+                             "verified_at": time.time(), "context_tokens": 32768})
+        row.config = json.dumps(data)
+        original = row.config
+        ceiling, tokens = reserve_answer(db, row, "adaptive-answer", [part])
+        assert 2000 < tokens < 8192
+        assert ceiling <= 0.005
+        assert row.config == original
+        assert reserve_answer(db, row, "adaptive-answer", [part]) == (ceiling, tokens)
+        db.commit()
+
+
+def test_adaptive_answer_monthly_remainder_and_context_never_exceeded(managed):
+    from hub.budgets import reserve_answer
+
+    app, client, headers, cfg = managed
+    part = ContextPart(content="A" * 100, source_id="synthetic", revision=1,
+                       label=Privacy.CLOUD_ALLOWED)
+    with app.state.sessions() as db:
+        row = db.get(ProviderConfig, "openrouter-default")
+        data = json.loads(row.config)
+        data.update(output_tokens=8192, context_tokens=1024, max_run_cost=0.05,
+                    monthly_budget=0.001, pricing={"input": 0.0000004,
+                    "output": 0.0000016, "verified_at": time.time(), "context_tokens": 1024})
+        row.config = json.dumps(data)
+        ceiling, tokens = reserve_answer(db, row, "monthly-answer", [part])
+        assert len(part.content.encode()) + 64 + 256 + tokens <= 1024
+        assert ceiling <= 0.001
+        with pytest.raises(ValueError, match="Kostenbudget"):
+            reserve_answer(db, row, "next-answer", [part])

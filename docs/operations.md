@@ -30,8 +30,8 @@ Restore ohne produktives Netz: DB migrieren, Files/Hashes prüfen, Memory reconc
 Jobs mit unklarem Ausgang markieren, Writes/global autonomy pausieren. n8n-Zeitpläne
 nicht automatisch nachholen. VM-Snapshot/GitHub ersetzen diese Sicherung nicht.
 `deploy/backup.sh` erstellt verschlüsselte eigene VM-Sicherungen; die separate
-Wiederherstellungsidentität bleibt auf dem WorkMac. M2-Restore auf Schema 0011 prüft
-Originalhashes, Provider-Masterkey, begrenzte SSH-Identitäten/Units und Memory-Dateien.
+Wiederherstellungsidentität bleibt auf dem WorkMac. Aktueller isolierter Restore auf Schema 0024 prüft
+55 Originalhashes, 34 Dateiversionen samt Vorschauen/Exports/Teilen, Recherche-/Querybelege, Provider-Masterkey, begrenzte SSH-Identitäten/Units und Memory-Dateien.
 Fehlender Mount und Transportfehler wurden an einer isolierten restaurierten
 PostgreSQL-Kopie geprüft, ohne den produktiven Mount zu unterbrechen. n8n-/HA-Daten
 sind noch keine Bestandteile dieser eigenen VM-Sicherung. Gemessene RTO/RPO und
@@ -56,7 +56,12 @@ stehen in STATUS.md. Vorhandene fremde Dienste sind keine impliziten Deploymentz
 Lokale Backends können nach Liveprüfung `HUB_LOCAL_DISABLE_THINKING=true` verwenden.
 Dies ergänzt ausschließlich beim lokalen Adapter das nachgewiesen unterstützte
 `enable_thinking:false`; standardmäßig wird kein vendorbezogenes Feld gesendet.
-Der Router hat 1.024 Outputtokens und maximal einen Schema-Reparaturversuch.
+Der Router klassifiziert ausschließlich (answer:null), mit höchstens 512 Outputtokens
+und maximal einem Schema-Reparaturversuch. Seine Einordnung deaktiviert Thinking
+unabhängig von der Antwortmodell-Einstellung. Frühere Assistentenantworten über
+768 Zeichen werden nur für diesen Schritt mit Anfang/Ende und Kürzungsmarkierung
+komprimiert. Benutzernachrichten bleiben vollständig; die eigentliche Antwort erhält
+weiter den unveränderten Kontext. Vorbereitungsfehler benennen den betroffenen Schritt.
 
 ## M1 Queue und Wiederaufnahme
 `uv run alembic upgrade head` legt unter PostgreSQL zusätzlich das dedizierte Schema
@@ -99,3 +104,42 @@ der Providersecrets nachweisen. Metriken unter `/api/metrics` sind authentifizie
 OpenRouter nur nach eigener Ziel-/Budgetfreigabe aktivieren, Testdaten synthetisch halten
 und bei fehlenden frischen Preisen den Verbindungstest wiederholen. Der Operator-Marker
 für `deploy/egress.sh` ist keine Berechtigung des Assistenten für beliebige Netzwerkziele.
+
+
+## Eigener Rollout mit Schemaänderung
+
+Vor dem eigenen Release aktuellen DB-Dump, Releasekonfiguration, sämtliche aktiven
+Compose-Overlays und IPv4-/IPv6-Regeln sichern. Neues Image bauen, dann den expliziten
+Maintenance-Dienst `migrate` mit allen aktuell eingesetzten Overlays einmalig ausführen;
+erst anschließend API, Worker und Parser auf das geprüfte Image aktualisieren.
+Aktuell aktiv: compose.yaml, https.compose.yaml, vault.compose.yaml,
+scheduler.compose.yaml und home-assistant.compose.yaml. Kein API-Start migriert implizit.
+
+Vor Abschluss Alembic-Version, Image aller fünf App-Container, beide Healthchecks,
+TLS, Secretmounts, unveränderte Regeln und bestehende Terminbelege prüfen. Ein
+fehlender Schemawechsel ist ein fehlgeschlagener Abschluss, auch bei gesunden APIs.
+Nach Schemaänderungen eine verschlüsselte Off-VM-Sicherung separat wiederherstellen,
+inklusive verschlüsselter Verbindungsdaten und dauerhafter Ausführungsbelege.
+Rollbackinformationen des aktuellen Releases liegen geschützt auf der eigenen VM;
+keine ungeprüften Downgrades gegen nichtleere Auditdaten durchführen.
+
+
+## Anmeldepasswort ab Schema 0026
+
+Unter Einstellungen → Sicherheit kann der angemeldete Benutzer sein Passwort
+ändern. Aktuelles Passwort und übereinstimmende neue Eingaben (12–256 Zeichen)
+sind erforderlich; fünf Bestätigungsversuche pro Minute werden getrennt vom
+Login dauerhaft begrenzt. Alle bisherigen Sitzungen werden nach erfolgreicher
+Änderung widerrufen; das neue Passwort wird nur als gesalzener Scrypt-Hash in
+account_credentials gespeichert. Keine Speicherung im Browserentwurf.
+
+Bis zur ersten Änderung bleibt HUB_PASSWORD_HASH der Bootstrap-Zugang. Ein
+gesetzter DB-Hash hat danach auf allen API-Instanzen und nach Neustarts Vorrang.
+Der alte Environment-Hash stellt diesen Zugang nicht automatisch wieder her.
+Die verschlüsselte DB-Sicherung enthält auch die Zugangskonfiguration.
+
+Rollback auf Releases vor 0026 ist nur zulässig, solange die Credential-Zeile
+noch keinen Hash und Revision0 hat. Andernfalls würden ältere APIs wieder den
+Bootstrap-Hash akzeptieren. Migration-Downgrade ist in diesem Fall gesperrt;
+Recovery muss die gültige Zugangskonfiguration bewahren. Keine automatische
+DB-Rücksetzung oder Entfernung des Hashes.

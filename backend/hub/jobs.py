@@ -4,6 +4,7 @@ import asyncio
 import json
 import sys
 import time
+from typing import Any
 
 import procrastinate
 import psycopg
@@ -75,7 +76,40 @@ def enqueue_source(db: Session, cfg: Settings, source_id: str) -> None:
     )
 
 
-def worker_app(cfg: Settings) -> procrastinate.App:
+def enqueue_knowledge(db: Session, cfg: Settings, connection_id: str, revision: int) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable queue requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(
+        name="hub.knowledge-index", queue="sources", priority=-15, connection=raw
+    ).defer(connection_id=connection_id, revision=revision)
+
+
+def enqueue_task_read(db: Session, cfg: Settings, run_id: str) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable task requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.task-read", queue="tasks", priority=0, connection=raw).defer(
+        run_id=run_id
+    )
+
+
+def enqueue_artifact(db: Session, cfg: Settings, artifact_id: str, revision: int) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable artifact requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.artifact", queue="artifacts", priority=-5, connection=raw).defer(
+        artifact_id=artifact_id, revision=revision
+    )
+
+
+def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
             conninfo=conninfo(cfg),
@@ -86,6 +120,15 @@ def worker_app(cfg: Settings) -> procrastinate.App:
     )
     factory = session_factory(cfg.database_url)
     providers = Providers(cfg)
+
+    def maintenance_schedule(task: Any) -> Any:
+        return queue.periodic(cron="* * * * *")(task) if include_maintenance else task
+
+    @queue.task(name="hub.artifact", queue="artifacts", retry=False)
+    async def artifact(artifact_id: str, revision: int) -> None:
+        from hub.artifacts import execute_artifact
+
+        await execute_artifact(factory, cfg, artifact_id, revision)
 
     @queue.task(name="hub.chat", queue="chat", retry=False)
     async def chat(run_id: str) -> None:
@@ -103,6 +146,7 @@ def worker_app(cfg: Settings) -> procrastinate.App:
                     db.add(
                         Message(
                             conversation_id=run.conversation_id,
+                            run_id=run.id,
                             role="assistant",
                             content=output,
                             label=Privacy.LOCAL_ONLY,
@@ -131,11 +175,23 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
         await extract_source(factory, cfg, source_id)
 
+    @queue.task(name="hub.knowledge-index", queue="sources", retry=False)
+    async def knowledge_index(connection_id: str, revision: int) -> None:
+        from hub.knowledge_connections import index_connection
+
+        await index_connection(factory, cfg, connection_id, revision)
+
     @queue.task(name="hub.probe", queue="tests", retry=False)
     async def probe(test_id: str) -> None:
         await execute_probe(factory, cfg, test_id)
 
-    @queue.periodic(cron="* * * * *")
+    @queue.task(name="hub.task-read", queue="tasks", retry=False)
+    async def task_read(run_id: str) -> None:
+        from hub.task_model import execute_task
+
+        await execute_task(factory, cfg, run_id)
+
+    @maintenance_schedule
     @queue.task(
         name="hub.vault-reconcile",
         queue="vault-maintenance",
@@ -148,16 +204,20 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
             from hub.memory import reconcile as reconcile_vault
 
-            with factory() as db:
-                reconcile_vault(
-                    db,
-                    Path(cfg.vault_dir),
-                    allow_memory_writes=cfg.vault_writable,
-                    expected_fs=cfg.vault_fs_type,
-                )
-                db.commit()
+            def scan() -> None:
+                with factory() as db:
+                    reconcile_vault(
+                        db,
+                        Path(cfg.vault_dir),
+                        allow_memory_writes=cfg.vault_writable,
+                        expected_fs=cfg.vault_fs_type,
+                    )
+                    db.commit()
 
-    @queue.periodic(cron="* * * * *")
+            # SSHFS/SQL indexing must not block Procrastinate heartbeat or shutdown.
+            await asyncio.to_thread(scan)
+
+    @maintenance_schedule
     @queue.task(
         name="hub.reconcile",
         queue="maintenance",
@@ -173,25 +233,62 @@ def worker_app(cfg: Settings) -> procrastinate.App:
 
 async def requeue_stalled(queue: procrastinate.App) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
-    for task in ("hub.chat", "hub.title", "hub.probe", "hub.extract"):
+    for task in (
+        "hub.chat",
+        "hub.title",
+        "hub.probe",
+        "hub.extract",
+        "hub.knowledge-index",
+        "hub.task-read",
+        "hub.artifact",
+    ):
         for job in await queue.job_manager.get_stalled_jobs(
             task_name=task, seconds_since_heartbeat=60
         ):
             await queue.job_manager.retry_job(job)
 
 
+async def cleanup_loop(cfg: Settings, role: str) -> None:
+    from hub.deletion_cleanup import process_pending
+
+    factory = session_factory(cfg.database_url)
+    while True:
+        try:
+            await asyncio.to_thread(process_pending, factory, cfg, role)
+        except Exception:
+            pass  # Durable pending rows retry after transient DB/storage interruptions.
+        await asyncio.sleep(2)
+
+
 async def main() -> None:
-    queue = worker_app(Settings.from_env())
+    cfg = Settings.from_env()
+    cleanup = (
+        asyncio.create_task(cleanup_loop(cfg, "source" if "--sources" in sys.argv else "artifact"))
+        if any(flag in sys.argv for flag in ("--sources", "--artifacts"))
+        else None
+    )
+    queue = worker_app(
+        cfg,
+        include_maintenance=not any(flag in sys.argv for flag in ("--artifacts", "--sources")),
+    )
     async with queue.open_async():
         await requeue_stalled(queue)
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
-            queues=["sources", "vault-maintenance"]
+            queues=["artifacts"]
+            if "--artifacts" in sys.argv
+            else ["sources"]
             if "--sources" in sys.argv
-            else ["chat", "tests", "titles", "maintenance"],
+            else ["vault-maintenance"]
+            if "--vault" in sys.argv
+            else ["chat", "tests", "tasks", "titles", "maintenance"],
             concurrency=1,
             shutdown_graceful_timeout=95,
         )
+
+    if cleanup:
+        cleanup.cancel()
+        await asyncio.gather(cleanup, return_exceptions=True)
 
 
 if __name__ == "__main__":
