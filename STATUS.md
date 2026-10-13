@@ -2979,3 +2979,28 @@ und technisch geprüfte Datei vor optionaler fachlicher Freigabe herunterladen.
 Workspace-Hinweis entsprechend aktualisiert; TypeScript und Frontendbuild danach
 bestanden. Eigene Fixture-Server beendet. Zwei inaktive Imagevorbereitungen und
 verschlüsselte Off-VM-Backups geprüft; aktive App dabei nicht umgeschaltet.
+
+
+### 13.10.2026: Cloud-Routing und echte Office-Downloads ausgeliefert
+
+Release 7dc5de6 auf der Test-VM aktiv, Schema 0042; vollständige CI 38355451263
+erfolgreich: 1356 Backend-/PostgreSQLtests bestanden, vier umgebungsabhängige Fälle
+übersprungen, 39 synthetische Browserchecks sowie Container-/Browser-/Artefaktrunner
+bestanden. Vorhandene Nachrichten, Profil, Use Cases, Artefaktversionen, Compose-
+Overlays und unabhängige Netzwerkregeln beim Rollout durch Fingerprints/Abgleich
+erhalten; verschlüsseltes Off-VM-Backup geprüft. Tailnet-HTTPS und normales SSH
+mit gepinnter Hostidentität vom Mac real geprüft. Bestehende Policy erhalten.
+
+Reale Auto-Antworten über deploytes Tailnet-HTTPS: einfache Rechnung lokal,
+gewöhnliche nicht einfache Frage über OpenRouter. Cloud-Dateiplanung mit dem
+konfigurierten Modell tatsächlich für PPTX (zwei Folien), DOCX und XLSX ausgeführt.
+Native Dateien gerendert, Vorschauen visuell geprüft, ZIP-/OOXML-Strukturen,
+Downloads vor optionaler Freigabe und SHA256 bestätigt. Excel SUM(B2:B3) ergibt
+15; eine zusätzlich vom Modell angelegte Gesamtsumme zählt die Summaryzeile mit
+und ergibt 30. Dies ist ein dokumentierter Modell-/Inhaltsfehler, keine behauptete
+fehlerfreie fachliche Excel-Abnahme. Native Downloadfunktion für alle Formate
+bestanden. Keine privaten Quellen oder ungeteilten Skills an Cloud übertragen.
+
+Alle fünf eigenen synthetischen Testchats mit exakten Löschbelegen und vollständiger
+Dateibereinigung entfernt; eigene Sitzungen entfernt. Belege ausschließlich privat
+unter .local/cloud-files-live und .local/deployment. Keine Nutzerchats gelöscht.
