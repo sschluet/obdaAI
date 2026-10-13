@@ -680,8 +680,8 @@
         },
         {
           "title": "Privater Fernzugriff über Tailscale",
-          "description": "Separater HTTPS-Zugang im eigenen Tailnet mit gültigem Zertifikat. Startseite, App-Healthcheck und Anmeldeschutz auf dem Server geprüft; bestehender LAN-Zugriff bleibt erhalten. Zugriff von einem zweiten Gerät steht noch zur Abnahme aus. Keine Subnetz- oder Exit-Node-Freigabe.",
-          "status": "limited"
+          "description": "Separater HTTPS-Zugang im eigenen Tailnet mit gültigem Zertifikat. HTTPS und SSH vom echten zweiten Gerät erfolgreich geprüft; bestehender Deployment-Schlüssel und gepinnte Serveridentität bleiben erforderlich. Zugriff gezielt für den eigenen Benutzer und die zwei Dienstports freigegeben. Bestehender LAN-Zugang bleibt erhalten; keine Subnetz- oder Exit-Node-Freigabe.",
+          "status": "live"
         },
         {
           "title": "Auto bevorzugt Cloud, einfache Fragen bleiben lokal",

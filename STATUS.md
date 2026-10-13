@@ -2957,3 +2957,17 @@ Versionskarten begrenzt; vollständiger browser-check und artifact-check danach
 gegen die eigene synthetische Fixture bestanden. Keine Produktfunktion für diese
 Korrektur verändert. Vollständige CI auf dem finalen Teststand erforderlich;
 VM-Auslieferung wartet weiterhin auf die separate Tailnet-SSH-Freigabe.
+
+
+### 13.10.2026: Tailnet-Ports bestätigt und vom echten Peer geprüft
+
+Benutzer hat die eng begrenzte HTTPS-/SSH-Regel bestätigt. Bestehende Regeln und
+Tests erhalten; ausschließlich die zwei obdaAI-Zielports für den bestätigten
+Benutzer ergänzt. Gespeicherte Policy privat gesichert. SSH vom Mac mit bestehendem
+Schlüssel und gepinnter Hostidentität erfolgreich; HTTPS mit gültigem Zertifikat,
+Startseite 200, Healthcheck gesund, geschützte API ohne Anmeldung 401.
+App bleibt während der Vorbereitung f95768a / 0042, keine aktiven Chat-/Dateiläufe;
+Routingstrategie balanced ist bereits gespeichert. CI 34181bf: Backend, Container,
+Browser- und Artefaktrunner bestanden. Letzter UI-Fehler betraf einen überholten
+Routingoptionsnamen; Routingcheck mit aktualisierten Namen vollständig bestanden.
+Finale CI und Rollout folgen auf dem gebündelten korrigierten Stand.
