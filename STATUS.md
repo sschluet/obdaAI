@@ -2971,3 +2971,11 @@ Routingstrategie balanced ist bereits gespeichert. CI 34181bf: Backend, Containe
 Browser- und Artefaktrunner bestanden. Letzter UI-Fehler betraf einen überholten
 Routingoptionsnamen; Routingcheck mit aktualisierten Namen vollständig bestanden.
 Finale CI und Rollout folgen auf dem gebündelten korrigierten Stand.
+
+
+Alle 39 synthetischen Frontend-CI-Prüfbefehle lokal bestanden. Späte alte Annahmen
+in Workbench-/Vorlagentests korrigiert: Download auf exakte Vorschau eingrenzen
+und technisch geprüfte Datei vor optionaler fachlicher Freigabe herunterladen.
+Workspace-Hinweis entsprechend aktualisiert; TypeScript und Frontendbuild danach
+bestanden. Eigene Fixture-Server beendet. Zwei inaktive Imagevorbereitungen und
+verschlüsselte Off-VM-Backups geprüft; aktive App dabei nicht umgeschaltet.

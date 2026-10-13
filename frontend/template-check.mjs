@@ -54,7 +54,7 @@ try{
  if(saveRequests.at(-1).draft_token)throw Error('Replaced template reused model receipt');
  if(saveRequests.at(-1).spec.plan.sections.length!==4)throw Error('Applied template was not saved');
  let card=page.locator('article').filter({has:page.getByText(first+' · Version 1',{exact:true})});
- if(await card.getByRole('link',{name:'Datei herunterladen',exact:true}).count())throw Error('Template bypassed preview review');
+ await card.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor(); // Validated native files download without pretending human review.
  await card.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();await choose('meeting-note');
  if(!await button('Entwurfsinhalt durch leere Gliederung ersetzen').isVisible())throw Error('Version replacement lacks consent');
  await replace();await fillWord('Synthetic meeting content');const second=first+' revised';

@@ -50,7 +50,7 @@ try{
  const preview=bench.getByRole('dialog',{name:'Dateivorschau',exact:true});
  await preview.getByLabel('Ich habe alle Vorschauseiten geprüft.',{exact:true}).check();
  await preview.getByRole('button',{name:'Diese Dateiversion freigeben',exact:true}).click();
- await bench.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
+ await preview.getByRole('link',{name:'Datei herunterladen',exact:true}).waitFor();
  await page.screenshot({path:output+'/desktop.png',fullPage:true});
  if(await page.evaluate(()=>Object.keys(sessionStorage).some(key=>key.startsWith('hub-ui-draft:task:'))))throw Error('Hidden task editor created a draft before being used');
  await page.getByRole('button',{name:'Aus Nachricht eine Aufgabe planen',exact:true}).click();
