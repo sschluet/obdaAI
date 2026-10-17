@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-13",
+  "updated": "2026-10-17",
   "applicationCommit": "68877a4",
   "schema": "0042",
   "tests": 1409,
@@ -244,6 +244,12 @@
       "title": "Formeln prüfen, Originale bewahren.",
       "description": "Ältere Excel-Versionen erhalten einen sichtbaren Prüfhinweis, wenn sie die erweiterten Formelregeln nicht erfüllen. Die gespeicherte Vorgabe bleibt unverändert und kann als neue Version korrigiert werden. Ausschließlich synthetisches Projekt Aurora und abgebrochener älterer Entwurf; kein Live-Downloadbeleg.",
       "image": "assets/excelformulaaudit.png"
+    },
+    {
+      "id": "integrationwrites",
+      "title": "Änderungen bewusst freigeben.",
+      "description": "Eigene Schreibrechte pro Profil, lokale KI-Vorbereitung und genaue Vorschau im Integrationsdialog. Ausschließlich synthetischer Mac-mini-Arbeitsordner; kein Nachweis eines echten Fremdsystemeingriffs.",
+      "image": "assets/integrationwrites.png"
     }
   ],
   "groups": [
@@ -608,13 +614,18 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi und SSH mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüf-/Adapterzuständen. Aktivierte konfigurierte Ziele erhalten dynamische Serverfreigaben. HA/Paperless/MCP haben Zugangstests; UniFi-/SSH-Ausführungsadapter bleiben in Entwicklung.",
+          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen ihre eigene Vorschau und Freigabe. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
           "status": "implemented"
         },
         {
           "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
           "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Allgemeine KI-Aktionen anderer Profile bleiben offen.",
           "status": "limited"
+        },
+        {
+          "title": "Integrationen mit geprüften Schreibaktionen",
+          "description": "Eigene Schreibfreigabe je Profil, konkrete Vorschau, zeitlich gebundene Bestätigung, einmaliger Dispatch und lesender Fehlerabgleich. Begrenzte HA-, Paperless-, SFTP-, UniFi-Gast- und MCP-Aktionen; lokale KI entwirft Daten und führt nichts selbst aus. Lokale und synthetische Abnahme; echte externe Änderungen und vollständige administrative Abdeckung bleiben gesondert nachzuweisen.",
+          "status": "implemented"
         }
       ]
     },

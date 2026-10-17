@@ -3051,3 +3051,30 @@ Doppelaggregat-Plan vor Berechnung abgewiesen. Belege nur unter .local.
 Die öffentliche Warnungsillustration bleibt eine synthetische Loopback-Fixture,
 kein Bildschirmfoto aus der Test-VM. Die öffentliche Abnahmemetadaten nennen den
 bestätigten Excel-Stand; fachliche Modellprüfung bleibt erforderlich.
+
+
+### 17.10.2026: Kontrollierte Integrationsänderungen – lokale Entwicklung
+
+Schema 0043 ergänzt standardmäßig ausgeschaltete Schreibrechte pro Profil,
+Vorherzustandsbelege und lokale KI-Aktionsentwürfe. Feste HA-Geräte-/Helferaktionen,
+Paperless-Metadaten, SSH-SFTP-Textdateien im eigenen Arbeitsordner, UniFi-Gastzugänge
+und explizite MCP-Aufrufe ergänzen den bestehenden SMTP-Versand. Profilaktivierung
+ist keine Schreibfreigabe. Vorschau → gebundene menschliche Freigabe → ein
+persistierter Dispatchversuch, Nachherprüfung und privater Beleg. Unklare Effekte
+werden nicht erneut gesendet; lesender Abgleich behauptet keine bewiesene Kausalität.
+MCP-Annotationen sind keine Rechte und Kataloggleichheit kein Zustandsnachweis.
+
+Lokale KI plant ausschließlich strukturierte Daten, erhält keine Secrets/Profilwerte
+oder Altchats und bleibt LOCAL_ONLY im normalen Run-/Budgetpfad. Änderungen an
+Profil/Revision blockieren die Nutzung. Keine Modellprogramme, freie Shell,
+HA-Wartung/Restore, allgemeinen Firewalländerungen oder autonomen Chat-Toolschleifen.
+Umfang und noch nicht implementierte administrative Funktionen: docs/integration-writes.md.
+
+Lokale Prüfung: 1451 Backend-/PostgreSQLtests bestanden, danach 37 gezielte
+Freigabe-/Transport-/MCP-/KI-Entwurfsprüfungen auf dem erweiterten Stand bestanden.
+Ruff/Mypy (100 Module), Source-Scan und TypeScript/Build bestanden. Neuer
+synthetischer Schreibdialog einschließlich lokaler KI-Übernahme, Reload,
+Fehlerabgleich und 320px bestanden. Die breite Browserregression stoppte bei einem
+abgelösten Composer im bestehenden Routingcheck; frische gezielte Prüfung folgt.
+Finale Gesamtabnahme, vollständige CI, neues VM-Deployment und echte Zielabnahmen
+stehen noch aus. Bestehende Einstellungen auf der Test-VM nicht verändert.

@@ -92,7 +92,11 @@ async def execute_run(
             snapshot = json.loads(run.context_snapshot)
             parts = [ContextPart.model_validate(p) for p in snapshot["parts"]]
             roles = snapshot["roles"]
-        workflow_generation = bool(snapshot.get("use_case") or snapshot.get("use_case_designer"))
+        workflow_generation = bool(
+            snapshot.get("use_case")
+            or snapshot.get("use_case_designer")
+            or snapshot.get("integration_write_draft")
+        )
         label = (
             Privacy.LOCAL_ONLY
             if any(p.label == Privacy.LOCAL_ONLY for p in parts)
@@ -108,6 +112,19 @@ async def execute_run(
         )
 
     def check_integration_context() -> None:
+        draft = snapshot.get("integration_write_draft")
+        if draft:
+            from hub.integrations import Integration
+
+            with factory() as db:
+                profile = db.get(Integration, draft["integration_id"])
+                if (
+                    not profile
+                    or not profile.enabled
+                    or not profile.writes_enabled
+                    or profile.revision != draft["integration_revision"]
+                ):
+                    raise ExecutionLimitError("Schreibprofil geändert; Entwurf erneut starten")
         selection = snapshot.get("integration_selection", {})
         if snapshot.get("integration_scope", {}).get("scope") != "use_case" and not any(
             item.get("kind") == "paperless" for item in selection.get("bindings", [])

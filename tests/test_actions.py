@@ -92,6 +92,7 @@ def test_gateway_read_and_strict_schema_before_effect(gateway):
         "mcp.read",
         "browser.inspect",
         "ha.maintenance.plan",
+        "integration.write",
     }
     action, body = proposal(c, h)
     result = execute(c, h, action)

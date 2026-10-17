@@ -91,3 +91,5 @@ CI startet schwere App-Prüfungen nur für einen noch nicht vollständig geprüf
 Längere Konzepte, klare Teilantworten und manuelle Fortsetzung: [Antwort-, Kontext- und Kostenlimits](docs/answer-limits.md).
 
 - [Use Cases: Integrationsphasen, KI-Erstellungsdialog und Mailversand](docs/use-case-integrations.md)
+
+Kontrollierte Integrationsänderungen mit eigener Profilfreigabe, lokaler KI-Vorbereitung, Vorschau, Ausführungsbeleg und lesendem Fehlerabgleich: [Schreibadapter und Grenzen](docs/integration-writes.md). Noch keine vollständige administrative Fremdsystemabnahme.

@@ -174,6 +174,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_connection_api(app, cfg, factory)
     install_use_case_delivery(app, cfg, factory)
     install_integration_api(app, cfg, factory)
+    from hub.integration_writes import install_write_api
+
+    install_write_api(app, cfg, factory)
+    from hub.integration_write_drafts import install_draft_api
+
+    install_draft_api(app, cfg, factory)
     install_paperless_api(app, cfg, factory)
     install_paperless_import_api(app, cfg, factory)
     install_use_case_api(app, cfg, factory)

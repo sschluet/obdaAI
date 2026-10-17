@@ -37,8 +37,9 @@ nur numerisch geprüfte Adressen und Ports in einer separaten Egress-Kette. Kein
 Änderung von eingehenden Zugriffen, Fremdsystemen oder globaler Schreibpause.
 Home-Assistant-Adressen mit abschließendem Schrägstrich sind gleichwertig; echte
 MCP-Endpunktpfade bleiben exakt. HA, Paperless und MCP haben lesende Zugangstests.
-SMTP prüft TLS und Anmeldung ohne Versand. Für UniFi und SSH fehlen weiterhin
-die Ausführungsadapter.
+SMTP prüft TLS und Anmeldung ohne Versand. SSH und UniFi erhalten mit Schema 0043
+lesende Zugangstests sowie eng begrenzte Schreibadapter. Umfang und Abnahmestand:
+[integration-writes.md](integration-writes.md).
 
 Paperless: Suche, Seitennavigation, Metadaten/OCR, Originaldownload, private OCR-
 Quelle in Projekten und echte lokale Nutzung im KI-Kontext. Keine Paperless-
