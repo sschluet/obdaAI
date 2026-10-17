@@ -16,7 +16,7 @@ try{
  for(let attempt=0;attempt<60;attempt++){
   if(startError)throw startError;
   if(closed)throw Error('Isolated write fixture could not start; do not reuse another server');
-  try{const r=await fetch(origin+'/api/synthetic-write-fixture-id');if(r.ok()&&(await r.json()).fixture_id===fixtureId){ready=true;break}}catch{}
+  try{const r=await fetch(origin+'/api/health');if(r.ok&&r.headers.get('X-OBDAAI-SYNTHETIC-FIXTURE')===fixtureId){ready=true;break}}catch{}
   await new Promise(resolve=>setTimeout(resolve,250));
  }
  if(!ready||closed)throw Error('Isolated write fixture health check failed');

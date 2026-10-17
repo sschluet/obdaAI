@@ -67,6 +67,10 @@ async def draft_stream(parts, roles, *, external, grants):
 app.state.providers.stream = draft_stream
 
 
-@app.get("/api/synthetic-write-fixture-id")
-def fixture_id():
-    return {"fixture_id": os.getenv("HUB_WRITE_FIXTURE_ID", "manual-synthetic-fixture")}
+@app.middleware("http")
+async def fixture_marker(request, call_next):
+    response = await call_next(request)
+    response.headers["X-OBDAAI-SYNTHETIC-FIXTURE"] = os.getenv(
+        "HUB_WRITE_FIXTURE_ID", "manual-synthetic-fixture"
+    )
+    return response
