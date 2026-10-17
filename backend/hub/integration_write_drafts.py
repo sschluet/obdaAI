@@ -115,7 +115,7 @@ def install_draft_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session
             if sum(len(p.content) for p in parts) > cfg.context_limit:
                 raise HTTPException(413, "Aktionsentwurf überschreitet Kontextgrenze")
             conversation = Conversation(
-                purpose="integration_write_draft",
+                purpose="write_draft",
                 title="Integrationsänderung entwerfen",
                 manual_title=True,
                 cloud_allowed=False,

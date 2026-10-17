@@ -3078,3 +3078,13 @@ Fehlerabgleich und 320px bestanden. Die breite Browserregression stoppte bei ein
 abgelösten Composer im bestehenden Routingcheck; frische gezielte Prüfung folgt.
 Finale Gesamtabnahme, vollständige CI, neues VM-Deployment und echte Zielabnahmen
 stehen noch aus. Bestehende Einstellungen auf der Test-VM nicht verändert.
+
+
+Erste Test-VM-Abnahme auf d56d5d4/0043: native SSH-/SFTP-Anmeldung erfolgreich.
+Die neue KI-Entwurfsanlage scheiterte vor einem Schreibauftrag am PostgreSQL-
+Längenlimit für conversation.purpose (SQLite hatte es nicht erzwungen). Kurzer
+interner Zweckbezeichner korrigiert und echter PostgreSQL-API-Regressionstest
+ergänzt. 31 betroffene PostgreSQL-/Freigabetests bestanden. Keine Dateischreibaktion
+oder Modellanfrage aus dem fehlgeschlagenen Entwurf; Schreibpause aktiv, eigenes
+unbenutztes Testprofil und eigene Sitzung bereinigt. Erneute exakte CI und
+Test-VM-Korrekturlieferung folgen; noch keine erfolgreiche Dateischreibabnahme behauptet.
