@@ -462,7 +462,7 @@ def test_profile_read_check_uses_own_url_key_and_pinned_address(registry, monkey
     assert checked["execution_available"] is False
 
 
-def test_adapter_missing_is_separate_from_target_permission(registry):
+def test_unifi_adapter_ready_is_separate_from_target_permission(registry):
     c, _, cfg = registry
     object.__setattr__(cfg, "integration_targets_enabled", True)
     row = create(c, kind="unifi", secret="synthetic-key", url="https://unifi.example.test")
@@ -471,8 +471,8 @@ def test_adapter_missing_is_separate_from_target_permission(registry):
         json={"enabled": True, "expected_revision": 1},
     ).json()
     assert enabled["target_approved"] is True
-    assert enabled["availability_reason"] == "adapter_unavailable"
-    assert enabled["check_available"] is False
+    assert enabled["availability_reason"] == "ready"
+    assert enabled["check_available"] is True
 
 
 def test_mcp_exact_endpoint_slash_is_saved_and_not_a_credential_alias(registry):

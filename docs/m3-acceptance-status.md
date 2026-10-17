@@ -22,7 +22,8 @@ Diese Liste trennt implementierte Funktionen und noch fehlende Funktionen.
   2FA-Übergabe. Die passive Browserprüfung bietet diese Funktion nicht.
 - Allgemeine mehrstufige n8n-Graphgenerierung aus dem Chat. Die vorhandene Vorlage
   nutzt einen geprüften festen Graph; Modellcode oder beliebige Nodes fehlen.
-- Weitere explizite MCP-/API-Aktionen und externe Writes mit eigener Abnahme.
+- Weitere administrative MCP-/API-Aktionen und Zielabnahmen über den dokumentierten
+  begrenzten Schreibumfang hinaus.
 - Zusätzliche Task-Schreibadapter, insbesondere externe Wartung. Die drei Profile
   sind für eine konkrete lokale Projektarchivierung implementiert; daraus entstehen
   keine Freigaben für andere Systeme, Schritte oder Folgeaktionen.
@@ -67,3 +68,12 @@ Eine echte HA-Lese-/Analysefolge sowie der achtknotige n8n-Abschlussgraph mit
 Status, Warten, Bedingungen und Fehlerstopp sind getrennt abgenommen. n8n erhält
 IDs/Betriebsstatus, keine privaten Ziele oder Modellantworten. Freie/parallel
 zusammengesetzte Graphen und zusätzliche Aktionsadapter bleiben davon getrennt.
+
+
+17.10.2026: Schema 0043 ergänzt kontrollierte Integrationsschreibaktionen mit
+Profil-Opt-in, konkreter Freigabe, dauerhaftem Dispatch und lesendem Abgleich.
+Verwaltete SSH-Textdatei über die Test-VM zum Mac mini tatsächlich geschrieben,
+hashgeprüft und bereinigt; Replay ohne zweiten Effekt. Lokale KI entwirft Daten,
+keine Ausführung. HA/Paperless/UniFi/MCP bisher synthetisch geprüft. Allgemeiner
+Chat/Task-Center führt diese neuen Aktionen nicht autonom aus; Umfang und
+verbleibende Grenzen: [integration-writes.md](integration-writes.md).

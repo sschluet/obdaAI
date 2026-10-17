@@ -3051,3 +3051,75 @@ Doppelaggregat-Plan vor Berechnung abgewiesen. Belege nur unter .local.
 Die öffentliche Warnungsillustration bleibt eine synthetische Loopback-Fixture,
 kein Bildschirmfoto aus der Test-VM. Die öffentliche Abnahmemetadaten nennen den
 bestätigten Excel-Stand; fachliche Modellprüfung bleibt erforderlich.
+
+
+### 17.10.2026: Kontrollierte Integrationsänderungen – lokale Entwicklung
+
+Schema 0043 ergänzt standardmäßig ausgeschaltete Schreibrechte pro Profil,
+Vorherzustandsbelege und lokale KI-Aktionsentwürfe. Feste HA-Geräte-/Helferaktionen,
+Paperless-Metadaten, SSH-SFTP-Textdateien im eigenen Arbeitsordner, UniFi-Gastzugänge
+und explizite MCP-Aufrufe ergänzen den bestehenden SMTP-Versand. Profilaktivierung
+ist keine Schreibfreigabe. Vorschau → gebundene menschliche Freigabe → ein
+persistierter Dispatchversuch, Nachherprüfung und privater Beleg. Unklare Effekte
+werden nicht erneut gesendet; lesender Abgleich behauptet keine bewiesene Kausalität.
+MCP-Annotationen sind keine Rechte und Kataloggleichheit kein Zustandsnachweis.
+
+Lokale KI plant ausschließlich strukturierte Daten, erhält keine Secrets/Profilwerte
+oder Altchats und bleibt LOCAL_ONLY im normalen Run-/Budgetpfad. Änderungen an
+Profil/Revision blockieren die Nutzung. Keine Modellprogramme, freie Shell,
+HA-Wartung/Restore, allgemeinen Firewalländerungen oder autonomen Chat-Toolschleifen.
+Umfang und noch nicht implementierte administrative Funktionen: docs/integration-writes.md.
+
+Lokale Prüfung: 1451 Backend-/PostgreSQLtests bestanden, danach 37 gezielte
+Freigabe-/Transport-/MCP-/KI-Entwurfsprüfungen auf dem erweiterten Stand bestanden.
+Ruff/Mypy (100 Module), Source-Scan und TypeScript/Build bestanden. Neuer
+synthetischer Schreibdialog einschließlich lokaler KI-Übernahme, Reload,
+Fehlerabgleich und 320px bestanden. Die breite Browserregression stoppte bei einem
+abgelösten Composer im bestehenden Routingcheck; frische gezielte Prüfung folgt.
+Finale Gesamtabnahme, vollständige CI, neues VM-Deployment und echte Zielabnahmen
+stehen noch aus. Bestehende Einstellungen auf der Test-VM nicht verändert.
+
+
+Erste Test-VM-Abnahme auf d56d5d4/0043: native SSH-/SFTP-Anmeldung erfolgreich.
+Die neue KI-Entwurfsanlage scheiterte vor einem Schreibauftrag am PostgreSQL-
+Längenlimit für conversation.purpose (SQLite hatte es nicht erzwungen). Kurzer
+interner Zweckbezeichner korrigiert und echter PostgreSQL-API-Regressionstest
+ergänzt. 31 betroffene PostgreSQL-/Freigabetests bestanden. Keine Dateischreibaktion
+oder Modellanfrage aus dem fehlgeschlagenen Entwurf; Schreibpause aktiv, eigenes
+unbenutztes Testprofil und eigene Sitzung bereinigt. Erneute exakte CI und
+Test-VM-Korrekturlieferung folgen; noch keine erfolgreiche Dateischreibabnahme behauptet.
+
+
+### 17.10.2026: Kontrollierte Schreibadapter – Korrektur ausgeliefert, SSH live geprüft
+
+Release 148e921 / Schema 0043 auf der autorisierten Test-VM aktiv, beide APIs
+gesund. Vollständige exakte CI 39057977400 erfolgreich: 1450 Backend-/PostgreSQLtests
+bestanden, sechs umgebungsabhängig übersprungen; die bisherigen 39 synthetischen
+Browserprüfungen plus neuer isolierter Schreibdialog bestanden. Container und
+Offline-Runner bestanden. Korrigierte KI-Entwurfsanlage hat einen zusätzlichen echten
+PostgreSQL-API-Regressionstest; der erste fehlgeschlagene Nachweis bleibt erhalten.
+
+Reale SSH-/SFTP-Verbindung über die Anwendungs-API: eigener synthetischer Text
+auf dem Mac mini erstellt, Hash und unmittelbarer Nachherzustand bestätigt;
+dieselbe Aktions-ID lieferte nur den vorhandenen Beleg. Testdatei und neu angelegter
+leerer Testordner, eigenes Testprofil, eigener Entwurf und eigene Sitzung bereinigt.
+Die ausdrücklich gewünschte Mac-mini-Verbindung aktiviert, Schreibaktionen für
+dieses Profil erlaubt und lesender Zugang erfolgreich geprüft. Globale Schreibpause
+wieder aktiv. Andere Profile erhalten keine pauschalen Schreibrechte.
+
+Reale lokale KI-Vorbereitung: erster Entwurf ungültig und ohne Dispatch abgefangen;
+separater klarer Auftrag mit explizitem Dateinamen/Inhalt erzeugte exakt ki-test.txt
+und TEST als gültige Datenparameter. Keine automatische Aktion, keine Cloud, keine
+Credentials/Profilwerte im Modelleingang; eigene Testobjekte danach entfernt.
+Dies ist keine allgemeine Zusage fehlerfreier Modellplanung.
+
+Frische verschlüsselte Off-VM-Sicherungen und Rollbackweg vor beiden Rollouts
+geprüft. Vorhandene Nachrichten, Use Cases und persönliches Profil auch nach der
+QA per Fingerprint unverändert. Compose-Overlays, Nginx und unabhängige Netzwerk-
+regeln erhalten. Private Belege ausschließlich unter .local/deployment. Öffentliche
+Galerie zeigt weiterhin nur eine isolierte synthetische Oberfläche.
+
+HA-/Paperless-/UniFi-/MCP-Schreibwege bleiben ohne reale Zielschreibabnahme.
+Freie SSH-Shell, vollständige administrative Systemabdeckung und autonome
+Integrationsaktionen aus dem allgemeinen Chat/Aufgaben sind nicht umgesetzt.
+M3/M5 und V1 bleiben teilweise abgenommen.

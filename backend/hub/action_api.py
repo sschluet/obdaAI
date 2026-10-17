@@ -70,6 +70,14 @@ class ProposalInput(StrictInput):
     parameters: dict[str, Any]
 
 
+class IntegrationWriteParameters(StrictInput):
+    integration_id: UUID
+    expected_revision: int = Field(ge=1)
+    operation: str = Field(min_length=1, max_length=80)
+    arguments: dict[str, Any]
+    expected_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class GrantInput(StrictInput):
     parameters_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     tool_revision: int = Field(ge=1)
@@ -83,6 +91,11 @@ class PauseInput(StrictInput):
 
 # These schemas and adapters are code-reviewed, never supplied by a model/document.
 TOOLS: dict[str, dict[str, Any]] = {
+    "integration.write": {
+        "id": "integration.write", "name": "Integration kontrolliert ändern",
+        "revision": 1, "effect": "write", "system": "Integrationen", "external": True,
+        "parameters_schema": IntegrationWriteParameters.model_json_schema(),
+    },
     "ha.maintenance.plan": {
         "id": "ha.maintenance.plan",
         "name": "Home-Assistant-Wartung planen",
@@ -173,7 +186,9 @@ def digest(value: str) -> str:
 def parameters(tool_id: str, value: dict[str, Any]) -> dict[str, Any]:
     try:
         model = (
-            BrowserParameters
+            IntegrationWriteParameters
+            if tool_id == "integration.write"
+            else BrowserParameters
             if tool_id == "browser.inspect"
             else MCPReadParameters
             if tool_id == "mcp.read"
@@ -394,6 +409,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                 from hub.mcp_actions import validate_connection
 
                 validate_connection(db, cfg, json.loads(params))
+            if body.tool_id == "integration.write":
+                from hub.integration_writes import validate_profile
+
+                validate_profile(db, cfg, json.loads(params))
             row = ActionIntent(
                 request_key=str(body.request_id),
                 tool_id=body.tool_id,
@@ -453,10 +472,12 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
                 ownership_lock(db)
             lock(db)
             row = get_action(db, action_id)
+            if row.tool_id == "integration.write" and row.status in {"dispatching", "uncertain"}:
+                raise HTTPException(409, "Übertragung bereits begonnen; Ergebnis lesend abgleichen")
             grant = db.get(ActionGrant, row.id)
             if grant:
                 grant.revoked = True
-            if row.status != "succeeded":
+            if row.status != "succeeded" and not db.get(ActionReceipt, row.id):
                 row.status = "revoked"
             db.commit()
             return info(db, row)
@@ -470,6 +491,10 @@ def install_action_api(app: FastAPI, factory: sessionmaker[Session], cfg: Settin
             from hub.workflow_operator import execute_workflow_action
 
             return execute_workflow_action(factory, cfg, action_id)
+        if action.tool_id == "integration.write":
+            from hub.integration_writes import execute_write
+
+            return execute_write(factory, cfg, action_id)
         with factory() as db:
             if (
                 db.scalar(select(ActionIntent.tool_id).where(ActionIntent.id == action_id))

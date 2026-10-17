@@ -19,3 +19,5 @@ try{
  if(headers){if(project){try{const preview=await call('/projects/'+project.id+'/deletion');if(preview.blockers.length)throw Error('Owned project cleanup blocked');await call('/projects/'+project.id,'DELETE',{expected_state:preview.expected_state})}catch(e){errors.push('Owned cleanup: '+e.message)}}for(const item of owned){try{const row=(await call('/integrations')).integrations.find(row=>row.id===item.id);await call('/integrations/'+row.id,'DELETE',{expected_revision:row.revision})}catch(e){errors.push('Owned cleanup: '+e.message)}}}
  await browser.close();if(errors.some(e=>e.startsWith('Owned cleanup:')))throw Error(errors.join('; '));
 }
+
+await import('./integration-writes-runner.mjs');

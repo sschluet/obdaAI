@@ -5,6 +5,7 @@ import ipaddress
 import json
 import re
 import time
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -77,6 +78,9 @@ def discover(
     read_tool: str | None = None,
     expected_schema: str = "",
     configured_profile: bool = False,
+    granted_tool: str | None = None,
+    granted_arguments: dict[str, Any] | None = None,
+    before_call: Callable[[], Any] | None = None,
 ) -> dict[str, Any]:
     if version not in VERSIONS:
         raise ValueError("Unsupported configured MCP version")
@@ -87,6 +91,8 @@ def discover(
 
         pinned, headers, extensions = pinned_target(cfg, url)
     else:
+        if granted_tool is not None:
+            raise ValueError("Granted calls require a configured integration profile")
         pinned, headers, extensions = target(cfg, url)
     if read_tool is not None:
         rules = json.loads(cfg.mcp_read_tools_json)
@@ -254,6 +260,24 @@ def discover(
         raise ValueError("MCP pagination limit")
     if len({t["name"] for t in tools}) != len(tools):
         raise ValueError("Duplicate MCP tool identity")
+    if granted_tool is not None:
+        tool = next((t for t in tools if t["name"] == granted_tool), None)
+        if not tool or schema_digest(tool["input_schema"]) != expected_schema:
+            raise ValueError("MCP granted schema changed")
+        from hub.integration_write_adapters import validate_mcp_value
+
+        validate_mcp_value(tool["input_schema"], granted_arguments)
+        if before_call:
+            before_call()
+        result_data = rpc("tools/call", {"name": granted_tool, "arguments": granted_arguments})
+        if result_data.get("isError", False) is not False:
+            raise ValueError("MCP call failed")
+        return {
+            "acknowledged": True,
+            "result_sha256": schema_digest(result_data),
+            "label": "LOCAL_ONLY",
+            "automatic_model_context": False,
+        }
     if read_tool is not None:
         tool = next((t for t in tools if t["name"] == read_tool), None)
         if not tool or schema_digest(tool["input_schema"]) != expected_schema:

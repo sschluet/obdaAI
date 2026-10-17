@@ -35,3 +35,11 @@ preservation. A separate disposable PostgreSQL CI test exercises the actual row
 lock and concurrent receipt contract. Browser checks use synthetic projects and
 verify proposal → grant → execute, reload persistence and 390px width without overflow.
 Live own-VM checks and external integrations are tracked separately in STATUS.md.
+
+
+Schema 0043 extends the gateway with opt-in integration writes. External effects
+commit a dispatch intent first and are never automatically resent after an unknown
+outcome. Profile/tool/policy revisions, grants and parameter hashes are checked
+again at the final transmission boundary. Read-only reconciliation records an
+observed matching result without claiming causation. Fixed scope and real versus
+synthetic acceptance: [integration-writes.md](integration-writes.md).

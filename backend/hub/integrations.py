@@ -15,6 +15,7 @@ class Integration(Base):
     kind: Mapped[str] = mapped_column(String(40))
     revision: Mapped[int] = mapped_column(Integer, default=1)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    writes_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     config: Mapped[str] = mapped_column(Text)
     encrypted_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_check: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -28,3 +29,23 @@ class IntegrationBinding(Base):
     revision: Mapped[int] = mapped_column(Integer, default=1)
     integration_ids: Mapped[str] = mapped_column(Text, default="[]")
     selection_mode: Mapped[str] = mapped_column(String(20), default="manual")
+
+
+class IntegrationWriteAudit(Base):
+    __tablename__ = "integration_write_audit"
+    action_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    before_state: Mapped[str] = mapped_column(Text)
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class IntegrationWriteDraft(Base):
+    __tablename__ = "integration_write_drafts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    request_id: Mapped[str] = mapped_column(String(36), unique=True)
+    request_digest: Mapped[str] = mapped_column(String(64))
+    integration_id: Mapped[str] = mapped_column(String(36))
+    integration_revision: Mapped[int] = mapped_column(Integer)
+    operation: Mapped[str] = mapped_column(String(80))
+    conversation_id: Mapped[str] = mapped_column(String(36))
+    run_id: Mapped[str] = mapped_column(String(36))
+    created: Mapped[float] = mapped_column(Float, default=time.time)

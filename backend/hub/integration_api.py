@@ -159,7 +159,7 @@ def approved(cfg: Settings, row: Integration) -> bool:
 def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
     checked = json.loads(row.last_check) if row.last_check else None
     target_ok = approved(cfg, row)
-    adapter = row.kind in {"home_assistant", "paperless", "mcp", "smtp"}
+    adapter = row.kind in {"home_assistant", "paperless", "mcp", "smtp", "ssh", "unifi"}
     credentials = json.loads(row.config).get("auth") == "none" or bool(row.encrypted_secret)
     reason = (
         "disabled"
@@ -183,6 +183,7 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
         "kind": row.kind,
         "revision": row.revision,
         "enabled": row.enabled,
+        "writes_enabled": row.writes_enabled,
         "config": json.loads(row.config),
         "secret_saved": bool(row.encrypted_secret),
         "target_approved": target_ok,
@@ -341,6 +342,7 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     )
                 ):
                     row.encrypted_secret = None
+                    row.writes_enabled = False
                 row.revision += 1
             else:
                 if body.expected_revision is not None:
@@ -454,6 +456,10 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                         from hub.smtp_client import assessment as smtp_assessment
 
                         result = smtp_assessment(cfg, config, secret)
+                    elif row.kind in {"ssh", "unifi"}:
+                        from hub.integration_write_adapters import check_connection
+
+                        result = check_connection(cfg, {**config, "kind": row.kind}, secret)
                     else:
                         with httpx.Client(
                             verify=True, trust_env=False, follow_redirects=False, timeout=8
