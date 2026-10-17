@@ -46,3 +46,12 @@ wurde mit derselben Last tatsächlich geprüft. Der erste Fehlbeleg bleibt erhal
 Eigene QA-Räume/-Chats sind archiviert, andere Aufgaben und globale Schreibpause
 blieben erhalten. Dies ist ein begrenzter Single-User-Mischlastfall; kein
 Sättigungs-, Dauertest, Mac-mini-RAM- oder allgemeiner RTO/RPO-Nachweis.
+
+
+17.10.2026: Aktueller Anwendungsstand 148e921 / Schema 0043, volle CI 39057977400
+mit 1450 bestandenen Tests / sechs Skips und 40 synthetischen Browserprüfungen.
+Deployment mit verschlüsselter Off-VM-Sicherung, Daten-/Konfigurationsabgleich und
+gesunden APIs bestätigt. Native SSH-/SFTP-Dateioperation über die Anwendung und
+begrenzte lokale KI-Datenplanung separat live geprüft; Testobjekte bereinigt,
+Schreibpause wieder aktiv. Dieser Nachweis ersetzt weder frühere Last-/Restore-
+Proben noch zusätzliche reale Schreibabnahmen anderer Fremdsysteme.

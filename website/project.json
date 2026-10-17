@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-17",
-  "applicationCommit": "68877a4",
-  "schema": "0042",
-  "tests": 1409,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
+  "applicationCommit": "148e921",
+  "schema": "0043",
+  "tests": 1450,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
   "screenshots": [
     {
       "id": "chat",
@@ -624,7 +624,7 @@
         },
         {
           "title": "Integrationen mit geprüften Schreibaktionen",
-          "description": "Eigene Schreibfreigabe je Profil, konkrete Vorschau, zeitlich gebundene Bestätigung, einmaliger Dispatch und lesender Fehlerabgleich. Begrenzte HA-, Paperless-, SFTP-, UniFi-Gast- und MCP-Aktionen; lokale KI entwirft Daten und führt nichts selbst aus. Lokale und synthetische Abnahme; echte externe Änderungen und vollständige administrative Abdeckung bleiben gesondert nachzuweisen.",
+          "description": "Eigene Schreibfreigabe je Profil, konkrete Vorschau, zeitlich gebundene Bestätigung, einmaliger Dispatch und lesender Fehlerabgleich. Begrenzte HA-, Paperless-, SFTP-, UniFi-Gast- und MCP-Aktionen. SSH-Datei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Beleg-Replay ohne zweiten Effekt. Lokale KI liefert geprüfte Datenentwürfe, keine automatische Ausführung. Andere Zielschreibabnahmen und vollständiger administrativer Zugriff bleiben offen.",
           "status": "implemented"
         }
       ]
@@ -746,18 +746,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0042",
-    "browserChecks": 39,
+    "schema": "0043",
+    "browserChecks": 40,
     "serverDeployment": true,
-    "commit": "68877a4",
-    "ciTests": 1409,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
-    "deployedCommit": "68877a4",
-    "deployedSchema": "0042",
-    "liveScope": "Release 68877a4 / Schema 0042 aktiv auf dem Testsystem. Vollständige CI: 1409 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängige Fälle übersprungen und 39 synthetische Browserchecks. Reale Cloud-XLSX-Planung mit direktem Download geprüft: 10 + 5 ergibt genau eine Formel-Gesamtsumme von 15, keine doppelte 30. Native Offline-Berechnung auf dem Testsystem bestätigt Rundung, bedingte Summe und Fehlerbehandlung; ungültiger Doppelaggregat-Plan abgewiesen. Vorhandene Versionen bleiben unverändert lesbar mit Prüfhinweis bei neuen Regelabweichungen. Bestehende Daten, Einstellungen, Overlays und unabhängige Netzwerkregeln erhalten, verschlüsseltes Off-VM-Backup geprüft. Eigener Testchat und Dateien vollständig bereinigt. Zuvor echte Auto-Routen und direkte PPTX-/DOCX-/XLSX-Cloud-Downloads sowie privates HTTPS und SSH geprüft. Formelvalidierung ersetzt keine fachliche Prüfung des Modellinhalts; vollständige V1-Abnahme bleibt offen.",
+    "commit": "148e921",
+    "ciTests": 1450,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
+    "deployedCommit": "148e921",
+    "deployedSchema": "0043",
+    "liveScope": "Release 148e921 / Schema 0043 aktiv auf dem Testsystem. Vollständige CI: 1450 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 40 synthetische Browserprüfungen. Kontrollierte Integrationsschreibaktionen mit eigener Profilfreigabe, Vorschau, menschlicher Bestätigung, dauerhaftem Dispatchbeleg und lesendem Fehlerabgleich installiert. Native SSH-/SFTP-Textdatei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Replay ohne zweite Ausführung. Ein expliziter lokaler KI-Dateientwurf lieferte gültige Parameter; ein vorheriger ungültiger Entwurf blieb ohne Aktion. HA, Paperless, UniFi und MCP bislang synthetisch geprüft. Andere Profile bleiben ohne pauschale Schreibfreigabe, globale Schreibpause nach QA aktiv. Bestehende Nachrichten, Use Cases, Profil, Overlays und unabhängige Netzwerkregeln erhalten; verschlüsselte Off-VM-Sicherungen geprüft. Frühere reale Cloud-Office-/Excel-Abnahme stammt aus 68877a4 und wird nicht als neue Cloud-Prüfung ausgegeben. Vollständige administrative und V1-Abnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "68877a4",
-    "lastSuccessfulCIUI": 39
+    "lastSuccessfulCICommit": "148e921",
+    "lastSuccessfulCIUI": 40
   }
 }

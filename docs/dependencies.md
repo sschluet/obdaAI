@@ -10,6 +10,7 @@ Versionen sind bewusst gepinnt, Updates separat mit Tests.
 | FastAPI / Pydantic | API und validierte Verträge | MIT; https://fastapi.tiangolo.com/deployment/versions/ |
 | SQLAlchemy / Alembic | DB und Migration | MIT; https://docs.sqlalchemy.org/ ; https://alembic.sqlalchemy.org/ |
 | psycopg | PostgreSQL-Protokoll | LGPL-3.0; https://www.psycopg.org/psycopg3/docs/ |
+| Paramiko 4.0.0 | explizit gebundene SSH-/SFTP-Verbindungen, kein Shell-Dispatcher | LGPL-2.1; https://docs.paramiko.org/en/stable/api/sftp.html ; https://github.com/paramiko/paramiko/blob/4.0.0/LICENSE |
 | Procrastinate 3.10.0 | persistente App-Queue auf PostgreSQL | MIT; https://procrastinate.readthedocs.io/en/stable/discussions.html |
 | PostgreSQL | App-Daten, getrennte n8n-DB | PostgreSQL License; https://www.postgresql.org/docs/ |
 | n8n (bestehende Instanz) | Zeitpläne und Workflows | Sustainable Use License, kein pauschales OSI-Open-Source-Versprechen |

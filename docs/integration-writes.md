@@ -2,8 +2,15 @@
 
 Stand 17.10.2026: Schema 0043 ergänzt gesonderte Schreibrechte pro Profil,
 gebundene Aktionsfreigaben, dauerhafte Dispatchbelege und lesenden Abgleich.
-Die Lieferung ist noch nicht auf der Test-VM abgenommen. Implementierung,
-synthetische Tests und echte Zielabnahme sind getrennte Nachweise.
+Release 148e921 / Schema 0043 ist auf der Test-VM installiert. SSH-Anmeldung,
+eine echte verwaltete Datei, Hashprüfung, Beleg-Replay und Bereinigung sind live
+geprüft. Ein realer lokaler KI-Entwurf mit explizitem Dateinamen/Inhalt war gültig;
+ein vorheriger ungültiger Entwurf löste keine Aktion aus. HA, Paperless, UniFi und
+MCP sind synthetisch geprüft und haben noch keine echte Zielschreibabnahme.
+Implementierung und reale Abnahme bleiben getrennte Nachweise.
+
+Die Zugangsdaten brauchen zusätzlich die passenden Rechte im Zielsystem.
+Die obdaAI-Freigabe erweitert keine externen Konto- oder Dateisystemrechte.
 
 Unter **Einstellungen → Integrationen → Änderungen** zunächst Schreibaktionen
 für das konkrete Profil erlauben. Aktivierung des Verbindungsprofils allein

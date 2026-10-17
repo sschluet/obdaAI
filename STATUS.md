@@ -3088,3 +3088,38 @@ ergänzt. 31 betroffene PostgreSQL-/Freigabetests bestanden. Keine Dateischreiba
 oder Modellanfrage aus dem fehlgeschlagenen Entwurf; Schreibpause aktiv, eigenes
 unbenutztes Testprofil und eigene Sitzung bereinigt. Erneute exakte CI und
 Test-VM-Korrekturlieferung folgen; noch keine erfolgreiche Dateischreibabnahme behauptet.
+
+
+### 17.10.2026: Kontrollierte Schreibadapter – Korrektur ausgeliefert, SSH live geprüft
+
+Release 148e921 / Schema 0043 auf der autorisierten Test-VM aktiv, beide APIs
+gesund. Vollständige exakte CI 39057977400 erfolgreich: 1450 Backend-/PostgreSQLtests
+bestanden, sechs umgebungsabhängig übersprungen; die bisherigen 39 synthetischen
+Browserprüfungen plus neuer isolierter Schreibdialog bestanden. Container und
+Offline-Runner bestanden. Korrigierte KI-Entwurfsanlage hat einen zusätzlichen echten
+PostgreSQL-API-Regressionstest; der erste fehlgeschlagene Nachweis bleibt erhalten.
+
+Reale SSH-/SFTP-Verbindung über die Anwendungs-API: eigener synthetischer Text
+auf dem Mac mini erstellt, Hash und unmittelbarer Nachherzustand bestätigt;
+dieselbe Aktions-ID lieferte nur den vorhandenen Beleg. Testdatei und neu angelegter
+leerer Testordner, eigenes Testprofil, eigener Entwurf und eigene Sitzung bereinigt.
+Die ausdrücklich gewünschte Mac-mini-Verbindung aktiviert, Schreibaktionen für
+dieses Profil erlaubt und lesender Zugang erfolgreich geprüft. Globale Schreibpause
+wieder aktiv. Andere Profile erhalten keine pauschalen Schreibrechte.
+
+Reale lokale KI-Vorbereitung: erster Entwurf ungültig und ohne Dispatch abgefangen;
+separater klarer Auftrag mit explizitem Dateinamen/Inhalt erzeugte exakt ki-test.txt
+und TEST als gültige Datenparameter. Keine automatische Aktion, keine Cloud, keine
+Credentials/Profilwerte im Modelleingang; eigene Testobjekte danach entfernt.
+Dies ist keine allgemeine Zusage fehlerfreier Modellplanung.
+
+Frische verschlüsselte Off-VM-Sicherungen und Rollbackweg vor beiden Rollouts
+geprüft. Vorhandene Nachrichten, Use Cases und persönliches Profil auch nach der
+QA per Fingerprint unverändert. Compose-Overlays, Nginx und unabhängige Netzwerk-
+regeln erhalten. Private Belege ausschließlich unter .local/deployment. Öffentliche
+Galerie zeigt weiterhin nur eine isolierte synthetische Oberfläche.
+
+HA-/Paperless-/UniFi-/MCP-Schreibwege bleiben ohne reale Zielschreibabnahme.
+Freie SSH-Shell, vollständige administrative Systemabdeckung und autonome
+Integrationsaktionen aus dem allgemeinen Chat/Aufgaben sind nicht umgesetzt.
+M3/M5 und V1 bleiben teilweise abgenommen.
