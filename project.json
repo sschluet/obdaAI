@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-13",
-  "applicationCommit": "68877a4",
-  "schema": "0042",
-  "tests": 1409,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
+  "updated": "2026-10-17",
+  "applicationCommit": "148e921",
+  "schema": "0043",
+  "tests": 1450,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
   "screenshots": [
     {
       "id": "chat",
@@ -244,6 +244,12 @@
       "title": "Formeln prüfen, Originale bewahren.",
       "description": "Ältere Excel-Versionen erhalten einen sichtbaren Prüfhinweis, wenn sie die erweiterten Formelregeln nicht erfüllen. Die gespeicherte Vorgabe bleibt unverändert und kann als neue Version korrigiert werden. Ausschließlich synthetisches Projekt Aurora und abgebrochener älterer Entwurf; kein Live-Downloadbeleg.",
       "image": "assets/excelformulaaudit.png"
+    },
+    {
+      "id": "integrationwrites",
+      "title": "Änderungen bewusst freigeben.",
+      "description": "Eigene Schreibrechte pro Profil, lokale KI-Vorbereitung und genaue Vorschau im Integrationsdialog. Ausschließlich synthetischer Mac-mini-Arbeitsordner; kein Nachweis eines echten Fremdsystemeingriffs.",
+      "image": "assets/integrationwrites.png"
     }
   ],
   "groups": [
@@ -608,13 +614,18 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi und SSH mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüf-/Adapterzuständen. Aktivierte konfigurierte Ziele erhalten dynamische Serverfreigaben. HA/Paperless/MCP haben Zugangstests; UniFi-/SSH-Ausführungsadapter bleiben in Entwicklung.",
+          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen ihre eigene Vorschau und Freigabe. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
           "status": "implemented"
         },
         {
           "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
           "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Allgemeine KI-Aktionen anderer Profile bleiben offen.",
           "status": "limited"
+        },
+        {
+          "title": "Integrationen mit geprüften Schreibaktionen",
+          "description": "Eigene Schreibfreigabe je Profil, konkrete Vorschau, zeitlich gebundene Bestätigung, einmaliger Dispatch und lesender Fehlerabgleich. Begrenzte HA-, Paperless-, SFTP-, UniFi-Gast- und MCP-Aktionen. SSH-Datei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Beleg-Replay ohne zweiten Effekt. Lokale KI liefert geprüfte Datenentwürfe, keine automatische Ausführung. Andere Zielschreibabnahmen und vollständiger administrativer Zugriff bleiben offen.",
+          "status": "implemented"
         }
       ]
     },
@@ -735,18 +746,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0042",
-    "browserChecks": 39,
+    "schema": "0043",
+    "browserChecks": 40,
     "serverDeployment": true,
-    "commit": "68877a4",
-    "ciTests": 1409,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/38369447722",
-    "deployedCommit": "68877a4",
-    "deployedSchema": "0042",
-    "liveScope": "Release 68877a4 / Schema 0042 aktiv auf dem Testsystem. Vollständige CI: 1409 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängige Fälle übersprungen und 39 synthetische Browserchecks. Reale Cloud-XLSX-Planung mit direktem Download geprüft: 10 + 5 ergibt genau eine Formel-Gesamtsumme von 15, keine doppelte 30. Native Offline-Berechnung auf dem Testsystem bestätigt Rundung, bedingte Summe und Fehlerbehandlung; ungültiger Doppelaggregat-Plan abgewiesen. Vorhandene Versionen bleiben unverändert lesbar mit Prüfhinweis bei neuen Regelabweichungen. Bestehende Daten, Einstellungen, Overlays und unabhängige Netzwerkregeln erhalten, verschlüsseltes Off-VM-Backup geprüft. Eigener Testchat und Dateien vollständig bereinigt. Zuvor echte Auto-Routen und direkte PPTX-/DOCX-/XLSX-Cloud-Downloads sowie privates HTTPS und SSH geprüft. Formelvalidierung ersetzt keine fachliche Prüfung des Modellinhalts; vollständige V1-Abnahme bleibt offen.",
+    "commit": "148e921",
+    "ciTests": 1450,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
+    "deployedCommit": "148e921",
+    "deployedSchema": "0043",
+    "liveScope": "Release 148e921 / Schema 0043 aktiv auf dem Testsystem. Vollständige CI: 1450 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 40 synthetische Browserprüfungen. Kontrollierte Integrationsschreibaktionen mit eigener Profilfreigabe, Vorschau, menschlicher Bestätigung, dauerhaftem Dispatchbeleg und lesendem Fehlerabgleich installiert. Native SSH-/SFTP-Textdatei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Replay ohne zweite Ausführung. Ein expliziter lokaler KI-Dateientwurf lieferte gültige Parameter; ein vorheriger ungültiger Entwurf blieb ohne Aktion. HA, Paperless, UniFi und MCP bislang synthetisch geprüft. Andere Profile bleiben ohne pauschale Schreibfreigabe, globale Schreibpause nach QA aktiv. Bestehende Nachrichten, Use Cases, Profil, Overlays und unabhängige Netzwerkregeln erhalten; verschlüsselte Off-VM-Sicherungen geprüft. Frühere reale Cloud-Office-/Excel-Abnahme stammt aus 68877a4 und wird nicht als neue Cloud-Prüfung ausgegeben. Vollständige administrative und V1-Abnahme bleiben offen.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "68877a4",
-    "lastSuccessfulCIUI": 39
+    "lastSuccessfulCICommit": "148e921",
+    "lastSuccessfulCIUI": 40
   }
 }
