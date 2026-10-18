@@ -72,6 +72,7 @@ class Rules(Strict):
     production_ha_approved: bool = False
     ha_websocket_prefixes: list[str] = Field(default_factory=list, max_length=30)
     mcp: bool = False
+    mcp_read_tools: dict[str, str] = Field(default_factory=dict, max_length=50)
     mail_recipients: list[str] = Field(default_factory=list, max_length=50)
     file_read_roots: list[str] = Field(default_factory=list, max_length=16)
     max_steps: int = Field(default=20, ge=1, le=80)
@@ -84,6 +85,12 @@ class Rules(Strict):
     def paths(self) -> "Rules":
         from hub.smtp_client import mailbox
 
+        if any(
+            not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", name)
+            or not re.fullmatch(r"[a-f0-9]{64}", sha)
+            for name, sha in self.mcp_read_tools.items()
+        ):
+            raise ValueError("MCP reads require explicit tool names and schema digests")
         for address in self.mail_recipients:
             mailbox(address)
         if any(not re.fullmatch(r"[a-z][a-z0-9_/]*", p) for p in self.ha_websocket_prefixes):
@@ -346,7 +353,7 @@ def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
     if tool == "mail.send":
         return kind == "smtp" and bool(rules.mail_recipients)
     if tool in {"mcp.call", "mcp.catalog"}:
-        return kind == "mcp" and rules.mcp
+        return kind == "mcp" and bool(rules.mcp or rules.mcp_read_tools)
     if tool == "ssh.inspect":
         return kind == "ssh"
     if tool == "shell":
@@ -358,6 +365,20 @@ def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
 
 def _scoped_arguments(tool: str, schema: dict[str, Any], rules: Rules) -> dict[str, Any]:
     result = copy.deepcopy(schema)
+    if tool == "mcp.call" and not rules.mcp and rules.mcp_read_tools:
+        return {
+            "anyOf": [
+                {
+                    **result,
+                    "properties": {
+                        **result["properties"],
+                        "name": {"type": "string", "const": name},
+                        "schema_sha256": {"type": "string", "const": sha},
+                    },
+                }
+                for name, sha in sorted(rules.mcp_read_tools.items())
+            ]
+        }
     path_pattern = (
         "^(?:" + "|".join(re.escape(p) for p in rules.http_prefixes) + ")[A-Za-z0-9_.~/-]*$"
     )
@@ -510,7 +531,12 @@ def validate_tool(
     """Return normalized inert data and effect classification, independent of model claims."""
     if not rules.enabled:
         raise PermissionError("Agent administration is disabled")
-    if tool == "mcp.catalog" and kind == "mcp" and rules.mcp and not arguments:
+    if (
+        tool == "mcp.catalog"
+        and kind == "mcp"
+        and (rules.mcp or rules.mcp_read_tools)
+        and not arguments
+    ):
         return {}, False
     model = SCHEMAS.get(tool)
     if model is None:
@@ -577,8 +603,12 @@ def validate_tool(
             )
         ):
             return data, False
-    if tool == "mcp.call" and kind == "mcp" and rules.mcp:
-        return data, True  # Annotations do not confer read authority.
+    if tool == "mcp.call" and kind == "mcp":
+        # Human-reviewed semantics and the exact schema grant reads, never remote annotations.
+        if rules.mcp_read_tools.get(data["name"]) == data["schema_sha256"]:
+            return data, False
+        if rules.mcp:
+            return data, True
     raise PermissionError("Interface is outside the approved administration rules")
 
 
@@ -896,6 +926,7 @@ def invoke(
                 granted_tool=args["name"],
                 expected_schema=args["schema_sha256"],
                 granted_arguments=args["arguments"],
+                granted_read=rules.mcp_read_tools.get(args["name"]) == args["schema_sha256"],
                 before_call=before_send,
                 argument_validator=validate,
                 before_connect=credential_boundary,

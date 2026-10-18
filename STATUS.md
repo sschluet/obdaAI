@@ -1,5 +1,89 @@
 # obdaAI — Status 18.10.2026
 
+## Intuitivere Integrationen — auf der Test-VM verfügbar
+
+Die Integrationsübersicht zeigt Verbindung, Status, Aktivierung und KI-Zugriff
+kompakt. Technische Einzelheiten und seltene Aktionen liegen in aufklappbaren
+Bereichen. Unter **KI-Zugriff** stehen **Kein KI-Zugriff**, **Nur lesen** und
+**Änderungen erlauben** im Vordergrund; einzelne Werkzeuge, Zielgrenzen und
+bereits erlaubte autonome Ausführung bleiben unter **Erweiterte Berechtigungen**
+sichtbar. Das bloße Öffnen der Oberfläche verändert keine vorhandenen Regeln.
+Eine Zugriffsauswahl erfindet keine API-Pfade, Shellrechte, MCP-Vollfreigaben oder
+Mailziele. Bestehende Einzelrechte bleiben gespeichert; Aktivierung und
+Schreibfreigabe bestimmen weiterhin, ob sie verwendet werden dürfen. Eine
+Änderung des Zugriffsmodus setzt autonome Ausführung zurück auf Einzelfreigaben;
+unverändertes Speichern erhält eine bestehende Selbstständigkeit.
+
+Proton Mail wird wie andere Verbindungen über **Verbindung hinzufügen** ausgewählt.
+Ein modaler Assistent führt durch **Vorbereiten**, **Zugangsdaten** und **Prüfen und
+verbinden**. Die Vorbereitung erklärt Tarif, serverseitige Bridge und die weiterhin
+extern erforderliche Proton-Kontoanmeldung; eine offizielle Anleitung ist verlinkt.
+Vorhandene Zugänge öffnen direkt die Zugangsdaten. Der Zugangstest startet erst
+nach einer ausdrücklichen Bestätigung der Zusammenfassung. Passwortschutz,
+Revisionsprüfung und Fehlerwiederaufnahme verwenden den bestehenden Backendweg.
+
+Release **7c7e8aa / Schema 0044** ist auf der Test-VM installiert; beide APIs
+sind gesund. Der echte authentifizierte HTTPS-Abruf bestätigt den ausgelieferten
+Assistenten, die vereinfachten Zugriffseinstellungen und den tokengebundenen
+Brokerzugang aus der App. Bestehende Daten, Berechtigungen, Overlays und unabhängige
+Netzregeln sind erhalten. Die persönliche Proton-Kontoanmeldung bleibt offen;
+durch diese Abnahme wurden keine Zugangsdaten geändert oder Nachrichten gelesen.
+
+Lokal sind alle **1664 Tests**, Ruff, mypy, Geheimnisprüfung und Frontend-Build
+erfolgreich. Die vollständige [CI39165821411](https://github.com/sschluet/obdaAI/actions/runs/39165821411)
+besteht mit **1658 Tests, sechs übersprungenen Tests**, allen **39 Browserabläufen
+und drei eingebundenen Zusatzprüfungen** sowie Container-/Runnersmokes. Die gleiche
+vollständige Browserfolge besteht lokal. Unveränderte Autonomie, keine stillen
+Rechteerweiterungen, der dreistufige Proton-Assistent und mobile Bedienung sind
+geprüft. Öffentliche Bilder stammen ausschließlich aus isolierten synthetischen
+Oberflächen; echte Postfachnutzung und breite Fremdsystemadministration bleiben
+offen. Die folgenden älteren Nachweise dokumentieren die vorherige Auslieferung.
+
+## Proton-Postfach: bisherige Bridge-Einrichtung auf der Test-VM
+
+Die offizielle Proton Bridge 3.27.1 läuft auf der Test-VM; ihre Signatur und die
+ausgeführte Programmdatei sind unabhängig geprüft. Ein geprüfter, festgeschriebener
+Community-MCP ist installiert. Der geschützte Katalog ist von obdaAI erreichbar;
+externe Clients werden gesperrt. Ein kostenpflichtiger Proton-Mail-Tarif ist
+Voraussetzung. Die Einrichtung bietet ausdrücklich freigegebenes lokales Lesen
+und Suchen. Versand und Änderungen am Postfach bleiben gesperrt.
+
+Die neue Oberfläche unter Einstellungen → Integrationen nimmt den vorhandenen
+Bridge-Benutzernamen und das gesonderte Bridge-Passwort entgegen. Sie fordert keine
+Proton-Kontoanmeldung oder 2FA in obdaAI. Ein fester lokaler, rootverwalteter Broker
+prüft den Zugang über zertifikatsgebundenes STARTTLS und einen lesend geöffneten
+IMAP-Posteingang. Keine Nachricht wird versandt, verschoben oder gelöscht. Passwort,
+Revision, Anfragekennung und Fehlerwiederaufnahme sind getrennt vom Agentenweg
+begrenzt. Die optionale Lesefreigabe bindet acht geprüfte Werkzeugnamen und Schemas,
+ohne Profil-Schreibrechte oder allgemeinen MCP-Vollzugriff einzuschalten.
+Kataloghinweise allein gewähren nichts; frische Rechte- und Schemaprüfungen bleiben
+bindend.
+
+Die vorherige Auslieferung **ec8ce2e / Schema 0044** wurde auf der Test-VM
+installiert und mit beiden gesunden APIs geprüft. Der echte authentifizierte HTTPS-Abruf bestätigt das Proton-Formular,
+den ausgelieferten Einstellungs-Build und den tokengebundenen Brokerzugang aus der
+App. Zugriff ohne Sitzung beziehungsweise ohne Broker-Token wird mit 401 abgewiesen.
+Bestehende Daten, Regeln, Overlays und unabhängige Netzregeln wurden verglichen und
+erhalten; ein eigenes Proton-Overlay ergänzt ausschließlich die beiden APIs.
+
+Vollständige lokale Prüfung: **1664 Tests bestanden**, Ruff, mypy, Geheimnisprüfung
+und Frontend-Build erfolgreich. Vollständige [CI39139794971](https://github.com/sschluet/obdaAI/actions/runs/39139794971):
+**1658 Tests bestanden, sechs übersprungen**, alle 41 synthetischen Browserprüfungen
+und Container-/Runnersmokes erfolgreich. Darin enthalten sind 21 neue Backend-/
+Broker-Tests sowie die Browserabnahme der Einrichtung mit Passwortschutz,
+Fehler-/Revisionswechsel, Aktivierungswechsel und mobiler Darstellung.
+
+Verschlüsselte Vorab-/Nachab-Sicherungen sind außerhalb der VM hashgeprüft.
+Die Nachab-Sicherung umfasst nun auch Bridge-/MCP-/Brokerzustand, Dienstdateien,
+Zertifikat und Proton-Overlay. Alle 16 geforderten Archivwurzeln und die erfolgreiche
+Entschlüsselung sind am echten Datenstrom geprüft, ohne Klartextextraktion. Das ist
+kein Restoretest und kein Beleg einer Transaktion über alle laufenden Dienste.
+
+Persönliche Kontoanmeldung und echter Postfachzugang stehen weiter aus;
+Installation, Katalog und synthetische Einrichtung sind kein Nachweis realer
+Mailnutzung. Details und offene Postfach-/Chat-/Aufgaben-/Projektabnahme:
+[docs/proton-mailbox.md](docs/proton-mailbox.md).
+
 ## Agentische Systemsteuerung — implementiert, reale Administration partiell
 
 Der Benutzer verlangt möglichst vollständige Administration angebundener Systeme
@@ -19,8 +103,8 @@ Die ausdrücklich erlaubten autonomen SSH-Skripte und direkte HA-Abnahme ohne
 isolierte Instanz/geprüften Restore sind dokumentiert; daraus folgt kein
 Wiederherstellungsnachweis und keine zusätzliche Netzwerkberechtigung.
 
-Release **fd56e02 / Schema 0044** ist gesund auf der Test-VM installiert; beide APIs
-separat geprüft. Vollständige [CI39130484648](https://github.com/sschluet/obdaAI/actions/runs/39130484648):
+Die bisherige reale Steuerungsabnahme erfolgte auf **fd56e02 / Schema 0044**;
+beide APIs wurden separat geprüft. Vollständige [CI39130484648](https://github.com/sschluet/obdaAI/actions/runs/39130484648):
 **1620 Backend-/PostgreSQLtests bestanden, sechs übersprungen**, 41 synthetische
 Browserprüfungen und alle Container-/Offline-Runnersmokes erfolgreich. Lokal 207
 gezielte Tests, Ruff, mypy und Geheimnisprüfung erfolgreich. Verschlüsselte App-

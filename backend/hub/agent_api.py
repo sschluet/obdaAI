@@ -45,6 +45,27 @@ class ReplyInput(ApprovalInput):
     content: str = Field(min_length=1, max_length=8000)
 
 
+def mcp_read_candidates(profile: Integration) -> list[dict[str, str]]:
+    """Catalog candidates require explicit human semantic review; annotations grant nothing."""
+    from hub.mcp_client import schema_digest
+
+    checked = json.loads(profile.last_check) if profile.last_check else {}
+    if (
+        profile.kind != "mcp"
+        or checked.get("status") != "succeeded"
+        or checked.get("revision") != profile.revision
+    ):
+        return []
+    return [
+        {
+            "name": tool["name"],
+            "description": tool.get("description", ""),
+            "schema_sha256": schema_digest(tool["input_schema"]),
+        }
+        for tool in checked.get("result", {}).get("tools", [])
+    ]
+
+
 def enqueue_agent(db: Any, cfg: Settings, job_id: str) -> None:
     if cfg.database_url.startswith("sqlite"):
         return
@@ -93,6 +114,7 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 "writes_enabled": profile.writes_enabled,
                 "current": bool(row and row.profile_revision == profile.revision),
                 "rules": json.loads(row.rules) if row else Rules().model_dump(),
+                "mcp_read_candidates": mcp_read_candidates(profile),
                 "shell_authority": "remote_account_permissions; no directory sandbox",
             }
 
@@ -113,7 +135,7 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             if (
                 rules.shell
                 and profile.kind != "ssh"
-                or rules.mcp
+                or (rules.mcp or rules.mcp_read_tools)
                 and profile.kind != "mcp"
                 or (
                     rules.http_prefixes
@@ -125,6 +147,11 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 raise HTTPException(422, "Regeln passen nicht zum Verbindungstyp")
             if rules.mail_recipients and profile.kind != "smtp":
                 raise HTTPException(422, "Empfängerregeln benötigen ein SMTP-Profil")
+            candidates = {t["name"]: t["schema_sha256"] for t in mcp_read_candidates(profile)}
+            if any(candidates.get(name) != sha for name, sha in rules.mcp_read_tools.items()):
+                raise HTTPException(
+                    409, "MCP-Lesefreigabe benötigt den aktuellen geprüften Katalog"
+                )
             if row is None:
                 row = AgentPolicy(
                     integration_id=profile.id,

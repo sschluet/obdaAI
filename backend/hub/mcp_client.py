@@ -80,12 +80,15 @@ def discover(
     configured_profile: bool = False,
     granted_tool: str | None = None,
     granted_arguments: dict[str, Any] | None = None,
+    granted_read: bool = False,
     before_call: Callable[[], Any] | None = None,
     argument_validator: Callable[[dict[str, Any], Any], None] | None = None,
     before_connect: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     if version not in VERSIONS:
         raise ValueError("Unsupported configured MCP version")
+    if granted_read and (not configured_profile or granted_tool is None):
+        raise ValueError("MCP read grant requires a configured profile and reviewed tool")
     if configured_profile:
         if read_tool is not None:
             raise ValueError("Profile catalog discovery does not grant execution")
@@ -278,6 +281,31 @@ def discover(
         result_data = rpc("tools/call", {"name": granted_tool, "arguments": granted_arguments})
         if result_data.get("isError", False) is not False:
             raise ValueError("MCP call failed")
+        if granted_read:
+            content = result_data.get("content")
+            if not isinstance(content, list) or not 1 <= len(content) <= 16:
+                raise ValueError("MCP read content limit")
+            output = []
+            total = 0
+            for item in content:
+                if (
+                    not isinstance(item, dict)
+                    or item.get("type") != "text"
+                    or not isinstance(item.get("text"), str)
+                ):
+                    raise ValueError("Only plain MCP text results are supported")
+                total += len(item["text"])
+                if total > 64000:
+                    raise ValueError("MCP text size limit")
+                output.append(item["text"])
+            return {
+                "tool_name": granted_tool,
+                "schema_sha256": expected_schema,
+                "content": output,
+                "label": "LOCAL_ONLY",
+                "untrusted": True,
+                "automatic_model_context": False,
+            }
         return {
             "acknowledged": True,
             "result_sha256": schema_digest(result_data),

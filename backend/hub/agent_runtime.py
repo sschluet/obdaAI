@@ -877,7 +877,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             allowed_tools.add("shell")
                         if rules.file_read_roots or rules.shell:
                             allowed_tools.add("file.read")
-                        if rules.mcp:
+                        if rules.mcp or rules.mcp_read_tools:
                             allowed_tools.update({"mcp.catalog", "mcp.call"})
                         if rules.mail_recipients:
                             allowed_tools.add("mail.send")
