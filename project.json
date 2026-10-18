@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "fd56e02",
+  "applicationCommit": "ec8ce2e",
   "schema": "0044",
-  "tests": 1620,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39130484648",
+  "tests": 1658,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
   "screenshots": [
     {
       "id": "chat",
@@ -256,6 +256,18 @@
       "title": "Ein Ziel im Chat. Nachvollziehbare Schritte.",
       "description": "Systemsteuerung mit Rückfragen im selben Gespräch, gezielten Freigaben und prüfbaren Werkzeugbelegen. Ausschließlich synthetischer Archivauftrag und simulierte Dienstantworten; kein realer HA-Updatebeleg.",
       "image": "assets/agentcontrol.png"
+    },
+    {
+      "id": "mcpreads",
+      "title": "Postfach lesen. Rechte gezielt vergeben.",
+      "description": "Einzeln geprüfte MCP-Lesewerkzeuge ohne Schreibfreigabe auswählen. Ausschließlich fiktives Postfach Aurora; synthetischer Katalog zur UI-Prüfung, keine echten Nachrichten.",
+      "image": "assets/mcpreads.png"
+    },
+    {
+      "id": "protonbridge",
+      "title": "Dein Proton-Postfach im Arbeitsraum.",
+      "description": "Vorhandenen Bridge-Benutzernamen und das eigene Bridge-Passwort unter Integrationen eintragen, den Zugang prüfen und lokales Lesen erlauben. Ausschließlich synthetische Zugangsdaten und simulierte Dienstantworten; kein Nachweis eines angemeldeten echten Postfachs.",
+      "image": "assets/protonbridge.png"
     }
   ],
   "groups": [
@@ -600,7 +612,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile in der zentralen Integrationsübersicht mit revisionierter Konfiguration, Katalogprüfung und begrenzten parameterfreien Text-Lesewerkzeugen. Echte Drittanbieterziele sind noch nicht abgenommen.",
+          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen. Werkzeugname und Eingabeschema bleiben gebunden; Lesen benötigt keine Profil-Schreibrechte. Proton-Bridge-Katalog auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
+          "status": "implemented"
+        },
+        {
+          "title": "Proton-Postfach über Bridge einrichten",
+          "description": "Vorhandenen Bridge-Benutzernamen und das gesonderte Bridge-Passwort direkt unter Integrationen eingeben, den Zugang prüfen und lokales Lesen in Chat, Aufgaben und Projekten erlauben. Versand und Postfachänderungen bleiben gesperrt. Die Oberfläche ist auf dem Testsystem verfügbar. Formular, Passwortschutz, Fehlerwiederaufnahme und Aktivierungswechsel sind synthetisch geprüft; echter HTTPS-Status und der lokale Einrichtungsdienst sind separat geprüft. Bridge 3.27.1 ist auf der Test-VM unabhängig geprüft, die echte Postfachanmeldung und Nutzungsabnahme bleiben offen.",
           "status": "implemented"
         },
         {
@@ -760,15 +777,15 @@
     "schema": "0044",
     "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "fd56e02",
-    "ciTests": 1620,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39130484648",
-    "deployedCommit": "fd56e02",
+    "commit": "ec8ce2e",
+    "ciTests": 1658,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
+    "deployedCommit": "ec8ce2e",
     "deployedSchema": "0044",
-    "liveScope": "Release fd56e02 / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1620 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
+    "liveScope": "Release ec8ce2e / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1658 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die neue Einrichtung unter Integrationen ist auf dem Testsystem verfügbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Persönliche Bridge-Anmeldung, echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "fd56e02",
+    "lastSuccessfulCICommit": "ec8ce2e",
     "lastSuccessfulCIUI": 41
   }
 }
