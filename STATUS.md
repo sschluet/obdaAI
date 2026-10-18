@@ -1,5 +1,25 @@
 # obdaAI — Status 18.10.2026
 
+## Proton-Postfach und gezielte MCP-Lesefreigaben — Abnahme in Arbeit
+
+Offizielle signaturgeprüfte Proton Bridge und ein geprüfter, festgeschriebener
+Community-MCP sind privat auf der Test-VM installiert. Der geschützte Katalog ist
+von obdaAI erreichbar; externe Clients werden gesperrt. Der Benutzer bestätigt
+einen kostenpflichtigen Tarif und erlaubt selbstständiges lokales Lesen und
+Suchen. Versand und Änderungen am Postfach bleiben gesperrt.
+
+Der bisherige Agent behandelt jeden MCP-Aufruf als mögliche Änderung. Die neue
+gezielte Lesefreigabe bindet deshalb einzelne menschlich geprüfte Werkzeugnamen
+und Schemas, ohne Profil-Schreibrechte einzuschalten. Kataloghinweise allein
+gewähren nichts; frische Rechte- und Schemaprüfungen bleiben bindend. Details und
+offene echte Postfach-/Chat-/Aufgaben-/Projektabnahme:
+[docs/proton-mailbox.md](docs/proton-mailbox.md). 143 gezielte Backendtests, Ruff, mypy, Frontend-Prüfung/Build und der
+synthetische Agenten-Browsercheck sind erfolgreich. Vollständige lokale/CI-
+Prüfungen und Auslieferung laufen noch. Persönliche Anmeldung steht noch
+aus; Installation und Katalog sind kein Nachweis echten Mailzugriffs. Release-
+und CI-Angaben unten beziehen sich bis zur nächsten geprüften Lieferung auf den
+bisherigen Stand.
+
 ## Agentische Systemsteuerung — implementiert, reale Administration partiell
 
 Der Benutzer verlangt möglichst vollständige Administration angebundener Systeme

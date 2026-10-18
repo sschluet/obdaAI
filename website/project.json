@@ -256,6 +256,12 @@
       "title": "Ein Ziel im Chat. Nachvollziehbare Schritte.",
       "description": "Systemsteuerung mit Rückfragen im selben Gespräch, gezielten Freigaben und prüfbaren Werkzeugbelegen. Ausschließlich synthetischer Archivauftrag und simulierte Dienstantworten; kein realer HA-Updatebeleg.",
       "image": "assets/agentcontrol.png"
+    },
+    {
+      "id": "mcpreads",
+      "title": "Postfach lesen. Rechte gezielt vergeben.",
+      "description": "Einzeln geprüfte MCP-Lesewerkzeuge ohne Schreibfreigabe auswählen. Ausschließlich fiktives Postfach Aurora; synthetischer Katalog zur UI-Prüfung, keine echten Nachrichten.",
+      "image": "assets/mcpreads.png"
     }
   ],
   "groups": [
@@ -600,7 +606,7 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile in der zentralen Integrationsübersicht mit revisionierter Konfiguration, Katalogprüfung und begrenzten parameterfreien Text-Lesewerkzeugen. Echte Drittanbieterziele sind noch nicht abgenommen.",
+          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen. Werkzeugname und Eingabeschema bleiben gebunden; Lesen benötigt keine Profil-Schreibrechte. Proton-Bridge-Anbindung vorbereitet und Katalog auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
           "status": "implemented"
         },
         {

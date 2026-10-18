@@ -1,6 +1,8 @@
 import {useEffect, useState} from 'react';
 import type {IntegrationAPI, IntegrationRow} from './IntegrationRegistryPanel';
 
+type MCPReadCandidate = {name: string; description: string; schema_sha256: string};
+
 export function AgentPolicyEditor({api, integration, onClose}: {
   api: IntegrationAPI; integration: IntegrationRow; onClose: () => void;
 }) {
@@ -17,6 +19,15 @@ export function AgentPolicyEditor({api, integration, onClose}: {
     return () => {alive = false;};
   }, [api, integration.id]);
   const change = (key: string, value: unknown) => setRules({...rules, [key]: value});
+  const readCandidates: MCPReadCandidate[] = policy?.mcp_read_candidates ?? [];
+  const readTools: Record<string, string> = rules?.mcp_read_tools ?? {};
+  const staleReadTools = Object.keys(readTools).filter(name => !readCandidates.some(tool => tool.name === name && tool.schema_sha256 === readTools[name]));
+  function allowReadTool(name: string, schema: string, allowed: boolean) {
+    const next = {...readTools};
+    if (allowed) next[name] = schema;
+    else delete next[name];
+    change('mcp_read_tools', next);
+  }
   async function save() {
     setBusy(true); setError('');
     try {
@@ -60,7 +71,22 @@ export function AgentPolicyEditor({api, integration, onClose}: {
         <label>Lesbare Dateiwurzeln (je Zeile ein absoluter Pfad)<textarea rows={3} value={rules.file_read_roots.join('\n')} onChange={e => change('file_read_roots', e.target.value.split('\n').filter(Boolean))}/></label>
       </>}
       {(integration.kind === 'home_assistant' || rules.home_assistant_host) && <label><input type="checkbox" checked={rules.production_ha_approved} onChange={e => change('production_ha_approved', e.target.checked)}/>Direkte Änderungen an dieser HA-Instanz erlauben, auch ohne abgeschlossenen Wiederherstellungstest. Dies bestätigt keinen geprüften Restore.</label>}
-      {integration.kind === 'mcp' && <label><input type="checkbox" checked={rules.mcp} onChange={e => change('mcp', e.target.checked)}/>Aktuelle MCP-Werkzeuge innerhalb dieses Serverkontos zulassen</label>}
+      {integration.kind === 'mcp' && <>
+        <fieldset aria-label="Lesende MCP-Werkzeuge freigeben">
+          <legend>Einzelne MCP-Werkzeuge als lesend freigeben</legend>
+          <p>Markiere ein Werkzeug erst, nachdem du geprüft hast, dass es ausschließlich liest. Deine Auswahl erlaubt seine Ausführung ohne Schreibfreigabe. Werkzeugbeschreibungen stammen vom angebundenen Server und sind keine geprüfte Einstufung.</p>
+          {readCandidates.length ? readCandidates.map(tool => <div key={tool.name}>
+            <label><input type="checkbox" checked={readTools[tool.name] === tool.schema_sha256} onChange={e => allowReadTool(tool.name, tool.schema_sha256, e.target.checked)}/>{tool.name}</label>
+            {tool.description && <p>{tool.description}</p>}
+          </div>) : <p>Prüfe zuerst den Zugang, um den aktuellen Werkzeugkatalog zu laden.</p>}
+          {!!staleReadTools.length && <div>
+            <p>Diese Freigaben passen nicht zum aktuellen Katalog. Prüfe den Zugang und gib geänderte Werkzeuge nach erneuter Prüfung frei.</p>
+            {staleReadTools.map(name => <label key={name}><input type="checkbox" checked onChange={() => allowReadTool(name, '', false)}/>{name} · bisherige Freigabe entfernen</label>)}
+          </div>}
+          <p>Die Auswahl gilt nur für die geprüfte Werkzeugversion. Neue oder geänderte Werkzeuge erhalten keine automatische Freigabe.</p>
+        </fieldset>
+        <label><input type="checkbox" checked={rules.mcp} onChange={e => change('mcp', e.target.checked)}/>Alle aktuellen MCP-Werkzeuge dieses Serverkontos einschließlich Änderungen zulassen</label>
+      </>}
       {integration.kind === 'smtp' && <label>Erlaubte E-Mail-Empfänger (je Zeile eine Adresse)<textarea rows={3} value={rules.mail_recipients.join('\n')} onChange={e => change('mail_recipients', e.target.value.split('\n').filter(Boolean))}/></label>}
       <label>Maximale Werkzeugschritte<input type="number" min={1} max={80} value={rules.max_steps} onChange={e => change('max_steps', Number(e.target.value))}/></label>
       <label>Maximale Änderungen pro Lauf<input type="number" min={0} max={20} value={rules.max_effects} onChange={e => change('max_effects', Number(e.target.value))}/></label>

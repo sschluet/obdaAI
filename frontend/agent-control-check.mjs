@@ -5,10 +5,42 @@ const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 page.setDefaultTimeout(20000);
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
-let headers,profile,chat;
+let headers,profile,chat,mcpProfile;
 async function call(path,method='GET',data){const r=await page.request.fetch(base+'/api'+path,{method,headers,data});if(!r.ok())throw Error(method+' '+path+' '+r.status()+' '+await r.text());return r.json()}
 try{
  await page.goto(base);const session=await loginFixture(page);headers={'Origin':base,'X-CSRF-Token':session.csrf};
+ // Synthetic UI contract only: no MCP connection or mailbox content is involved.
+ mcpProfile=await call('/integrations','POST',{name:'Postfach Aurora',kind:'mcp',url:'https://mail.example.test/mcp',auth:'none',protocol:'2026-07-28'});
+ let mailPolicy=await call('/integrations/'+mcpProfile.id+'/agent-policy');
+ mailPolicy={...mailPolicy,writes_enabled:false,rules:{...mailPolicy.rules,max_effects:0,mcp:false,mcp_read_tools:{old_tool:'b'.repeat(64)}},mcp_read_candidates:[{name:'list_folders',description:'Liest die Ordner des synthetischen Postfachs.',schema_sha256:'a'.repeat(64)},{name:'export_email',description:'Speichert eine Datei lokal.',schema_sha256:'c'.repeat(64)}]};
+ let mailPolicySaved=false;
+ const policyRoute=base+'/api/integrations/'+mcpProfile.id+'/agent-policy';
+ await page.route(policyRoute,async route=>{
+  if(route.request().method()==='PUT'){
+   const data=route.request().postDataJSON();
+   if(JSON.stringify(data.rules.mcp_read_tools)!==JSON.stringify({list_folders:'a'.repeat(64)})||data.rules.mcp||data.rules.max_effects!==0)throw Error('Read-only MCP UI widened the grant');
+   mailPolicy={...mailPolicy,rules:data.rules};mailPolicySaved=true;
+  }
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(mailPolicy)});
+ });
+ await page.goto(base+'/?view=Einstellungen&settingsTab=Integrationen');
+ const mailRow=page.locator('.registry-table tr').filter({hasText:mcpProfile.name});
+ await mailRow.getByRole('button',{name:'Agentenregeln',exact:true}).click();
+ const mailEditor=page.getByRole('region',{name:'Agentenregeln für '+mcpProfile.name,exact:true});
+ await mailEditor.getByText(/Werkzeugbeschreibungen stammen vom angebundenen Server/).waitFor();
+ if(await mailEditor.getByLabel('list_folders',{exact:true}).isChecked()||await mailEditor.getByLabel('export_email',{exact:true}).isChecked())throw Error('MCP candidates automatically approved');
+ await mailEditor.getByLabel('old_tool · bisherige Freigabe entfernen',{exact:true}).click();
+ await mailEditor.getByLabel('old_tool · bisherige Freigabe entfernen',{exact:true}).waitFor({state:'hidden'});
+ await mailEditor.getByLabel('list_folders',{exact:true}).check();
+ if(await mailEditor.getByLabel('Schreibaktionen für dieses Profil erlauben',{exact:true}).isChecked()||await mailEditor.getByLabel('Alle aktuellen MCP-Werkzeuge dieses Serverkontos einschließlich Änderungen zulassen',{exact:true}).isChecked())throw Error('Read grant enabled writes');
+ if(process.env.HUB_MCP_READ_CAPTURE){await page.setViewportSize({width:1440,height:2200});await mailEditor.scrollIntoViewIfNeeded();await mailEditor.screenshot({path:process.env.HUB_MCP_READ_CAPTURE});await page.setViewportSize({width:1440,height:1100})}
+ await mailEditor.getByRole('button',{name:'Regeln speichern',exact:true}).click();
+ await mailEditor.waitFor({state:'hidden'});
+ if(!mailPolicySaved)throw Error('MCP read policy not saved');
+ await mailRow.getByRole('button',{name:'Agentenregeln',exact:true}).click();
+ if(!await mailEditor.getByLabel('list_folders',{exact:true}).isChecked()||await mailEditor.getByLabel('export_email',{exact:true}).isChecked())throw Error('MCP read grant not restored');
+ await mailEditor.getByRole('button',{name:'Schließen',exact:true}).click();
+ await page.unroute(policyRoute);
  profile=await call('/integrations','POST',{name:'Paperless Aurora',kind:'paperless',url:'https://agent.example.test',auth:'api_key',secret:'synthetic-agent-token'});
  profile=await call('/integrations/'+profile.id+'/control','PATCH',{expected_revision:profile.revision,enabled:true});
  let current=(await call('/integrations')).integrations.find(p=>p.id===profile.id);
@@ -66,6 +98,6 @@ try{
  await page.setViewportSize({width:320,height:740});
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1))throw Error('Agent chat mobile overflow');
  if(errors.length)throw Error(errors.join('; '));
- console.log('Agent chat UI passed: same-chat clarification, dynamic read/write, exact approval, independent verification, reload, autonomous rules, shared task creation/execution, lost-response no retry and 320px.');
+ console.log('Agent chat UI passed: explicit MCP read-tool grants without write authority, same-chat clarification, dynamic read/write, exact approval, independent verification, reload, autonomous rules, shared task creation/execution, lost-response no retry and 320px.');
 }catch(e){await page.screenshot({path:'.local/agent-ui-failure.png',fullPage:true});console.error((await page.locator('body').innerText()).slice(-6000));throw e}
-finally{if(headers&&chat){try{const jobs=await call('/agent-runs?conversation_id='+chat.id);for(const job of jobs)if(['queued','running','awaiting_approval','awaiting_input'].includes(job.status))await call('/agent-runs/'+job.id+'/cancel','POST',{});const p=await call('/conversations/'+chat.id+'/deletion');if(!p.blockers.length)await call('/conversations/'+chat.id,'DELETE',{expected_state:p.expected_state})}catch(e){errors.push(e.message)}}if(headers&&profile){try{const p=(await call('/integrations')).integrations.find(p=>p.id===profile.id);if(p)await call('/integrations/'+p.id,'DELETE',{expected_revision:p.revision})}catch(e){errors.push(e.message)}}await browser.close()}
+finally{if(headers&&chat){try{const jobs=await call('/agent-runs?conversation_id='+chat.id);for(const job of jobs)if(['queued','running','awaiting_approval','awaiting_input'].includes(job.status))await call('/agent-runs/'+job.id+'/cancel','POST',{});const p=await call('/conversations/'+chat.id+'/deletion');if(!p.blockers.length)await call('/conversations/'+chat.id,'DELETE',{expected_state:p.expected_state})}catch(e){errors.push(e.message)}}for(const target of [profile,mcpProfile]){if(headers&&target){try{const p=(await call('/integrations')).integrations.find(p=>p.id===target.id);if(p)await call('/integrations/'+p.id,'DELETE',{expected_revision:p.revision})}catch(e){errors.push(e.message)}}}await browser.close()}
