@@ -7,11 +7,13 @@ research and target responses are inert, untrusted data until the final gate.
 import asyncio
 import json
 import time
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 from uuid import uuid4
 
 import httpx
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import defer
 
@@ -37,6 +39,11 @@ class AgentBusy(RuntimeError):
     pass
 
 
+class AgentFormatError(ValueError):
+    def __init__(self, rejected: str):
+        self.rejected = rejected[:4000]
+
+
 INSTRUCTION = """Du bist der lokale Systemverwaltungsagent in obdaAI.
 Erfülle das Ziel durch eine Folge echter Werkzeugaufrufe. Prüfe erst Installation,
 Versionen, Istzustand, Fähigkeiten und Rechte. Verwende API-Kataloge, MCP-Kataloge
@@ -60,6 +67,16 @@ Ein angenommener Aufruf ist kein belegter Effekt. Prüfe Nachzustände unabhäng
 Bei uncertain KEINEN Ersatzaufruf und KEINE Wiederholung derselben Änderung.
 Wenn Angaben oder ein sicherer Zugriffsweg fehlen, stelle eine konkrete Rückfrage.
 Jede Ausgabe ist ausschließlich ein JSON-Objekt nach dem angegebenen Schema.
+Für einen Werkzeugschritt ist die Hülle IMMER:
+{"kind":"tool","integration_id":"ID aus interfaces","tool":"Werkzeugname",
+"arguments":{},"message":"Kurze Beschreibung"}.
+kind ist also tool, niemals shell/http/ssh.inspect. integration_id ist bei jedem
+Werkzeug Pflicht. Für Rückfragen nur {"kind":"ask","message":"Frage"};
+zum Abschluss nur {"kind":"finish","message":"Ergebnis"}.
+Beginne bei SSH mit ssh.inspect und leeren arguments für echte Systeminformationen.
+file.read meldet auch, ob eine Datei fehlt. Wähle Befehle passend zum beobachteten
+Betriebssystem. Ein verification_script prüft die Wirkung der gerade ausgeführten
+Änderung; fordere ihren Sollzustand nicht schon bei einer Bestandsaufnahme.
 message ist eine kurze sachliche Beschreibung des nächsten Schrittes oder Ergebnisses,
 keine internen Überlegungen. finish nur, wenn das Ziel tatsächlich überprüft ist;
 benenne verbleibende Einschränkungen. Du kannst keine Berechtigungen erteilen.
@@ -331,7 +348,46 @@ def record(db: Any, job: AgentJob, kind: str, document: dict[str, Any]) -> Agent
     return step
 
 
+def format_feedback(
+    db: Any, cfg: Settings, job: AgentJob, rejected: Any, issues: Sequence[Mapping[str, Any]]
+) -> None:
+    gate(db, cfg, job)
+    if sum(s.kind == "feedback" for s in steps(db, job.id)) >= 2:
+        raise ValueError("Lokale Formatkorrekturen ausgeschöpft")
+    record(
+        db,
+        job,
+        "feedback",
+        {
+            "message": "Modellformat korrigieren; hierfür kein Werkzeug versandt",
+            "rejected_decision": rejected,
+            "issues": list(issues),
+            "instruction": "Erzeuge eine neue Entscheidung nach decision_schema und tools. "
+            "Verwende bei Werkzeugen kind=tool und die echte integration_id aus interfaces. "
+            "Keine Zielangaben oder Rechte erfinden. "
+            "Keine bereits ausgeführte Änderung wiederholen.",
+        },
+    ).status = "succeeded"
+
+
 def complete(db: Any, job: AgentJob, status: str, summary: str) -> None:
+    unresolved_effect = any(
+        s.kind == "effect"
+        and s.status in {"dispatching", "verifying", "succeeded", "uncertain"}
+        and not json.loads(s.result).get("effect_verified")
+        for s in steps(db, job.id)
+    )
+    if job.task_run_id and (
+        status == "uncertain" or (status not in ACTIVE and unresolved_effect)
+    ):
+        task = db.get(Task, job.owner_id)
+        if task and not task.paused:
+            task.paused = True
+            task.control_revision += 1
+        summary += (
+            " Die Aufgabe ist pausiert. Prüfe den tatsächlichen Zustand, "
+            "bevor du sie ausdrücklich wieder aktivierst."
+        )
     job.status, job.summary = status, summary
     if status not in ACTIVE:
         job.finished = time.time()
@@ -417,7 +473,13 @@ async def generate(
             step.status = "failed"
             db.commit()
             raise ValueError("Lokale Agentenplanung fehlgeschlagen; kein Cloudfallback")
-        output = model_json(execution_text(db, run))
+        text = execution_text(db, run)
+        try:
+            output = model_json(text)
+        except ValueError:
+            step.status, step.result = "failed", encode({"message": "Ungültiges Modell-JSON"})
+            db.commit()
+            raise AgentFormatError(text) from None
         step.status, step.result = "succeeded", encode(output)
         db.commit()
         return output
@@ -620,6 +682,11 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
             db.commit()  # No authority locks across DNS, authentication or remote waits.
             result = invoke(cfg, config, secret, document["tool"], args, rules, final_gate)
             step.status, step.result = "succeeded", encode(result)
+            if document["tool"] == "shell" and (
+                result.get("exit_code") != 0
+                or result.get("verification", {}).get("exit_code", 0) != 0
+            ):
+                step.status = "uncertain"  # A failed script may already have partial effects.
             if document["tool"] == "http.verify":
                 reference = db.get(AgentStep, (job_id, args["effect_step"]))
                 if (
@@ -775,7 +842,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         if rules.file_read_roots or rules.shell:
                             allowed_tools.add("file.read")
                         if rules.mcp:
-                            allowed_tools.add("mcp.call")
+                            allowed_tools.update({"mcp.catalog", "mcp.call"})
                         if rules.mail_recipients:
                             allowed_tools.add("mail.send")
                     if job.research_allowed:
@@ -863,15 +930,41 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     continue
                 from hub.agent_context import fit
 
-                raw = await generate(
-                    factory,
-                    cfg,
-                    providers,
-                    job_id,
-                    INSTRUCTION,
-                    fit(data, INSTRUCTION, cfg.context_limit),
-                )
-                decision = Decision.model_validate(raw)
+                try:
+                    raw = await generate(
+                        factory,
+                        cfg,
+                        providers,
+                        job_id,
+                        INSTRUCTION,
+                        fit(data, INSTRUCTION, cfg.context_limit),
+                    )
+                except AgentFormatError as error:
+                    with factory() as db:
+                        job = db.get(AgentJob, job_id)
+                        assert job
+                        format_feedback(db, cfg, job, error.rejected, [{"type": "json_invalid"}])
+                        db.commit()
+                    continue
+                try:
+                    decision = Decision.model_validate(raw)
+                except ValidationError as error:
+                    with factory() as db:
+                        job = db.get(AgentJob, job_id)
+                        assert job
+                        format_feedback(
+                            db,
+                            cfg,
+                            job,
+                            raw,
+                            error.errors(
+                                include_input=False,
+                                include_url=False,
+                                include_context=False,
+                            ),
+                        )
+                        db.commit()
+                    continue
                 with factory() as db:
                     job = db.get(AgentJob, job_id)
                     assert job
@@ -909,9 +1002,24 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         raise PermissionError("Modell hat ein nicht freigegebenes System gewählt")
                     profile, rules, _ = profiles[decision.integration_id]
                     target_config = json.loads(profile.config)
-                    args, effect = validate_tool(
-                        profile.kind, rules, decision.tool or "", decision.arguments
-                    )
+                    try:
+                        args, effect = validate_tool(
+                            profile.kind, rules, decision.tool or "", decision.arguments
+                        )
+                    except ValidationError as error:
+                        format_feedback(
+                            db,
+                            cfg,
+                            job,
+                            raw,
+                            error.errors(
+                                include_input=False,
+                                include_url=False,
+                                include_context=False,
+                            ),
+                        )
+                        db.commit()
+                        continue
                     record(
                         db,
                         job,

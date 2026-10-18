@@ -23,6 +23,8 @@ try{
  await composer.fill('Ändere das synthetische Dokument. Frage zuerst nach dem gewünschten Titel.');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
+ await page.reload();await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
+ await page.waitForFunction(()=>document.querySelector('.agent-mode input')?.checked);
  await composer.fill('Agentenabnahme');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});
  const approve=panel.getByRole('button',{name:'Diesen Schritt freigeben und fortsetzen',exact:true});await approve.waitFor();

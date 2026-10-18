@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "148e921",
-  "schema": "0043",
-  "tests": 1450,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
+  "applicationCommit": "62de1ef",
+  "schema": "0044",
+  "tests": 1493,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39111208314",
   "screenshots": [
     {
       "id": "chat",
@@ -757,18 +757,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0043",
-    "browserChecks": 40,
+    "schema": "0044",
+    "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "148e921",
-    "ciTests": 1450,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
-    "deployedCommit": "148e921",
-    "deployedSchema": "0043",
-    "liveScope": "Release 148e921 / Schema 0043 aktiv auf dem Testsystem. Vollständige CI: 1450 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 40 synthetische Browserprüfungen. Kontrollierte Integrationsschreibaktionen mit eigener Profilfreigabe, Vorschau, menschlicher Bestätigung, dauerhaftem Dispatchbeleg und lesendem Fehlerabgleich installiert. Native SSH-/SFTP-Textdatei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Replay ohne zweite Ausführung. Ein expliziter lokaler KI-Dateientwurf lieferte gültige Parameter; ein vorheriger ungültiger Entwurf blieb ohne Aktion. HA, Paperless, UniFi und MCP bislang synthetisch geprüft. Andere Profile bleiben ohne pauschale Schreibfreigabe, globale Schreibpause nach QA aktiv. Bestehende Nachrichten, Use Cases, Profil, Overlays und unabhängige Netzwerkregeln erhalten; verschlüsselte Off-VM-Sicherungen geprüft. Frühere reale Cloud-Office-/Excel-Abnahme stammt aus 68877a4 und wird nicht als neue Cloud-Prüfung ausgegeben. Vollständige administrative und V1-Abnahme bleiben offen.",
+    "commit": "62de1ef",
+    "ciTests": 1493,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39111208314",
+    "deployedCommit": "62de1ef",
+    "deployedSchema": "0044",
+    "liveScope": "Release 62de1ef / Schema 0044 auf dem Testsystem installiert. Vollständige CI: 1493 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 41 synthetische Browserprüfungen. Gemeinsamer lokaler Agentenweg für Chat, Projektchat und Aufgaben mit gebundenen Regeln, öffentlicher Recherche, dynamischen Schnittstellen und dauerhaften Belegen installiert. Erste reale Modellentscheidung vor jedem Werkzeug wegen ungültiger Hülle abgewiesen; noch kein neuer agentischer SSH-/HA-Schreibnachweis. Die lokale Korrektur ist zusätzlich mit dem echten lokalen Modell ohne Toolausführung geprüft. Frühere begrenzte SSH-/SFTP-Abnahme aus 148e921 bleibt ein eigener Nachweis. Bestehende Daten und Netzwerkregeln erhalten, verschlüsselte Off-VM-Sicherung hashgeprüft. Fremdsystemadministration und V1 bleiben partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "148e921",
-    "lastSuccessfulCIUI": 40
+    "lastSuccessfulCICommit": "62de1ef",
+    "lastSuccessfulCIUI": 41
   }
 }

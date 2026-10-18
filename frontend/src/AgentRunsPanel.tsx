@@ -7,7 +7,7 @@ import './agent.css';
 export type AgentJob = {id: string; status: string; goal: string; summary: string; cancel_requested: boolean;
   steps: {sequence: number; kind: string; status: string; sha256: string; document: any; result: any}[]};
 const stepNames:Record<string,string>={prepared:'vorbereitet',dispatching:'wird ausgeführt',verifying:'Sollzustand wird geprüft',succeeded:'abgeschlossen',uncertain:'Wirkung unklar',failed:'fehlgeschlagen',unavailable:'nicht verfügbar'};
-const kindNames:Record<string,string>={input:'Deine Angabe',research:'Öffentliche Recherche',effect:'Änderung',read:'Prüfung',verification:'Sollzustand prüfen',error:'Fehler'};
+const kindNames:Record<string,string>={input:'Deine Angabe',research:'Öffentliche Recherche',effect:'Änderung',read:'Prüfung',verification:'Sollzustand prüfen',error:'Fehler',feedback:'Modellentscheidung korrigieren'};
 const active = ['queued', 'running', 'awaiting_approval', 'awaiting_input'];
 const names: Record<string, string> = {queued: 'Eingeplant', running: 'In Arbeit', awaiting_approval: 'Freigabe erforderlich', awaiting_input: 'Rückfrage', succeeded: 'Ausführung und Prüfschritte abgeschlossen', observed: 'Nur lesende Schritte abgeschlossen', failed: 'Angehalten', uncertain: 'Wirkung unklar', unverified: 'Wirkung nicht vollständig belegt', cancelled: 'Abgebrochen'};
 

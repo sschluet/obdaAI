@@ -4,8 +4,10 @@ Shell authority is the remote account's actual authority, not a working-director
 sandbox. A persisted, explicit policy is required; the model cannot create it.
 """
 
+import hashlib
 import ipaddress
 import json
+import logging
 import re
 import socket
 import ssl
@@ -20,6 +22,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from hub.config import Settings
 from hub.integration_transport import pinned_target, resolved_targets
 from hub.integration_write_adapters import sftp, ssh_client
+
+# Frame-level debug logs must never contain the authentication token.
+LOGGER = logging.Logger("hub.agent_transport")
+LOGGER.disabled = True
 
 
 class Strict(BaseModel):
@@ -225,6 +231,7 @@ class Decision(Strict):
 
 SCHEMAS: dict[str, type[Strict]] = {
     "ssh.inspect": Strict,
+    "mcp.catalog": Strict,
     "http.upload": UploadCall,
     "ha.websocket": HACall,
     "mail.send": MailCall,
@@ -464,6 +471,7 @@ def invoke(
                 "open_timeout": 8,
                 "close_timeout": 2,
                 "max_size": 8_000_000,
+                "logger": LOGGER,
             }
             if parsed.scheme == "https":
                 options.update(ssl=ssl.create_default_context(), server_hostname=parsed.hostname)
@@ -552,14 +560,22 @@ def invoke(
             canonical = remote.normalize(args["path"])
             validate_tool("ssh", rules, "file.read", {"path": canonical})
             before_send()
-            attrs = remote.stat(canonical)
+            try:
+                attrs = remote.stat(canonical)
+            except FileNotFoundError:
+                return {"path": canonical, "exists": False}
             if not stat.S_ISREG(attrs.st_mode) or attrs.st_size > 200_000:
                 raise ValueError("Not a bounded regular text file")
             with remote.open(canonical, "rb") as handle:
                 data = handle.read(200_001)
             if len(data) > 200_000:
                 raise ValueError("File grew beyond the limit")
-            return {"path": canonical, "text": data.decode("utf-8")}
+            return {
+                "path": canonical,
+                "exists": True,
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "text": data.decode("utf-8"),
+            }
     if tool in {"mcp.catalog", "mcp.call"}:
         from hub.agent_schema import validate
         from hub.mcp_client import discover, schema_digest

@@ -10,7 +10,7 @@ from hub import agent_tools as tools
 from hub.agent_context import fit, project
 from hub.agent_schema import validate
 from hub.config import Settings
-from test_ssh_sftp_write import Authentication, server  # noqa: F401
+from test_ssh_sftp_write import Authentication, Files, server  # noqa: F401
 
 
 def test_real_ssh_command_and_separate_verification(server, monkeypatch):  # noqa: F811
@@ -59,7 +59,7 @@ def test_real_ssh_command_and_separate_verification(server, monkeypatch):  # noq
     assert (root / "verified.txt").read_text() == "synthetic-native-agent"
     assert result["effect_verified"] is True
     assert len(received) == 2
-    assert len(checked) == 3  # Authentication and both command boundaries.
+    assert len(checked) >= 3  # Authentication, both commands and optional periodic checks.
 
 
 def test_native_json_schema_supports_local_refs_and_rejects_network_refs():
@@ -370,3 +370,33 @@ def test_read_verification_can_prove_deletion_and_report_missing_rights(monkeypa
         lambda: None,
     )
     assert result["http_status"] == 403
+
+
+def test_native_sftp_reports_absence_and_hash_without_remote_code(server, monkeypatch):  # noqa: F811
+    import hashlib
+
+    config, root = server
+    monkeypatch.setattr(Files, "canonicalize", lambda self, path: path)
+    (root / "present.txt").write_bytes(b"synthetic")
+    rules = tools.Rules(enabled=True, file_read_roots=["/"])
+    missing = tools.invoke(
+        Settings(),
+        config,
+        "synthetic-secret",
+        "file.read",
+        {"path": "/missing.txt"},
+        rules,
+        lambda: None,
+    )
+    assert missing["exists"] is False
+    found = tools.invoke(
+        Settings(),
+        config,
+        "synthetic-secret",
+        "file.read",
+        {"path": "/present.txt"},
+        rules,
+        lambda: None,
+    )
+    assert found["exists"] is True and found["text"] == "synthetic"
+    assert found["sha256"] == hashlib.sha256(b"synthetic").hexdigest()

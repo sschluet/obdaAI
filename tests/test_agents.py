@@ -595,3 +595,178 @@ def test_project_chat_uses_inherited_targets_and_same_effect_verification(agent,
     result = run(context, start(context), monkeypatch, decisions)
     assert result["status"] == "succeeded"
     assert len(agent[7]) == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "effect_status", "verified", "should_pause"),
+    [
+        ("uncertain", None, False, True),
+        ("unverified", "succeeded", False, True),
+        ("failed", "succeeded", False, True),
+        ("cancelled", "dispatching", False, True),
+        ("failed", "prepared", False, False),
+        ("failed", "succeeded", True, False),
+    ],
+)
+def test_unresolved_scheduled_effect_pauses_task_before_next_occurrence(
+    agent, status, effect_status, verified, should_pause
+):
+    from hub.db import Task, TaskRun
+
+    task = (
+        agent[1]
+        .post(
+            "/api/tasks",
+            headers=agent[2],
+            json={
+                "title": "Synthetic recurring administration",
+                "goal": "Inspect then change",
+                "steps": [{"tool_id": "agent.run"}],
+                "autonomy": "bounded_autonomous",
+                "success_criterion": "all_steps_completed",
+                "timeout_seconds": 600,
+            },
+        )
+        .json()
+    )
+    task = (
+        agent[1]
+        .patch(
+            "/api/tasks/" + task["id"] + "/control",
+            headers=agent[2],
+            json={
+                "expected_revision": task["revision"],
+                "expected_control_revision": task["control_revision"],
+                "paused": False,
+            },
+        )
+        .json()
+    )
+    job_id = start(agent)
+    with agent[0].state.sessions() as db:
+        run = TaskRun(
+            task_id=task["id"],
+            task_revision=task["revision"],
+            control_revision=task["control_revision"],
+            request_key=str(uuid4()),
+            request_digest="a" * 64,
+            snapshot="{}",
+        )
+        db.add(run)
+        db.flush()
+        job = db.get(AgentJob, job_id)
+        job.task_run_id, job.owner_id, job.scope = run.id, task["id"], "task"
+        if effect_status:
+            step = runtime.record(db, job, "effect", {"message": "Synthetic effect"})
+            step.status = effect_status
+            step.result = json.dumps({"effect_verified": verified})
+            db.flush()
+        runtime.complete(db, job, status, "Synthetic terminal result")
+        db.commit()
+        current = db.get(Task, task["id"])
+        assert current.paused == should_pause
+        assert current.control_revision == task["control_revision"] + int(should_pause)
+        assert run.status == ("cancelled" if status == "cancelled" else "failed")
+        assert ("ausdrücklich wieder aktivierst" in job.summary) == should_pause
+
+
+def test_failed_remote_script_stops_before_new_effects(agent, monkeypatch):
+    job_id = start(agent)
+    with agent[0].state.sessions() as db:
+        step = runtime.record(
+            db,
+            db.get(AgentJob, job_id),
+            "effect",
+            {
+                "integration_id": agent[4],
+                "tool": "shell",
+                "arguments": {},
+                "message": "Synthetic script",
+            },
+        )
+        sequence = step.sequence
+        db.commit()
+    monkeypatch.setattr(runtime, "validate_tool", lambda *a: ({}, True))
+
+    def failed(cfg, config, secret, tool, args, rules, boundary):
+        boundary()
+        return {"exit_code": 1, "effect_verified": False}
+
+    monkeypatch.setattr(runtime, "invoke", failed)
+    runtime.dispatch(agent[0].state.sessions, agent[3], job_id, sequence)
+    result = agent[1].get("/api/agent-runs/" + job_id).json()
+    assert result["steps"][0]["status"] == "uncertain"
+
+
+def test_invalid_model_envelope_gets_feedback_without_inferring_target(agent, monkeypatch):
+    bad = {"kind": "shell", "tool": "shell", "message": "Inspect", "arguments": {}}
+    verify = {
+        "kind": "tool",
+        "tool": "http.verify",
+        "integration_id": agent[4],
+        "message": "Verify",
+        "arguments": {
+            "path": "/api/documents/1/",
+            "effect_step": 2,
+            "expected": {"/body/title": "After"},
+        },
+    }
+    result = run(
+        agent,
+        start(agent),
+        monkeypatch,
+        [bad, effect(agent), verify, {"kind": "finish", "message": "Checked"}],
+    )
+    assert result["status"] == "succeeded"
+    feedback = [s for s in result["steps"] if s["kind"] == "feedback"]
+    assert len(feedback) == 1
+    assert feedback[0]["document"]["rejected_decision"] == bad
+    assert len(agent[7]) == 1
+
+
+def test_model_format_correction_is_bounded_and_never_dispatches_invalid_data(agent, monkeypatch):
+    bad = {"kind": "shell", "tool": "shell", "message": "Invalid", "arguments": {}}
+    result = run(agent, start(agent), monkeypatch, [bad, bad, bad])
+    assert result["status"] == "failed"
+    assert len([s for s in result["steps"] if s["kind"] == "feedback"]) == 2
+    assert not any(s["kind"] == "effect" for s in result["steps"])
+    assert not agent[7]
+
+
+def test_exhausted_format_correction_preserves_acknowledged_unverified_effect(agent, monkeypatch):
+    bad = {"kind": "shell", "tool": "shell", "message": "Invalid", "arguments": {}}
+    result = run(agent, start(agent), monkeypatch, [effect(agent), bad, bad, bad])
+    assert result["status"] == "failed"
+    effects = [s for s in result["steps"] if s["kind"] == "effect"]
+    assert len(effects) == len(agent[7]) == 1
+    assert effects[0]["status"] == "succeeded"
+    assert not effects[0]["result"]["effect_verified"]
+
+
+def test_tool_argument_validation_uses_feedback_before_creating_intent(agent, monkeypatch):
+    bad = effect(agent)
+    bad["arguments"]["method"] = "BOOM"
+    result = run(
+        agent, start(agent), monkeypatch, [bad, {"kind": "finish", "message": "No action"}]
+    )
+    assert result["status"] == "unverified"
+    assert result["steps"][0]["kind"] == "feedback"
+    assert not agent[7]
+
+
+def test_invalid_json_can_be_corrected_locally_before_tools(agent, monkeypatch):
+    attempts = []
+
+    async def generate(*args):
+        attempts.append(args)
+        if len(attempts) == 1:
+            raise runtime.AgentFormatError("not JSON")
+        return {"kind": "finish", "message": "No action"}
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    job_id = start(agent)
+    asyncio.run(runtime.execute_agent(agent[0].state.sessions, agent[3], None, job_id))
+    result = agent[1].get("/api/agent-runs/" + job_id).json()
+    assert result["status"] == "unverified" and len(attempts) == 2
+    assert result["steps"][0]["document"]["rejected_decision"] == "not JSON"
+    assert not agent[7]

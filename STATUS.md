@@ -19,14 +19,30 @@ führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
 
 Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
 sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
-Vollständige lokale Suite: 1494 Tests bestanden; spätere Änderungen an
-Gesprächskontext, Widerruf und Heartbeat-Wiederaufnahme zusätzlich gezielt geprüft.
-41 synthetische Browserprüfungen bestanden; die Agenten-Aufgabe zusätzlich
-im Browser erstellt und mit demselben Worker erfolgreich ausgeführt. Noch kein neuer Commit, CI-Nachweis oder Rollout. Die Test-VM
-bleibt vorerst auf 148e921 / Schema 0043. HA-Bestandsaufnahme lesend möglich;
-Direkter Supervisor-REST-Zugang mit dem vorhandenen Token abgewiesen,
-Backupübersicht über den vorhandenen WebSocket-Weg lesbar und Supervisor gesund. Reale Änderungen
-und Updateabnahme stehen aus. V1 bleibt partiell.
+Erster gemeinsamer Agentenstand 62de1ef / Schema 0044 auf der Test-VM installiert.
+Vollständige CI39111208314 erfolgreich:1493 Backend-/PostgreSQLtests, sechs
+umgebungsabhängig übersprungen,41 synthetische Browserprüfungen und Container-/
+Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung hashgeprüft, bestehende
+Nachrichten, Profile, Use Cases, Dateibelege, Overlays und unabhängige Netzwerkregeln
+erhalten. Aktive konfigurierte Zielprofile haben separat gebundene Agentenregeln;
+das ist keine Freigabe unkonfigurierter Systeme oder beliebiger Mail-Empfänger.
+
+Die erste echte lokale Modellentscheidung hatte eine ungültige Werkzeughülle und
+blieb ohne SSH-Dispatch. Die Korrektur ergänzt deutliche Entscheidungsbeispiele,
+höchstens zwei lokale Format-Rückmeldungen ohne semantische Parameterreparatur,
+Datei-Abwesenheit/Hash als lesende Beobachtung und vollständige MCP-Katalogverträge.
+Ein echter lokaler Modell-Dryrun liefert damit eine gültige ssh.inspect-Entscheidung
+am synthetischen Ziel; dabei wurde kein Werkzeug ausgeführt. Die vollständige lokale
+Folgeprüfung bestand mit 1506 Tests, anschließend zusätzliche Fälle zur Aufgabenpause. Offene Chatrückfragen werden nach
+Reload wieder als Agentenauftrag aufgenommen. Bereits versandte, unverifizierte
+Task-Effekte pausieren die Aufgabe auch bei unverified/failed/cancelled vor dem
+nächsten Termin; fehlgeschlagene Fernskripte stoppen Folgewirkungen.
+
+HA-Bestandsaufnahme lesend möglich: Supervisor gesund, Backupübersicht über den
+vorhandenen WebSocket-Weg lesbar; direkter Supervisor-REST-Zugang abgewiesen.
+Reale agentische Änderungen und HA-Updateabnahme stehen weiterhin aus. Die neuen
+öffentlichen Bilder stammen ausschließlich aus einer frischen synthetischen
+Umgebung. Vollständige Fremdsystemadministration und V1 bleiben partiell.
 
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 

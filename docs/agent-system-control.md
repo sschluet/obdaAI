@@ -125,7 +125,10 @@ Schema 0044 speichert Agentenregeln und ihre menschlichen Revisionen, Aufträge,
 Modellläufe, konkrete Werkzeugabsichten und Ergebnisbelege. Chat und Projektchat
 verwenden **Systeme steuern** im Composer; Aufgaben bieten den Schritt
 **Agentische Systemsteuerung** mit demselben Worker und denselben Prüfungen.
-Rückfragen und einzelne Freigaben unterbrechen den dauerhaften Auftrag.
+Rückfragen und einzelne Freigaben unterbrechen den dauerhaften Auftrag. Eine
+offene Rückfrage wird nach Neuladen im selben Chat wieder aufgenommen. Ungültige
+Modellhüllen und typisierte Werkzeugargumente erhalten höchstens zwei lokale
+Format-Rückmeldungen; der Server ergänzt weder Ziele noch Befehle oder Rechte.
 
 Der private Planer verwendet ausschließlich das konfigurierte lokale Modell.
 Ein begrenzter Verlauf desselben Gesprächs ist lokal an Nachrichtenrevisionen
@@ -151,7 +154,12 @@ Schreibpause, Abbruch und Zeitgrenzen werden unmittelbar vor Modellaufruf,
 Authentifizierung und Werkzeugübertragung erneut geprüft.
 
 Änderungsabsichten werden vor Versand dauerhaft gespeichert. Unterbrochene oder
-unklare Absichten werden nicht automatisch erneut gesendet. Ein vor dem Aufruf
+unklare Absichten werden nicht automatisch erneut gesendet. Bereits versandte,
+unverifizierte Task-Effekte pausieren die Aufgabe auch bei einem Abschluss als
+unverified/failed/cancelled vor weiteren Terminen bis zur ausdrücklichen Reaktivierung.
+Nur vorbereitete, niemals versandte Absichten lösen diese Pause nicht aus.
+Fehlgeschlagene entfernte Skripte stoppen Folgewirkungen; ein nicht erfolgreicher
+Exitcode ist kein Beleg dafür, dass zuvor nichts verändert wurde. Ein vor dem Aufruf
 festgelegtes GET-Prädikat kann nach Updates oder Antwortverlust begrenzt pollen;
 es belegt den beobachteten Zustand, keine Kausalität. Ohne passende Nachprüfung
 wird ein HTTP-/MCP-/SMTP-Ack nicht als bewiesene Wirkung ausgegeben. SSH kann ein
@@ -171,8 +179,11 @@ Websuche. Das ist keine allgemeine Exactly-once-Garantie für entfernte Systeme.
 - Isolierter Browser: Rückfrage im selben Chat, Lesen/Ändern/Nachprüfung,
   einzelne Freigabe, erneutes Laden, autonome Regeln, Antwortverlust und 320px.
   Öffentliche Abbildung ausschließlich aus synthetischer Umgebung.
-- Vollständige lokale Suite, CI und reale Zielabnahmen werden erst nach ihren
-  tatsächlichen Ergebnissen in STATUS und öffentlicher Evidenz aktualisiert.
+- Stand 62de1ef vollständig in CI geprüft und installiert, aber erste reale
+  Modellentscheidung vor jedem Werkzeug abgewiesen. Die Formatkorrektur ist
+  durch einen echten lokalen Modell-Dryrun ohne Toolausführung zusätzlich geprüft.
+  Aktuelle CI und reale Zielabnahmen stehen jeweils mit ihrem exakten Release
+  in STATUS; synthetische Belege werden nicht als Fremdsystemeingriff ausgegeben.
 
 ## Offene Abnahme
 
