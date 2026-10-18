@@ -1,6 +1,37 @@
 # obdaAI — Status 18.10.2026
 
-## Proton-Postfach: Bridge-Einrichtung unter Integrationen — lokal geprüft
+## Intuitivere Integrationen — lokal geprüft, Auslieferung offen
+
+Die Integrationsübersicht zeigt Verbindung, Status, Aktivierung und KI-Zugriff
+kompakt. Technische Einzelheiten und seltene Aktionen liegen in aufklappbaren
+Bereichen. Unter **KI-Zugriff** stehen **Kein KI-Zugriff**, **Nur lesen** und
+**Änderungen erlauben** im Vordergrund; einzelne Werkzeuge, Zielgrenzen und
+bereits erlaubte autonome Ausführung bleiben unter **Erweiterte Berechtigungen**
+sichtbar. Das bloße Öffnen der Oberfläche verändert keine vorhandenen Regeln.
+Eine Zugriffsauswahl erfindet keine API-Pfade, Shellrechte, MCP-Vollfreigaben oder
+Mailziele. Bestehende Einzelrechte bleiben gespeichert; Aktivierung und
+Schreibfreigabe bestimmen weiterhin, ob sie verwendet werden dürfen. Eine
+Änderung des Zugriffsmodus setzt autonome Ausführung zurück auf Einzelfreigaben;
+unverändertes Speichern erhält eine bestehende Selbstständigkeit.
+
+Proton Mail wird wie andere Verbindungen über **Verbindung hinzufügen** ausgewählt.
+Ein modaler Assistent führt durch **Vorbereiten**, **Zugangsdaten** und **Prüfen und
+verbinden**. Die Vorbereitung erklärt Tarif, serverseitige Bridge und die weiterhin
+extern erforderliche Proton-Kontoanmeldung; eine offizielle Anleitung ist verlinkt.
+Vorhandene Zugänge öffnen direkt die Zugangsdaten. Der Zugangstest startet erst
+nach einer ausdrücklichen Bestätigung der Zusammenfassung. Passwortschutz,
+Revisionsprüfung und Fehlerwiederaufnahme verwenden den bestehenden Backendweg.
+
+Lokal sind alle 1664 Tests, Ruff, mypy, Geheimnisprüfung und Frontend-Build
+erfolgreich. Die gezielten Browserprüfungen für die kompakte Übersicht,
+Dokumentzugriff, Änderungen, KI-Zugriff und den Proton-Assistenten bestehen;
+unveränderte Autonomie, keine stillen Rechteerweiterungen und mobile Bedienung
+sind ausdrücklich geprüft. Neue vollständige CI und Auslieferung stehen aus. Die folgenden Release- und CI-Nachweise gehören zur
+bisherigen Auslieferung **ec8ce2e**. Neue öffentliche Bilder werden ausschließlich
+aus isolierten synthetischen Oberflächen erzeugt; echte Postfachnutzung sowie die
+breite Fremdsystemadministration bleiben offen.
+
+## Proton-Postfach: bisherige Bridge-Einrichtung auf der Test-VM
 
 Die offizielle Proton Bridge 3.27.1 läuft auf der Test-VM; ihre Signatur und die
 ausgeführte Programmdatei sind unabhängig geprüft. Ein geprüfter, festgeschriebener

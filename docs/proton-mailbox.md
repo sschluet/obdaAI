@@ -24,12 +24,22 @@ von Git. obdaAI verwendet ausschließlich den gesonderten Bridge-Zugang.
 
 ## Postfach unter Integrationen einrichten
 
-Unter Einstellungen → Integrationen steht **Proton Mail (Bridge)** bereit, wenn
-der Betreiber die lokale Bridge und den festen Postfachadapter eingerichtet hat.
-Trage den Namen der Verbindung, den **Bridge-Benutzernamen** und das von Bridge
-erzeugte **Bridge-Passwort** ein. Das sind die vorhandenen Zugangsdaten für
-Mailprogramme. Das Proton-Konto muss bereits in Bridge angemeldet sein; die
-Anmeldung am Proton-Konto und dessen 2FA erfolgen außerhalb von obdaAI.
+Öffne Einstellungen → Integrationen → **Verbindung hinzufügen** → **Proton Mail**.
+Der Assistent führt in drei Schritten durch die Einrichtung:
+
+1. **Vorbereiten:** Ein kostenpflichtiger Tarif und die auf dem Server vorbereitete
+   Bridge sind erforderlich. Unter **Noch keine Bridge-Zugangsdaten?** wird erklärt,
+   wie du mit dem Betreiber über dessen privaten Serverzugang dein Proton-Konto
+   direkt in Bridge anmeldest. Die offizielle Proton-Anleitung ist verlinkt.
+   Kontoanmeldung und gegebenenfalls 2FA erfolgen weiterhin außerhalb von obdaAI.
+2. **Zugangsdaten:** Trage den Namen der Verbindung, den **Bridge-Benutzernamen**
+   und das von Bridge erzeugte **Bridge-Passwort** für Mailprogramme ein. Wähle,
+   ob du lokales Lesen und Suchen in Chat, Aufgaben und Projekten erlaubst.
+   Vorhandene Verbindungen starten direkt in diesem Schritt.
+3. **Prüfen und verbinden:** Kontrolliere die Zusammenfassung. Erst der Klick auf
+   **Verbindung prüfen und speichern** startet die Prüfung; ein Wechsel zwischen
+   den Schritten kontaktiert das Postfach nicht. Nach Erfolg schließt **Fertig**
+   den Assistenten.
 
 **Verbindung prüfen und speichern** prüft den Zugang und den MCP-Katalog. Die
 Option **Lokales Lesen und Suchen über Chat, Aufgaben und Projekte erlauben**
@@ -56,8 +66,15 @@ keine Postfachinhalte.
 
 ## Gezielte MCP-Lesefreigaben
 
-Unter Integrationen → Agentenregeln können einzelne Werkzeuge nach Prüfung ihrer
-Bedeutung als lesend freigegeben werden. Der Katalog selbst und seine
+Die kompakte Integrationsübersicht führt über **KI-Zugriff** zu **Kein KI-Zugriff**,
+**Nur lesen** und **Änderungen erlauben**. Vorhandene Einzelrechte bleiben beim
+Öffnen erhalten; eine Auswahl erzeugt keine zusätzlichen Werkzeug- oder Zielrechte.
+Eine ausdrücklich geänderte Zugriffsauswahl schaltet autonome Ausführung aus.
+Ein Profil ohne eingerichtete Lesewerkzeuge erhält durch **Nur lesen** allein
+keine pauschale Leseberechtigung.
+
+Unter **KI-Zugriff → Erweiterte Berechtigungen** können einzelne MCP-Werkzeuge nach
+Prüfung ihrer Bedeutung als lesend freigegeben werden. Der Katalog selbst und seine
 `readOnlyHint`-Angaben erteilen keine Rechte. Eine Freigabe bindet Profilrevision,
 Werkzeugname und SHA256 des Eingabeschemas. Zum Speichern ist ein erfolgreicher
 Katalogtest für die aktuelle Profilrevision nötig. Auch unmittelbar vor dem
@@ -78,7 +95,7 @@ und erhalten keine solche Freigabe.
 ## Abnahme und offene Punkte
 
 Bridge-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
-Die neue Einrichtung in der Integrationsoberfläche ist lokal mit synthetischen
+Die bisherige Einrichtung in der Integrationsoberfläche ist lokal mit synthetischen
 Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests sind erfolgreich.
 Release `ec8ce2e` / Schema `0044` ist auf der Test-VM verfügbar; beide APIs sind
 gesund. Der echte authentifizierte HTTPS-Status, die ausgelieferte Einstellungsdatei
@@ -86,6 +103,10 @@ und der tokengebundene Brokerzugang aus dem App-Container sind separat geprüft.
 Vollständige lokale Suite: 1664 bestanden. Vollständige
 [App-CI](https://github.com/sschluet/obdaAI/actions/runs/39139794971): 1658 bestanden,
 sechs übersprungen; alle 41 synthetischen Browserprüfungen und Runnersmokes erfolgreich.
+
+Die kompakte Übersicht und der neue dreistufige Assistent sind im aktuellen
+Quellstand umgesetzt; ihre Prüfungen und Auslieferung sind noch offen. Die oben
+genannten Nachweise beziehen sich auf die bisherige Oberfläche von `ec8ce2e`.
 
 Die verschlüsselte Nachab-Sicherung umfasst den Bridge-Anmeldespeicher und den
 MCP-/Brokerzustand einschließlich dauerhafter Ausführungsbelege, Dienstdateien,
