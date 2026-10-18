@@ -5,6 +5,7 @@ import ipaddress
 import json
 import socket
 from collections.abc import AsyncIterator
+from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
@@ -151,6 +152,7 @@ class Providers:
         self.keys = keys or {}
         self.measured_cost: float | None = None
         self.route_calls = 0
+        self.local_json_schema: dict[str, Any] | None = None
 
     def _target(self, external: bool) -> tuple[str, dict[str, str], dict[str, str], str]:
         s = self.settings
@@ -423,6 +425,15 @@ class Providers:
         }
         if not external and self.settings.local_disable_thinking:
             body["enable_thinking"] = False
+        if not external and self.local_json_schema is not None:
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "obdaai_agent",
+                    "strict": True,
+                    "schema": self.local_json_schema,
+                },
+            }
         if external:
             body["provider"] = {"allow_fallbacks": False}
         slot = asyncio.Semaphore(1) if external else self.local_slot

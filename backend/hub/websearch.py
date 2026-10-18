@@ -188,15 +188,19 @@ async def fetch_page(
             extensions={"sni_hostname": u.hostname or ""},
         ) as response:
             response.raise_for_status()
-            if "text/html" not in response.headers.get("content-type", ""):
-                raise ValueError("Nur öffentliche HTML-Quellen erlaubt")
+            media_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            if media_type not in {"text/html", "text/plain", "application/json"}:
+                raise ValueError("Nur öffentliche HTML-, Text- oder JSON-Quellen erlaubt")
             content = bytearray()
             async for part in response.aiter_bytes():
                 if len(content) + len(part) > 1_000_000:
                     raise ValueError("Webseite zu groß")
                 content.extend(part)
+    text = content.decode("utf-8", errors="replace")
+    if media_type != "text/html":
+        return text[:20000]
     parser = PageText()
-    parser.feed(content.decode("utf-8", errors="replace"))
+    parser.feed(text)
     return "\n".join(parser.parts)[:20000]
 
 

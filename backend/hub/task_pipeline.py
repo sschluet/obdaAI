@@ -11,6 +11,7 @@ LABELS = {
     "ha.maintenance.plan": "HA-Wartungsbericht lesen",
     "ai.analyze": "Lokal auswerten",
     "project.archive": "Gebundenes Projekt archivieren",
+    "agent.run": "Systeme mit dem gemeinsamen Agenten steuern",
 }
 
 
@@ -24,7 +25,9 @@ def plan(spec: TaskSpec) -> dict[str, Any]:
                 "tool_id": step.tool_id,
                 "tool_revision": step.tool_revision,
                 "name": LABELS[step.tool_id],
-                "effect": "write"
+                "effect": "agent"
+                if step.tool_id == "agent.run"
+                else "write"
                 if step.tool_id == "project.archive"
                 else "model"
                 if step.tool_id == "ai.analyze"

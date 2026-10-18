@@ -1,5 +1,11 @@
 # Integrationen kontrolliert verändern
 
+**Anforderungserweiterung vom 18.10.2026:** Der Benutzer verlangt einen Agenten,
+der Systeme aus Chat, Aufgaben und Projekten einschließlich Updates und neuen
+Konfigurationen steuert und Verfahren selbst recherchiert. Die nachfolgend
+beschriebenen Einzelaktionen erfüllen dieses Ziel nicht. Ziel und offene
+Abnahmefälle stehen in [Agentische Systemsteuerung](agent-system-control.md).
+
 Stand 17.10.2026: Schema 0043 ergänzt gesonderte Schreibrechte pro Profil,
 gebundene Aktionsfreigaben, dauerhafte Dispatchbelege und lesenden Abgleich.
 Release 148e921 / Schema 0043 ist auf der Test-VM installiert. SSH-Anmeldung,

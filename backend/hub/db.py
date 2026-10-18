@@ -73,6 +73,7 @@ class Message(Base):
         ForeignKey("runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
     role: Mapped[str] = mapped_column(String(20))
+    agent_job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     content: Mapped[str] = mapped_column(Text)
     label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
     revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")

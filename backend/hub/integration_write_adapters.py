@@ -242,7 +242,12 @@ def request(
 
 
 @contextmanager
-def sftp(cfg: Settings, config: dict[str, Any], secret: str) -> Iterator[Any]:
+def ssh_client(
+    cfg: Settings,
+    config: dict[str, Any],
+    secret: str,
+    before_auth: Callable[[str], Any] | None = None,
+) -> Iterator[Any]:
     addresses = resolved_targets(cfg, config["url"], ssh_port=config["port"])
     address, port = addresses[0]
     key_type, key_data = config["host_key"].split()[:2]
@@ -252,6 +257,14 @@ def sftp(cfg: Settings, config: dict[str, Any], secret: str) -> Iterator[Any]:
     client.get_host_keys().add(host_alias, key_type, pinned_key)
     sock = socket.create_connection((address, port), timeout=8)
     try:
+        if before_auth:
+            authenticate = client._auth
+
+            def checked_auth(*args: Any, **kwargs: Any) -> Any:
+                before_auth(address)
+                return authenticate(*args, **kwargs)
+
+            client._auth = checked_auth
         opts: dict[str, Any] = {"password": secret} if config["auth"] == "password" else {}
         if config["auth"] == "private_key":
             key = None
@@ -279,12 +292,23 @@ def sftp(cfg: Settings, config: dict[str, Any], secret: str) -> Iterator[Any]:
             channel_timeout=10,
             **opts,
         )
-        with client.open_sftp() as remote:
-            remote.get_channel().settimeout(10)
-            yield remote
+        yield client
     finally:
         client.close()
         sock.close()
+
+
+@contextmanager
+def sftp(
+    cfg: Settings,
+    config: dict[str, Any],
+    secret: str,
+    before_auth: Callable[[str], Any] | None = None,
+) -> Iterator[Any]:
+    with ssh_client(cfg, config, secret, before_auth) as client:
+        with client.open_sftp() as remote:
+            remote.get_channel().settimeout(10)
+            yield remote
 
 
 def ssh_state(remote: Any, filename: str) -> dict[str, Any]:

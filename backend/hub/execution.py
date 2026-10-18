@@ -96,6 +96,7 @@ async def execute_run(
             snapshot.get("use_case")
             or snapshot.get("use_case_designer")
             or snapshot.get("integration_write_draft")
+            or snapshot.get("agent_generation")
         )
         label = (
             Privacy.LOCAL_ONLY
@@ -112,6 +113,15 @@ async def execute_run(
         )
 
     def check_integration_context() -> None:
+        if snapshot.get("agent_generation"):
+            from hub.agent_models import AgentJob
+            from hub.agent_runtime import gate as agent_gate
+
+            with factory() as db:
+                job = db.get(AgentJob, snapshot["agent_generation"]["job_id"])
+                if not job:
+                    raise ExecutionLimitError("Agentenauftrag fehlt")
+                agent_gate(db, cfg, job)
         draft = snapshot.get("integration_write_draft")
         if draft:
             from hub.integrations import Integration
@@ -481,6 +491,18 @@ async def execute_run(
                     external_kind=c.cloud_provider,
                     cloud_only=bool(snapshot.get("model_cloud_only")),
                 )
+                if snapshot.get("agent_generation"):
+                    from hub.agent_tools import decision_schema, research_schema
+
+                    providers.local_json_schema = (
+                        decision_schema(
+                            snapshot["agent_generation"].get("integration_ids", []),
+                            snapshot["agent_generation"].get("tool_names"),
+                            snapshot["agent_generation"].get("interfaces"),
+                        )
+                        if snapshot["agent_generation"].get("decision_format")
+                        else research_schema()
+                    )
                 if not snapshot.get("model_cloud_only"):
                     local = selected.get("local")
                     if not local or not local.enabled:

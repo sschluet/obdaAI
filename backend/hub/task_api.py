@@ -16,6 +16,7 @@ from hub.action_api import TOOLS, ArchiveParameters, StrictInput, digest, encode
 from hub.config import Settings
 from hub.db import (
     Project,
+    Run,
     ScheduleOccurrence,
     Skill,
     SkillRevision,
@@ -61,7 +62,17 @@ class WriteStep(StrictInput):
     parameters: ArchiveParameters
 
 
-def default_steps() -> list[ReadStep | AnalyzeStep | WriteStep]:
+class AgentTaskParameters(StrictInput):
+    research_allowed: bool = False
+
+
+class AgentTaskStep(StrictInput):
+    tool_id: Literal["agent.run"]
+    tool_revision: Literal[1] = 1
+    parameters: AgentTaskParameters = Field(default_factory=AgentTaskParameters)
+
+
+def default_steps() -> list[ReadStep | AnalyzeStep | WriteStep | AgentTaskStep]:
     return [ReadStep()]
 
 
@@ -75,13 +86,13 @@ class TaskSpec(StrictInput):
     trigger: Literal["manual"] = "manual"
     autonomy: Literal["analyze_only", "confirm_each", "bounded_autonomous"] = "analyze_only"
     label: Literal["LOCAL_ONLY"] = "LOCAL_ONLY"
-    steps: list[ReadStep | AnalyzeStep | WriteStep] = Field(
+    steps: list[ReadStep | AnalyzeStep | WriteStep | AgentTaskStep] = Field(
         default_factory=default_steps, min_length=1, max_length=5
     )
     success_criterion: Literal["all_reads_completed", "all_steps_completed"] = "all_reads_completed"
     output: Literal["task_center"] = "task_center"
     max_cost_usd: Literal[0] = 0
-    timeout_seconds: int = Field(default=15, ge=1, le=30)
+    timeout_seconds: int = Field(default=15, ge=1, le=3600)
     include_system_reports: bool = False
     analysis_condition: Literal["always", "ha_updates_available"] = "always"
     workflow_wait: bool = False
@@ -99,6 +110,19 @@ class TaskSpec(StrictInput):
 
     @model_validator(mode="after")
     def model_step_last(self) -> "TaskSpec":
+        if any(step.tool_id == "agent.run" for step in self.steps):
+            if (
+                len(self.steps) != 1
+                or self.autonomy == "analyze_only"
+                or self.success_criterion != "all_steps_completed"
+                or self.include_system_reports
+                or self.analysis_condition != "always"
+                or self.workflow_wait
+            ):
+                raise ValueError("Agent task needs one shared agent step and explicit authority")
+            return self
+        if self.timeout_seconds > 30:
+            raise ValueError("Fixed task steps allow at most thirty seconds")
         analyses = [i for i, step in enumerate(self.steps) if step.tool_id == "ai.analyze"]
         if analyses and analyses != [len(self.steps) - 1]:
             raise ValueError("At most one local analysis, as the final step")
@@ -270,6 +294,8 @@ def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
             )
         checked.append({**binding.model_dump(mode="json"), "document": revision.document})
     for step in spec.steps:
+        if step.tool_id == "agent.run":
+            continue  # Shared agent runtime revalidates selected targets and their policies.
         if step.tool_id == "ai.analyze":
             continue  # Fixed local text analysis; never a model-selected external tool.
         if step.tool_id == "project.archive":
@@ -483,7 +509,7 @@ def execute_task_read(
                     valid_snapshot = False
                 if not valid_snapshot:
                     raise HTTPException(409, "Laufvorgabe verändert")
-                if any(step.tool_id == "ai.analyze" for step in spec.steps):
+                if any(step.tool_id in {"ai.analyze", "agent.run"} for step in spec.steps):
                     raise HTTPException(409, "Modellschritt benötigt den lokalen Analyseworker")
                 started = time.monotonic()
                 for sequence, step in enumerate(spec.steps, 1):
@@ -748,6 +774,27 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
             run = db.get(TaskRun, run_id)
             if run is None:
                 raise HTTPException(404, "Aufgabenlauf fehlt")
+            from hub.agent_models import AgentJob
+
+            agent = db.scalar(select(AgentJob).where(AgentJob.task_run_id == run.id))
+            if agent and agent.status in {
+                "queued",
+                "running",
+                "awaiting_input",
+                "awaiting_approval",
+            }:
+                agent.cancel_requested = True
+                if agent.status != "running":
+                    from hub.agent_runtime import complete
+
+                    complete(db, agent, "cancelled", "Agentenlauf abgebrochen.")
+                for model_run in db.scalars(
+                    select(Run).where(
+                        Run.conversation_id == agent.model_conversation_id,
+                        Run.status.in_({"queued", "routing", "streaming"}),
+                    )
+                ):
+                    model_run.cancel_requested = True
             if run.status in ("queued", "awaiting_approval"):
                 run.status, run.finished = "cancelled", time.time()
                 db.commit()
@@ -756,6 +803,7 @@ def install_task_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
                 db.commit()
             elif run.status != "cancelled":
                 raise HTTPException(409, "Aufgabenlauf bereits abgeschlossen")
+            db.commit()
             return run_info(db, run)
 
     @app.get("/api/tasks/{task_id}/revisions")

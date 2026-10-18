@@ -369,3 +369,63 @@ def test_final_delta_limit_and_usage_are_distinct(monkeypatch, external, finish)
     assert len(calls) == 1
     if external and finish != "content_filter":
         assert provider.measured_cost == 0.0123 and provider.cost_basis == "provider_reported"
+
+
+@pytest.mark.parametrize(("structured", "external"), [(False, False), (True, False), (True, True)])
+@pytest.mark.parametrize("research", [False, True])
+def test_agent_schema_is_explicit_and_only_applies_to_local_requests(
+    monkeypatch, structured, external, research
+):
+    from hub.agent_tools import Decision, research_schema
+    from hub.policy import CloudGrant, Privacy
+
+    original = httpx.AsyncClient
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            text='data: {"choices":[{"delta":{"content":"{}"}}]}\n\ndata: [DONE]\n\n',
+        )
+
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    provider = Providers(Settings(local_model="fixture", openrouter_model="fixture"))
+    monkeypatch.setattr(
+        provider, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
+    )
+    if structured:
+        provider.local_json_schema = research_schema() if research else Decision.model_json_schema()
+    part = ContextPart(
+        content="Synthetic planning request",
+        label=Privacy.CLOUD_ALLOWED if external else Privacy.LOCAL_ONLY,
+        source_id="fixture",
+        revision=1,
+    )
+    grants = (
+        [CloudGrant(source_id="fixture", revision=1, provider_id="openrouter")] if external else []
+    )
+
+    async def consume():
+        return "".join(
+            [
+                value
+                async for value in provider.stream(
+                    [part], ["user"], external=external, grants=grants
+                )
+            ]
+        )
+
+    assert asyncio.run(consume()) == "{}"
+    assert len(requests) == 1
+    if structured and not external:
+        assert (
+            requests[0]["response_format"]["json_schema"]["schema"] == provider.local_json_schema
+        )
+        assert requests[0]["response_format"]["json_schema"]["strict"] is True
+    else:
+        assert "response_format" not in requests[0]

@@ -1,0 +1,204 @@
+"""Bounded model views; persisted originals and execution authority stay unchanged."""
+
+import hashlib
+import json
+from typing import Any
+
+
+def pointer(value: Any, path: str) -> Any:
+    if path == "":
+        return value
+    if not path.startswith("/"):
+        raise ValueError("Expected a JSON pointer")
+    for key in path[1:].split("/"):
+        key = key.replace("~1", "/").replace("~0", "~")
+        value = value[int(key)] if isinstance(value, list) else value[key]
+    return value
+
+
+def project(body: Any, rule: dict[str, Any]) -> dict[str, Any]:
+    selected = pointer(body, rule["items_path"])
+    if not isinstance(selected, list):
+        raise ValueError("Projection requires a list response")
+    if rule["where_pointer"] is not None:
+
+        def matches(item: Any) -> bool:
+            try:
+                field = pointer(item, rule["where_pointer"])
+                if rule["where_prefix"] is not None:
+                    return isinstance(field, str) and field.startswith(rule["where_prefix"])
+                return type(field) is type(rule["where_equals"]) and field == rule["where_equals"]
+            except (KeyError, TypeError, IndexError, ValueError):
+                return False
+
+        selected = [item for item in selected if matches(item)]
+    matched = len(selected)
+    selected = selected[: rule["limit"]]
+    if rule["fields"]:
+        projected = []
+        for item in selected:
+            row = {}
+            for field in rule["fields"]:
+                try:
+                    row[field] = pointer(item, field)
+                except (KeyError, TypeError, IndexError, ValueError):
+                    row[field] = None
+            projected.append(row)
+        selected = projected
+    return {"items": selected, "matched": matched, "returned": len(selected)}
+
+
+def view(value: Any, limit: int) -> Any:
+    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if len(text) <= limit:
+        return value
+    return {
+        "excerpt": text[: max(0, limit - 160)],
+        "truncated": True,
+        "full_sha256": hashlib.sha256(text.encode()).hexdigest(),
+    }
+
+
+def _shape(value: Any, *, depth: int = 0, width: int = 12) -> dict[str, Any]:
+    """Describe observed JSON structure, never infer fields from a tool contract."""
+    if isinstance(value, dict):
+        # Preserve conventional payload containers even behind large metadata fields.
+        keys = list(value)
+        priority = [key for key in ("results", "items", "data") if key in value]
+        selected = (priority + [key for key in keys if key not in priority])[:width]
+        result: dict[str, Any] = {
+            "type": "object",
+            "key_count": len(keys),
+            "keys": [key[:48] for key in selected],
+            "keys_omitted": len(keys) - len(selected),
+            "key_names_truncated": any(len(key) > 48 for key in selected),
+        }
+        if depth < 1:
+            # A list of pairs avoids collisions between truncated long field names.
+            result["fields"] = [
+                {
+                    "key": key[:48],
+                    "key_truncated": len(key) > 48,
+                    "shape": _shape(value[key], depth=depth + 1, width=width),
+                }
+                for key in selected
+            ]
+        return result
+    if isinstance(value, list):
+        sampled = value[:3]
+        item_keys: list[str] = []
+        for item in sampled:
+            if isinstance(item, dict):
+                for key in item:
+                    if key not in item_keys and len(item_keys) < width:
+                        item_keys.append(key)
+        return {
+            "type": "array",
+            "length": len(value),
+            "sampled_items": len(sampled),
+            "sample_item_types": list(dict.fromkeys(_json_type(item) for item in sampled)),
+            "sample_item_keys": [key[:48] for key in item_keys],
+            "sample_item_key_names_truncated": any(len(key) > 48 for key in item_keys),
+        }
+    result = {"type": _json_type(value)}
+    if isinstance(value, str):
+        result["length"] = len(value)
+    return result
+
+
+def _json_type(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, dict):
+        return "object"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, str):
+        return "string"
+    return "number"
+
+
+def _observation(entry: dict[str, Any]) -> dict[str, Any]:
+    observed = entry["result"]
+    summary: dict[str, Any] = {}
+    if isinstance(observed, dict):
+        # Extract before clipping: sorted JSON can put a huge body before these fields.
+        for key in (
+            "http_status",
+            "effect_verified",
+            "verification_passed",
+            "projection_error",
+            "exit_code",
+            "verification_method",
+            "causation_verified",
+            "smtp_accepted",
+            "delivery_verified",
+            "error",
+        ):
+            if key in observed:
+                summary[key] = view(observed[key], 200)
+        if isinstance(observed.get("verification"), dict):
+            verification = observed["verification"]
+            summary["verification"] = {
+                key: view(verification[key], 200)
+                for key in ("exit_code", "error")
+                if key in verification
+            }
+    for width in (12, 6, 3, 1):
+        summary["result_shape"] = _shape(observed, width=width)
+        if isinstance(observed, dict) and "body" in observed:
+            summary["body_shape"] = _shape(observed["body"], width=width)
+        if len(json.dumps(summary, ensure_ascii=False)) <= 2500:
+            break
+    else:
+        raise ValueError("Observation metadata exceeds the model context limit")
+    encoded = json.dumps(observed, ensure_ascii=False, separators=(",", ":"))
+    return {
+        "sequence": entry.get("sequence"),
+        "full_sha256": hashlib.sha256(encoded.encode()).hexdigest(),
+        "summary": summary,
+        "result": view(observed, 1500),
+    }
+
+
+def fit(data: dict[str, Any], instruction: str, context_limit: int) -> dict[str, Any]:
+    """Reduce evidence views, never authority, targets, goal or tool contracts.
+
+    The latest tool observation keeps an independent structural/verification summary
+    and a larger excerpt even when older history must shrink. All views are derived;
+    persisted original evidence and its execution authority remain untouched.
+    """
+    result = dict(data)
+    original = data.get("history", [])
+    latest = next(
+        (
+            entry
+            for entry in reversed(original)
+            if entry.get("kind") in {"read", "effect", "verification", "research"}
+            or isinstance(entry.get("document"), dict)
+            and "tool" in entry["document"]
+        ),
+        None,
+    )
+    latest_input = next(
+        (entry for entry in reversed(original) if entry.get("kind") == "input"), None
+    )
+    if latest_input is not None:
+        result["latest_input"] = latest_input
+    if latest is not None:
+        result["latest_observation"] = _observation(latest)
+    for size in (6000, 3000, 1500, 600, 180):
+        result["private_context"] = view(data.get("private_context", []), size)
+        result["history"] = [
+            {
+                **entry,
+                "document": view(entry["document"], size),
+                "result": view(entry["result"], size if i == len(original) - 1 else size // 2),
+            }
+            for i, entry in enumerate(original)
+        ]
+        if len(instruction) + len(json.dumps(result, ensure_ascii=False)) <= context_limit - 200:
+            return result
+    raise ValueError("Goal, authority or evidence exceeds the model context limit")

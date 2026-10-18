@@ -47,7 +47,12 @@ class PinnedSSL(smtplib.SMTP_SSL):
             raise
 
 
-def connect(cfg: Settings, config: dict[str, Any], password: str) -> smtplib.SMTP:
+def connect(
+    cfg: Settings,
+    config: dict[str, Any],
+    password: str,
+    before_auth: Callable[[str], Any] | None = None,
+) -> smtplib.SMTP:
     try:
         hostname, port = config["url"], config["port"]
         validate_host(hostname)
@@ -70,6 +75,8 @@ def connect(cfg: Settings, config: dict[str, Any], password: str) -> smtplib.SMT
                 connection.close()
                 raise
         try:
+            if before_auth:
+                before_auth(address)
             connection.login(config["username"], password)
             return connection
         except Exception:

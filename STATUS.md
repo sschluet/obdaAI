@@ -1,4 +1,68 @@
-# obdaAI — Status 12.10.2026
+# obdaAI — Status 18.10.2026
+
+## Agentische Systemsteuerung — implementiert, reale Administration partiell
+
+Der Benutzer verlangt möglichst vollständige Administration angebundener Systeme
+aus Chat, Aufgaben und Projekten, einschließlich HA-Updates, Konfigurationen und
+selbstständiger öffentlicher Recherche. Feste Schreibformulare allein erfüllen
+diesen Auftrag nicht. Vertrag und offene Abnahmen:
+[docs/agent-system-control.md](docs/agent-system-control.md).
+
+Ein gemeinsamer dauerhafter lokaler Agentenlauf ist implementiert: Chat und
+Projektchat über **Systeme steuern**, Aufgaben über **Agentische Systemsteuerung**.
+Dynamische REST-/HA-WebSocket-/SSH-/MCP-Werkzeuge, gebundene Originaldateien und
+begrenzte Mailziele verwenden menschliche Zielregeln und frische Ausgangsprüfungen.
+Revisionen, Kontext, Quellen, Pause, Abbruch und Grenzen bleiben bindend.
+Absichten werden vor Änderungen gespeichert; unklare Effekte werden nicht blind
+wiederholt. Vorgebundener lesender Abgleich unterstützt Neustarts/Antwortverlust.
+Die ausdrücklich erlaubten autonomen SSH-Skripte und direkte HA-Abnahme ohne
+isolierte Instanz/geprüften Restore sind dokumentiert; daraus folgt kein
+Wiederherstellungsnachweis und keine zusätzliche Netzwerkberechtigung.
+
+Release **fd56e02 / Schema 0044** ist gesund auf der Test-VM installiert; beide APIs
+separat geprüft. Vollständige [CI39130484648](https://github.com/sschluet/obdaAI/actions/runs/39130484648):
+**1620 Backend-/PostgreSQLtests bestanden, sechs übersprungen**, 41 synthetische
+Browserprüfungen und alle Container-/Offline-Runnersmokes erfolgreich. Lokal 207
+gezielte Tests, Ruff, mypy und Geheimnisprüfung erfolgreich. Verschlüsselte App-
+Vorab- und Nachab-Sicherungen sind außerhalb der VM hashgeprüft. Bestehende Daten,
+Agentenregeln, Overlays und unabhängige Netzregeln erhalten. Lokale API, Frontend,
+Worker, Quellen- und Dateidienste mit aktuellem Code neu gestartet und erreichbar.
+
+Die native Generierungsgrammatik bindet Zielart, Werkzeuge, typisierte Argumente,
+HTTP-Methoden/Pfade, HA-Kommandopräfixe und Mailziele an die menschlichen Regeln.
+Querystrings und URLs gehören nicht ins reine Pfadfeld; GET enthält keinen
+Schreibkörper oder Wirkungsnachweis. Die Prompt-Hülle bleibt kompakt. Die neueste
+Beobachtung erhält echten Status und begrenzte Struktur, die letzte Rückmeldung
+bleibt vollständig. Keine Ziel-/Argumentreparatur oder zusätzliche Rechte.
+Native lokale Modellantworten für HA-Backupmetadaten und einen Paperless-GET sind
+gegen die Ausgabegrammatik geprüft, ohne Werkzeugdispatch. Öffentliche HTML-/Text-/JSON-Quellen
+bleiben inerte, begrenzte Daten mit URLfreigabe und öffentlichem DNS-Pinning.
+
+Reale Belege:
+
+- SSH auf efbd4ed: Chat erzeugt eigene Abnahmedatei mit separater Prüfung;
+  unabhängiges SFTP bestätigt Inhalt/Hash. Eine echte Aufgabe löscht dieselbe Datei
+  hashgebunden; SFTP bestätigt ihre Abwesenheit. Die Aufgabe benötigte eine
+  klärende Rückmeldung, deshalb kein vollständiger unbeaufsichtigter Nachweis.
+- HA auf fd56e02: reiner Chat-Leselauf erreicht HTTP200 und observed, ohne
+  Formatkorrektur oder menschliche Fortsetzung.
+- Paperless auf fd56e02: öffentliche Recherche und drei echte GET-Schritte;
+  wiederholt ungeeigneter Auswahlpfad, danach Anbieterzeitgrenze. Kein Effekt.
+- HA-Projekt auf fd56e02: öffentliche Recherche und wiederholte GET404 auf dem vom
+  Modell gewählten Konfigurationspfad. Eigener Prüflauf ohne Effekt beendet.
+  Unabhängig bestätigt: kein eigener Tag, keine eigene HA-Testautomation in
+  Konfiguration oder Laufzeit. 17 eigene Prüfläufe ausschließlich privat gesichert.
+
+Offen bleiben echte agentische Paperless-Änderungen, HA-Konfiguration und HA-Update
+mit Sicherung/Validierung/Nachprüfung sowie weitere Verwaltungs- und Störfälle.
+Direkte öffentliche Volltexte scheitern an bestehenden Netzgrenzen; Suchauszüge
+arbeiten. Eine begrenzte Dokumentations-Netzfreigabe und eine Erhöhung des
+Anbieterzeitlimits sind separat angefragt, nicht angewendet. Eigene QA-Chats und
+Projekte bleiben bis zur ausdrücklichen Löschfreigabe erhalten; automatische
+Freigabeprüfung hat ihre Löschung abgelehnt. Keine Inferenzwerte eigenmächtig
+geändert. Unkonfigurierte UniFi-/MCP-Ziele und tatsächliche SMTP-Zustellung haben
+keinen neuen Live-Nachweis. Öffentliche Bilder sind ausschließlich synthetisch.
+**Umfassende Fremdsystemadministration und V1 sind weiterhin nicht abgenommen.**
 
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 

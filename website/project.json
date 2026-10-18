@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-17",
-  "applicationCommit": "148e921",
-  "schema": "0043",
-  "tests": 1450,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
+  "updated": "2026-10-18",
+  "applicationCommit": "fd56e02",
+  "schema": "0044",
+  "tests": 1620,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39130484648",
   "screenshots": [
     {
       "id": "chat",
@@ -250,6 +250,12 @@
       "title": "Änderungen bewusst freigeben.",
       "description": "Eigene Schreibrechte pro Profil, lokale KI-Vorbereitung und genaue Vorschau im Integrationsdialog. Ausschließlich synthetischer Mac-mini-Arbeitsordner; kein Nachweis eines echten Fremdsystemeingriffs.",
       "image": "assets/integrationwrites.png"
+    },
+    {
+      "id": "agentcontrol",
+      "title": "Ein Ziel im Chat. Nachvollziehbare Schritte.",
+      "description": "Systemsteuerung mit Rückfragen im selben Gespräch, gezielten Freigaben und prüfbaren Werkzeugbelegen. Ausschließlich synthetischer Archivauftrag und simulierte Dienstantworten; kein realer HA-Updatebeleg.",
+      "image": "assets/agentcontrol.png"
     }
   ],
   "groups": [
@@ -566,7 +572,7 @@
         },
         {
           "title": "Schreibfreigaben und globale Pause",
-          "description": "Einzelfreigabe und befristete begrenzte Autonomie sind für eine konkrete lokale Projektarchivierung geprüft. Weitere externe Schreibadapter bleiben offen.",
+          "description": "Konkrete Einzelfreigaben, begrenzte Autonomie und globale Schreibpause gelten auch für den gemeinsamen Agentenweg. Lokale Projektarchivierung und begrenzte SSH-Effekte real geprüft; breitere externe Verwaltungsabnahme bleibt offen.",
           "status": "limited"
         },
         {
@@ -614,18 +620,23 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen ihre eigene Vorschau und Freigabe. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
+          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen eine einzelne Freigabe oder ausdrücklich eingerichtete Agentenautonomie. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
           "status": "implemented"
         },
         {
           "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
-          "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Allgemeine KI-Aktionen anderer Profile bleiben offen.",
+          "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Der separate Agentenweg verwendet freigegebene Profile auch für Werkzeugaufrufe.",
           "status": "limited"
         },
         {
           "title": "Integrationen mit geprüften Schreibaktionen",
           "description": "Eigene Schreibfreigabe je Profil, konkrete Vorschau, zeitlich gebundene Bestätigung, einmaliger Dispatch und lesender Fehlerabgleich. Begrenzte HA-, Paperless-, SFTP-, UniFi-Gast- und MCP-Aktionen. SSH-Datei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Beleg-Replay ohne zweiten Effekt. Lokale KI liefert geprüfte Datenentwürfe, keine automatische Ausführung. Andere Zielschreibabnahmen und vollständiger administrativer Zugriff bleiben offen.",
           "status": "implemented"
+        },
+        {
+          "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Zielregeln, typisierte zielgebundene Grammatik, Einzelfreigaben oder begrenzte Autonomie, dauerhafte Absichten und separate Nachprüfung. Reales SSH-Schreiben im Chat und Löschen durch eine unterstützte Aufgabe geprüft; HA-Lesechat ohne menschliche Fortsetzung erfolgreich. Vollständige Dokumentationsabrufe eingeschränkt; umfassende autonome API-Verwaltung, HA-Konfiguration und HA-Update bleiben offen.",
+          "status": "limited"
         }
       ]
     },
@@ -728,8 +739,8 @@
       "text": "Getrennte Sitzungen sowie sichere menschliche Login- und 2FA-Übergabe."
     },
     {
-      "title": "Weitere Aktionen und Graphen",
-      "text": "Zusätzliche feste Aktionsadapter und breitere geprüfte Workflowabdeckung."
+      "title": "Systemverwaltung weiter abnehmen",
+      "text": "Breitere echte Verwaltungsabläufe mit dem gemeinsamen Agenten, belastbare Schnittstellenrecherche und weitere geprüfte Workflows."
     },
     {
       "title": "Breitere Datei-QA",
@@ -741,23 +752,23 @@
     },
     {
       "title": "Externe Wiederherstellung",
-      "text": "Vollständige HA-/n8n-Sicherung und Restore-Nachweise vor produktiven Wartungsaktionen."
+      "text": "Vollständige HA-/n8n-Sicherungs- und Restore-Prozesse weiter abnehmen; vorhandene Backuplisten ersetzen keinen Wiederherstellungsnachweis."
     }
   ],
   "development": {
     "mode": "local",
-    "schema": "0043",
-    "browserChecks": 40,
+    "schema": "0044",
+    "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "148e921",
-    "ciTests": 1450,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39057977400",
-    "deployedCommit": "148e921",
-    "deployedSchema": "0043",
-    "liveScope": "Release 148e921 / Schema 0043 aktiv auf dem Testsystem. Vollständige CI: 1450 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 40 synthetische Browserprüfungen. Kontrollierte Integrationsschreibaktionen mit eigener Profilfreigabe, Vorschau, menschlicher Bestätigung, dauerhaftem Dispatchbeleg und lesendem Fehlerabgleich installiert. Native SSH-/SFTP-Textdatei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Replay ohne zweite Ausführung. Ein expliziter lokaler KI-Dateientwurf lieferte gültige Parameter; ein vorheriger ungültiger Entwurf blieb ohne Aktion. HA, Paperless, UniFi und MCP bislang synthetisch geprüft. Andere Profile bleiben ohne pauschale Schreibfreigabe, globale Schreibpause nach QA aktiv. Bestehende Nachrichten, Use Cases, Profil, Overlays und unabhängige Netzwerkregeln erhalten; verschlüsselte Off-VM-Sicherungen geprüft. Frühere reale Cloud-Office-/Excel-Abnahme stammt aus 68877a4 und wird nicht als neue Cloud-Prüfung ausgegeben. Vollständige administrative und V1-Abnahme bleiben offen.",
+    "commit": "fd56e02",
+    "ciTests": 1620,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39130484648",
+    "deployedCommit": "fd56e02",
+    "deployedSchema": "0044",
+    "liveScope": "Release fd56e02 / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1620 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "148e921",
-    "lastSuccessfulCIUI": 40
+    "lastSuccessfulCICommit": "fd56e02",
+    "lastSuccessfulCIUI": 41
   }
 }

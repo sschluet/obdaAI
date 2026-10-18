@@ -23,6 +23,7 @@ dependencies = [
   "smbprotocol==1.17.0",
   "pyyaml==6.0.3",
   "paramiko==4.0.0",
+  "jsonschema==4.26.0",
 ]
 
 [project.optional-dependencies]
