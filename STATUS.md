@@ -19,12 +19,12 @@ führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
 
 Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
 sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
-Release f186024 / Schema 0044 ist gesund auf der Test-VM installiert.
-Vollständige CI39120775573 erfolgreich:1519 Backend-/PostgreSQLtests bestanden,
+Release 462db2b / Schema 0044 ist gesund auf der Test-VM installiert.
+Vollständige CI39122584882 erfolgreich:1528 Backend-/PostgreSQLtests bestanden,
 sechs umgebungsabhängig übersprungen,41 synthetische Browserprüfungen sowie
 Container- und Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung
 hashgeprüft; bestehende Daten, Agentenregeln, Overlays und unabhängige Netzregeln
-erhalten. Auch die lokale Entwicklung läuft mit dem aktuellen Code.
+erhalten. Auch die lokale Entwicklung läuft mit diesem Code.
 
 Realer Chat auf efbd4ed: eigene SSH-Abnahmedatei angelegt und separat geprüft;
 unabhängiges SFTP bestätigt exakten Inhalt und SHA256. Reale Aufgabe: dieselbe
@@ -33,24 +33,30 @@ Der Aufgabenlauf brauchte einen klärenden Eingriff, weil das lokale Modell nach
 reinen Systemabfragen fälschlich eine fehlende Datei behauptete. Kein Nachweis
 vollständig unbeaufsichtigter Aufgabenadministration.
 
-Die engere Recherchegrammatik ist auf f186024 sowohl mit dem vorhandenen lokalen
-Modell als auch in echten Agentenläufen erfolgreich. Paperless und HA-Projektchat
-führten jeweils drei öffentliche Suchschritte aus. Beide scheiterten anschließend
-vor jeder Änderung am ersten GET: das Modell nahm einen falschen Antwortpfad für
-die lokale Ergebnisauswahl an. Die Folgekorrektur erhält bei solchen reinen
-GET-Auswahlfehlern die bereits begrenzte Originalantwort und kennzeichnet den
-Auswahlfehler; der Agent darf daraus korrekt weiterplanen. Keine erneute Übertragung
-und kein Wirkungsnachweis bei fehlerhafter Auswahl. Schreib-, Transport- und
-Antwortgrenzen bleiben unverändert.72 gezielte Transport-/Orchestrierungstests,
-Ruff, mypy und Geheimnisprüfung erfolgreich; vollständige CI und reale Abnahme
-dieser Folgekorrektur stehen aus.
+Die engere Recherchegrammatik ist mit dem vorhandenen lokalen Modell und echten
+Agentenläufen geprüft. Öffentliche Suchauszüge sind verfügbar; direkte Seiten-
+volltexte scheitern an bestehenden ausgehenden Netzgrenzen. Keine Netzfreigaben
+verändert. Paperless und HA-Projektchat führten reale Such-/GET-Schritte aus.
+Die GET-Projektionskorrektur erhält die Originalantwort samt Auswahlfehler korrekt,
+jedoch verbarg die anschließende Kontextkürzung diese späten Statusfelder und den
+Listenschlüssel hinter einem langen JSON-Präfix. Der tatsächliche Modellinput
+bestätigt dies; der Agent wiederholte deshalb fehlerhafte Leseschritte. Unterstützte
+Fortsetzungen endeten vor jeder Änderung an einer Modellzeitgrenze.
 
-Öffentliche Suchauszüge sind verfügbar; öffentliche Seitenvolltexte scheitern an
-den bestehenden ausgehenden Netzgrenzen. Keine Netzfreigaben dafür verändert.
-HA-Bestandsaufnahme bleibt lesend möglich: Supervisor gesund, Backupübersicht über
-den vorhandenen WebSocket-Weg lesbar. Reale agentische Paperless-Änderungen,
-HA-Konfiguration und HA-Update stehen aus. Öffentliche Bilder sind ausschließlich
-synthetisch. Vollständige Fremdsystemadministration und V1 bleiben partiell.
+Die Folgekorrektur bewahrt die neueste Werkzeugbeobachtung mit begrenzter,
+aus echten Daten abgeleiteter Status-/Strukturzusammenfassung sowie die letzte
+Nutzerrückmeldung vollständig. Originale, Hashbindung und Kontextgrenze bleiben
+erhalten; bei unmöglichem Budget wird abgebrochen. JSON-Pointer für nachträgliche
+und vorgebundene HTTP-Prüfungen werden bereits vor einem Intent validiert.
+113 gezielte Kontext-/Transport-/Orchestrierungs-/Providerprüfungen sowie Ruff,
+mypy und Geheimnisprüfung erfolgreich. Auch der ursprünglich fehlgeschlagene
+reale Modellkontext ist offline mit sichtbarem Status, Auswahlfehler, Listenschlüssel
+und vollständiger Rückmeldung innerhalb der bestehenden Grenze aufbereitet.
+Vollständige CI und reale Abnahme dieses Korrekturstands stehen noch aus.
+
+Reale agentische Paperless-Änderungen, HA-Konfiguration und HA-Update bleiben offen.
+Die öffentlichen Bilder sind ausschließlich synthetisch. Vollständige
+Fremdsystemadministration und V1 bleiben partiell.
 
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 

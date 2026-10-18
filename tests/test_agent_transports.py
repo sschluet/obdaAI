@@ -257,6 +257,32 @@ def test_projection_recovery_never_catches_write_or_transport_failures(monkeypat
     assert len(requests) == 2
 
 
+@pytest.mark.parametrize("key", ["id", "#/body/id", ""])
+def test_verification_rejects_nonpointer_keys_before_any_effect(key):
+    from pydantic import ValidationError
+
+    rules = tools.Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET", "POST"])
+    with pytest.raises(ValidationError):
+        tools.validate_tool(
+            "paperless",
+            rules,
+            "http",
+            {
+                "method": "POST",
+                "path": "/api/tags/",
+                "body": {"name": "Synthetic"},
+                "verification": {"path": "/api/tags/1/", "expected": {key: 1}},
+            },
+        )
+    with pytest.raises(ValidationError):
+        tools.validate_tool(
+            "paperless",
+            rules,
+            "http.verify",
+            {"path": "/api/tags/1/", "effect_step": 1, "expected": {key: 1}},
+        )
+
+
 def test_public_target_requires_specific_private_data_grant():
     with pytest.raises(PermissionError):
         tools.private_boundary("8.8.8.8", tools.Rules(enabled=True))

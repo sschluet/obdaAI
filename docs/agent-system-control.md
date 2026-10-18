@@ -189,6 +189,13 @@ beweisen nicht, dass entfernte Prozesse gestoppt wurden. Der Chat bietet bei
 unklarem Ausgang einen neuen, technisch auf Lesen begrenzten Abgleich ohne
 Websuche. Das ist keine allgemeine Exactly-once-Garantie für entfernte Systeme.
 
+Bei der Kürzung des privaten Planerkontexts bleiben die neueste Werkzeugbeobachtung
+mit begrenzter Status-/Strukturzusammenfassung und die letzte Nutzerrückmeldung
+sichtbar. Die Zusammenfassung stammt aus echten Daten, ergänzt keine IDs oder
+Sollwerte und erteilt keine Rechte. Vollständige Rohbelege bleiben gespeichert;
+ein passender Gesamtkontext wird vor der Übertragung geprüft. Ungültige JSON-Pointer
+werden bereits vor einer vorgebundenen Änderung zurückgewiesen.
+
 ## Prüfstand dieser Lieferung
 
 - Gezielte synthetische Orchestrierungs-/API-Tests: Freigaben, Widerruf nach

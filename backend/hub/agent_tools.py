@@ -13,7 +13,7 @@ import socket
 import ssl
 import time
 from collections.abc import Callable, Sequence
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
 import httpx
@@ -114,10 +114,13 @@ class ResearchCall(Strict):
     topic: Literal["interfaces", "updates", "configuration", "backup", "troubleshooting"]
 
 
+JSONPointer = Annotated[str, Field(pattern=r"^/")]
+
+
 class ReadVerification(Strict):
     path: str = Field(min_length=1, max_length=1000)
     query: dict[str, str | int | bool] = Field(default_factory=dict, max_length=30)
-    expected: dict[str, Any] = Field(min_length=1, max_length=32)
+    expected: dict[JSONPointer, Any] = Field(min_length=1, max_length=32)
     timeout_seconds: int = Field(default=300, ge=1, le=900)
     interval_seconds: int = Field(default=5, ge=1, le=30)
 
@@ -157,7 +160,7 @@ class ShellCall(Strict):
 class HTTPVerify(HTTPCall):
     method: Literal["GET"] = "GET"
     effect_step: int = Field(ge=1)
-    expected: dict[str, Any] = Field(min_length=1, max_length=32)
+    expected: dict[JSONPointer, Any] = Field(min_length=1, max_length=32)
 
 
 class FileRead(Strict):
