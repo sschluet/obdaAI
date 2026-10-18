@@ -80,7 +80,19 @@ und erhalten keine solche Freigabe.
 Bridge-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
 Die neue Einrichtung in der Integrationsoberfläche ist lokal mit synthetischen
 Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests sind erfolgreich.
-Die Auslieferung dieser neuen Oberfläche ist noch nicht bestätigt.
+Release `ec8ce2e` / Schema `0044` ist auf der Test-VM verfügbar; beide APIs sind
+gesund. Der echte authentifizierte HTTPS-Status, die ausgelieferte Einstellungsdatei
+und der tokengebundene Brokerzugang aus dem App-Container sind separat geprüft.
+Vollständige lokale Suite: 1664 bestanden. Vollständige
+[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39139794971): 1658 bestanden,
+sechs übersprungen; alle 41 synthetischen Browserprüfungen und Runnersmokes erfolgreich.
+
+Die verschlüsselte Nachab-Sicherung umfasst den Bridge-Anmeldespeicher und den
+MCP-/Brokerzustand einschließlich dauerhafter Ausführungsbelege, Dienstdateien,
+Zertifikat und eigenem Compose-Overlay. Prüfsummen, Entschlüsselbarkeit und 16
+geforderte Archivwurzeln sind am außerhalb der VM gespeicherten Archiv geprüft,
+ohne Klartextdateien zu entpacken. Das ersetzt keinen Restoretest; laufende Dienste
+und atomare Einzeldateien bilden keine gemeinsame Sicherungstransaktion.
 
 Die persönliche Kontoanmeldung in Bridge und die Eingabe des vorhandenen
 Bridge-Zugangs stehen noch aus. Echte Ordner-/Such-/Nachrichtenaufrufe und die

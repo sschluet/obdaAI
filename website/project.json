@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "fd56e02",
+  "applicationCommit": "ec8ce2e",
   "schema": "0044",
-  "tests": 1620,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39130484648",
+  "tests": 1658,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
   "screenshots": [
     {
       "id": "chat",
@@ -617,7 +617,7 @@
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Vorhandenen Bridge-Benutzernamen und das gesonderte Bridge-Passwort direkt unter Integrationen eingeben, den Zugang prüfen und lokales Lesen in Chat, Aufgaben und Projekten erlauben. Versand und Postfachänderungen bleiben gesperrt. Formular, Passwortschutz und Fehlerwiederaufnahme sind lokal synthetisch geprüft; die neue Oberfläche ist noch nicht als ausgeliefert bestätigt. Bridge 3.27.1 ist auf der Test-VM unabhängig geprüft, die echte Postfachanmeldung und Nutzungsabnahme bleiben offen.",
+          "description": "Vorhandenen Bridge-Benutzernamen und das gesonderte Bridge-Passwort direkt unter Integrationen eingeben, den Zugang prüfen und lokales Lesen in Chat, Aufgaben und Projekten erlauben. Versand und Postfachänderungen bleiben gesperrt. Die Oberfläche ist auf dem Testsystem verfügbar. Formular, Passwortschutz, Fehlerwiederaufnahme und Aktivierungswechsel sind synthetisch geprüft; echter HTTPS-Status und der lokale Einrichtungsdienst sind separat geprüft. Bridge 3.27.1 ist auf der Test-VM unabhängig geprüft, die echte Postfachanmeldung und Nutzungsabnahme bleiben offen.",
           "status": "implemented"
         },
         {
@@ -777,15 +777,15 @@
     "schema": "0044",
     "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "fd56e02",
-    "ciTests": 1620,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39130484648",
-    "deployedCommit": "fd56e02",
+    "commit": "ec8ce2e",
+    "ciTests": 1658,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
+    "deployedCommit": "ec8ce2e",
     "deployedSchema": "0044",
-    "liveScope": "Release fd56e02 / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1620 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
+    "liveScope": "Release ec8ce2e / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1658 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die neue Einrichtung unter Integrationen ist auf dem Testsystem verfügbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Persönliche Bridge-Anmeldung, echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "fd56e02",
+    "lastSuccessfulCICommit": "ec8ce2e",
     "lastSuccessfulCIUI": 41
   }
 }
