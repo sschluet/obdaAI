@@ -129,6 +129,11 @@ Rückfragen und einzelne Freigaben unterbrechen den dauerhaften Auftrag. Eine
 offene Rückfrage wird nach Neuladen im selben Chat wieder aufgenommen. Ungültige
 Modellhüllen und typisierte Werkzeugargumente erhalten höchstens zwei lokale
 Format-Rückmeldungen; der Server ergänzt weder Ziele noch Befehle oder Rechte.
+Agentenentscheidungen verlangen auch in der Generierungsgrammatik bei jedem
+Werkzeug explizite Ziel-ID, Werkzeug und Argumente; die IDs stammen ausschließlich
+aus der menschlich gebundenen Auswahl. Der Server ergänzt sie nicht nachträglich.
+Der Planer fordert bei konkreten Änderungsaufträgen keine zusätzliche allgemeine
+Erlaubnisfrage; notwendige einzelne Freigaben erzwingt der Gateway.
 Agentenentscheidungen fordern zusätzlich die feste Decision-JSON-Schemaausgabe am
 vorhandenen lokalen Modell an, Recherchepläne ein JSON-Objekt. Diese Anfrageoption
 ändert keine Inferenzkonfiguration und erweitert keine Rechte. Die nachgelagerte
@@ -144,7 +149,8 @@ Werkzeugausgaben verleihen keine Rechte.
 
 Die Schnittstellen umfassen dynamische REST-Aufrufe innerhalb erlaubter
 API-Pfade und Methoden, HA-WebSocket-Kommandos nach freigegebenen Präfixen,
-SSH-Befehle und getrennte Prüfskripte, SFTP-Textlesen, MCP-Katalog und Aufrufe
+SSH-Befehle und getrennte Prüfskripte mit fester Betriebssystem-/Programmabfrage,
+SFTP-Textlesen, MCP-Katalog und Aufrufe
 mit aktuellem Schema sowie SMTP an ausdrücklich erlaubte Empfänger. MCP-Schemata
 werden im begrenzten Unterprozess vollständig geprüft; externe Schemaauflösung
 ist gesperrt. Multipart-Übertragungen können ausschließlich unveränderte,

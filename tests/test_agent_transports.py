@@ -60,6 +60,26 @@ def test_real_ssh_command_and_separate_verification(server, monkeypatch):  # noq
     assert result["effect_verified"] is True
     assert len(received) == 2
     assert len(checked) >= 3  # Authentication, both commands and optional periodic checks.
+    import shutil
+
+    before = (root / "verified.txt").read_bytes()
+    metadata = tools.invoke(
+        Settings(),
+        config,
+        "synthetic-secret",
+        "ssh.inspect",
+        {},
+        tools.Rules(enabled=True),
+        lambda: checked.append(True),
+    )
+    assert metadata["exit_code"] == 0
+    assert "OBDAAI_COMMAND_AVAILABILITY" in metadata["stdout"]
+    capabilities = dict(
+        line.split("=", 1) for line in metadata["stdout"].splitlines() if "=" in line
+    )
+    for name in ["shasum", "sha256sum", "python3"]:
+        assert capabilities[name] == (shutil.which(name) or "MISSING")
+    assert (root / "verified.txt").read_bytes() == before
 
 
 def test_native_json_schema_supports_local_refs_and_rejects_network_refs():
@@ -459,3 +479,31 @@ def test_only_exact_existing_ha_metadata_reads_are_classified_as_read_only():
         assert (
             tools.validate_tool("home_assistant", rules, "ha.websocket", args)[1] is expected_effect
         )
+
+
+def test_decision_generation_requires_explicit_selected_target_for_every_tool():
+    import jsonschema
+
+    schema = tools.decision_schema(["synthetic-selected-target"])
+    checker = jsonschema.Draft202012Validator(schema)
+    valid = {
+        "kind": "tool",
+        "integration_id": "synthetic-selected-target",
+        "tool": "ssh.inspect",
+        "arguments": {},
+        "message": "Inspect",
+    }
+    checker.validate(valid)
+    tools.Decision.model_validate(valid)
+    for key in ["integration_id", "tool", "arguments"]:
+        with pytest.raises(jsonschema.ValidationError):
+            checker.validate({k: v for k, v in valid.items() if k != key})
+    for target in [None, "other-target", ""]:
+        with pytest.raises(jsonschema.ValidationError):
+            checker.validate({**valid, "integration_id": target})
+    for kind in ["ask", "finish"]:
+        checker.validate({"kind": kind, "message": "Synthetic text"})
+        with pytest.raises(jsonschema.ValidationError):
+            checker.validate({**valid, "kind": kind})
+    with pytest.raises(ValueError):
+        tools.decision_schema([])

@@ -104,6 +104,17 @@ Existing services, firewall, VM, sync and inference settings require separate
 approval for changes. Read-only discovery is allowed in the authorized context.
 No autonomous writes until action-bound policy, idempotency and reconciliation exist.
 
+On 18.10.2026 the user explicitly authorized model-generated SSH commands and
+configuration scripts on individually approved systems, autonomously within
+defined rules. This is an exception to the general model-code prohibition above,
+exclusively through the shared agent path with human-configured target rules,
+final-boundary permission checks, durable intents and reconciliation without blind
+retries. It grants no new target, credential, privilege or network authority.
+The user also explicitly approved direct HA update/configuration acceptance on
+their existing instance despite no isolated HA or verified restore. Preserve
+available backups; do not describe this permission as a successful restore test.
+See docs/agent-system-control.md and STATUS.md for implementation and live evidence.
+
 ## Agent administration authorization, 18.10.2026
 
 The user explicitly requests comprehensive administration of connected systems

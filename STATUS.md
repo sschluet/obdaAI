@@ -27,27 +27,26 @@ Nachrichten, Profile, Use Cases, Dateibelege, Overlays und unabhängige Netzwerk
 erhalten. Aktive konfigurierte Zielprofile haben separat gebundene Agentenregeln;
 das ist keine Freigabe unkonfigurierter Systeme oder beliebiger Mail-Empfänger.
 
-Die erste echte lokale Modellentscheidung hatte eine ungültige Werkzeughülle und
-blieb ohne SSH-Dispatch. Die Korrektur ergänzt deutliche Entscheidungsbeispiele,
-höchstens zwei lokale Format-Rückmeldungen ohne semantische Parameterreparatur,
-Datei-Abwesenheit/Hash als lesende Beobachtung und vollständige MCP-Katalogverträge.
-Ein echter lokaler Modell-Dryrun liefert damit eine gültige ssh.inspect-Entscheidung
-am synthetischen Ziel; dabei wurde kein Werkzeug ausgeführt. Die vollständige lokale
-Folgeprüfung bestand mit 1506 Tests, anschließend zusätzliche Fälle zur Aufgabenpause. Offene Chatrückfragen werden nach
-Reload wieder als Agentenauftrag aufgenommen. Bereits versandte, unverifizierte
-Task-Effekte pausieren die Aufgabe auch bei unverified/failed/cancelled vor dem
-nächsten Termin; fehlgeschlagene Fernskripte stoppen Folgewirkungen.
+Stand 3782a0c / Schema 0044 ebenfalls auf der Test-VM installiert: vollständige
+CI39115280716 mit1513 bestandenen Backend-/PostgreSQLtests, sechs übersprungenen
+und41 synthetischen Browserprüfungen erfolgreich; lokal1519 Tests bestanden.
+Erneute verschlüsselte Off-VM-Sicherung hashgeprüft, bestehende Agentenbelege und
+sonstige Daten sowie Overlays und unabhängige Netzwerkregeln erhalten.
 
-Mehrstufige echte Modell-Dryruns mit simulierten Beobachtungen zeigen bei freier
-Ausgabe weiterhin unvollständige Skripthüllen. Die vorhandene lokale Schemaausgabe
-liefert dagegen gültige Schritte ssh.inspect → file.read → shell, ohne Werkzeugversand.
-Diese Anfrageoption wird gezielt für Agentenentscheidungen und öffentliche
-Recherchepläne ergänzt; gewöhnliche Chats, Cloud und Inferenzkonfiguration bleiben
-unverändert. Reale Wirkung ist dadurch noch nicht abgenommen. SSH verlangt nun bereits vor
-Versand ein unabhängiges Prüfskript. Die drei vorhandenen HA-Metadatenlesevorgänge
-werden exakt als Lesen eingeordnet; unbekannte WebSocket-Kommandos bleiben
-mögliche Änderungen.87 gezielte Vertrags-, native Transport- und Orchestrierungstests
-bestanden.
+Der echte Chatauftrag blieb ohne Werkzeugdispatch: das lokale Modell ließ die
+Ziel-ID weg, die Entscheidung wurde jeweils vor einem Intent abgewiesen. Die
+Folgekorrektur bildet die bedingten Pflichtfelder zusätzlich in der Grammatik ab:
+Werkzeugschritte müssen Ziel-ID aus der gebundenen Auswahl, Werkzeug und Argumente
+explizit zurückgeben. Kein nachträgliches Ergänzen einer fehlenden Identität.
+Ein Diagnoseplan mit dem echten ursprünglichen Auftragskontext führt damit bereits
+reale, fest begrenzte SSH-/SFTP-Leseschritte aus, aber noch keine Änderung. Eine
+redundante allgemeine Ausführungsfrage wird im Planerauftrag präzisiert; konkrete
+Einzelfreigaben bleiben beim Gateway. Die feste SSH-Bestandsaufnahme meldet
+tatsächliche Programmverfügbarkeit; der native Test gleicht sie mit dem Ziel ab.
+Ein weiterer Plan mit demselben realen Auftragskontext liefert explizite Ziel-ID
+und gültiges Schreib-/Prüfskript, weiterhin ohne Schreibdispatch.88 gezielte
+Vertrags-/Transporttests bestanden.
+Reale Schreibabnahme des korrigierten Stands und dessen vollständige CI stehen aus.
 
 HA-Bestandsaufnahme lesend möglich: Supervisor gesund, Backupübersicht über den
 vorhandenen WebSocket-Weg lesbar; direkter Supervisor-REST-Zugang abgewiesen.

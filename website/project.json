@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "62de1ef",
+  "applicationCommit": "3782a0c",
   "schema": "0044",
-  "tests": 1493,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39111208314",
+  "tests": 1513,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39115280716",
   "screenshots": [
     {
       "id": "chat",
@@ -635,7 +635,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Ein gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Regeln je Ziel, einzelne Freigaben oder begrenzte Autonomie, dauerhafte Absichten und Ergebnisbelege. Agentenentscheidungen fordern lokale JSON-Schemaausgabe an und werden zusätzlich unabhängig validiert. SSH benötigt vor Versand einen separaten Prüfplan. Antwortverlust führt zu lesendem Abgleich oder unklarem Ergebnis. Synthetische Chat- und native lokale Transportprüfungen bestanden; reale umfassende Systemadministration steht noch aus.",
+          "description": "Ein gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Regeln je Ziel, einzelne Freigaben oder begrenzte Autonomie, dauerhafte Absichten und Ergebnisbelege. Agentenentscheidungen fordern lokale JSON-Schemaausgabe mit ausdrücklicher Auswahl eines gebundenen Ziels an und werden zusätzlich unabhängig validiert. SSH benötigt vor Versand einen separaten Prüfplan. Antwortverlust führt zu lesendem Abgleich oder unklarem Ergebnis. Synthetische Chat- und native lokale Transportprüfungen bestanden; reale umfassende Systemadministration steht noch aus.",
           "status": "limited"
         }
       ]
@@ -760,15 +760,15 @@
     "schema": "0044",
     "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "62de1ef",
-    "ciTests": 1493,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39111208314",
-    "deployedCommit": "62de1ef",
+    "commit": "3782a0c",
+    "ciTests": 1513,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39115280716",
+    "deployedCommit": "3782a0c",
     "deployedSchema": "0044",
-    "liveScope": "Release 62de1ef / Schema 0044 auf dem Testsystem installiert. Vollständige CI: 1493 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 41 synthetische Browserprüfungen. Gemeinsamer lokaler Agentenweg für Chat, Projektchat und Aufgaben mit gebundenen Regeln, öffentlicher Recherche, dynamischen Schnittstellen und dauerhaften Belegen installiert. Erste reale Modellentscheidung vor jedem Werkzeug wegen ungültiger Hülle abgewiesen; noch kein neuer agentischer SSH-/HA-Schreibnachweis. Die lokale Korrektur ist zusätzlich mit dem echten lokalen Modell ohne Toolausführung geprüft. Frühere begrenzte SSH-/SFTP-Abnahme aus 148e921 bleibt ein eigener Nachweis. Bestehende Daten und Netzwerkregeln erhalten, verschlüsselte Off-VM-Sicherung hashgeprüft. Fremdsystemadministration und V1 bleiben partiell.",
+    "liveScope": "Release 3782a0c / Schema 0044 auf dem Testsystem gesund installiert. Vollständige CI: 1513 Backend-/PostgreSQLtests bestanden, sechs umgebungsabhängig übersprungen und 41 synthetische Browserprüfungen; lokal 1519 Tests erfolgreich. Bestehende Daten, Agentenbelege, Konfigurationen und unabhängige Netzwerkregeln erhalten, verschlüsselte Off-VM-Sicherung hashgeprüft. Der echte Chatauftrag ließ die Ziel-ID weg und wurde vor jedem Werkzeugdispatch abgewiesen. Eine engere Zielgrammatik ist zusätzlich mit dem echten ursprünglichen Auftragskontext und fest begrenzten realen SSH-/SFTP-Leseoperationen geprüft; geplante Änderungen wurden dabei nicht versandt. Reale agentische Schreib- und HA-Updateabnahme bleiben offen. Frühere begrenzte SSH-/SFTP-Abnahme aus 148e921 bleibt ein eigener Nachweis. Fremdsystemadministration und V1 bleiben partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "62de1ef",
+    "lastSuccessfulCICommit": "3782a0c",
     "lastSuccessfulCIUI": 41
   }
 }

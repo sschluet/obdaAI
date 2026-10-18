@@ -12,7 +12,7 @@ import re
 import socket
 import ssl
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
@@ -26,6 +26,16 @@ from hub.integration_write_adapters import sftp, ssh_client
 # Frame-level debug logs must never contain the authentication token.
 LOGGER = logging.Logger("hub.agent_transport")
 LOGGER.disabled = True
+
+SSH_INSPECT = (
+    "/usr/bin/uname -sr\n/usr/bin/id -un\n/usr/bin/uptime\n"
+    "if [ -x /usr/bin/sw_vers ]; then /usr/bin/sw_vers; fi\n"
+    "printf '\\nOBDAAI_COMMAND_AVAILABILITY\\n'\n"
+    "for tool_name in shasum sha256sum openssl python3 base64 systemctl launchctl docker ha; do\n"
+    '  resolved=$(command -v "$tool_name" 2>/dev/null || true)\n'
+    '  printf \'%s=%s\\n\' "$tool_name" "${resolved:-MISSING}"\n'
+    "done\n"
+)
 
 
 class Strict(BaseModel):
@@ -227,6 +237,40 @@ class Decision(Strict):
         elif self.integration_id is not None or self.tool is not None or self.arguments:
             raise ValueError("Text decisions cannot carry tools")
         return self
+
+
+def decision_schema(integration_ids: Sequence[str]) -> dict[str, Any]:
+    """Express the validator's conditional fields in the generation grammar too."""
+    if not integration_ids:
+        raise ValueError("Decision generation requires selected targets")
+    base = Decision.model_json_schema()
+    properties = {
+        **base["properties"],
+        "kind": {"const": "tool", "type": "string"},
+        "integration_id": {"type": "string", "enum": sorted(set(integration_ids))},
+        "tool": next(
+            item for item in base["properties"]["tool"]["anyOf"] if item.get("type") == "string"
+        ),
+    }
+    return {
+        "type": "object",
+        "anyOf": [
+            {
+                **base,
+                "properties": properties,
+                "required": ["kind", "message", "integration_id", "tool", "arguments"],
+            },
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "kind": {"type": "string", "enum": ["ask", "finish"]},
+                    "message": base["properties"]["message"],
+                },
+                "required": ["kind", "message"],
+            },
+        ],
+    }
 
 
 SCHEMAS: dict[str, type[Strict]] = {
@@ -460,8 +504,7 @@ def invoke(
         with ssh_client(cfg, config, secret, credential_boundary) as client:
             return command(
                 client,
-                "/usr/bin/uname -sr\n/usr/bin/id -un\n/usr/bin/uptime\n"
-                "if [ -x /usr/bin/sw_vers ]; then /usr/bin/sw_vers; fi\n",
+                SSH_INSPECT,
                 10,
                 before_send,
             )
