@@ -60,6 +60,7 @@ from hub.personal_profile import freeze_profile, install_personal_profile_api
 from hub.policy import Privacy
 from hub.preference_api import install_preference_api
 from hub.preferences import resolve as resolve_preferences
+from hub.proton_bridge_setup import install_proton_bridge_setup
 from hub.provider_api import install_provider_api
 from hub.providers import Providers
 from hub.routing_settings import install_routing_settings_api
@@ -173,6 +174,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_action_api(app, factory, cfg)
     install_connection_api(app, cfg, factory)
     install_use_case_delivery(app, cfg, factory)
+    install_proton_bridge_setup(app, cfg, factory)
     install_integration_api(app, cfg, factory)
     from hub.integration_writes import install_write_api
 

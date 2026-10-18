@@ -1,24 +1,36 @@
 # obdaAI — Status 18.10.2026
 
-## Proton-Postfach und gezielte MCP-Lesefreigaben — Abnahme in Arbeit
+## Proton-Postfach: Bridge-Einrichtung unter Integrationen — lokal geprüft
 
-Offizielle signaturgeprüfte Proton Bridge und ein geprüfter, festgeschriebener
-Community-MCP sind privat auf der Test-VM installiert. Der geschützte Katalog ist
-von obdaAI erreichbar; externe Clients werden gesperrt. Der Benutzer bestätigt
-einen kostenpflichtigen Tarif und erlaubt selbstständiges lokales Lesen und
-Suchen. Versand und Änderungen am Postfach bleiben gesperrt.
+Die offizielle Proton Bridge 3.27.1 läuft auf der Test-VM; ihre Signatur und die
+ausgeführte Programmdatei sind unabhängig geprüft. Ein geprüfter, festgeschriebener
+Community-MCP ist installiert. Der geschützte Katalog ist von obdaAI erreichbar;
+externe Clients werden gesperrt. Der Benutzer bestätigt einen kostenpflichtigen
+Tarif und erlaubt selbstständiges lokales Lesen und Suchen. Versand und Änderungen
+am Postfach bleiben gesperrt.
 
-Der bisherige Agent behandelt jeden MCP-Aufruf als mögliche Änderung. Die neue
-gezielte Lesefreigabe bindet deshalb einzelne menschlich geprüfte Werkzeugnamen
-und Schemas, ohne Profil-Schreibrechte einzuschalten. Kataloghinweise allein
-gewähren nichts; frische Rechte- und Schemaprüfungen bleiben bindend. Details und
-offene echte Postfach-/Chat-/Aufgaben-/Projektabnahme:
-[docs/proton-mailbox.md](docs/proton-mailbox.md). 143 gezielte Backendtests, Ruff, mypy, Frontend-Prüfung/Build und der
-synthetische Agenten-Browsercheck sind erfolgreich. Vollständige lokale/CI-
-Prüfungen und Auslieferung laufen noch. Persönliche Anmeldung steht noch
-aus; Installation und Katalog sind kein Nachweis echten Mailzugriffs. Release-
-und CI-Angaben unten beziehen sich bis zur nächsten geprüften Lieferung auf den
-bisherigen Stand.
+Die neue Oberfläche unter Einstellungen → Integrationen nimmt den vorhandenen
+Bridge-Benutzernamen und das gesonderte Bridge-Passwort entgegen. Sie fordert keine
+Proton-Kontoanmeldung oder 2FA in obdaAI. Ein fester lokaler, rootverwalteter Broker
+prüft den Zugang über zertifikatsgebundenes STARTTLS und einen lesend geöffneten
+IMAP-Posteingang. Keine Nachricht wird versandt, verschoben oder gelöscht. Passwort,
+Revision, Anfragekennung und Fehlerwiederaufnahme sind getrennt vom Agentenweg
+begrenzt. Die optionale Lesefreigabe bindet acht geprüfte Werkzeugnamen und Schemas,
+ohne Profil-Schreibrechte oder allgemeinen MCP-Vollzugriff einzuschalten.
+Kataloghinweise allein gewähren nichts; frische Rechte- und Schemaprüfungen bleiben
+bindend.
+
+21 gezielte Backend-/Broker-Tests und der synthetische Browsercheck der
+Bridge-Einrichtung sind erfolgreich, einschließlich Passwortschutz, Beibehalten
+des gespeicherten Zugangs, Fehler-/Revisionswechsel und mobiler Darstellung.
+Vollständige lokale Prüfung: 1664 Tests bestanden; Ruff, mypy und Geheimnisprüfung
+sowie Frontend-Prüfung und Build erfolgreich. Neue vollständige CI folgt.
+Die Auslieferung der neuen Oberfläche ist noch nicht bestätigt. Persönliche
+Kontoanmeldung und echter Postfachzugang stehen weiter aus; Installation, Katalog
+und synthetische Einrichtung sind kein Nachweis realer Mailnutzung. Details und
+offene Postfach-/Chat-/Aufgaben-/Projektabnahme:
+[docs/proton-mailbox.md](docs/proton-mailbox.md). Release- und CI-Angaben unten
+beziehen sich bis zur nächsten geprüften Lieferung auf den bisherigen Stand.
 
 ## Agentische Systemsteuerung — implementiert, reale Administration partiell
 

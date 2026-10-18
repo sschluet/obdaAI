@@ -5,8 +5,10 @@ Ein kostenpflichtiger Proton-Mail-Tarif ist erforderlich. Ein SMTP-Profil allein
 ermöglicht keinen Postfachzugriff. Die geprüften Community-MCPs ergänzen Bridge;
 sie ersetzen den offiziellen Proton-Zugang nicht.
 
-Für die private Testumgebung wurde die offizielle, per `debsig-verify` geprüfte
-Bridge 3.22.0 und `mhbxyz/protonmail-mcp` 0.4.0 gewählt. Dessen Quellstand
+In der privaten Testumgebung läuft die offizielle Bridge 3.27.1; Signatur und
+tatsächlich ausgeführte Programmdatei sind unabhängig geprüft. Das ursprüngliche
+Installationspaket 3.22.0 wurde zusätzlich mit `debsig-verify` geprüft. Als
+Postfachadapter wurde `mhbxyz/protonmail-mcp` 0.4.0 gewählt. Dessen Quellstand
 `f15d769d562de55c288a574f2a1e0946fefc9e31`, veröffentlichtes Wheel und sämtliche
 Laufzeitabhängigkeiten sind festgeschrieben und hashgeprüft. 255 Tests des
 Community-Projekts sowie ein synthetischer Katalogtest mit allen drei von obdaAI
@@ -18,8 +20,39 @@ Loopback. Der MCP verlangt ein Bearer-Token und bleibt im serverseitigen Modus
 `read`; Versand und Postfachänderungen sind gesperrt. Die von diesem Server auch
 angebotenen lokalen Exportwerkzeuge werden nicht als reine Lesewerkzeuge in
 obdaAI freigegeben. Anmeldedaten, Pfade und private Netzwerkziele bleiben außerhalb
-von Git. Proton-Passwort und 2FA werden direkt im privaten Terminal eingegeben;
-obdaAI verwendet ausschließlich den gesonderten Bridge-Zugang.
+von Git. obdaAI verwendet ausschließlich den gesonderten Bridge-Zugang.
+
+## Postfach unter Integrationen einrichten
+
+Unter Einstellungen → Integrationen steht **Proton Mail (Bridge)** bereit, wenn
+der Betreiber die lokale Bridge und den festen Postfachadapter eingerichtet hat.
+Trage den Namen der Verbindung, den **Bridge-Benutzernamen** und das von Bridge
+erzeugte **Bridge-Passwort** ein. Das sind die vorhandenen Zugangsdaten für
+Mailprogramme. Das Proton-Konto muss bereits in Bridge angemeldet sein; die
+Anmeldung am Proton-Konto und dessen 2FA erfolgen außerhalb von obdaAI.
+
+**Verbindung prüfen und speichern** prüft den Zugang und den MCP-Katalog. Die
+Option **Lokales Lesen und Suchen über Chat, Aufgaben und Projekte erlauben**
+erteilt ausschließlich die acht unten genannten Lesefreigaben für dieses Profil.
+Profil-Schreibrechte, allgemeiner MCP-Vollzugriff und autonome Änderungen bleiben
+ausgeschaltet; die Grenze für Änderungen beträgt null. Die Verbindung kann danach
+im Chat, einer Aufgabe oder einem Projekt ausgewählt werden.
+
+Ein leeres Passwortfeld behält den gespeicherten Bridge-Zugang nur bei unverändertem
+Benutzernamen. Das Passwort erscheint weder in der Statusantwort noch als Klartext
+im Formular und wird nach Erfolg oder Fehler aus dem Eingabefeld entfernt. Nach
+einem fehlgeschlagenen Versuch lädt die Oberfläche den aktuellen Stand; ein
+weiterer Versuch benötigt einen neuen ausdrücklichen Klick.
+
+Die Einrichtung verwendet einen separaten, rootverwalteten lokalen Broker. Dieser
+akzeptiert nur die feste Bridge-Konfiguration, prüft STARTTLS gegen das gepinnte
+Bridge-Zertifikat und öffnet den Posteingang mit IMAP ausdrücklich lesend. Er kann
+nur die Bridge-Zugangsdaten und den festgelegten lesenden MCP-Dienst konfigurieren;
+ein frei wählbares Ziel oder ein Shellbefehl gehört nicht zu dieser Schnittstelle.
+Revisionen, Anfragekennung und vorab gespeicherter Einrichtungszustand verhindern
+blinde Wiederholung nach unklarem Ausgang. Alte Profilrechte werden vor einem
+Zugangswechsel entzogen. Die Einrichtung verschickt keine Nachricht und verändert
+keine Postfachinhalte.
 
 ## Gezielte MCP-Lesefreigaben
 
@@ -44,11 +77,16 @@ und erhalten keine solche Freigabe.
 
 ## Abnahme und offene Punkte
 
-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
-Echte Ordner-/Such-/Nachrichtenaufrufe und Chat-, Aufgaben- und Projektabnahme
-bleiben bis zur persönlichen Proton-Anmeldung offen. Nach der Anmeldung muss der
-reale Zugriff getrennt von synthetischen UI-/API-Prüfungen bestätigt werden.
-Keine Nachricht wird für die Einrichtung verschickt, verschoben oder gelöscht.
+Bridge-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
+Die neue Einrichtung in der Integrationsoberfläche ist lokal mit synthetischen
+Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests sind erfolgreich.
+Die Auslieferung dieser neuen Oberfläche ist noch nicht bestätigt.
+
+Die persönliche Kontoanmeldung in Bridge und die Eingabe des vorhandenen
+Bridge-Zugangs stehen noch aus. Echte Ordner-/Such-/Nachrichtenaufrufe und die
+Chat-, Aufgaben- und Projektabnahme bleiben deshalb offen. Der reale Zugriff muss
+getrennt von synthetischen UI-/API-Prüfungen bestätigt werden. Keine Nachricht wird
+für die Einrichtung verschickt, verschoben oder gelöscht.
 
 Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),
 [Linux-Installation](https://proton.me/support/installing-bridge-linux-deb-file),

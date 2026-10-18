@@ -1,5 +1,6 @@
 import {chromium} from 'playwright';
 import {loginFixture} from './fixture-login.mjs';
+import {checkProtonBridgeSetup} from './proton-bridge-check.mjs';
 const base=process.env.HUB_AGENT_ORIGIN||'http://127.0.0.1:18769';
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
@@ -9,6 +10,7 @@ let headers,profile,chat,mcpProfile;
 async function call(path,method='GET',data){const r=await page.request.fetch(base+'/api'+path,{method,headers,data});if(!r.ok())throw Error(method+' '+path+' '+r.status()+' '+await r.text());return r.json()}
 try{
  await page.goto(base);const session=await loginFixture(page);headers={'Origin':base,'X-CSRF-Token':session.csrf};
+ await checkProtonBridgeSetup({page,base,call});
  // Synthetic UI contract only: no MCP connection or mailbox content is involved.
  mcpProfile=await call('/integrations','POST',{name:'Postfach Aurora',kind:'mcp',url:'https://mail.example.test/mcp',auth:'none',protocol:'2026-07-28'});
  let mailPolicy=await call('/integrations/'+mcpProfile.id+'/agent-policy');

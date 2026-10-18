@@ -262,6 +262,12 @@
       "title": "Postfach lesen. Rechte gezielt vergeben.",
       "description": "Einzeln geprüfte MCP-Lesewerkzeuge ohne Schreibfreigabe auswählen. Ausschließlich fiktives Postfach Aurora; synthetischer Katalog zur UI-Prüfung, keine echten Nachrichten.",
       "image": "assets/mcpreads.png"
+    },
+    {
+      "id": "protonbridge",
+      "title": "Dein Proton-Postfach im Arbeitsraum.",
+      "description": "Vorhandenen Bridge-Benutzernamen und das eigene Bridge-Passwort unter Integrationen eintragen, den Zugang prüfen und lokales Lesen erlauben. Ausschließlich synthetische Zugangsdaten und simulierte Dienstantworten; kein Nachweis eines angemeldeten echten Postfachs.",
+      "image": "assets/protonbridge.png"
     }
   ],
   "groups": [
@@ -606,7 +612,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen. Werkzeugname und Eingabeschema bleiben gebunden; Lesen benötigt keine Profil-Schreibrechte. Proton-Bridge-Anbindung vorbereitet und Katalog auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
+          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen. Werkzeugname und Eingabeschema bleiben gebunden; Lesen benötigt keine Profil-Schreibrechte. Proton-Bridge-Katalog auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
+          "status": "implemented"
+        },
+        {
+          "title": "Proton-Postfach über Bridge einrichten",
+          "description": "Vorhandenen Bridge-Benutzernamen und das gesonderte Bridge-Passwort direkt unter Integrationen eingeben, den Zugang prüfen und lokales Lesen in Chat, Aufgaben und Projekten erlauben. Versand und Postfachänderungen bleiben gesperrt. Formular, Passwortschutz und Fehlerwiederaufnahme sind lokal synthetisch geprüft; die neue Oberfläche ist noch nicht als ausgeliefert bestätigt. Bridge 3.27.1 ist auf der Test-VM unabhängig geprüft, die echte Postfachanmeldung und Nutzungsabnahme bleiben offen.",
           "status": "implemented"
         },
         {
