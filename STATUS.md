@@ -19,32 +19,38 @@ führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
 
 Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
 sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
-Release efbd4ed / Schema 0044 ist auf der Test-VM installiert. Vollständige
-CI39117828987 erfolgreich:1514 Backend-/PostgreSQLtests bestanden, sechs
-umgebungsabhängig übersprungen,41 synthetische Browserprüfungen sowie Container-
-und Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung hashgeprüft;
-bestehende Daten, Agentenregeln, Overlays und unabhängige Netzwerkregeln erhalten.
+Release f186024 / Schema 0044 ist gesund auf der Test-VM installiert.
+Vollständige CI39120775573 erfolgreich:1519 Backend-/PostgreSQLtests bestanden,
+sechs umgebungsabhängig übersprungen,41 synthetische Browserprüfungen sowie
+Container- und Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung
+hashgeprüft; bestehende Daten, Agentenregeln, Overlays und unabhängige Netzregeln
+erhalten. Auch die lokale Entwicklung läuft mit dem aktuellen Code.
 
-Realer Chat: Eine eigene SSH-Abnahmedatei angelegt und separat geprüft;
+Realer Chat auf efbd4ed: eigene SSH-Abnahmedatei angelegt und separat geprüft;
 unabhängiges SFTP bestätigt exakten Inhalt und SHA256. Reale Aufgabe: dieselbe
 Datei hashgebunden gelöscht, separate SFTP-Abfrage bestätigt ihre Abwesenheit.
 Der Aufgabenlauf brauchte einen klärenden Eingriff, weil das lokale Modell nach
 reinen Systemabfragen fälschlich eine fehlende Datei behauptete. Kein Nachweis
 vollständig unbeaufsichtigter Aufgabenadministration.
 
-Der echte Paperless-Auftrag scheiterte vor jedem Werkzeugdispatch: Recherche-
-JSON enthielt `.queries` statt `queries`. Die Folgekorrektur gibt auch für den
-öffentlichen Rechercheplan eine exakte lokale Generierungsgrammatik vor. Keine
-Umbenennung fehlerhafter Modellfelder; die nachgelagerte Prüfung bleibt bestehen.
-93 gezielte Schema-/Transport-/Orchestrierungs-/Providerprüfungen bestanden,
-Ruff, mypy und Quellgeheimnisprüfung erfolgreich. Vollständige CI und reale
-Recherche-/Paperless-/HA-Abnahme dieser Folgekorrektur stehen noch aus.
+Die engere Recherchegrammatik ist auf f186024 sowohl mit dem vorhandenen lokalen
+Modell als auch in echten Agentenläufen erfolgreich. Paperless und HA-Projektchat
+führten jeweils drei öffentliche Suchschritte aus. Beide scheiterten anschließend
+vor jeder Änderung am ersten GET: das Modell nahm einen falschen Antwortpfad für
+die lokale Ergebnisauswahl an. Die Folgekorrektur erhält bei solchen reinen
+GET-Auswahlfehlern die bereits begrenzte Originalantwort und kennzeichnet den
+Auswahlfehler; der Agent darf daraus korrekt weiterplanen. Keine erneute Übertragung
+und kein Wirkungsnachweis bei fehlerhafter Auswahl. Schreib-, Transport- und
+Antwortgrenzen bleiben unverändert.72 gezielte Transport-/Orchestrierungstests,
+Ruff, mypy und Geheimnisprüfung erfolgreich; vollständige CI und reale Abnahme
+dieser Folgekorrektur stehen aus.
 
-HA-Bestandsaufnahme lesend möglich: Supervisor gesund, Backupübersicht über den
-vorhandenen WebSocket-Weg lesbar; direkter Supervisor-REST-Zugang abgewiesen.
-Reale agentische HA-Konfiguration und HA-Updateabnahme stehen weiterhin aus.
-Die öffentlichen Bilder stammen ausschließlich aus einer frischen synthetischen
-Umgebung. Vollständige Fremdsystemadministration und V1 bleiben partiell.
+Öffentliche Suchauszüge sind verfügbar; öffentliche Seitenvolltexte scheitern an
+den bestehenden ausgehenden Netzgrenzen. Keine Netzfreigaben dafür verändert.
+HA-Bestandsaufnahme bleibt lesend möglich: Supervisor gesund, Backupübersicht über
+den vorhandenen WebSocket-Weg lesbar. Reale agentische Paperless-Änderungen,
+HA-Konfiguration und HA-Update stehen aus. Öffentliche Bilder sind ausschließlich
+synthetisch. Vollständige Fremdsystemadministration und V1 bleiben partiell.
 
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 

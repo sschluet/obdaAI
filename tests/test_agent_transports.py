@@ -165,6 +165,98 @@ def test_http_projection_and_independent_predicate(monkeypatch):
     assert len(calls) == 1
 
 
+@pytest.mark.parametrize("path", ["/items/name", "/results/99", "/results/0/id", "/results/no"])
+@pytest.mark.parametrize("tool", ["http", "http.verify"])
+def test_invalid_get_projection_preserves_response_without_retry_or_verification(
+    monkeypatch, path, tool
+):
+    calls = []
+    body = {"results": [{"id": 7, "name": "Synthetic tag"}], "count": 1}
+
+    def reply(request):
+        calls.append(request)
+        return httpx.Response(200, json=body)
+
+    client = httpx.Client
+    monkeypatch.setattr(
+        tools.httpx, "Client", lambda **kw: client(transport=httpx.MockTransport(reply), **kw)
+    )
+    monkeypatch.setattr(tools, "pinned_target", lambda *a: ("https://192.168.50.20", {}, {}))
+    rules = tools.Rules(enabled=True, http_prefixes=["/api/"])
+    request = {"path": "/api/tags/", "projection": {"items_path": path}}
+    if tool == "http.verify":
+        request.update(effect_step=1, expected={"/body/count": 1})
+    args, _ = tools.validate_tool("paperless", rules, tool, request)
+    result = tools.invoke(
+        Settings(),
+        {"url": "https://paperless.example.test", "kind": "paperless"},
+        "synthetic-token",
+        tool,
+        args,
+        rules,
+        lambda: None,
+    )
+    assert len(calls) == 1
+    assert result["body"] == body and result["http_status"] == 200
+    assert result["projection_error"] and result["effect_verified"] is False
+    if tool == "http.verify":
+        assert result["verification_passed"] is False  # Raw predicate would match.
+
+    args, _ = tools.validate_tool(
+        "paperless",
+        rules,
+        "http",
+        {"path": "/api/tags/", "projection": {"items_path": "/results"}},
+    )
+    corrected = tools.invoke(
+        Settings(),
+        {"url": "https://paperless.example.test", "kind": "paperless"},
+        "synthetic-token",
+        "http",
+        args,
+        rules,
+        lambda: None,
+    )
+    assert len(calls) == 2
+    assert corrected["body"]["items"] == body["results"]
+    assert "projection_error" not in corrected
+
+
+def test_projection_recovery_never_catches_write_or_transport_failures(monkeypatch):
+    requests = []
+
+    def reply(request):
+        requests.append(request)
+        if request.method == "GET":
+            raise httpx.ConnectError("Synthetic transport failure")
+        return httpx.Response(200, json={"results": []})
+
+    client = httpx.Client
+    monkeypatch.setattr(
+        tools.httpx, "Client", lambda **kw: client(transport=httpx.MockTransport(reply), **kw)
+    )
+    monkeypatch.setattr(tools, "pinned_target", lambda *a: ("https://192.168.50.20", {}, {}))
+    rules = tools.Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET", "POST"])
+    for method, error in [("POST", KeyError), ("GET", httpx.ConnectError)]:
+        args, _ = tools.validate_tool(
+            "paperless",
+            rules,
+            "http",
+            {"method": method, "path": "/api/tags/", "projection": {"items_path": "/wrong"}},
+        )
+        with pytest.raises(error):
+            tools.invoke(
+                Settings(),
+                {"url": "https://paperless.example.test", "kind": "paperless"},
+                "synthetic-token",
+                "http",
+                args,
+                rules,
+                lambda: None,
+            )
+    assert len(requests) == 2
+
+
 def test_public_target_requires_specific_private_data_grant():
     with pytest.raises(PermissionError):
         tools.private_boundary("8.8.8.8", tools.Rules(enabled=True))

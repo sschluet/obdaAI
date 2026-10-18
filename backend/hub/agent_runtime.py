@@ -108,7 +108,12 @@ Bei großen API-Antworten verwende projection: items_path als JSON-Pointer auf e
 Liste (leer für die Wurzelliste), where_pointer und where_equals oder where_prefix,
 fields als Liste relativer JSON-Pointer und limit. Für HA-Updates z.B. /api/states
 mit where_pointer=/entity_id, where_prefix=update. und passenden Attributfeldern.
+Erfinde keine Antwortpfade: lies eine unbekannte API-Struktur zunächst ohne
+projection und wähle danach nur tatsächlich beobachtete Listen und Felder aus.
 truncated zeigt eine gekürzte Modellsicht; Belege bleiben erhalten. Lies gezielt nach.
+projection_error bedeutet eine unpassende lokale Auswahl, nicht einen fehlgeschlagenen
+GET. body enthält dann die ursprüngliche Antwort; korrigiere die Auswahl anhand
+dieser Struktur. Ein solcher Schritt verifiziert keine Änderung.
 Für weitere öffentliche Recherche nutze research mit einem topic. Die getrennte
 Rechercheplanung erhält nur den aktuellen Benutzerauftrag und bereits öffentliche
 Quellen, keine privaten Werkzeugergebnisse. Erfinde keine Recherchebelege.
@@ -386,9 +391,7 @@ def complete(db: Any, job: AgentJob, status: str, summary: str) -> None:
         and not json.loads(s.result).get("effect_verified")
         for s in steps(db, job.id)
     )
-    if job.task_run_id and (
-        status == "uncertain" or (status not in ACTIVE and unresolved_effect)
-    ):
+    if job.task_run_id and (status == "uncertain" or (status not in ACTIVE and unresolved_effect)):
         task = db.get(Task, job.owner_id)
         if task and not task.paused:
             task.paused = True
@@ -533,6 +536,8 @@ async def research(
         job_id,
         "Erzeuge für den aktuellen öffentlichen Benutzerauftrag höchstens drei "
         "präzise Suchfragen zu offiziellen Dokumentationen und Verfahren. "
+        "Nutze bei technischen APIs deren englische Fachbegriffe und gezielte "
+        "Suchfragen nach der offiziellen REST-/WebSocket-Dokumentation. "
         'Nur JSON {"queries":["..."]}. Keine internen Adressen, '
         "Personen, Secrets oder lokalen Pfade in Suchfragen. Nutze nur diesen "
         "Auftrag; du hast keinen Zugang zu privaten Systembeobachtungen.",

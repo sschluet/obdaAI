@@ -448,14 +448,28 @@ def http_call(
                 if args["method"] != "GET":
                     raise
                 body = {"text": data.decode("utf-8", errors="replace")}
+            projection_error = False
             if args.get("projection"):
                 from hub.agent_context import project
 
-                body = project(body, args["projection"])
+                try:
+                    body = project(body, args["projection"])
+                except (KeyError, IndexError, TypeError, ValueError):
+                    if args["method"] != "GET":
+                        raise
+                    projection_error = True
             return {
                 "http_status": response.status_code,
                 "body": body,
                 "effect_verified": False,
+                **(
+                    {
+                        "projection_error": "Auswahl passt nicht zur Antwortstruktur; "
+                        "body enthält die unveränderte Antwort."
+                    }
+                    if projection_error
+                    else {}
+                ),
             }
 
 
@@ -602,7 +616,7 @@ def invoke(
     if tool in {"http", "http.verify"}:
         response = http_call(cfg, config, secret, args, before_send, rules)
         if tool == "http.verify":
-            response["verification_passed"] = True
+            response["verification_passed"] = not response.get("projection_error")
             for pointer, expected in args["expected"].items():
                 if not pointer.startswith("/"):
                     raise ValueError("Verification needs JSON pointers")

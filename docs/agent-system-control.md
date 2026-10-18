@@ -176,6 +176,11 @@ Exitcode ist kein Beleg dafür, dass zuvor nichts verändert wurde. Ein vor dem 
 festgelegtes GET-Prädikat kann nach Updates oder Antwortverlust begrenzt pollen;
 es belegt den beobachteten Zustand, keine Kausalität. Ohne passende Nachprüfung
 wird ein HTTP-/MCP-/SMTP-Ack nicht als bewiesene Wirkung ausgegeben. SSH verlangt vor Versand ein separates, vom Agenten definiertes Prüfskript.
+Bei einer unpassenden lokalen GET-Projektion bleibt die bereits begrenzte
+Originalantwort als Beobachtung erhalten. `projection_error` ist kein Transportfehler
+und kein Wirkungsnachweis: `http.verify` kann damit niemals erfolgreich sein.
+Es erfolgt keine automatische neue HTTP-Anfrage. Fehler bei Schreibantworten,
+Transporten und Antwortgrenzen werden dadurch nicht abgefangen.
 Die drei bereits vorhandenen HA-Metadatenabfragen (backup/info sowie GET /info
 und /supervisor/info über supervisor/api) sind ausschließlich in ihrer exakten
 Form lesend. Andere WebSocket-Aufrufe bleiben mögliche Änderungen; eine
