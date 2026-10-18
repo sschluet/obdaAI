@@ -635,7 +635,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Ein gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Regeln je Ziel, einzelne Freigaben oder begrenzte Autonomie, dauerhafte Absichten und Ergebnisbelege. Antwortverlust führt zu lesendem Abgleich oder unklarem Ergebnis. Synthetische Chat- und native lokale Transportprüfungen bestanden; reale umfassende Systemadministration steht noch aus.",
+          "description": "Ein gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Regeln je Ziel, einzelne Freigaben oder begrenzte Autonomie, dauerhafte Absichten und Ergebnisbelege. Agentenentscheidungen fordern lokale JSON-Schemaausgabe an und werden zusätzlich unabhängig validiert. Antwortverlust führt zu lesendem Abgleich oder unklarem Ergebnis. Synthetische Chat- und native lokale Transportprüfungen bestanden; reale umfassende Systemadministration steht noch aus.",
           "status": "limited"
         }
       ]

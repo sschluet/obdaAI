@@ -447,7 +447,10 @@ async def generate(
             status="queued",
             context_snapshot=encode(
                 {
-                    "agent_generation": {"job_id": job.id},
+                    "agent_generation": {
+                        "job_id": job.id,
+                        "decision_format": "decision_schema" in data,
+                    },
                     "parts": [p.model_dump(mode="json") for p in parts],
                     "roles": ["system", "user"],
                     "sources": [],

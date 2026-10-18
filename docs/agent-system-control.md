@@ -129,6 +129,10 @@ Rückfragen und einzelne Freigaben unterbrechen den dauerhaften Auftrag. Eine
 offene Rückfrage wird nach Neuladen im selben Chat wieder aufgenommen. Ungültige
 Modellhüllen und typisierte Werkzeugargumente erhalten höchstens zwei lokale
 Format-Rückmeldungen; der Server ergänzt weder Ziele noch Befehle oder Rechte.
+Agentenentscheidungen fordern zusätzlich die feste Decision-JSON-Schemaausgabe am
+vorhandenen lokalen Modell an, Recherchepläne ein JSON-Objekt. Diese Anfrageoption
+ändert keine Inferenzkonfiguration und erweitert keine Rechte. Die nachgelagerte
+Validierung bleibt verbindlich; kein semantisches Reparieren ungültiger Ausgaben.
 
 Der private Planer verwendet ausschließlich das konfigurierte lokale Modell.
 Ein begrenzter Verlauf desselben Gesprächs ist lokal an Nachrichtenrevisionen

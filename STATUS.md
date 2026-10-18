@@ -38,6 +38,13 @@ Reload wieder als Agentenauftrag aufgenommen. Bereits versandte, unverifizierte
 Task-Effekte pausieren die Aufgabe auch bei unverified/failed/cancelled vor dem
 nächsten Termin; fehlgeschlagene Fernskripte stoppen Folgewirkungen.
 
+Mehrstufige echte Modell-Dryruns mit simulierten Beobachtungen zeigen bei freier
+Ausgabe weiterhin unvollständige Skripthüllen. Die vorhandene lokale Schemaausgabe
+liefert dagegen gültige Schritte ssh.inspect → file.read → shell, ohne Werkzeugversand.
+Diese Anfrageoption wird gezielt für Agentenentscheidungen und öffentliche
+Recherchepläne ergänzt; gewöhnliche Chats, Cloud und Inferenzkonfiguration bleiben
+unverändert. Reale Wirkung ist dadurch noch nicht abgenommen.
+
 HA-Bestandsaufnahme lesend möglich: Supervisor gesund, Backupübersicht über den
 vorhandenen WebSocket-Weg lesbar; direkter Supervisor-REST-Zugang abgewiesen.
 Reale agentische Änderungen und HA-Updateabnahme stehen weiterhin aus. Die neuen

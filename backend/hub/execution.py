@@ -491,6 +491,14 @@ async def execute_run(
                     external_kind=c.cloud_provider,
                     cloud_only=bool(snapshot.get("model_cloud_only")),
                 )
+                if snapshot.get("agent_generation"):
+                    from hub.agent_tools import Decision
+
+                    providers.local_json_schema = (
+                        Decision.model_json_schema()
+                        if snapshot["agent_generation"].get("decision_format")
+                        else {"type": "object"}
+                    )
                 if not snapshot.get("model_cloud_only"):
                     local = selected.get("local")
                     if not local or not local.enabled:
