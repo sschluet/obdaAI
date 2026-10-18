@@ -19,8 +19,8 @@ führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
 
 Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
 sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
-Release 8257ce9 / Schema 0044 ist gesund auf der Test-VM installiert.
-Vollständige CI39125512330 erfolgreich:1539 Backend-/PostgreSQLtests bestanden,
+Release 43e3592 / Schema 0044 ist gesund auf der Test-VM installiert.
+Vollständige CI39128091940 erfolgreich:1582 Backend-/PostgreSQLtests bestanden,
 sechs umgebungsabhängig übersprungen,41 synthetische Browserprüfungen sowie
 Container- und Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung
 hashgeprüft; bestehende Daten, Agentenregeln, Overlays und unabhängige Netzregeln
@@ -59,14 +59,34 @@ Werkzeugschemata und genau die im Lauf verfügbaren Werkzeuge. GET erlaubt weder
 Schreibkörper noch Wirkungsprüfung; Prüfwerte verwenden gültige JSON-Pointer.
 Die Prompt-Hülle bleibt kompakt, vollständige Argumentregeln stehen nur in der
 nativen Ausgabegrammatik. Die native Prüfung identifizierte ein nicht unterstütztes
-Schemawort und bestätigte anschließend die kompatible Fassung. Vollständige CI
-und Rollout dieser zusätzlichen Änderung stehen noch aus.
+Schemawort und bestätigte anschließend die kompatible Fassung. 126 gezielte Tests sowie
+Ruff, mypy und Geheimnisprüfung erfolgreich. Die vollständige CI und der Rollout
+von 43e3592 sind abgeschlossen; beide APIs separat gesund bestätigt.
 
 Auf 8257ce9 erreichte ein neuer reiner HA-Leselauf HTTP200 und den Status observed
 ohne menschliche Fortsetzung. Die anschließende Paperless-Schreibabnahme scheiterte
 vor dem ersten Effekt; der HA-Projektlauf fragte nach zwei Leseversuchen erneut
 nach der Schnittstelle und wurde ohne Effekt beendet. Unabhängige Gegenprüfungen
 bestätigten erneut keinen eigenen Tag und keine eigene HA-Automation.
+
+Weitere Abnahme auf 43e3592: wiederholte Querystrings im reinen API-Pfad
+verhinderten Paperless-Zugriffe; HA wählte einen nicht freigegebenen
+WebSocket-Kommandotyp. Beide Läufe wurden vor Änderungen abgefangen.
+Gegenprüfungen bestätigen keinen eigenen Tag und keine eigene Automation;
+14 eigene Prüfläufe sind ausschließlich privat auditgesichert. Eigene QA-Chats
+und Projekte bleiben bis zur gesonderten Löschfreigabe erhalten.
+
+Die nächste Korrektur bindet native Grammatikzweige an Zielart und menschliche
+Regeln, einschließlich HA-Kommandopräfixen und HTTP-Methoden/Pfaden. Querystrings,
+Prozentkodierung und URLs gehören nicht ins Pfadfeld. Der öffentliche Leser
+unterstützt zusätzlich begrenzte Text-/JSON-Dokumentation als inerte Daten;
+URLfreigabe, öffentliche DNS-Pins und Größenlimits bleiben bestehen. Diese
+Korrektur hat207 gezielte Prüfungen, Ruff, mypy und Geheimnisprüfung bestanden.
+Native lokale Schemaantworten für HA-Backupmetadaten und einen Paperless-GET
+sind gültig; dabei wurde kein Werkzeug ausgeführt. Vollständige CI und Rollout
+stehen noch aus. Eine konkrete
+begrenzte Firewallfreigabe für Dokumentation ist privat vorbereitet und separat
+angefragt; sie wurde nicht angewendet.
 
 Unkonfigurierte UniFi-/MCP-Ziele und tatsächliche SMTP-Zustellung haben keinen
 neuen Live-Nachweis. Die öffentlichen Bilder sind ausschließlich synthetisch.

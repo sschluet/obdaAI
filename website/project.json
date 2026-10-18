@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "8257ce9",
+  "applicationCommit": "43e3592",
   "schema": "0044",
-  "tests": 1539,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39125512330",
+  "tests": 1582,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39128091940",
   "screenshots": [
     {
       "id": "chat",
@@ -760,15 +760,15 @@
     "schema": "0044",
     "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "8257ce9",
-    "ciTests": 1539,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39125512330",
-    "deployedCommit": "8257ce9",
+    "commit": "43e3592",
+    "ciTests": 1582,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39128091940",
+    "deployedCommit": "43e3592",
     "deployedSchema": "0044",
-    "liveScope": "Release 8257ce9 / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1539 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe real separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Öffentliche Suchauszüge und echte GET-Schritte in Paperless- und HA-Projektläufen nachgewiesen; deren Änderungsabnahme bleibt offen. Die bestätigte Kontextkürzungsursache ist korrigiert und am aufgezeichneten Fehlerkontext geprüft. Zusätzliche typisierte Werkzeuggrammatik wird geprüft; deren Rollout steht noch aus. Ein neuer reiner HA-Leselauf gelingt ohne menschliche Fortsetzung. Eine vorhandene Anbieterzeitgrenze verhindert derzeit den Abschluss längerer Planerläufe; Inferenzwerte blieben unverändert. Öffentliche Seitenvolltexte sind durch bestehende Netzgrenzen eingeschränkt. HA-Konfiguration und HA-Update bleiben offen. Vollständige Fremdsystemadministration und V1 bleiben partiell.",
+    "liveScope": "Release 43e3592 / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1582 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe real separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Öffentliche Suchauszüge und echte GET-Schritte in Paperless- und HA-Projektläufen nachgewiesen; deren Änderungsabnahme bleibt offen. Die bestätigte Kontextkürzungsursache ist korrigiert und am aufgezeichneten Fehlerkontext geprüft. Typisierte Werkzeuggrammatik ist synthetisch und am nativen lokalen Modell geprüft und ausgerollt. Weitere Grenzen für Pfade und zielgebundene Werkzeuge sowie Text-/JSON-Dokumentation werden geprüft; diese Zusatzkorrektur ist noch nicht ausgerollt. Ein neuer reiner HA-Leselauf gelingt ohne menschliche Fortsetzung. Eine vorhandene Anbieterzeitgrenze verhindert derzeit den Abschluss längerer Planerläufe; Inferenzwerte blieben unverändert. Öffentliche Seitenvolltexte sind durch bestehende Netzgrenzen eingeschränkt. HA-Konfiguration und HA-Update bleiben offen. Vollständige Fremdsystemadministration und V1 bleiben partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "3782a0c",
+    "lastSuccessfulCICommit": "43e3592",
     "lastSuccessfulCIUI": 41
   }
 }

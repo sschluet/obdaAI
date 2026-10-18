@@ -4,6 +4,7 @@ Shell authority is the remote account's actual authority, not a working-director
 sandbox. A persisted, explicit policy is required; the model cannot create it.
 """
 
+import copy
 import hashlib
 import ipaddress
 import json
@@ -115,10 +116,11 @@ class ResearchCall(Strict):
 
 
 JSONPointer = Annotated[str, Field(pattern=r"^/")]
+APIPath = Annotated[str, Field(pattern=r"^/[A-Za-z0-9_.~/-]*$", min_length=1, max_length=1000)]
 
 
 class ReadVerification(Strict):
-    path: str = Field(min_length=1, max_length=1000)
+    path: APIPath
     query: dict[str, str | int | bool] = Field(default_factory=dict, max_length=30)
     expected: dict[JSONPointer, Any] = Field(min_length=1, max_length=32)
     timeout_seconds: int = Field(default=300, ge=1, le=900)
@@ -134,7 +136,7 @@ class ReadVerification(Strict):
 
 class HTTPCall(Strict):
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"] = "GET"
-    path: str = Field(min_length=1, max_length=1000)
+    path: APIPath
     query: dict[str, str | int | bool] = Field(default_factory=dict, max_length=30)
     body: dict[str, Any] | list[Any] | None = None
     projection: Projection | None = None
@@ -174,7 +176,7 @@ class MCPCall(Strict):
 
 
 class UploadCall(Strict):
-    path: str = Field(min_length=1, max_length=1000)
+    path: APIPath
     source_id: str = Field(pattern=r"^[0-9a-f-]{36}$")
     source_revision: int = Field(ge=1)
     source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -298,12 +300,115 @@ def decision_envelope_schema(
     return {"type": "object", "anyOf": branches}
 
 
+def _interface_rules(
+    integration_ids: Sequence[str], interfaces: Sequence[dict[str, Any]]
+) -> list[tuple[str, str, Rules]]:
+    selected = set(integration_ids)
+    found: set[str] = set()
+    result = []
+    for interface in interfaces:
+        if not isinstance(interface, dict):
+            raise ValueError("Invalid bound administration interfaces")
+        identifier = interface.get("integration_id")
+        kind = interface.get("kind")
+        if (
+            not isinstance(identifier, str)
+            or identifier not in selected
+            or identifier in found
+            or not isinstance(kind, str)
+            or kind not in {"ssh", "home_assistant", "paperless", "unifi", "mcp", "smtp"}
+            or not isinstance(interface.get("rules"), dict)
+        ):
+            raise ValueError("Invalid bound administration interfaces")
+        rules = Rules.model_validate(interface["rules"])
+        found.add(identifier)
+        result.append((identifier, kind, rules))
+    if found != selected:
+        raise ValueError("Missing bound administration interfaces")
+    return result
+
+
+def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
+    if not rules.enabled:
+        return False
+    if tool == "research":
+        return True
+    if tool in {"http", "http.verify", "http.upload"}:
+        if kind not in {"home_assistant", "paperless", "unifi"} or not rules.http_prefixes:
+            return False
+        if tool == "http":
+            return bool(rules.http_methods)
+        if tool == "http.verify":
+            return "GET" in rules.http_methods
+        return rules.file_upload and "POST" in rules.http_methods
+    if tool == "ha.websocket":
+        return kind == "home_assistant" and bool(rules.ha_websocket_prefixes)
+    if tool == "mail.send":
+        return kind == "smtp" and bool(rules.mail_recipients)
+    if tool in {"mcp.call", "mcp.catalog"}:
+        return kind == "mcp" and rules.mcp
+    if tool == "ssh.inspect":
+        return kind == "ssh"
+    if tool == "shell":
+        return kind == "ssh" and rules.shell
+    if tool == "file.read":
+        return kind == "ssh" and (rules.shell or bool(rules.file_read_roots))
+    return False
+
+
+def _scoped_arguments(tool: str, schema: dict[str, Any], rules: Rules) -> dict[str, Any]:
+    result = copy.deepcopy(schema)
+    path_pattern = (
+        "^(?:" + "|".join(re.escape(p) for p in rules.http_prefixes) + ")[A-Za-z0-9_.~/-]*$"
+    )
+    variants = result.get("anyOf", [result]) if tool == "http" else [result]
+    retained = []
+    for variant in variants:
+        properties = variant["properties"]
+        if tool in {"http", "http.verify"}:
+            method = properties["method"]
+            allowed = [
+                value
+                for value in method.get("enum", [method.get("const")])
+                if value in rules.http_methods
+            ]
+            if not allowed:
+                continue
+            properties["method"] = {"type": "string", "enum": allowed}
+        if tool in {"http", "http.verify", "http.upload"}:
+            properties["path"]["pattern"] = path_pattern
+        if tool == "ha.websocket":
+            alternatives = [
+                re.escape(prefix) + ("[a-z0-9_/]*" if prefix.endswith("/") else "")
+                for prefix in rules.ha_websocket_prefixes
+            ]
+            properties["type"]["pattern"] = "^(?:" + "|".join(alternatives) + ")$"
+            properties["type"]["maxLength"] = 151
+        if tool == "mail.send":
+            properties["recipient"]["enum"] = rules.mail_recipients
+        if "verification" in properties and properties["verification"].get("type") != "null":
+            if "GET" not in rules.http_methods or not rules.http_prefixes:
+                properties["verification"] = {"type": "null"}
+            else:
+                verification = ReadVerification.model_json_schema()
+                verification["properties"]["path"]["pattern"] = path_pattern
+                verification["properties"]["expected"]["additionalProperties"] = False
+                properties["verification"] = {"anyOf": [verification, {"type": "null"}]}
+        retained.append(variant)
+    if not retained:
+        raise ValueError("No allowed administration argument variant")
+    return {"anyOf": retained} if tool == "http" else retained[0]
+
+
 def decision_schema(
-    integration_ids: Sequence[str], tool_names: Sequence[str] | None = None
+    integration_ids: Sequence[str],
+    tool_names: Sequence[str] | None = None,
+    interfaces: Sequence[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Constrain generation to typed, available tools; runtime gates remain authoritative."""
     envelope = decision_envelope_schema(integration_ids, tool_names)
     names = sorted(SCHEMAS if tool_names is None else set(tool_names))
+    bound = _interface_rules(integration_ids, interfaces) if interfaces is not None else None
     definitions: dict[str, Any] = {}
     branches: list[dict[str, Any]] = []
     for name in names:
@@ -338,19 +443,31 @@ def decision_schema(
                     "required": required,
                 }
                 arguments = {"anyOf": [read, write]}
-        definition_name = "Tool_" + name.replace(".", "_")
-        definitions[definition_name] = arguments
-        branch = envelope["anyOf"][0]
-        branches.append(
-            {
-                **branch,
-                "properties": {
-                    **branch["properties"],
-                    "tool": {"type": "string", "const": name},
-                    "arguments": {"$ref": "#/$defs/" + definition_name},
-                },
-            }
+        targets = (
+            [(None, None)]
+            if bound is None
+            else [
+                (identifier, rules)
+                for identifier, kind, rules in bound
+                if _interface_tool(kind, rules, name)
+            ]
         )
+        for index, (identifier, rules) in enumerate(targets):
+            definition_name = "Tool_" + name.replace(".", "_")
+            if identifier is not None:
+                definition_name += "_" + str(index)
+            definitions[definition_name] = (
+                arguments if rules is None else _scoped_arguments(name, arguments, rules)
+            )
+            branch = envelope["anyOf"][0]
+            properties = {
+                **branch["properties"],
+                "tool": {"type": "string", "const": name},
+                "arguments": {"$ref": "#/$defs/" + definition_name},
+            }
+            if identifier is not None:
+                properties["integration_id"] = {"type": "string", "const": identifier}
+            branches.append({**branch, "properties": properties})
     # Pydantic emits patternProperties for constrained dictionary keys, which alone
     # allows nonmatching keys in JSON Schema. Match the actual pointer validator.
     for definition in definitions.values():

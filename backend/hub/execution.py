@@ -498,6 +498,7 @@ async def execute_run(
                         decision_schema(
                             snapshot["agent_generation"].get("integration_ids", []),
                             snapshot["agent_generation"].get("tool_names"),
+                            snapshot["agent_generation"].get("interfaces"),
                         )
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()

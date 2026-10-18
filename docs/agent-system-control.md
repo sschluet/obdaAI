@@ -67,6 +67,11 @@ Der Agent darf solche Inhalte nicht durch die Behauptung „öffentliche Suchfra
 umklassifizieren. Quellen, Abrufzeit und Versionsbezug werden am Plan festgehalten.
 Dokumentation ist untrusted Datenmaterial, niemals eine Erlaubnis zur Ausführung.
 
+Der öffentliche Leser verarbeitet HTML sowie begrenzte Text- und JSON-Quellen
+als inerte Dokumentation. URLfreigabe, öffentliche DNS-Pins, kein automatischer
+Redirect und Größenlimits gelten für alle Formate. Die Erweiterung ist noch
+nicht ausgerollt; bestehende Netzgrenzen bleiben bindend.
+
 Der Agent soll verfügbare Verfahren selbst recherchieren und vergleichen, nicht
 den Benutzer zur Recherche oder zum Eintragen jedes API-Payloads auffordern.
 Ein neu gefundenes Verfahren muss trotzdem zu einem überprüfbaren Aufruf einer
@@ -137,6 +142,10 @@ Werkzeug explizite Ziel-ID, Werkzeug und Argumente; die IDs stammen ausschließl
 aus der menschlich gebundenen Auswahl. Der Server ergänzt sie nicht nachträglich. Die native Grammatik bindet außerdem
 die vorhandenen typisierten Argumentmodelle und exakt die im Lauf verfügbaren
 Werkzeuge. GET kann keinen Schreibkörper oder Wirkungsnachweis enthalten.
+Die nächste Erweiterung bindet Werkzeug, Zielart, HA-Kommandopräfixe und
+HTTP-Methoden/Pfade an die menschlichen Zielregeln. Diese Zusatzänderung ist noch
+nicht vollständig CI-geprüft oder ausgerollt. Querystrings und absolute URLs
+sind im Pfadfeld ausgeschlossen.
 Die Prompt-Hülle bleibt kompakt; die vollständigen Argumentregeln werden
 ausschließlich als native Ausgabegrammatik übertragen.
 Der Planer fordert bei konkreten Änderungsaufträgen keine zusätzliche allgemeine
@@ -202,10 +211,10 @@ werden bereits vor einer vorgebundenen Änderung zurückgewiesen.
 
 ## Prüfstand dieser Lieferung
 
-- Release 8257ce9 / Schema 0044 vollständig geprüft und gesund auf der Test-VM
-  installiert. CI39125512330:1539 Backend-/PostgreSQLtests bestanden, sechs
+- Release 43e3592 / Schema 0044 vollständig geprüft und gesund auf der Test-VM
+  installiert. CI39128091940:1582 Backend-/PostgreSQLtests bestanden, sechs
   umgebungsabhängig übersprungen,41 synthetische Browserprüfungen und
-  Container-/Offline-Runnersmokes.113 gezielte Kontext-/Transport-/Provider-/
+  Container-/Offline-Runnersmokes.126 gezielte Grammatik-/Kontext-/Transport-/
   Orchestrierungsprüfungen lokal erfolgreich.
 - Native lokale Transporte: echter SSH-Server mit separatem Prüfbefehl sowie
   echter HA-WebSocket-Testserver einschließlich Authentifizierung. Diese Tests
@@ -227,7 +236,8 @@ werden bereits vor einer vorgebundenen Änderung zurückgewiesen.
   menschliche Fortsetzung. Erneute Schreibversuche endeten vor Effekten; kein
   eigener Tag und keine eigene HA-Automation zurückgeblieben, separat geprüft.
 - Die zusätzliche typisierte Argumentgrammatik ist gezielt und am nativen
-  lokalen Compiler geprüft; vollständige CI und Rollout stehen noch aus.
+  lokalen Compiler geprüft; ein valider HTTP-GET-Plan ohne Werkzeugdispatch
+  bestätigt. Vollständige CI und Rollout sind abgeschlossen.
 - Direkte öffentliche Volltexte sind durch bestehende Netzgrenzen eingeschränkt;
   Suchauszüge bleiben verfügbar. Keine neuen Netz- oder Inferenzfreigaben aus
   diesen Fehlschlägen abgeleitet. QA-Belege bleiben privat.

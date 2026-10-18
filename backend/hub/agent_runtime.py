@@ -474,6 +474,10 @@ async def generate(
                         "job_id": job.id,
                         "decision_format": "decision_schema" in data,
                         "tool_names": sorted(data.get("tools", {})),
+                        "interfaces": [
+                            {key: interface[key] for key in ("integration_id", "kind", "rules")}
+                            for interface in data.get("interfaces", [])
+                        ],
                         "integration_ids": [
                             i["integration_id"] for i in data.get("interfaces", [])
                         ],

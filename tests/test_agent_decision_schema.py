@@ -198,3 +198,196 @@ def test_compact_contract_preserves_tool_selection_and_old_snapshot_defaults():
             schema_fn([TARGET], ["invented"])
     # Missing tool_names in older snapshots is intentionally represented by None.
     assert decision_schema([TARGET], None) == decision_schema([TARGET], list(SCHEMAS))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/tags/?name=Synthetic",
+        "/api/tags/%20",
+        "/api/tags/has space",
+        "/api/#fragment",
+        "https://example.test/api/",
+        "api/tags/",
+        "/api/ümlaut",
+        "/api/\\escape",
+    ],
+)
+def test_api_path_grammar_rejects_query_urls_and_encoded_or_nonplain_paths(path):
+    validator = Draft202012Validator(decision_schema([TARGET]))
+    for tool in ("http", "http.verify", "http.upload"):
+        assert not validator.is_valid(decision(tool, {**VALID[tool], "path": path}))
+    write = {"method": "POST", "path": path, "body": {"name": "Synthetic"}}
+    assert not validator.is_valid(decision("http", write))
+    for tool, arguments in (
+        ("http", {"method": "POST", "path": "/api/tags/"}),
+        ("http.upload", VALID["http.upload"]),
+        ("ha.websocket", VALID["ha.websocket"]),
+    ):
+        assert not validator.is_valid(
+            decision(tool, {**arguments, "verification": {**PROOF, "path": path}})
+        )
+
+
+@pytest.mark.parametrize("path", ["/", "/api/tags/", "/api/config/a_b~c-d.1/"])
+def test_plain_api_paths_still_validate_for_reads_writes_uploads_and_prebound_checks(path):
+    validator = Draft202012Validator(decision_schema([TARGET]))
+    for tool in ("http", "http.verify", "http.upload"):
+        arguments = {**VALID[tool], "path": path}
+        validator.validate(decision(tool, arguments))
+        SCHEMAS[tool].model_validate(arguments)
+    arguments = {
+        "method": "PATCH",
+        "path": path,
+        "body": {"name": "Synthetic"},
+        "verification": {**PROOF, "path": path},
+    }
+    validator.validate(decision("http", arguments))
+    SCHEMAS["http"].model_validate(arguments)
+
+
+@pytest.mark.parametrize("path", ["//api/tags/", "/api/../tags/", "/api/./tags/"])
+def test_final_plain_path_validation_remains_stricter_than_generation_subset(path):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        SCHEMAS["http"].model_validate({"method": "GET", "path": path})
+
+
+HA_TARGET = "00000000-0000-0000-0000-000000000002"
+
+
+def bound_interfaces():
+    return [
+        {
+            "integration_id": TARGET,
+            "kind": "ssh",
+            "rules": Rules(
+                enabled=True, shell=True, http_prefixes=["/api/"], http_methods=["GET", "POST"]
+            ).model_dump(),
+        },
+        {
+            "integration_id": HA_TARGET,
+            "kind": "home_assistant",
+            "rules": Rules(
+                enabled=True,
+                shell=True,
+                http_prefixes=["/api/"],
+                http_methods=["GET", "POST"],
+                file_upload=True,
+                ha_websocket_prefixes=["config/", "backup/info", "supervisor/api"],
+            ).model_dump(),
+        },
+    ]
+
+
+def test_bound_interfaces_enforce_kind_tool_mapping_and_ha_command_scopes():
+    validator = Draft202012Validator(
+        decision_schema([TARGET, HA_TARGET], interfaces=bound_interfaces())
+    )
+    validator.validate(decision("shell", VALID["shell"]))
+    assert not validator.is_valid(
+        {**decision("shell", VALID["shell"]), "integration_id": HA_TARGET}
+    )
+    assert not validator.is_valid(decision("http", VALID["http"]))
+    for command in ("config/automation/list", "backup/info", "supervisor/api"):
+        validator.validate(
+            {**decision("ha.websocket", {"type": command}), "integration_id": HA_TARGET}
+        )
+    for command in (
+        "automation",
+        "configuration/list",
+        "backup/info_extra",
+        "supervisor/api/extra",
+    ):
+        assert not validator.is_valid(
+            {**decision("ha.websocket", {"type": command}), "integration_id": HA_TARGET}
+        )
+    assert not validator.is_valid(decision("ha.websocket", {"type": "config/automation/list"}))
+
+
+def test_bound_http_methods_prefixes_and_prebound_scopes_are_enforced():
+    validator = Draft202012Validator(
+        decision_schema([TARGET, HA_TARGET], interfaces=bound_interfaces())
+    )
+
+    def http(arguments):
+        return {**decision("http", arguments), "integration_id": HA_TARGET}
+
+    validator.validate(http({"method": "GET", "path": "/api/tags/"}))
+    validator.validate(http({"method": "POST", "path": "/api/tags/", "verification": PROOF}))
+    assert not validator.is_valid(http({"method": "DELETE", "path": "/api/tags/"}))
+    assert not validator.is_valid(http({"method": "GET", "path": "/api-other/"}))
+    assert not validator.is_valid(
+        http(
+            {
+                "method": "POST",
+                "path": "/api/tags/",
+                "verification": {**PROOF, "path": "/elsewhere/"},
+            }
+        )
+    )
+    upload = {**VALID["http.upload"], "path": "/elsewhere/"}
+    assert not validator.is_valid({**decision("http.upload", upload), "integration_id": HA_TARGET})
+
+
+@pytest.mark.parametrize(
+    "interfaces",
+    [
+        [],
+        [{"integration_id": TARGET, "kind": "invented", "rules": {}}],
+        [{"integration_id": TARGET, "kind": "ssh"}],
+        [{"integration_id": "unselected", "kind": "ssh", "rules": {}}],
+        [None],
+        bound_interfaces() + bound_interfaces(),
+    ],
+)
+def test_invalid_missing_unknown_or_duplicate_interfaces_fail_closed(interfaces):
+    with pytest.raises(ValueError):
+        decision_schema([TARGET, HA_TARGET], interfaces=interfaces)
+
+
+def test_disabled_interfaces_offer_no_tools_and_legacy_none_stays_compatible():
+    schema = decision_schema(
+        [TARGET],
+        interfaces=[{"integration_id": TARGET, "kind": "ssh", "rules": Rules().model_dump()}],
+    )
+    validator = Draft202012Validator(schema)
+    validator.validate({"kind": "finish", "message": "No enabled tools"})
+    assert not validator.is_valid(decision("ssh.inspect", {}))
+    assert decision_schema([TARGET]) == decision_schema([TARGET], interfaces=None)
+
+
+def test_smtp_and_mcp_cannot_cross_interfaces_and_recipient_scope_is_exact():
+    interfaces = [
+        {
+            "integration_id": TARGET,
+            "kind": "smtp",
+            "rules": Rules(enabled=True, mail_recipients=["owner@example.test"]).model_dump(),
+        },
+        {
+            "integration_id": HA_TARGET,
+            "kind": "mcp",
+            "rules": Rules(enabled=True, mcp=True).model_dump(),
+        },
+    ]
+    schema = decision_schema([TARGET, HA_TARGET], interfaces=interfaces)
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    validator.validate(decision("mail.send", VALID["mail.send"]))
+    assert not validator.is_valid(
+        decision("mail.send", {**VALID["mail.send"], "recipient": "other@example.test"})
+    )
+    assert not validator.is_valid(decision("mcp.call", VALID["mcp.call"]))
+    validator.validate({**decision("mcp.call", VALID["mcp.call"]), "integration_id": HA_TARGET})
+
+
+def test_scoped_ha_type_keeps_original_maximum_length():
+    validator = Draft202012Validator(
+        decision_schema([TARGET, HA_TARGET], interfaces=bound_interfaces())
+    )
+    allowed = "config/" + "a" * (151 - len("config/"))
+    validator.validate({**decision("ha.websocket", {"type": allowed}), "integration_id": HA_TARGET})
+    assert not validator.is_valid(
+        {**decision("ha.websocket", {"type": allowed + "a"}), "integration_id": HA_TARGET}
+    )
