@@ -19,7 +19,14 @@ from sqlalchemy.orm import defer
 
 from hub.action_api import digest, encode, lock
 from hub.agent_models import AgentJob, AgentPolicy, AgentStep
-from hub.agent_tools import SCHEMAS, Decision, Rules, decision_schema, invoke, validate_tool
+from hub.agent_tools import (
+    SCHEMAS,
+    Decision,
+    Rules,
+    decision_envelope_schema,
+    invoke,
+    validate_tool,
+)
 from hub.config import Settings
 from hub.db import ActionPolicy, Conversation, Message, Project, Run, Task, TaskRun, TaskStep
 from hub.integration_api import Scope, freeze_bindings
@@ -466,6 +473,7 @@ async def generate(
                     "agent_generation": {
                         "job_id": job.id,
                         "decision_format": "decision_schema" in data,
+                        "tool_names": sorted(data.get("tools", {})),
                         "integration_ids": [
                             i["integration_id"] for i in data.get("interfaces", [])
                         ],
@@ -904,7 +912,9 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             }
                             for source in bound_sources(db, job)
                         ],
-                        "decision_schema": decision_schema(list(profiles)),
+                        "decision_schema": decision_envelope_schema(
+                            list(profiles), sorted(allowed_tools)
+                        ),
                         "private_context": json.loads(job.context),
                         "history": [
                             {

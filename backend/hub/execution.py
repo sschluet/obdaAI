@@ -495,7 +495,10 @@ async def execute_run(
                     from hub.agent_tools import decision_schema, research_schema
 
                     providers.local_json_schema = (
-                        decision_schema(snapshot["agent_generation"].get("integration_ids", []))
+                        decision_schema(
+                            snapshot["agent_generation"].get("integration_ids", []),
+                            snapshot["agent_generation"].get("tool_names"),
+                        )
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()
                     )

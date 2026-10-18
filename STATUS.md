@@ -1,4 +1,4 @@
-# obdaAI — Status 12.10.2026
+# obdaAI — Status 18.10.2026
 
 ## Entwicklungsziel korrigiert: agentische Systemsteuerung, 18.10.2026
 
@@ -19,8 +19,8 @@ führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
 
 Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
 sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
-Release 462db2b / Schema 0044 ist gesund auf der Test-VM installiert.
-Vollständige CI39122584882 erfolgreich:1528 Backend-/PostgreSQLtests bestanden,
+Release 8257ce9 / Schema 0044 ist gesund auf der Test-VM installiert.
+Vollständige CI39125512330 erfolgreich:1539 Backend-/PostgreSQLtests bestanden,
 sechs umgebungsabhängig übersprungen,41 synthetische Browserprüfungen sowie
 Container- und Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung
 hashgeprüft; bestehende Daten, Agentenregeln, Overlays und unabhängige Netzregeln
@@ -33,30 +33,44 @@ Der Aufgabenlauf brauchte einen klärenden Eingriff, weil das lokale Modell nach
 reinen Systemabfragen fälschlich eine fehlende Datei behauptete. Kein Nachweis
 vollständig unbeaufsichtigter Aufgabenadministration.
 
-Die engere Recherchegrammatik ist mit dem vorhandenen lokalen Modell und echten
-Agentenläufen geprüft. Öffentliche Suchauszüge sind verfügbar; direkte Seiten-
-volltexte scheitern an bestehenden ausgehenden Netzgrenzen. Keine Netzfreigaben
-verändert. Paperless und HA-Projektchat führten reale Such-/GET-Schritte aus.
-Die GET-Projektionskorrektur erhält die Originalantwort samt Auswahlfehler korrekt,
-jedoch verbarg die anschließende Kontextkürzung diese späten Statusfelder und den
-Listenschlüssel hinter einem langen JSON-Präfix. Der tatsächliche Modellinput
-bestätigt dies; der Agent wiederholte deshalb fehlerhafte Leseschritte. Unterstützte
-Fortsetzungen endeten vor jeder Änderung an einer Modellzeitgrenze.
+Öffentliche Recherche über Suchauszüge und echte GET-Schritte sind in Paperless-
+und HA-Projektläufen nachgewiesen. Direkte Seitenvolltexte scheitern an bestehenden
+ausgehenden Netzgrenzen; dafür wurden keine Freigaben verändert. Unterstützte
+API-Fortsetzungen blieben vor jedem Änderungsaufruf: wiederholte fehlerhafte
+Leseauswahl und schließlich eine vorhandene Modellzeitgrenze verhinderten den
+Abschluss. Unabhängig bestätigt: kein eigener Testtag und keine eigene Testautomation
+in Konfiguration oder Laufzeit hinterlassen. Reale agentische Paperless-Änderungen,
+HA-Konfiguration und HA-Update sind damit weiterhin nicht abgenommen.
 
-Die Folgekorrektur bewahrt die neueste Werkzeugbeobachtung mit begrenzter,
-aus echten Daten abgeleiteter Status-/Strukturzusammenfassung sowie die letzte
-Nutzerrückmeldung vollständig. Originale, Hashbindung und Kontextgrenze bleiben
-erhalten; bei unmöglichem Budget wird abgebrochen. JSON-Pointer für nachträgliche
-und vorgebundene HTTP-Prüfungen werden bereits vor einem Intent validiert.
-113 gezielte Kontext-/Transport-/Orchestrierungs-/Providerprüfungen sowie Ruff,
-mypy und Geheimnisprüfung erfolgreich. Auch der ursprünglich fehlgeschlagene
-reale Modellkontext ist offline mit sichtbarem Status, Auswahlfehler, Listenschlüssel
-und vollständiger Rückmeldung innerhalb der bestehenden Grenze aufbereitet.
-Vollständige CI und reale Abnahme dieses Korrekturstands stehen noch aus.
+Der aktuelle Stand korrigiert die bestätigte Kontextursache: Die neueste
+Werkzeugbeobachtung bewahrt Status und begrenzte, aus echten Daten abgeleitete
+Struktur, die letzte Nutzerrückmeldung bleibt vollständig. Originale, Hashbindung
+und Kontextgrenze bleiben erhalten; unmögliche Budgets führen zum Abbruch.
+JSON-Pointer für nachträgliche und vorgebundene HTTP-Prüfungen werden bereits vor
+einem Intent validiert.113 gezielte Prüfungen sowie Ruff, mypy und Geheimnisprüfung
+erfolgreich. Der ursprüngliche reale Fehlerkontext ist offline mit sichtbarem Status,
+Auswahlfehler, Listenschlüssel und vollständiger Rückmeldung innerhalb der Grenze
+aufbereitet. Ein reiner Planertest bleibt an der unveränderten Anbieterzeitgrenze
+stehen. Eine gesonderte Freigabe für deren Erhöhung ist angefragt; keine
+Inferenzwerte wurden dafür eigenmächtig geändert.
 
-Reale agentische Paperless-Änderungen, HA-Konfiguration und HA-Update bleiben offen.
-Die öffentlichen Bilder sind ausschließlich synthetisch. Vollständige
-Fremdsystemadministration und V1 bleiben partiell.
+Die anschließende Argumentgrammatik verwendet die vorhandenen typisierten
+Werkzeugschemata und genau die im Lauf verfügbaren Werkzeuge. GET erlaubt weder
+Schreibkörper noch Wirkungsprüfung; Prüfwerte verwenden gültige JSON-Pointer.
+Die Prompt-Hülle bleibt kompakt, vollständige Argumentregeln stehen nur in der
+nativen Ausgabegrammatik. Die native Prüfung identifizierte ein nicht unterstütztes
+Schemawort und bestätigte anschließend die kompatible Fassung. Vollständige CI
+und Rollout dieser zusätzlichen Änderung stehen noch aus.
+
+Auf 8257ce9 erreichte ein neuer reiner HA-Leselauf HTTP200 und den Status observed
+ohne menschliche Fortsetzung. Die anschließende Paperless-Schreibabnahme scheiterte
+vor dem ersten Effekt; der HA-Projektlauf fragte nach zwei Leseversuchen erneut
+nach der Schnittstelle und wurde ohne Effekt beendet. Unabhängige Gegenprüfungen
+bestätigten erneut keinen eigenen Tag und keine eigene HA-Automation.
+
+Unkonfigurierte UniFi-/MCP-Ziele und tatsächliche SMTP-Zustellung haben keinen
+neuen Live-Nachweis. Die öffentlichen Bilder sind ausschließlich synthetisch.
+Vollständige Fremdsystemadministration und V1 bleiben partiell.
 
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 

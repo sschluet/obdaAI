@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "462db2b",
+  "applicationCommit": "8257ce9",
   "schema": "0044",
-  "tests": 1528,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39122584882",
+  "tests": 1539,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39125512330",
   "screenshots": [
     {
       "id": "chat",
@@ -572,7 +572,7 @@
         },
         {
           "title": "Schreibfreigaben und globale Pause",
-          "description": "Einzelfreigabe und befristete begrenzte Autonomie sind für eine konkrete lokale Projektarchivierung geprüft. Weitere externe Schreibadapter bleiben offen.",
+          "description": "Konkrete Einzelfreigaben, begrenzte Autonomie und globale Schreibpause gelten auch für den gemeinsamen Agentenweg. Lokale Projektarchivierung und begrenzte SSH-Effekte real geprüft; breitere externe Verwaltungsabnahme bleibt offen.",
           "status": "limited"
         },
         {
@@ -635,7 +635,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Ein gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Regeln je Ziel, einzelne Freigaben oder begrenzte Autonomie, dauerhafte Absichten und Ergebnisbelege. Agentenentscheidungen fordern lokale JSON-Schemaausgabe mit ausdrücklicher Auswahl eines gebundenen Ziels an und werden zusätzlich unabhängig validiert. SSH benötigt vor Versand einen separaten Prüfplan. Antwortverlust führt zu lesendem Abgleich oder unklarem Ergebnis. Synthetische Chat- und native lokale Transportprüfungen bestanden; reale umfassende Systemadministration steht noch aus.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Zielregeln, Einzelfreigaben oder begrenzte Autonomie, dauerhafte Absichten und separate Nachprüfung. Neueste Beobachtung und letzte Rückmeldung bleiben trotz begrenztem Kontext sichtbar. Reales SSH-Schreiben im Chat und Löschen durch eine unterstützte Aufgabe geprüft. Reine API-Lesewege und synthetische Freigabe-/Fehlerabläufe geprüft; umfassende autonome API-Verwaltung, HA-Konfiguration und HA-Update noch offen.",
           "status": "limited"
         }
       ]
@@ -739,8 +739,8 @@
       "text": "Getrennte Sitzungen sowie sichere menschliche Login- und 2FA-Übergabe."
     },
     {
-      "title": "Weitere Aktionen und Graphen",
-      "text": "Zusätzliche feste Aktionsadapter und breitere geprüfte Workflowabdeckung."
+      "title": "Systemverwaltung weiter abnehmen",
+      "text": "Breitere echte Verwaltungsabläufe mit dem gemeinsamen Agenten, belastbare Schnittstellenrecherche und weitere geprüfte Workflows."
     },
     {
       "title": "Breitere Datei-QA",
@@ -752,7 +752,7 @@
     },
     {
       "title": "Externe Wiederherstellung",
-      "text": "Vollständige HA-/n8n-Sicherung und Restore-Nachweise vor produktiven Wartungsaktionen."
+      "text": "Vollständige HA-/n8n-Sicherungs- und Restore-Prozesse weiter abnehmen; vorhandene Backuplisten ersetzen keinen Wiederherstellungsnachweis."
     }
   ],
   "development": {
@@ -760,12 +760,12 @@
     "schema": "0044",
     "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "462db2b",
-    "ciTests": 1528,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39122584882",
-    "deployedCommit": "462db2b",
+    "commit": "8257ce9",
+    "ciTests": 1539,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39125512330",
+    "deployedCommit": "8257ce9",
     "deployedSchema": "0044",
-    "liveScope": "Release 462db2b / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1528 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Korrektur. Öffentliche Recherche über Suchauszüge und echte GET-Schritte in Paperless- und HA-Projektläufen ausgeführt. Nach reinen lokalen Auswahlfehlern bleibt die Originalantwort erhalten; deren entscheidende Struktur und Fehler wurden jedoch im Modellkontext abgeschnitten. Eine weitere Korrektur bewahrt dafür die neueste Beobachtung und letzte Nutzerrückmeldung gezielt. Deren vollständige CI und reale Abnahme stehen aus. Paperless-Änderung, HA-Konfiguration und HA-Update bleiben offen. Vollständige Fremdsystemadministration und V1 bleiben partiell.",
+    "liveScope": "Release 8257ce9 / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1539 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe real separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Öffentliche Suchauszüge und echte GET-Schritte in Paperless- und HA-Projektläufen nachgewiesen; deren Änderungsabnahme bleibt offen. Die bestätigte Kontextkürzungsursache ist korrigiert und am aufgezeichneten Fehlerkontext geprüft. Zusätzliche typisierte Werkzeuggrammatik wird geprüft; deren Rollout steht noch aus. Ein neuer reiner HA-Leselauf gelingt ohne menschliche Fortsetzung. Eine vorhandene Anbieterzeitgrenze verhindert derzeit den Abschluss längerer Planerläufe; Inferenzwerte blieben unverändert. Öffentliche Seitenvolltexte sind durch bestehende Netzgrenzen eingeschränkt. HA-Konfiguration und HA-Update bleiben offen. Vollständige Fremdsystemadministration und V1 bleiben partiell.",
     "designModernized": true,
     "interactionModernized": true,
     "lastSuccessfulCICommit": "3782a0c",

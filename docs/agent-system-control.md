@@ -134,7 +134,11 @@ Modellhüllen und typisierte Werkzeugargumente erhalten höchstens zwei lokale
 Format-Rückmeldungen; der Server ergänzt weder Ziele noch Befehle oder Rechte.
 Agentenentscheidungen verlangen auch in der Generierungsgrammatik bei jedem
 Werkzeug explizite Ziel-ID, Werkzeug und Argumente; die IDs stammen ausschließlich
-aus der menschlich gebundenen Auswahl. Der Server ergänzt sie nicht nachträglich.
+aus der menschlich gebundenen Auswahl. Der Server ergänzt sie nicht nachträglich. Die native Grammatik bindet außerdem
+die vorhandenen typisierten Argumentmodelle und exakt die im Lauf verfügbaren
+Werkzeuge. GET kann keinen Schreibkörper oder Wirkungsnachweis enthalten.
+Die Prompt-Hülle bleibt kompakt; die vollständigen Argumentregeln werden
+ausschließlich als native Ausgabegrammatik übertragen.
 Der Planer fordert bei konkreten Änderungsaufträgen keine zusätzliche allgemeine
 Erlaubnisfrage; notwendige einzelne Freigaben erzwingt der Gateway.
 Agentenentscheidungen fordern zusätzlich die feste Decision-JSON-Schemaausgabe am
@@ -198,44 +202,56 @@ werden bereits vor einer vorgebundenen Änderung zurückgewiesen.
 
 ## Prüfstand dieser Lieferung
 
-- Gezielte synthetische Orchestrierungs-/API-Tests: Freigaben, Widerruf nach
-  Verbindungsaufbau, Quellenbindung, Task-Autonomie, Abbruch, Neustart,
-  Antwortverlust, lesender Abgleich und fehlende Wirkungsnachweise.
-- Native lokale Transporte: echter SSH-Server mit Ausführung und separatem
-  Prüfbefehl sowie echter HA-WebSocket-Testserver einschließlich Authentifizierung.
-  Diese Tests sind keine Kontakte zu realen Fremdsystemen.
+- Release 8257ce9 / Schema 0044 vollständig geprüft und gesund auf der Test-VM
+  installiert. CI39125512330:1539 Backend-/PostgreSQLtests bestanden, sechs
+  umgebungsabhängig übersprungen,41 synthetische Browserprüfungen und
+  Container-/Offline-Runnersmokes.113 gezielte Kontext-/Transport-/Provider-/
+  Orchestrierungsprüfungen lokal erfolgreich.
+- Native lokale Transporte: echter SSH-Server mit separatem Prüfbefehl sowie
+  echter HA-WebSocket-Testserver einschließlich Authentifizierung. Diese Tests
+  sind keine Kontakte zu realen Fremdsystemen.
 - Isolierter Browser: Rückfrage im selben Chat, Lesen/Ändern/Nachprüfung,
   einzelne Freigabe, erneutes Laden, autonome Regeln, Antwortverlust und 320px.
-  Öffentliche Abbildung ausschließlich aus synthetischer Umgebung.
-- Stand 62de1ef vollständig in CI geprüft und installiert, aber erste reale
-  Modellentscheidung vor jedem Werkzeug abgewiesen. Die Formatkorrektur ist
-  durch einen echten lokalen Modell-Dryrun ohne Toolausführung zusätzlich geprüft.
-  Aktuelle CI und reale Zielabnahmen stehen jeweils mit ihrem exakten Release
-  in STATUS; synthetische Belege werden nicht als Fremdsystemeingriff ausgegeben.
+  Öffentliche Abbildungen ausschließlich aus synthetischer Umgebung.
+- Reales SSH auf efbd4ed: Chat legt eigene neue Datei an und prüft sie; unabhängiges
+  SFTP bestätigt Inhalt/Hash. Eine echte Aufgabe entfernt sie hashgebunden und
+  prüft ihre Abwesenheit; unabhängiges SFTP bestätigt dies. Die Aufgabe brauchte
+  eine klärende Rückmeldung, deshalb kein unbeaufsichtigter Autonomienachweis.
+- Echte Paperless- und HA-Projektläufe führen öffentliche Such- und GET-Schritte
+  aus. Unterstützte Fortsetzungen endeten vor Änderungen an einer vorhandenen
+  Modellzeitgrenze. Die ursprüngliche fehlerhafte Kontextkürzung ist mit deren
+  tatsächlichem Modellinput nachgewiesen und korrigiert; der korrigierte
+  Fehlerkontext passt mit sichtbaren Struktur-/Statusdaten in die bestehende
+  Grenze. Das ersetzt keine erfolgreiche reale API-Schreibabnahme.
+- Ein neuer reiner HA-Leselauf auf 8257ce9 erreichte HTTP200 und observed ohne
+  menschliche Fortsetzung. Erneute Schreibversuche endeten vor Effekten; kein
+  eigener Tag und keine eigene HA-Automation zurückgeblieben, separat geprüft.
+- Die zusätzliche typisierte Argumentgrammatik ist gezielt und am nativen
+  lokalen Compiler geprüft; vollständige CI und Rollout stehen noch aus.
+- Direkte öffentliche Volltexte sind durch bestehende Netzgrenzen eingeschränkt;
+  Suchauszüge bleiben verfügbar. Keine neuen Netz- oder Inferenzfreigaben aus
+  diesen Fehlschlägen abgeleitet. QA-Belege bleiben privat.
 
 ## Offene Abnahme
 
-- Ein natürlichsprachlicher Chatauftrag erzeugt echte Werkzeugschritte und
-  geprüfte Ergebnisse im selben Gespräch.
-- Eine Aufgabe und ein Projekt verwenden denselben Ablauf samt Berechtigungen,
-  Wartezuständen und Belegen; keine zweite vereinfachte Ausführungslogik.
-- Der Agent entdeckt eine zuvor nicht fest als Formular implementierte Fähigkeit
-  aus dem tatsächlichen System und seiner dokumentierten Schnittstelle.
-- Öffentliche Recherche beeinflusst einen konkreten, versionsbezogenen Plan;
-  private Daten verlassen weder über Suchfragen noch über Modellaufrufe den
-  erlaubten Kontext. Manipulierte Recherche- und Werkzeugtexte erweitern keine
-  Rechte.
+- Die korrigierten API-Läufe führen Verwaltungseffekte und unabhängige Prüfungen
+  ohne manuell nachgereichte Schnittstellendetails aus.
+- Projektvererbung und autonome Aufgaben bewähren sich auch bei umfangreicheren
+  tatsächlichen Verwaltungszielen; redundante Rückfragen und fehlerhafte
+  Modellannahmen sind weiterhin beobachtete Grenzen.
 - HA-Update und neue HA-Konfiguration werden einschließlich Sicherung,
-  Validierung, Ausführung und Nachprüfung auf geeignetem Ziel real abgenommen.
-- Entsprechende administrative Abläufe für SSH, Paperless, UniFi und MCP sind
-  tatsächlich ausführbar und je Ziel getrennt live nachgewiesen.
-- Wiederanlauf nach Worker-Abbruch, Timeout während einer Änderung, Widerruf,
-  Abbruch, geänderte Profile und eine ausstehende Freigabe führen nicht zu
-  Doppeländerungen oder stillen Erfolgsmeldungen.
+  Validierung, Ausführung und Nachprüfung an der freigegebenen Instanz abgenommen.
+- Paperless-, UniFi- und MCP-Verwaltung werden je tatsächlich konfiguriertem Ziel
+  getrennt live nachgewiesen. SMTP-Akzeptanz bleibt von Zustellung unterschieden.
+- Öffentliche Recherche liefert konkrete passende Verfahrensbelege innerhalb
+  erlaubter Netzgrenzen. Private Beobachtungen verlassen weder Such- noch
+  Modellgrenzen; manipulierte Texte erweitern keine Rechte.
+- Worker-Abbruch, Timeout während einer Änderung, Widerruf und offene Freigaben
+  sind synthetisch geprüft; entsprechende reale Störfallabnahmen bleiben offen.
 
-Die bisherigen festen Formulare sind kein Nachweis dieser umfassenden Abnahme.
-Auch der neue gemeinsame Agentenweg beweist keinen administrativen Zugriff auf
-Schnittstellen, für die dem registrierten Konto Rechte oder Transporte fehlen.
+Die bisherigen festen Formulare und synthetische Agentenabläufe ersetzen diese
+Abnahme nicht. Ein funktionsfähiger Transport oder Verbindungscheck beweist keinen
+vollständigen administrativen Zugriff und keine hinreichende Planungsqualität.
 
 ## Geprüfte Primärquellen
 

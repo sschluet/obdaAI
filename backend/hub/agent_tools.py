@@ -258,38 +258,107 @@ def research_schema() -> dict[str, Any]:
     }
 
 
-def decision_schema(integration_ids: Sequence[str]) -> dict[str, Any]:
-    """Express the validator's conditional fields in the generation grammar too."""
+def decision_envelope_schema(
+    integration_ids: Sequence[str], tool_names: Sequence[str] | None = None
+) -> dict[str, Any]:
+    """Compact prompt contract; full typed arguments live in tools and native grammar."""
     if not integration_ids:
         raise ValueError("Decision generation requires selected targets")
-    base = Decision.model_json_schema()
-    properties = {
-        **base["properties"],
-        "kind": {"const": "tool", "type": "string"},
-        "integration_id": {"type": "string", "enum": sorted(set(integration_ids))},
-        "tool": next(
-            item for item in base["properties"]["tool"]["anyOf"] if item.get("type") == "string"
-        ),
-    }
-    return {
-        "type": "object",
-        "anyOf": [
-            {
-                **base,
-                "properties": properties,
-                "required": ["kind", "message", "integration_id", "tool", "arguments"],
-            },
+    names = sorted(SCHEMAS if tool_names is None else set(tool_names))
+    if any(name not in SCHEMAS for name in names):
+        raise ValueError("Unknown administration tool in generation schema")
+    message = Decision.model_json_schema()["properties"]["message"]
+    branches = []
+    if names:
+        branches.append(
             {
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "kind": {"type": "string", "enum": ["ask", "finish"]},
-                    "message": base["properties"]["message"],
+                    "kind": {"type": "string", "const": "tool"},
+                    "message": message,
+                    "integration_id": {"type": "string", "enum": sorted(set(integration_ids))},
+                    "tool": {"type": "string", "enum": names},
+                    "arguments": {"type": "object"},
                 },
-                "required": ["kind", "message"],
+                "required": ["kind", "message", "integration_id", "tool", "arguments"],
+            }
+        )
+    branches.append(
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "kind": {"type": "string", "enum": ["ask", "finish"]},
+                "message": message,
             },
-        ],
-    }
+            "required": ["kind", "message"],
+        }
+    )
+    return {"type": "object", "anyOf": branches}
+
+
+def decision_schema(
+    integration_ids: Sequence[str], tool_names: Sequence[str] | None = None
+) -> dict[str, Any]:
+    """Constrain generation to typed, available tools; runtime gates remain authoritative."""
+    envelope = decision_envelope_schema(integration_ids, tool_names)
+    names = sorted(SCHEMAS if tool_names is None else set(tool_names))
+    definitions: dict[str, Any] = {}
+    branches: list[dict[str, Any]] = []
+    for name in names:
+        model = SCHEMAS[name]
+        arguments = model.model_json_schema()
+        for key, definition in arguments.pop("$defs", {}).items():
+            if key in definitions and definitions[key] != definition:
+                raise ValueError("Conflicting administration schema definitions")
+            definitions[key] = definition
+        if issubclass(model, HTTPCall):
+            properties = arguments["properties"]
+            required = list(dict.fromkeys([*arguments.get("required", []), "method"]))
+            read = {
+                **arguments,
+                "properties": {
+                    **properties,
+                    "method": {"type": "string", "const": "GET"},
+                    "body": {"type": "null"},
+                    "verification": {"type": "null"},
+                },
+                "required": required,
+            }
+            if model is HTTPVerify:
+                arguments = read
+            else:
+                write = {
+                    **arguments,
+                    "properties": {
+                        **properties,
+                        "method": {"type": "string", "enum": ["POST", "PUT", "PATCH", "DELETE"]},
+                    },
+                    "required": required,
+                }
+                arguments = {"anyOf": [read, write]}
+        definition_name = "Tool_" + name.replace(".", "_")
+        definitions[definition_name] = arguments
+        branch = envelope["anyOf"][0]
+        branches.append(
+            {
+                **branch,
+                "properties": {
+                    **branch["properties"],
+                    "tool": {"type": "string", "const": name},
+                    "arguments": {"$ref": "#/$defs/" + definition_name},
+                },
+            }
+        )
+    # Pydantic emits patternProperties for constrained dictionary keys, which alone
+    # allows nonmatching keys in JSON Schema. Match the actual pointer validator.
+    for definition in definitions.values():
+        expected = definition.get("properties", {}).get("expected")
+        if expected is not None:
+            expected["additionalProperties"] = False
+    branches.append(envelope["anyOf"][-1])
+    return {"type": "object", "$defs": definitions, "anyOf": branches}
 
 
 SCHEMAS: dict[str, type[Strict]] = {
