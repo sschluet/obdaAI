@@ -166,8 +166,11 @@ Fehlgeschlagene entfernte Skripte stoppen Folgewirkungen; ein nicht erfolgreiche
 Exitcode ist kein Beleg dafür, dass zuvor nichts verändert wurde. Ein vor dem Aufruf
 festgelegtes GET-Prädikat kann nach Updates oder Antwortverlust begrenzt pollen;
 es belegt den beobachteten Zustand, keine Kausalität. Ohne passende Nachprüfung
-wird ein HTTP-/MCP-/SMTP-Ack nicht als bewiesene Wirkung ausgegeben. SSH kann ein
-separates, vom Agenten definiertes Prüfskript ausführen. Geschlossene SSH-Kanäle
+wird ein HTTP-/MCP-/SMTP-Ack nicht als bewiesene Wirkung ausgegeben. SSH verlangt vor Versand ein separates, vom Agenten definiertes Prüfskript.
+Die drei bereits vorhandenen HA-Metadatenabfragen (backup/info sowie GET /info
+und /supervisor/info über supervisor/api) sind ausschließlich in ihrer exakten
+Form lesend. Andere WebSocket-Aufrufe bleiben mögliche Änderungen; eine
+fehlende Lesefähigkeit wird als Beobachtung statt als vermeintlicher Effekt geliefert. Geschlossene SSH-Kanäle
 beweisen nicht, dass entfernte Prozesse gestoppt wurden. Der Chat bietet bei
 unklarem Ausgang einen neuen, technisch auf Lesen begrenzten Abgleich ohne
 Websuche. Das ist keine allgemeine Exactly-once-Garantie für entfernte Systeme.

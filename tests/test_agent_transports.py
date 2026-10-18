@@ -216,7 +216,13 @@ def test_websocket_scope_and_frame_id_are_code_owned():
         )
 
 
-def test_native_home_assistant_websocket_authentication_and_command(monkeypatch):
+@pytest.mark.parametrize(
+    ("command_type", "success"),
+    [("config/automation/list", True), ("backup/info", True), ("backup/info", False)],
+)
+def test_native_home_assistant_websocket_authentication_and_command(
+    monkeypatch, command_type, success
+):
     import socket
 
     from websockets.sync.server import serve
@@ -232,7 +238,17 @@ def test_native_home_assistant_websocket_authentication_and_command(monkeypatch)
         seen.append(json.loads(ws.recv()))
         ws.send(json.dumps({"type": "auth_ok"}))
         seen.append(json.loads(ws.recv()))
-        ws.send(json.dumps({"id": 1, "type": "result", "success": True, "result": {"ok": True}}))
+        ws.send(
+            json.dumps(
+                {
+                    "id": 1,
+                    "type": "result",
+                    "success": success,
+                    "result": {"ok": True},
+                    "error": {"code": "not_supported"},
+                }
+            )
+        )
 
     monkeypatch.setattr(tools, "resolved_targets", lambda *a, **kw: [("127.0.0.1", port)])
     with serve(handler, sock=listener) as ws_server:
@@ -244,15 +260,19 @@ def test_native_home_assistant_websocket_authentication_and_command(monkeypatch)
                 {"kind": "home_assistant", "url": "http://ha.example.test"},
                 "synthetic-ws-token",
                 "ha.websocket",
-                {"type": "config/automation/list", "parameters": {}},
-                tools.Rules(enabled=True, ha_websocket_prefixes=["config/"]),
+                {"type": command_type, "parameters": {}},
+                tools.Rules(enabled=True, ha_websocket_prefixes=["config/", "backup/"]),
                 lambda: gates.append(True),
             )
-            assert result["response"] == {"ok": True}
+            if success:
+                assert result["response"] == {"ok": True}
+            else:
+                assert result["success"] is False
+                assert result["error"] == {"code": "not_supported"}
             assert result["effect_verified"] is False
             assert seen == [
                 {"type": "auth", "access_token": "synthetic-ws-token"},
-                {"id": 1, "type": "config/automation/list"},
+                {"id": 1, "type": command_type},
             ]
             assert len(gates) == 2
         finally:
@@ -400,3 +420,42 @@ def test_native_sftp_reports_absence_and_hash_without_remote_code(server, monkey
     )
     assert found["exists"] is True and found["text"] == "synthetic"
     assert found["sha256"] == hashlib.sha256(b"synthetic").hexdigest()
+
+
+def test_shell_requires_an_independent_verification_before_creating_intent():
+    rules = tools.Rules(enabled=True, shell=True)
+    for args in [
+        {"script": "echo synthetic"},
+        {"script": "echo synthetic", "verification_script": ""},
+    ]:
+        with pytest.raises(ValueError):
+            tools.validate_tool("ssh", rules, "shell", args)
+
+
+def test_only_exact_existing_ha_metadata_reads_are_classified_as_read_only():
+    rules = tools.Rules(enabled=True, ha_websocket_prefixes=["backup/", "supervisor/"])
+    calls = [
+        ({"type": "backup/info"}, False),
+        ({"type": "backup/info", "parameters": {"extra": True}}, True),
+        ({"type": "supervisor/api", "parameters": {"endpoint": "/info", "method": "get"}}, False),
+        (
+            {
+                "type": "supervisor/api",
+                "parameters": {"endpoint": "/supervisor/info", "method": "get"},
+            },
+            False,
+        ),
+        (
+            {
+                "type": "supervisor/api",
+                "parameters": {"endpoint": "/core/update", "method": "post"},
+            },
+            True,
+        ),
+        ({"type": "supervisor/api", "parameters": {"endpoint": "/other", "method": "get"}}, True),
+        ({"type": "backup/create"}, True),
+    ]
+    for args, expected_effect in calls:
+        assert (
+            tools.validate_tool("home_assistant", rules, "ha.websocket", args)[1] is expected_effect
+        )

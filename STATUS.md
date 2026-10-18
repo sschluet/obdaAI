@@ -43,7 +43,11 @@ Ausgabe weiterhin unvollständige Skripthüllen. Die vorhandene lokale Schemaaus
 liefert dagegen gültige Schritte ssh.inspect → file.read → shell, ohne Werkzeugversand.
 Diese Anfrageoption wird gezielt für Agentenentscheidungen und öffentliche
 Recherchepläne ergänzt; gewöhnliche Chats, Cloud und Inferenzkonfiguration bleiben
-unverändert. Reale Wirkung ist dadurch noch nicht abgenommen.
+unverändert. Reale Wirkung ist dadurch noch nicht abgenommen. SSH verlangt nun bereits vor
+Versand ein unabhängiges Prüfskript. Die drei vorhandenen HA-Metadatenlesevorgänge
+werden exakt als Lesen eingeordnet; unbekannte WebSocket-Kommandos bleiben
+mögliche Änderungen.87 gezielte Vertrags-, native Transport- und Orchestrierungstests
+bestanden.
 
 HA-Bestandsaufnahme lesend möglich: Supervisor gesund, Backupübersicht über den
 vorhandenen WebSocket-Weg lesbar; direkter Supervisor-REST-Zugang abgewiesen.

@@ -141,7 +141,7 @@ class HTTPCall(Strict):
 
 class ShellCall(Strict):
     script: str = Field(min_length=1, max_length=64000)
-    verification_script: str = Field(default="", max_length=16000)
+    verification_script: str = Field(min_length=1, max_length=16000)
 
 
 class HTTPVerify(HTTPCall):
@@ -244,6 +244,17 @@ SCHEMAS: dict[str, type[Strict]] = {
 }
 
 
+def ha_metadata_read(data: dict[str, Any]) -> bool:
+    """Only the installation/backup reads already used by the fixed HA reader."""
+    parameters = data["parameters"]
+    return (data["type"] == "backup/info" and not parameters) or (
+        data["type"] == "supervisor/api"
+        and set(parameters) == {"endpoint", "method"}
+        and parameters["method"] == "get"
+        and parameters["endpoint"] in {"/info", "/supervisor/info"}
+    )
+
+
 def validate_tool(
     kind: str, rules: Rules, tool: str, arguments: dict[str, Any]
 ) -> tuple[dict[str, Any], bool]:
@@ -291,7 +302,10 @@ def validate_tool(
             for p in rules.ha_websocket_prefixes
         )
     ):
-        return data, True  # Unknown WebSocket commands can have effects.
+        read = ha_metadata_read(data)
+        if read and data["verification"] is not None:
+            raise ValueError("Metadata reads cannot carry effect verification")
+        return data, not read  # Unknown WebSocket commands can have effects.
     if tool in {"http", "http.verify"}:
         if kind not in {"home_assistant", "paperless", "unifi"}:
             raise PermissionError("No HTTP administration interface for this profile")
@@ -488,6 +502,12 @@ def invoke(
                     result = json.loads(connection.recv(timeout=25))
                     if result.get("id") == 1 and result.get("type") == "result":
                         if result.get("success") is not True:
+                            if ha_metadata_read(args):
+                                return {
+                                    "success": False,
+                                    "error": result.get("error"),
+                                    "effect_verified": False,
+                                }
                             raise ValueError("HA did not acknowledge the command")
                         return {"response": result.get("result"), "effect_verified": False}
                 raise ValueError("HA WebSocket response limit")
