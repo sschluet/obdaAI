@@ -372,10 +372,11 @@ def test_final_delta_limit_and_usage_are_distinct(monkeypatch, external, finish)
 
 
 @pytest.mark.parametrize(("structured", "external"), [(False, False), (True, False), (True, True)])
+@pytest.mark.parametrize("research", [False, True])
 def test_agent_schema_is_explicit_and_only_applies_to_local_requests(
-    monkeypatch, structured, external
+    monkeypatch, structured, external, research
 ):
-    from hub.agent_tools import Decision
+    from hub.agent_tools import Decision, research_schema
     from hub.policy import CloudGrant, Privacy
 
     original = httpx.AsyncClient
@@ -398,7 +399,7 @@ def test_agent_schema_is_explicit_and_only_applies_to_local_requests(
         provider, "_target", lambda external: ("http://127.0.0.1/v1/chat/completions", {}, {}, "")
     )
     if structured:
-        provider.local_json_schema = Decision.model_json_schema()
+        provider.local_json_schema = research_schema() if research else Decision.model_json_schema()
     part = ContextPart(
         content="Synthetic planning request",
         label=Privacy.CLOUD_ALLOWED if external else Privacy.LOCAL_ONLY,
@@ -423,7 +424,7 @@ def test_agent_schema_is_explicit_and_only_applies_to_local_requests(
     assert len(requests) == 1
     if structured and not external:
         assert (
-            requests[0]["response_format"]["json_schema"]["schema"] == Decision.model_json_schema()
+            requests[0]["response_format"]["json_schema"]["schema"] == provider.local_json_schema
         )
         assert requests[0]["response_format"]["json_schema"]["strict"] is True
     else:

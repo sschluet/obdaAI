@@ -19,39 +19,31 @@ führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
 
 Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
 sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
-Erster gemeinsamer Agentenstand 62de1ef / Schema 0044 auf der Test-VM installiert.
-Vollständige CI39111208314 erfolgreich:1493 Backend-/PostgreSQLtests, sechs
-umgebungsabhängig übersprungen,41 synthetische Browserprüfungen und Container-/
-Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung hashgeprüft, bestehende
-Nachrichten, Profile, Use Cases, Dateibelege, Overlays und unabhängige Netzwerkregeln
-erhalten. Aktive konfigurierte Zielprofile haben separat gebundene Agentenregeln;
-das ist keine Freigabe unkonfigurierter Systeme oder beliebiger Mail-Empfänger.
+Release efbd4ed / Schema 0044 ist auf der Test-VM installiert. Vollständige
+CI39117828987 erfolgreich:1514 Backend-/PostgreSQLtests bestanden, sechs
+umgebungsabhängig übersprungen,41 synthetische Browserprüfungen sowie Container-
+und Offline-Runnersmokes. Verschlüsselte Off-VM-Vorab-Sicherung hashgeprüft;
+bestehende Daten, Agentenregeln, Overlays und unabhängige Netzwerkregeln erhalten.
 
-Stand 3782a0c / Schema 0044 ebenfalls auf der Test-VM installiert: vollständige
-CI39115280716 mit1513 bestandenen Backend-/PostgreSQLtests, sechs übersprungenen
-und41 synthetischen Browserprüfungen erfolgreich; lokal1519 Tests bestanden.
-Erneute verschlüsselte Off-VM-Sicherung hashgeprüft, bestehende Agentenbelege und
-sonstige Daten sowie Overlays und unabhängige Netzwerkregeln erhalten.
+Realer Chat: Eine eigene SSH-Abnahmedatei angelegt und separat geprüft;
+unabhängiges SFTP bestätigt exakten Inhalt und SHA256. Reale Aufgabe: dieselbe
+Datei hashgebunden gelöscht, separate SFTP-Abfrage bestätigt ihre Abwesenheit.
+Der Aufgabenlauf brauchte einen klärenden Eingriff, weil das lokale Modell nach
+reinen Systemabfragen fälschlich eine fehlende Datei behauptete. Kein Nachweis
+vollständig unbeaufsichtigter Aufgabenadministration.
 
-Der echte Chatauftrag blieb ohne Werkzeugdispatch: das lokale Modell ließ die
-Ziel-ID weg, die Entscheidung wurde jeweils vor einem Intent abgewiesen. Die
-Folgekorrektur bildet die bedingten Pflichtfelder zusätzlich in der Grammatik ab:
-Werkzeugschritte müssen Ziel-ID aus der gebundenen Auswahl, Werkzeug und Argumente
-explizit zurückgeben. Kein nachträgliches Ergänzen einer fehlenden Identität.
-Ein Diagnoseplan mit dem echten ursprünglichen Auftragskontext führt damit bereits
-reale, fest begrenzte SSH-/SFTP-Leseschritte aus, aber noch keine Änderung. Eine
-redundante allgemeine Ausführungsfrage wird im Planerauftrag präzisiert; konkrete
-Einzelfreigaben bleiben beim Gateway. Die feste SSH-Bestandsaufnahme meldet
-tatsächliche Programmverfügbarkeit; der native Test gleicht sie mit dem Ziel ab.
-Ein weiterer Plan mit demselben realen Auftragskontext liefert explizite Ziel-ID
-und gültiges Schreib-/Prüfskript, weiterhin ohne Schreibdispatch.88 gezielte
-Vertrags-/Transporttests bestanden.
-Reale Schreibabnahme des korrigierten Stands und dessen vollständige CI stehen aus.
+Der echte Paperless-Auftrag scheiterte vor jedem Werkzeugdispatch: Recherche-
+JSON enthielt `.queries` statt `queries`. Die Folgekorrektur gibt auch für den
+öffentlichen Rechercheplan eine exakte lokale Generierungsgrammatik vor. Keine
+Umbenennung fehlerhafter Modellfelder; die nachgelagerte Prüfung bleibt bestehen.
+93 gezielte Schema-/Transport-/Orchestrierungs-/Providerprüfungen bestanden,
+Ruff, mypy und Quellgeheimnisprüfung erfolgreich. Vollständige CI und reale
+Recherche-/Paperless-/HA-Abnahme dieser Folgekorrektur stehen noch aus.
 
 HA-Bestandsaufnahme lesend möglich: Supervisor gesund, Backupübersicht über den
 vorhandenen WebSocket-Weg lesbar; direkter Supervisor-REST-Zugang abgewiesen.
-Reale agentische Änderungen und HA-Updateabnahme stehen weiterhin aus. Die neuen
-öffentlichen Bilder stammen ausschließlich aus einer frischen synthetischen
+Reale agentische HA-Konfiguration und HA-Updateabnahme stehen weiterhin aus.
+Die öffentlichen Bilder stammen ausschließlich aus einer frischen synthetischen
 Umgebung. Vollständige Fremdsystemadministration und V1 bleiben partiell.
 
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026

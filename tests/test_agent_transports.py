@@ -481,6 +481,26 @@ def test_only_exact_existing_ha_metadata_reads_are_classified_as_read_only():
         )
 
 
+def test_research_generation_requires_bounded_queries_without_extra_keys():
+    import jsonschema
+
+    checker = jsonschema.Draft202012Validator(tools.research_schema())
+    for queries in [[], ["Official API documentation"], ["a", "b", "c"], ["x" * 500]]:
+        checker.validate({"queries": queries})
+    for invalid in [
+        {".queries": ["Official API documentation"]},
+        {"queries": [], "private_observations": "not accepted"},
+        {},
+        {"queries": ["a", "b", "c", "d"]},
+        {"queries": [""]},
+        {"queries": ["x" * 501]},
+        {"queries": [42]},
+        {"queries": "not an array"},
+    ]:
+        with pytest.raises(jsonschema.ValidationError):
+            checker.validate(invalid)
+
+
 def test_decision_generation_requires_explicit_selected_target_for_every_tool():
     import jsonschema
 

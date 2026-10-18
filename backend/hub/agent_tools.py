@@ -239,6 +239,22 @@ class Decision(Strict):
         return self
 
 
+def research_schema() -> dict[str, Any]:
+    """Constrain public query planning without repairing generated keys."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["queries"],
+        "properties": {
+            "queries": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {"type": "string", "minLength": 1, "maxLength": 500},
+            }
+        },
+    }
+
+
 def decision_schema(integration_ids: Sequence[str]) -> dict[str, Any]:
     """Express the validator's conditional fields in the generation grammar too."""
     if not integration_ids:

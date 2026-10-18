@@ -347,6 +347,27 @@ def test_public_research_planner_receives_no_private_observations(agent, monkeyp
     assert queries == ["official paperless API documentation"]
 
 
+def test_invalid_research_keys_never_reach_search(agent, monkeypatch):
+    import hub.websearch as web
+
+    app, client, headers, cfg, integration_id, chat, state, effects = agent
+    job_id = start(agent)
+    with app.state.sessions() as db:
+        db.get(AgentJob, job_id).research_allowed = True
+        db.commit()
+
+    async def invalid_plan(*args):
+        return {".queries": ["official API documentation"]}
+
+    async def forbidden_search(*args, **kwargs):
+        pytest.fail("Invalid query plans must not dispatch public requests")
+
+    monkeypatch.setattr(runtime, "generate", invalid_plan)
+    monkeypatch.setattr(web, "search", forbidden_search)
+    with pytest.raises(ValueError, match="Ungültiger öffentlicher Rechercheplan"):
+        asyncio.run(runtime.research(app.state.sessions, cfg, None, job_id))
+
+
 def test_task_dispatch_uses_shared_loop_and_confirm_each_overrides_profile(agent, monkeypatch):
     import hub.task_model as task_model
     from hub.agent_tasks import execute_agent_task

@@ -58,6 +58,9 @@ Die Schnittstellen bleiben austauschbar; der Agent benötigt keine ungeprüft
 importierten Erweiterungsprogramme für jedes neue Ziel.
 
 Öffentliche Recherche und private Systembeobachtung sind getrennte Datenwege.
+Der lokale Rechercheplan verwendet ein exaktes JSON-Schema mit ausschließlich
+`queries`: höchstens drei nichtleere Suchfragen mit je höchstens 500 Zeichen.
+Fehlerhafte Felder werden nicht repariert; nachgelagerte Prüfung bleibt bindend.
 Recherchefragen dürfen keine Zugangsdaten, internen Adressen, Konfigurationen,
 Projektdateien oder alten LOCAL_ONLY-Inhalte aus Werkzeugergebnissen übernehmen.
 Der Agent darf solche Inhalte nicht durch die Behauptung „öffentliche Suchfrage“
