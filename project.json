@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "ec8ce2e",
+  "applicationCommit": "7c7e8aa",
   "schema": "0044",
   "tests": 1658,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39165821411",
   "screenshots": [
     {
       "id": "chat",
@@ -79,8 +79,8 @@
     },
     {
       "id": "generic-integrations",
-      "title": "Deine Verbindungen. Ein klarer Überblick.",
-      "description": "Eine zentrale Übersicht ohne doppelte Einstellungsbereiche: fiktive Profile für Home Assistant, Paperless, MCP, UniFi und SSH mit Aktiv-Schaltern und klaren Prüf-/Adapterzuständen. Paperless bietet Dokumentzugriff und privaten KI-Kontext; fehlende Adapter bleiben erkennbar. Keine realen Verbindungen oder Zugangsdaten.",
+      "title": "Deine Systeme. Klar verbunden.",
+      "description": "Kompakte Übersicht mit Verbindungsstatus, Aktivierung und KI-Zugriff; technische Angaben und weitere Aktionen bleiben aufklappbar. Ausschließlich fiktive Verbindungen mit synthetischen Prüfzuständen, keine echten Systeme oder Zugangsdaten.",
       "image": "assets/genericintegrations.png"
     },
     {
@@ -259,14 +259,14 @@
     },
     {
       "id": "mcpreads",
-      "title": "Postfach lesen. Rechte gezielt vergeben.",
-      "description": "Einzeln geprüfte MCP-Lesewerkzeuge ohne Schreibfreigabe auswählen. Ausschließlich fiktives Postfach Aurora; synthetischer Katalog zur UI-Prüfung, keine echten Nachrichten.",
+      "title": "Du bestimmst, was die KI darf.",
+      "description": "Kein KI-Zugriff, Nur lesen oder Änderungen erlauben als verständliche Auswahl. Einzelne MCP-Lesewerkzeuge bleiben unter Erweiterte Berechtigungen ausdrücklich prüfbar. Ausschließlich fiktives Postfach Aurora und synthetischer Werkzeugkatalog, keine echten Nachrichten.",
       "image": "assets/mcpreads.png"
     },
     {
       "id": "protonbridge",
-      "title": "Dein Proton-Postfach im Arbeitsraum.",
-      "description": "Vorhandenen Bridge-Benutzernamen und das eigene Bridge-Passwort unter Integrationen eintragen, den Zugang prüfen und lokales Lesen erlauben. Ausschließlich synthetische Zugangsdaten und simulierte Dienstantworten; kein Nachweis eines angemeldeten echten Postfachs.",
+      "title": "Proton Mail Schritt für Schritt verbinden.",
+      "description": "Proton Mail unter Verbindung hinzufügen auswählen und durch Vorbereitung, Bridge-Zugangsdaten und abschließende Prüfung führen lassen. Ausschließlich synthetische Angaben und simulierte Dienstantworten; die Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI. Kein Nachweis echter Postfachnutzung.",
       "image": "assets/protonbridge.png"
     }
   ],
@@ -612,12 +612,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen. Werkzeugname und Eingabeschema bleiben gebunden; Lesen benötigt keine Profil-Schreibrechte. Proton-Bridge-Katalog auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
+          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
           "status": "implemented"
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Vorhandenen Bridge-Benutzernamen und das gesonderte Bridge-Passwort direkt unter Integrationen eingeben, den Zugang prüfen und lokales Lesen in Chat, Aufgaben und Projekten erlauben. Versand und Postfachänderungen bleiben gesperrt. Die Oberfläche ist auf dem Testsystem verfügbar. Formular, Passwortschutz, Fehlerwiederaufnahme und Aktivierungswechsel sind synthetisch geprüft; echter HTTPS-Status und der lokale Einrichtungsdienst sind separat geprüft. Bridge 3.27.1 ist auf der Test-VM unabhängig geprüft, die echte Postfachanmeldung und Nutzungsabnahme bleiben offen.",
+          "description": "Proton Mail über Verbindung hinzufügen auswählen. Ein Assistent führt durch Vorbereiten, vorhandene Bridge-Zugangsdaten und eine ausdrückliche abschließende Prüfung. Die persönliche Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI; Versand und Postfachänderungen bleiben gesperrt. Die bisherige Einrichtung ist auf dem Testsystem verfügbar, der neue Assistent ist im Quellstand umgesetzt und noch nicht als ausgeliefert bestätigt. Echter Postfachzugang und Nutzungsabnahme bleiben offen.",
           "status": "implemented"
         },
         {
@@ -637,7 +637,7 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen eine einzelne Freigabe oder ausdrücklich eingerichtete Agentenautonomie. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
+          "description": "Kompakte Verbindungsübersicht mit Status, Aktivierung und KI-Zugriff. Kein KI-Zugriff, Nur lesen oder Änderungen erlauben stehen im Vordergrund; technische Details und einzelne Berechtigungen bleiben aufklappbar. Vorhandene Regeln bleiben erhalten; eine Zugriffsauswahl vergibt keine pauschalen Werkzeug- oder Zielrechte. Die vereinfachte Oberfläche ist vollständig synthetisch geprüft und auf dem Testsystem verfügbar; bestehende Daten und Berechtigungen sind erhalten.",
           "status": "implemented"
         },
         {
@@ -775,17 +775,17 @@
   "development": {
     "mode": "local",
     "schema": "0044",
-    "browserChecks": 41,
+    "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "ec8ce2e",
+    "commit": "7c7e8aa",
     "ciTests": 1658,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
-    "deployedCommit": "ec8ce2e",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39165821411",
+    "deployedCommit": "7c7e8aa",
     "deployedSchema": "0044",
-    "liveScope": "Release ec8ce2e / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1658 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die neue Einrichtung unter Integrationen ist auf dem Testsystem verfügbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Persönliche Bridge-Anmeldung, echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
+    "liveScope": "Release 7c7e8aa / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1658 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 39 synthetische Browserabläufe plus drei eingebundene Zusatzprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die kompakte Übersicht und der dreistufige Assistent über Verbindung hinzufügen → Proton Mail sind auf dem Testsystem verfügbar. Bestehende Rechte bleiben erhalten; Details sind aufklappbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Persönliche Bridge-Anmeldung, echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "ec8ce2e",
-    "lastSuccessfulCIUI": 41
+    "lastSuccessfulCICommit": "7c7e8aa",
+    "lastSuccessfulCIUI": 39
   }
 }
