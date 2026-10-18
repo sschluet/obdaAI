@@ -185,7 +185,7 @@ def install_write_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session
             operations = adapters.capabilities(row.kind)
             return {
                 "operations": operations,
-                "writes_supported": bool(operations),
+                "writes_supported": bool(operations) or row.kind == "smtp",
                 "writes_enabled": row.writes_enabled,
                 "revision": row.revision,
             }
@@ -198,7 +198,7 @@ def install_write_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Session
             row = db.get(Integration, str(integration_id))
             if not row or row.revision != body.expected_revision:
                 raise HTTPException(409, "Integration geändert")
-            if body.writes_enabled and not adapters.capabilities(row.kind):
+            if body.writes_enabled and not adapters.capabilities(row.kind) and row.kind != "smtp":
                 raise HTTPException(422, "Schreibadapter noch nicht implementiert")
             if row.writes_enabled != body.writes_enabled:
                 row.writes_enabled = body.writes_enabled

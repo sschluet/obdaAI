@@ -150,6 +150,8 @@ def bounded_grant(db: Session, run: TaskRun) -> TaskWriteGrant:
 
 
 def prepare_run(db: Session, run: TaskRun, spec: "TaskSpec") -> None:
+    if any(step.tool_id == "agent.run" for step in spec.steps):
+        return  # The common agent binds target policies and grants each generated effect.
     if spec.autonomy == "analyze_only":
         return
     if spec.autonomy == "bounded_autonomous":

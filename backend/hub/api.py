@@ -180,6 +180,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from hub.integration_write_drafts import install_draft_api
 
     install_draft_api(app, cfg, factory)
+    from hub.agent_api import install_agent_api
+
+    install_agent_api(app, cfg, factory)
     install_paperless_api(app, cfg, factory)
     install_paperless_import_api(app, cfg, factory)
     install_use_case_api(app, cfg, factory)
@@ -422,6 +425,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 select(Run).where(Run.conversation_id == chat_id).order_by(Run.started)
             ).all()
             by_run = {run.id: run for run in runs}
+            by_run.update(
+                {
+                    run.id: run
+                    for run in db.scalars(
+                        select(Run).where(
+                            Run.id.in_([m.run_id for m in messages if m.agent_job_id and m.run_id])
+                        )
+                    )
+                }
+            )
             return {
                 "id": c.id,
                 "project_id": c.project_id,
@@ -463,6 +476,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 "model": linked.model or None,
                                 "model_used": linked.answer_model_used,
                                 "status": linked.status,
+                                **({"agent_job_id": m.agent_job_id} if m.agent_job_id else {}),
                                 **(
                                     {"routing": json.loads(linked.routing_trace)}
                                     if linked.routing_trace and linked.routing_trace != "{}"
@@ -471,6 +485,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             }
                             if m.role == "assistant"
                             and (linked := by_run.get(m.run_id or "")) is not None
+                            else {
+                                "run_id": "",
+                                "provider": "local",
+                                "model": None,
+                                "model_used": False,
+                                "status": "succeeded",
+                                "agent_job_id": m.agent_job_id,
+                            }
+                            if m.agent_job_id and m.role == "assistant"
                             else None
                         ),
                     }

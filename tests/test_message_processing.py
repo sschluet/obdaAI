@@ -254,7 +254,12 @@ def test_migration_backfills_only_unique_exact_event_proof_and_preserves_every_m
     command.downgrade(Config("alembic.ini"), "0026")
     command.upgrade(Config("alembic.ini"), "0027")
     with app.state.sessions() as db:
-        migrated = list(db.scalars(select(Message).where(Message.conversation_id == chat)))
+        # Inspect the historical schema without selecting columns added by later
+        # features (for example agent_job_id in 0044).
+        from sqlalchemy import MetaData, Table
+
+        historical = Table("messages", MetaData(), autoload_with=db.connection())
+        migrated = list(db.execute(select(historical).where(historical.c.conversation_id == chat)))
         assert {
             m.id: (m.content, m.label, m.active, m.revision, m.created) for m in migrated
         } == before

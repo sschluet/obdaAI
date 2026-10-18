@@ -162,6 +162,12 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
                 return
         await execute_run(factory, cfg, providers, run_id)
 
+    @queue.task(name="hub.agent", queue="chat", retry=False)
+    async def agent(job_id: str) -> None:
+        from hub.agent_runtime import execute_agent
+
+        await execute_agent(factory, cfg, providers, job_id)
+
     @queue.task(name="hub.title", queue="titles", retry=False)
     async def title(chat_id: str) -> None:
         title_providers = providers
@@ -235,6 +241,7 @@ async def requeue_stalled(queue: procrastinate.App) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
     for task in (
         "hub.chat",
+        "hub.agent",
         "hub.title",
         "hub.probe",
         "hub.extract",

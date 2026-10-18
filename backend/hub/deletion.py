@@ -11,6 +11,7 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from hub import db as models
+from hub.agent_models import AgentJob, AgentStep
 from hub.config import Settings
 from hub.db_locks import MEMORY_INDEX, ownership_lock
 from hub.integrations import IntegrationBinding
@@ -67,6 +68,15 @@ def plan(
         )
     )
     chat_ids = [c.id for c in chats]
+    agent_jobs = list(db.scalars(select(AgentJob).where(AgentJob.conversation_id.in_(chat_ids))))
+    hidden_ids = {job.model_conversation_id for job in agent_jobs} - set(chat_ids)
+    chats.extend(
+        db.scalars(select(models.Conversation).where(models.Conversation.id.in_(hidden_ids)))
+    )
+    chat_ids = [c.id for c in chats]
+    agent_steps = list(
+        db.scalars(select(AgentStep).where(AgentStep.job_id.in_([job.id for job in agent_jobs])))
+    )
     integration_bindings = list(
         db.scalars(
             select(IntegrationBinding).where(
@@ -134,6 +144,11 @@ def plan(
         )
     )
     blockers = []
+    if any(
+        job.status in {"queued", "running", "awaiting_approval", "awaiting_input"}
+        for job in agent_jobs
+    ):
+        blockers.append("Ein Agentenlauf ist noch aktiv. Zuerst abbrechen und Abschluss abwarten.")
     if kind == "project" and target.kind != "project":
         blockers.append(
             "Verbundene Wissensräume können hier nicht gelöscht werden. Verbindung unter Wissen "
@@ -331,6 +346,8 @@ def plan(
         *events,
         *prefs,
         *integration_bindings,
+        *agent_jobs,
+        *agent_steps,
     ]
     owned.extend(
         db.scalars(
@@ -386,6 +403,7 @@ def plan(
         _target=target,
         _research_ids=[r.id for r in chat_research if r.id not in retained_research],
         _source_events=events,
+        _agent_ids=[job.id for job in agent_jobs],
     )
 
 
@@ -450,6 +468,8 @@ def permanently_delete(
     cleanup_id = queue_cleanup(db, p["_sources"], p["_revisions"])
     try:
         chat_ids = [c.id for c in p["_chats"]]
+        db.execute(delete(AgentStep).where(AgentStep.job_id.in_(p["_agent_ids"])))
+        db.execute(delete(AgentJob).where(AgentJob.id.in_(p["_agent_ids"])))
         db.execute(
             delete(IntegrationBinding).where(
                 (IntegrationBinding.scope == "conversation")

@@ -21,3 +21,5 @@ try{
 }
 
 await import('./integration-writes-runner.mjs');
+
+await import('./agent-control-runner.mjs');

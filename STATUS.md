@@ -1,5 +1,33 @@
 # obdaAI — Status 12.10.2026
 
+## Entwicklungsziel korrigiert: agentische Systemsteuerung, 18.10.2026
+
+Der Benutzer verlangt die möglichst vollständige Administration angebundener
+Systeme aus Chat, Aufgaben und Projekten. Dazu gehören ausdrücklich HA-Updates
+und neue Konfigurationen sowie selbstständige Recherche geeigneter Verfahren.
+Die bisherigen Schreibdialoge und lokalen Parameterentwürfe erfüllen diesen
+Auftrag nicht. Ziel, gemeinsamer Ausführungsweg, Recherche-/Datenschutzgrenzen
+und noch offene reale Abnahmen stehen in
+[docs/agent-system-control.md](docs/agent-system-control.md).
+
+Der gemeinsame Agentenweg ist jetzt lokal implementiert: Chat/Projektchat und
+Aufgaben verwenden denselben dauerhaften lokalen Planer mit öffentlicher Recherche,
+dynamischen API-/HA-WebSocket-/SSH-/MCP-Werkzeugen, Quellenübertragung und begrenztem
+SMTP-Versand. Regeln, Quellen, Profile, globale Pause und Abbruch werden an der
+Ausführungsgrenze geprüft. Ein Ack genügt nicht als Wirkungsnachweis; Antwortverlust
+führt zu vorgebundenem lesendem Abgleich oder ausdrücklich unklarem Ausgang.
+
+Der Benutzer hat autonome modellgenerierte Befehle auf freigegebenen Systemen
+sowie die direkte HA-Abnahme ohne isolierte Instanz/geprüften Restore erlaubt.
+Vollständige lokale Suite: 1494 Tests bestanden; spätere Änderungen an
+Gesprächskontext, Widerruf und Heartbeat-Wiederaufnahme zusätzlich gezielt geprüft.
+41 synthetische Browserprüfungen bestanden; die Agenten-Aufgabe zusätzlich
+im Browser erstellt und mit demselben Worker erfolgreich ausgeführt. Noch kein neuer Commit, CI-Nachweis oder Rollout. Die Test-VM
+bleibt vorerst auf 148e921 / Schema 0043. HA-Bestandsaufnahme lesend möglich;
+Direkter Supervisor-REST-Zugang mit dem vorhandenen Token abgewiesen,
+Backupübersicht über den vorhandenen WebSocket-Weg lesbar und Supervisor gesund. Reale Änderungen
+und Updateabnahme stehen aus. V1 bleibt partiell.
+
 ## Dateianfragen mit Skill-Aufruf – Test-VM geprüft, 12.10.2026
 
 Der Screenshotauftrag „Bitte Präsentation über Blumenzucht über 8 Slides erstellen“

@@ -16,7 +16,7 @@ from hub.policy import ContextPart
 from hub.provider_settings import runtime_provider
 from hub.providers import Providers
 from hub.schedule_api import ScheduleDefinition, next_due
-from hub.task_api import AnalyzeStep, ReadStep, TaskSpec, WriteStep
+from hub.task_api import AgentTaskStep, AnalyzeStep, ReadStep, TaskSpec, WriteStep
 
 
 class GoalInput(StrictInput):
@@ -107,7 +107,7 @@ async def preview(factory: Any, cfg: Any, goal: str, provider: Any = None) -> di
         "ha_backups": "ha.backups.inspect",
         "ha_maintenance": "ha.maintenance.plan",
     }
-    steps: list[ReadStep | AnalyzeStep | WriteStep] = [
+    steps: list[ReadStep | AnalyzeStep | WriteStep | AgentTaskStep] = [
         ReadStep.model_validate({"tool_id": kinds[kind]})
         if kind != "analysis"
         else AnalyzeStep(tool_id="ai.analyze")

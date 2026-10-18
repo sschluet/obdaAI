@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-17",
+  "updated": "2026-10-18",
   "applicationCommit": "148e921",
   "schema": "0043",
   "tests": 1450,
@@ -250,6 +250,12 @@
       "title": "Änderungen bewusst freigeben.",
       "description": "Eigene Schreibrechte pro Profil, lokale KI-Vorbereitung und genaue Vorschau im Integrationsdialog. Ausschließlich synthetischer Mac-mini-Arbeitsordner; kein Nachweis eines echten Fremdsystemeingriffs.",
       "image": "assets/integrationwrites.png"
+    },
+    {
+      "id": "agentcontrol",
+      "title": "Ein Ziel im Chat. Nachvollziehbare Schritte.",
+      "description": "Systemsteuerung mit Rückfragen im selben Gespräch, gezielten Freigaben und prüfbaren Werkzeugbelegen. Ausschließlich synthetischer Archivauftrag und simulierte Dienstantworten; kein realer HA-Updatebeleg.",
+      "image": "assets/agentcontrol.png"
     }
   ],
   "groups": [
@@ -614,18 +620,23 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen ihre eigene Vorschau und Freigabe. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
+          "description": "Zentrale Profile für HA, Paperless, MCP, UniFi, SSH und SMTP mit verschlüsselten Zugangsdaten, Aktivschaltern und klaren Prüfzuständen. Schreibrechte werden zusätzlich pro Profil erlaubt; konkrete Änderungen benötigen eine einzelne Freigabe oder ausdrücklich eingerichtete Agentenautonomie. Der neue Schreibumfang ist getrennt von bisherigen Live-Lesenachweisen dokumentiert.",
           "status": "implemented"
         },
         {
           "title": "Integrationen in Projekt, Aufgabe und Chat auswählen",
-          "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Allgemeine KI-Aktionen anderer Profile bleiben offen.",
+          "description": "Profile dauerhaft Projekten und Aufgaben zuordnen oder im Chat dynamisch auswählen und abwählen. Ausgewählte Paperless-Archive liefern tatsächlichen privaten KI-Kontext; Projektbindungen gelten auch für projektbezogene Use Cases. Revision und Aktivzustand werden erneut geprüft. Der separate Agentenweg verwendet freigegebene Profile auch für Werkzeugaufrufe.",
           "status": "limited"
         },
         {
           "title": "Integrationen mit geprüften Schreibaktionen",
           "description": "Eigene Schreibfreigabe je Profil, konkrete Vorschau, zeitlich gebundene Bestätigung, einmaliger Dispatch und lesender Fehlerabgleich. Begrenzte HA-, Paperless-, SFTP-, UniFi-Gast- und MCP-Aktionen. SSH-Datei über die Anwendung zum Mac mini tatsächlich erstellt, hashgeprüft und bereinigt; Beleg-Replay ohne zweiten Effekt. Lokale KI liefert geprüfte Datenentwürfe, keine automatische Ausführung. Andere Zielschreibabnahmen und vollständiger administrativer Zugriff bleiben offen.",
           "status": "implemented"
+        },
+        {
+          "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
+          "description": "Ein gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Regeln je Ziel, einzelne Freigaben oder begrenzte Autonomie, dauerhafte Absichten und Ergebnisbelege. Antwortverlust führt zu lesendem Abgleich oder unklarem Ergebnis. Synthetische Chat- und native lokale Transportprüfungen bestanden; reale umfassende Systemadministration steht noch aus.",
+          "status": "limited"
         }
       ]
     },

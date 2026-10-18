@@ -113,6 +113,22 @@ async def execute_task(factory: Any, cfg: Any, run_id: str, provider: Any = None
         has_model = run.status == "running"
         try:
             _, _, spec = current(db, run.task_id)
+            if any(step.tool_id == "agent.run" for step in spec.steps):
+                from hub.agent_tasks import execute_agent_task
+
+                try:
+                    await execute_agent_task(factory, cfg, run_id, provider)
+                except Exception:
+                    with factory() as failed_db:
+                        failed_run = failed_db.get(TaskRun, run_id)
+                        if failed_run and failed_run.status in {"queued", "running"}:
+                            failed_run.status, failed_run.finished = "failed", time.time()
+                            failed_run.error = (
+                                "Agentenlauf nicht gestartet. Aktuelle Integrationsregeln "
+                                "und Aufgabenbindungen prüfen."
+                            )
+                            failed_db.commit()
+                return
             has_model = run.status == "running" or any(
                 step.tool_id == "ai.analyze" for step in spec.steps
             )

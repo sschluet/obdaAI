@@ -1,5 +1,5 @@
 import './answer-processing.css';
-export type Processing={run_id:string;provider:string;model:string|null;model_used:boolean|null;status:string};
+export type Processing={run_id:string;provider:string;model:string|null;model_used:boolean|null;status:string;agent_job_id?:string};
 const providers:Record<string,string>={local:'Lokal',openrouter:'OpenRouter',openai:'OpenAI direkt',anthropic:'Anthropic direkt'};
 export function AnswerProcessing({processing}:{processing?:Processing|null}){
  if(!processing)return <small className="answer-processing" aria-label="Antwortverarbeitung" title="Für diese ältere Antwort ist kein Lauf eindeutig zugeordnet.">Verarbeitung nicht erfasst</small>;

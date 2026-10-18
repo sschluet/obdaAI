@@ -81,6 +81,8 @@ def discover(
     granted_tool: str | None = None,
     granted_arguments: dict[str, Any] | None = None,
     before_call: Callable[[], Any] | None = None,
+    argument_validator: Callable[[dict[str, Any], Any], None] | None = None,
+    before_connect: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     if version not in VERSIONS:
         raise ValueError("Unsupported configured MCP version")
@@ -94,6 +96,8 @@ def discover(
         if granted_tool is not None:
             raise ValueError("Granted calls require a configured integration profile")
         pinned, headers, extensions = target(cfg, url)
+    if before_connect:
+        before_connect(urlsplit(pinned).hostname or "")
     if read_tool is not None:
         rules = json.loads(cfg.mcp_read_tools_json)
         if (
@@ -119,6 +123,8 @@ def discover(
 
     def rpc(method: str, params: dict[str, Any], *, notify: bool = False) -> dict[str, Any]:
         nonlocal sequence
+        if before_connect:
+            before_connect(urlsplit(pinned).hostname or "")
         sequence += 1
         if version == "2026-07-28":
             params = {
@@ -266,7 +272,7 @@ def discover(
             raise ValueError("MCP granted schema changed")
         from hub.integration_write_adapters import validate_mcp_value
 
-        validate_mcp_value(tool["input_schema"], granted_arguments)
+        (argument_validator or validate_mcp_value)(tool["input_schema"], granted_arguments)
         if before_call:
             before_call()
         result_data = rpc("tools/call", {"name": granted_tool, "arguments": granted_arguments})
