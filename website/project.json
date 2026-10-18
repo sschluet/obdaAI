@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-18",
-  "applicationCommit": "ec8ce2e",
+  "applicationCommit": "7c7e8aa",
   "schema": "0044",
   "tests": 1658,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39165821411",
   "screenshots": [
     {
       "id": "chat",
@@ -260,7 +260,7 @@
     {
       "id": "mcpreads",
       "title": "Du bestimmst, was die KI darf.",
-      "description": "Kein KI-Zugriff, Nur lesen oder Änderungen mit Freigabe als verständliche Auswahl. Einzelne MCP-Lesewerkzeuge bleiben unter Erweiterte Berechtigungen ausdrücklich prüfbar. Ausschließlich fiktives Postfach Aurora und synthetischer Werkzeugkatalog, keine echten Nachrichten.",
+      "description": "Kein KI-Zugriff, Nur lesen oder Änderungen erlauben als verständliche Auswahl. Einzelne MCP-Lesewerkzeuge bleiben unter Erweiterte Berechtigungen ausdrücklich prüfbar. Ausschließlich fiktives Postfach Aurora und synthetischer Werkzeugkatalog, keine echten Nachrichten.",
       "image": "assets/mcpreads.png"
     },
     {
@@ -637,7 +637,7 @@
         },
         {
           "title": "Generische Integrationsübersicht",
-          "description": "Kompakte Verbindungsübersicht mit Status, Aktivierung und KI-Zugriff. Kein KI-Zugriff, Nur lesen oder Änderungen mit Freigabe stehen im Vordergrund; technische Details und einzelne Berechtigungen bleiben aufklappbar. Vorhandene Regeln bleiben erhalten; eine Zugriffsauswahl vergibt keine pauschalen Werkzeug- oder Zielrechte. Die vereinfachte Oberfläche ist im Quellstand umgesetzt, Prüfung und Auslieferung stehen noch aus.",
+          "description": "Kompakte Verbindungsübersicht mit Status, Aktivierung und KI-Zugriff. Kein KI-Zugriff, Nur lesen oder Änderungen erlauben stehen im Vordergrund; technische Details und einzelne Berechtigungen bleiben aufklappbar. Vorhandene Regeln bleiben erhalten; eine Zugriffsauswahl vergibt keine pauschalen Werkzeug- oder Zielrechte. Die vereinfachte Oberfläche ist vollständig synthetisch geprüft und auf dem Testsystem verfügbar; bestehende Daten und Berechtigungen sind erhalten.",
           "status": "implemented"
         },
         {
@@ -775,17 +775,17 @@
   "development": {
     "mode": "local",
     "schema": "0044",
-    "browserChecks": 41,
+    "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "ec8ce2e",
+    "commit": "7c7e8aa",
     "ciTests": 1658,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39139794971",
-    "deployedCommit": "ec8ce2e",
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39165821411",
+    "deployedCommit": "7c7e8aa",
     "deployedSchema": "0044",
-    "liveScope": "Release ec8ce2e / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1658 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 41 synthetische Browserprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die neue Einrichtung unter Integrationen ist auf dem Testsystem verfügbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Persönliche Bridge-Anmeldung, echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
+    "liveScope": "Release 7c7e8aa / Schema 0044 gesund auf dem Testsystem installiert. Vollständige CI: 1658 Backend-/PostgreSQLtests bestanden, sechs übersprungen, 39 synthetische Browserabläufe plus drei eingebundene Zusatzprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die kompakte Übersicht und der dreistufige Assistent über Verbindung hinzufügen → Proton Mail sind auf dem Testsystem verfügbar. Bestehende Rechte bleiben erhalten; Details sind aufklappbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Persönliche Bridge-Anmeldung, echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "ec8ce2e",
-    "lastSuccessfulCIUI": 41
+    "lastSuccessfulCICommit": "7c7e8aa",
+    "lastSuccessfulCIUI": 39
   }
 }

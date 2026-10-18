@@ -95,18 +95,18 @@ und erhalten keine solche Freigabe.
 ## Abnahme und offene Punkte
 
 Bridge-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
-Die bisherige Einrichtung in der Integrationsoberfläche ist lokal mit synthetischen
-Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests sind erfolgreich.
-Release `ec8ce2e` / Schema `0044` ist auf der Test-VM verfügbar; beide APIs sind
-gesund. Der echte authentifizierte HTTPS-Status, die ausgelieferte Einstellungsdatei
-und der tokengebundene Brokerzugang aus dem App-Container sind separat geprüft.
+Die kompakte Integrationsübersicht und der dreistufige Proton-Assistent sind mit
+synthetischen Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests
+sind erfolgreich. Release `7c7e8aa` / Schema `0044` ist auf der Test-VM verfügbar;
+beide APIs sind gesund. Der echte authentifizierte HTTPS-Status, die ausgelieferte
+Einstellungsdatei und der tokengebundene Brokerzugang aus dem App-Container sind
+separat geprüft. Bestehende Daten, Rechte, Overlays und unabhängige Netzregeln sind
+erhalten; die Live-Prüfung hat keine Mail-Zugangsdaten verändert oder Nachrichten
+abgerufen.
 Vollständige lokale Suite: 1664 bestanden. Vollständige
-[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39139794971): 1658 bestanden,
-sechs übersprungen; alle 41 synthetischen Browserprüfungen und Runnersmokes erfolgreich.
-
-Die kompakte Übersicht und der neue dreistufige Assistent sind im aktuellen
-Quellstand umgesetzt; ihre Prüfungen und Auslieferung sind noch offen. Die oben
-genannten Nachweise beziehen sich auf die bisherige Oberfläche von `ec8ce2e`.
+[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39165821411): 1658 bestanden,
+sechs übersprungen; alle 39 Browserabläufe und drei eingebundene Zusatzprüfungen
+sowie Runnersmokes erfolgreich. Die vollständige Browserfolge besteht auch lokal.
 
 Die verschlüsselte Nachab-Sicherung umfasst den Bridge-Anmeldespeicher und den
 MCP-/Brokerzustand einschließlich dauerhafter Ausführungsbelege, Dienstdateien,

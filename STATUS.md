@@ -1,6 +1,6 @@
 # obdaAI — Status 18.10.2026
 
-## Intuitivere Integrationen — lokal geprüft, Auslieferung offen
+## Intuitivere Integrationen — auf der Test-VM verfügbar
 
 Die Integrationsübersicht zeigt Verbindung, Status, Aktivierung und KI-Zugriff
 kompakt. Technische Einzelheiten und seltene Aktionen liegen in aufklappbaren
@@ -22,14 +22,22 @@ Vorhandene Zugänge öffnen direkt die Zugangsdaten. Der Zugangstest startet ers
 nach einer ausdrücklichen Bestätigung der Zusammenfassung. Passwortschutz,
 Revisionsprüfung und Fehlerwiederaufnahme verwenden den bestehenden Backendweg.
 
-Lokal sind alle 1664 Tests, Ruff, mypy, Geheimnisprüfung und Frontend-Build
-erfolgreich. Die gezielten Browserprüfungen für die kompakte Übersicht,
-Dokumentzugriff, Änderungen, KI-Zugriff und den Proton-Assistenten bestehen;
-unveränderte Autonomie, keine stillen Rechteerweiterungen und mobile Bedienung
-sind ausdrücklich geprüft. Neue vollständige CI und Auslieferung stehen aus. Die folgenden Release- und CI-Nachweise gehören zur
-bisherigen Auslieferung **ec8ce2e**. Neue öffentliche Bilder werden ausschließlich
-aus isolierten synthetischen Oberflächen erzeugt; echte Postfachnutzung sowie die
-breite Fremdsystemadministration bleiben offen.
+Release **7c7e8aa / Schema 0044** ist auf der Test-VM installiert; beide APIs
+sind gesund. Der echte authentifizierte HTTPS-Abruf bestätigt den ausgelieferten
+Assistenten, die vereinfachten Zugriffseinstellungen und den tokengebundenen
+Brokerzugang aus der App. Bestehende Daten, Berechtigungen, Overlays und unabhängige
+Netzregeln sind erhalten. Die persönliche Proton-Kontoanmeldung bleibt offen;
+durch diese Abnahme wurden keine Zugangsdaten geändert oder Nachrichten gelesen.
+
+Lokal sind alle **1664 Tests**, Ruff, mypy, Geheimnisprüfung und Frontend-Build
+erfolgreich. Die vollständige [CI39165821411](https://github.com/sschluet/obdaAI/actions/runs/39165821411)
+besteht mit **1658 Tests, sechs übersprungenen Tests**, allen **39 Browserabläufen
+und drei eingebundenen Zusatzprüfungen** sowie Container-/Runnersmokes. Die gleiche
+vollständige Browserfolge besteht lokal. Unveränderte Autonomie, keine stillen
+Rechteerweiterungen, der dreistufige Proton-Assistent und mobile Bedienung sind
+geprüft. Öffentliche Bilder stammen ausschließlich aus isolierten synthetischen
+Oberflächen; echte Postfachnutzung und breite Fremdsystemadministration bleiben
+offen. Die folgenden älteren Nachweise dokumentieren die vorherige Auslieferung.
 
 ## Proton-Postfach: bisherige Bridge-Einrichtung auf der Test-VM
 
@@ -51,8 +59,8 @@ ohne Profil-Schreibrechte oder allgemeinen MCP-Vollzugriff einzuschalten.
 Kataloghinweise allein gewähren nichts; frische Rechte- und Schemaprüfungen bleiben
 bindend.
 
-Release **ec8ce2e / Schema 0044** ist auf der Test-VM installiert; beide APIs
-sind gesund. Der echte authentifizierte HTTPS-Abruf bestätigt das Proton-Formular,
+Die vorherige Auslieferung **ec8ce2e / Schema 0044** wurde auf der Test-VM
+installiert und mit beiden gesunden APIs geprüft. Der echte authentifizierte HTTPS-Abruf bestätigt das Proton-Formular,
 den ausgelieferten Einstellungs-Build und den tokengebundenen Brokerzugang aus der
 App. Zugriff ohne Sitzung beziehungsweise ohne Broker-Token wird mit 401 abgewiesen.
 Bestehende Daten, Regeln, Overlays und unabhängige Netzregeln wurden verglichen und
