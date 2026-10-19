@@ -146,8 +146,11 @@ def approved(cfg: Settings, row: Integration) -> bool:
     if row.kind == "gmail":
         from hub.gmail_client import API_BASE
 
-        return bool(cfg.integration_targets_enabled and config.get("url") == API_BASE
-                    and config.get("auth") == "oauth")
+        return bool(
+            cfg.integration_targets_enabled
+            and config.get("url") == API_BASE
+            and config.get("auth") == "oauth"
+        )
     if policy_allows(cfg, config["url"], ssh=row.kind in {"ssh", "smtp"}):
         return True
     if row.kind == "home_assistant":
@@ -248,15 +251,42 @@ def paperless_read_ready(row: Integration) -> bool:
 def binding_info(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
     row = db.get(IntegrationBinding, (scope, owner_id))
     ids = json.loads(row.integration_ids) if row else []
-    mode = row.selection_mode if row else "inherit" if scope == "conversation" else "manual"
+    conversation = db.get(Conversation, owner_id) if scope == "conversation" else None
+    mode = (
+        row.selection_mode
+        if row
+        else "inherit"
+        if conversation and conversation.project_id
+        else "automatic"
+    )
     resolved_ids = ids
-    if mode == "inherit":
-        conversation = db.get(Conversation, owner_id)
+    effective_mode = mode
+    if mode == "automatic":
+        # Availability is dynamic; selecting profiles does not grant tool or
+        # cloud authority. The shared agent still checks current per-profile
+        # rules, approved targets and revisions before every actual request.
+        resolved_ids = list(
+            db.scalars(
+                select(Integration.id).where(Integration.enabled.is_(True)).order_by(Integration.id)
+            )
+        )
+    elif mode == "inherit":
+        resolved_ids = []
         if conversation and conversation.project_id:
             project = db.get(Project, conversation.project_id)
             if project and not project.archived:
                 inherited = binding_info(db, "project", project.id)
                 resolved_ids = inherited["effective_integration_ids"]
+                effective_mode = inherited["effective_selection_mode"]
+        elif conversation:
+            effective_mode = "automatic"
+            resolved_ids = list(
+                db.scalars(
+                    select(Integration.id)
+                    .where(Integration.enabled.is_(True))
+                    .order_by(Integration.id)
+                )
+            )
     effective = [
         item.id
         for item in db.scalars(select(Integration).where(Integration.id.in_(resolved_ids)))
@@ -268,6 +298,7 @@ def binding_info(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
         "revision": row.revision if row else 0,
         "integration_ids": ids,
         "selection_mode": mode,
+        "effective_selection_mode": effective_mode,
         "effective_integration_ids": [item for item in resolved_ids if item in effective],
         "execution_available": any(
             paperless_read_ready(item)
@@ -287,6 +318,7 @@ def freeze_bindings(db: Session, scope: Scope, owner_id: str) -> dict[str, Any]:
     }
     return {
         "mode": selection["selection_mode"],
+        "effective_mode": selection["effective_selection_mode"],
         "revision": selection["revision"],
         "bindings": [
             {

@@ -235,7 +235,9 @@ def task_integrations(db: Session, task_id: str, spec: TaskSpec) -> dict[str, An
 
 def freeze_task_integrations(db: Session, run: TaskRun, spec: TaskSpec) -> None:
     selection = task_integrations(db, run.task_id, spec)
-    if any(item["kind"] == "paperless" for item in selection["bindings"]):
+    if selection.get("effective_mode") != "automatic" and any(
+        item["kind"] == "paperless" for item in selection["bindings"]
+    ):
         db.add(
             TaskStep(
                 run_id=run.id,

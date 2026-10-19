@@ -147,7 +147,20 @@ try{
  const mcpDemo=seededProfiles.find(row=>row.kind==='mcp');if(!mcpDemo.enabled)await showcaseApi('/integrations/'+mcpDemo.id+'/control','PATCH',{expected_revision:mcpDemo.revision,enabled:true});
  const projectBinding=await showcaseApi('/integration-bindings/project/'+aurora.id);if(!projectBinding.integration_ids.includes(mcpDemo.id))await showcaseApi('/integration-bindings/project/'+aurora.id,'PUT',{expected_revision:projectBinding.revision,selection_mode:'manual',integration_ids:[mcpDemo.id]});
  async function captureUseCases(){await captureAIUseCases(page,base,capture);}
- if(process.env.SHOWCASE_CAPTURE_ONLY==='integrations'){
+ if(process.env.SHOWCASE_CAPTURE_ONLY==='integrationselection'){
+  for(const profile of seededProfiles){const current=(await showcaseApi('/integrations')).integrations.find(row=>row.id===profile.id);if(!current.enabled)await showcaseApi('/integrations/'+current.id+'/control','PATCH',{expected_revision:current.revision,enabled:true})}
+  const conversation=await showcaseApi('/conversations','POST',{cloud_allowed:false});
+  await page.goto(base+'/?view=Chat&chat='+conversation.id);
+  const picker=page.locator('.integration-binding-picker');
+  await picker.locator('summary').filter({hasText:/Automatisch · [1-9][0-9]* verfügbar/}).waitFor();
+  await picker.locator('summary').click();
+  await picker.getByRole('button',{name:'Alle automatisch',exact:true}).waitFor();
+  await page.getByRole('textbox',{name:'Nachricht',exact:true}).fill('Welche neuen Mails gab es heute?');
+  await page.setViewportSize({width:1440,height:1180});
+  await capture('integrationselection');
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('Automatic integration selection captured with isolated synthetic data only; no prompt sent.');
+ }else if(process.env.SHOWCASE_CAPTURE_ONLY==='integrations'){
   await page.goto(base+'/?view=Einstellungen&settingsTab=Integrationen');
   await page.getByRole('heading',{name:'Integrationen',exact:true}).waitFor();
   await page.locator('.registry-table tr').filter({hasText:'Aurora · Testsystem'}).waitFor();

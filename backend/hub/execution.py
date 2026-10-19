@@ -136,6 +136,8 @@ async def execute_run(
                 ):
                     raise ExecutionLimitError("Schreibprofil geändert; Entwurf erneut starten")
         selection = snapshot.get("integration_selection", {})
+        if selection.get("effective_mode") == "automatic":
+            return  # Dynamic availability is not consent to eagerly read every archive.
         if snapshot.get("integration_scope", {}).get("scope") != "use_case" and not any(
             item.get("kind") == "paperless" for item in selection.get("bindings", [])
         ):
@@ -365,7 +367,9 @@ async def execute_run(
                     raise ArtifactClarificationCompleted
             check_integration_context()
             selection = snapshot.get("integration_selection", {})
-            if any(item.get("kind") == "paperless" for item in selection.get("bindings", [])):
+            if selection.get("effective_mode") != "automatic" and any(
+                item.get("kind") == "paperless" for item in selection.get("bindings", [])
+            ):
                 from hub.paperless_api import collect_context
 
                 check_integration_context()

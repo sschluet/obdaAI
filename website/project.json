@@ -6,6 +6,12 @@
   "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39293502010",
   "screenshots": [
     {
+      "id": "integration-selection",
+      "title": "Deine Verbindungen. Einfach verfügbar.",
+      "description": "Neue Gespräche stellen alle aktivierten Integrationen automatisch bereit. Passende System- und Mailfragen nutzen freigegebene lokale Werkzeuge; eine manuelle Auswahl oder Keine bleibt möglich. Ausschließlich synthetische Verbindungen und eine ungesendete Mailfrage, kein echtes Postfach.",
+      "image": "assets/integrationselection.png"
+    },
+    {
       "id": "chat",
       "title": "Ein Gespräch. Viele Möglichkeiten.",
       "description": "Direkte Gesprächsleiste mit Plus-Aktionen, sofort umschaltbarer Websuche und kompakter Modellwahl. Antwortstil als sichtbare Auswahl neben dem Chat.",
@@ -618,7 +624,7 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft. Bridge-Anmeldung, IMAP-Zugangsprüfung und authentifizierter App-Verbindungstest sind erfolgreich; lokaler Lesezugriff ist aktiviert. Die korrigierte Schema-Prüfung und der echte schema- und richtliniengebundene KI-Ordnerabruf sind erfolgreich. Suche, Nachrichten und vollständige Chat-/Aufgaben-/Projektabnahme bleiben offen.",
+          "description": "Neu implementiert, noch in Prüfung: Alle aktivierten Integrationen stehen im neuen Chat automatisch bereit; bekannte System- und Postfachanfragen nutzen passende konkret freigegebene lokale Werkzeuge ohne zusätzlichen Schalter. Bewusste Auswahl und Ausschlüsse bleiben erhalten. Die Zuordnung verwendet bekannte Begriffe und Verbindungsnamen, keinen allgemeinen semantischen Modellrouter. MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft. Bridge-Anmeldung, IMAP-Zugangsprüfung und authentifizierter App-Verbindungstest sind erfolgreich; lokaler Lesezugriff ist aktiviert. Die korrigierte Schema-Prüfung und der echte schema- und richtliniengebundene KI-Ordnerabruf sind erfolgreich. Suche, Nachrichten und vollständige Chat-/Aufgaben-/Projektabnahme bleiben offen.",
           "status": "implemented"
         },
         {

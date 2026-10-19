@@ -1,5 +1,35 @@
 # obdaAI — Status 19.10.2026
 
+## Automatische Integrationen — Implementierung in Prüfung
+
+Neue Chats, Projekte und Aufgaben stellen alle aktivierten Profile automatisch
+bereit; bewusste manuelle Auswahl und Ausschlüsse bleiben erhalten. Projektchats
+übernehmen ihre Projektauswahl. Die Oberfläche zeigt den verfügbaren Bestand
+statt einer leeren Projektauswahl und bietet gezielte Auswahl ohne gesperrte
+Checkboxen. Neue Profile werden bei folgenden Anfragen automatisch berücksichtigt.
+
+Eine lokale, nebenwirkungsfreie Zuordnung bekannter System-/Postfachbegriffe und
+Verbindungsnamen leitet passende gewöhnliche Chatfragen an den gemeinsamen
+Agentenweg. Kein zusätzlicher Schalter ist nötig. Es ist eine begrenzte lexikalische
+Zuordnung, kein allgemeiner semantischer Modellrouter. Gewöhnliche Erklärung,
+öffentliche Nachrichten und Dateierstellung ohne private Quellen bleiben im
+normalen Chat. Automatische Verfügbarkeit liest keine Paperless-Bestände vorab.
+Nur passende konkrete Profile bestimmen die Auftragsgrenzen; unbeteiligte
+Profiländerungen verändern laufende automatische Aufträge nicht. Widerruf,
+aktuelle Policy-/Profilrevisionen und explizite Auswahl bleiben maßgeblich.
+Private Daten bleiben lokal; ausdrücklich gewähltes Cloud wird nicht still
+umgeroutet. Abbruch während der Zuordnung verhindert den Werkzeugstart.
+
+Jeder Agentenauftrag erhält einen dauerhaften Zeitkontext mit konfigurierbarer
+IANA-Zeitzone (Standard Europe/Berlin). „Heute“ verwendet lokale Kalendergrenzen
+inklusive Sommerzeitwechsel. Nur lesende Postfächer bekommen keine Schreibrechte.
+Lokal bestehen 1847 Tests, Ruff, mypy und Geheimnisprüfung. TypeScript, Build,
+der vollständige normale Browserablauf und die Integrations-/Paperless-Prüfungen
+einschließlich Proton-, Gmail-, Schreib- und Agentenprüfungen sind erfolgreich.
+Die unabhängige Prüfung hat keine offenen blockierenden Befunde. GitHub-CI und
+die reale VM-/Mailfrage-Abnahme dieser neuen Lieferung stehen noch aus. Die folgenden Belege
+für cb5c179 betreffen die vorherige Lieferung.
+
 ## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
 
 Release **cb5c179 / Schema 0045** ist auf der Test-VM installiert; beide APIs

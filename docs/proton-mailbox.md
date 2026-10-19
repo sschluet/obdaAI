@@ -45,8 +45,9 @@ Der Assistent führt in drei Schritten durch die Einrichtung:
 Option **Lokales Lesen und Suchen über Chat, Aufgaben und Projekte erlauben**
 erteilt ausschließlich die acht unten genannten Lesefreigaben für dieses Profil.
 Profil-Schreibrechte, allgemeiner MCP-Vollzugriff und autonome Änderungen bleiben
-ausgeschaltet; die Grenze für Änderungen beträgt null. Die Verbindung kann danach
-im Chat, einer Aufgabe oder einem Projekt ausgewählt werden.
+ausgeschaltet; die Grenze für Änderungen beträgt null. Aktivierte Verbindungen stehen danach im neuen Chat automatisch bereit.
+Eine Mailfrage startet die passenden freigegebenen Werkzeuge; eine manuelle
+Einzelauswahl ist optional. Bestehende explizite Ausschlüsse bleiben wirksam.
 
 Ein leeres Passwortfeld behält den gespeicherten Bridge-Zugang nur bei unverändertem
 Benutzernamen. Das Passwort erscheint weder in der Statusantwort noch als Klartext
@@ -117,10 +118,15 @@ Zertifikatsdatei ausdrücklich mit `load_verify_locations`. Die Umgebungsvariabl
 geändert. Original, Prüfsummen und Rückweg werden außerhalb von Git erhalten.
 Der Dienst ist damit lokal angepasst und kein unverändertes Upstream-Paket.
 
-Der Dienst bündelt außerdem die vollständige Ordnerliste als einen JSON-Textblock,
+Der Dienst bündelt nackte Listen der freigegebenen Werkzeuge `list_folders`,
+`get_status`, `get_thread` und `list_attachments` jeweils als einen JSON-Textblock,
 ohne Kürzung oder Schemaänderung. Die App-Grenzen bleiben unverändert. Diese
-private Kompatibilitätskorrektur verhindert, dass das SDK pro Ordner einen
-separaten Antwortblock erzeugt. Leere und übergroße Listen sind separat geprüft.
+private Kompatibilitätskorrektur verhindert, dass das SDK pro Eintrag einen
+separaten Antwortblock erzeugt oder leere Listen ohne Textblock zurückgibt.
+Vollständige, leere und übergroße Listen sind synthetisch geprüft. `list_emails`,
+`search_emails` und `daily_digest` liefern bereits umschlossene Objekte und
+benötigen diese Anpassung nicht. Die Erweiterung ist privat auf der VM angewandt;
+sie ist kein Nachweis tatsächlicher Nachrichten-, Thread- oder Anhangabrufe.
 
 ## Abnahme und offene Punkte
 

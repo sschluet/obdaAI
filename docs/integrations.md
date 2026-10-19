@@ -28,3 +28,36 @@ Berechtigungen, Zugangsdaten oder Netzwerkregeln; Schema0033 bleibt erhalten.
 Die vollständige Archivierung wird mit eigenen synthetischen Projekten geprüft.
 Reale VM-Abnahme lässt die globale Schreibpause unverändert und prüft den lesenden
 Arbeitsraumaufruf sowie Bedienung und Navigation. Belege stehen in STATUS.md.
+
+
+## Automatische Nutzung im Chat
+
+Neue Gespräche, Projekte und Aufgaben stellen standardmäßig alle aktivierten
+Integrationen bereit. Im Chat zeigt die Auswahl **Automatisch · N verfügbar**.
+Die Liste wächst mit später aktivierten Verbindungen; eine gespeicherte manuelle
+Auswahl oder **Keine** bleibt wirksam. Projektgespräche übernehmen die Auswahl
+ihres Projekts. **Gezielt auswählen** bietet die bisherige begrenzte Einzelauswahl.
+Das Öffnen der Liste und die automatische Verfügbarkeit kontaktieren keinen Dienst.
+
+Beim Senden prüft die Oberfläche die Anfrage lokal über den authentifizierten
+Routing-Endpunkt. Bekannte System-/Postfachbegriffe und die Verbindungsnamen
+bestimmen die passenden vorhandenen Profile. Diese Zuordnung verwendet kein
+Cloudmodell, keine Websuche und keine externen Dienstaufrufe. Sie ersetzt keine
+allgemeine semantische Erkennung beliebiger Formulierungen. Normale Erklärfragen
+bleiben im bisherigen Chat; eine Mailfrage wie **Welche neuen Mails gab es heute?**
+startet den gemeinsamen lokalen Werkzeuglauf ohne zusätzlichen Schalter.
+
+Nur die konkret passenden Profile werden an den Auftrag gebunden. Bestehende
+Profilrechte, aktuelle Richtlinien, Ziel-/Kontogrenzen, Einzelfreigaben und
+Schreibpausen werden weiterhin geprüft. Die automatische Auswahl erteilt keine
+neuen Rechte. Ein nur lesendes Mailprofil soll keine HA-/SSH-Änderung in einem
+anderen Auftrag blockieren. Eine Anfrage im ausdrücklich gewählten Modus
+**Cloud** wechselt für private Systemdaten nicht stillschweigend zu einem lokalen
+Modell; die Oberfläche erklärt die nötige lokale Verarbeitung.
+
+Die bloße automatische Verfügbarkeit eines Paperless-Archivs liest keine
+Dokumente für gewöhnliche Fragen. Bewusste manuelle Archivbindungen behalten
+ihre bisherige lokale Kontextfunktion. Ergebnisse aus Systemen und Postfächern
+bleiben lokal und sind untrusted Daten. Die Anwendung friert den Zeitkontext
+für jeden Agentenauftrag ein; `HUB_AGENT_TIMEZONE` bestimmt die IANA-Zeitzone
+(Standard `Europe/Berlin`). Tagesgrenzen berücksichtigen Sommerzeitwechsel.

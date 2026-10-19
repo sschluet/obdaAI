@@ -33,8 +33,10 @@ await page.locator('.history button').first().click();
 await page.getByText('SYNTHETIC_BROWSER_REPLY:',{exact:false}).waitFor();
 // Reload while execution is active, then reattach to its durable events.
 await page.getByLabel('Nachricht',{exact:true}).fill('SYNTHETIC_SLOW');
+const slowAccepted=page.waitForResponse(response=>response.url().endsWith('/conversations/'+firstChatId+'/messages')&&response.request().method()==='POST'&&response.request().postDataJSON()?.content==='SYNTHETIC_SLOW'&&response.ok());
 await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
 await page.getByRole('button',{name:'Antwort abbrechen',exact:true}).waitFor();
+await slowAccepted; // Reload only after the durable message run has been accepted, not during routing.
 await page.reload();
 await page.locator('aside > button.new').waitFor();
 await page.locator('.history button').first().click();

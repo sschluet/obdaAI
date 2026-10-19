@@ -34,6 +34,11 @@ class StartInput(StrictInput):
     research_allowed: bool = False
     read_only: bool = False
     reconcile_job_id: UUID | None = None
+    integration_ids: list[UUID] | None = None
+
+
+class IntegrationRouteInput(StrictInput):
+    goal: str = Field(min_length=1, max_length=16000)
 
 
 class ApprovalInput(StrictInput):
@@ -133,7 +138,8 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 raise HTTPException(409, "Profil oder Agentenregeln inzwischen geändert")
             rules = body.rules
             if (
-                rules.gmail_read and profile.kind != "gmail"
+                rules.gmail_read
+                and profile.kind != "gmail"
                 or rules.shell
                 and profile.kind != "ssh"
                 or (rules.mcp or rules.mcp_read_tools)
@@ -184,6 +190,17 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 "rules": rules.model_dump(),
                 "current": True,
             }
+
+    @app.post("/api/conversations/{conversation_id}/integration-route")
+    def integration_route(
+        conversation_id: UUID, body: IntegrationRouteInput, auth: Auth
+    ) -> dict[str, Any]:
+        from hub.integration_api import binding_owner
+        from hub.integration_routing import route_integrations
+
+        with factory() as db:
+            binding_owner(db, "conversation", str(conversation_id))
+            return route_integrations(db, cfg, str(conversation_id), body.goal)
 
     @app.post("/api/conversations/{conversation_id}/agent-runs")
     async def start(conversation_id: UUID, body: StartInput, auth: Auth) -> dict[str, Any]:
@@ -260,6 +277,9 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 research_allowed=body.research_allowed,
                 read_only=body.read_only,
                 context=[p.model_dump(mode="json") for p in parts],
+                integration_ids=[str(item) for item in body.integration_ids]
+                if body.integration_ids is not None
+                else None,
             )
             if not old:
                 db.add(

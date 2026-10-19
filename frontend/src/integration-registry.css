@@ -11,3 +11,6 @@
 
 .agent-access-choice label{flex-direction:row!important;align-items:center;justify-content:flex-start}.agent-access-choice input[type=radio]{margin:0;align-self:center}
 .integration-registry .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}.integration-registry .registry-search{flex-direction:row;align-items:center}
+.binding-summary{display:inline-block;margin-left:.5rem;font-weight:400;color:var(--muted,#777)}.binding-availability svg{flex-shrink:0}.binding-availability .available{color:var(--accent,#6556dd)}.binding-availability .unavailable{opacity:.2}.binding-choice>span{min-width:0;overflow-wrap:anywhere}.binding-footer{flex-wrap:wrap}@media(max-width:650px){.binding-summary{display:block;margin-left:0;font-size:.8rem}.binding-modes button{flex-grow:1}.integration-binding-picker{min-width:0}}
+
+.integration-binding-picker .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}

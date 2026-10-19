@@ -84,10 +84,12 @@ try{
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
  await page.reload();await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
- await page.waitForFunction(()=>document.querySelector('.agent-mode input')?.checked);
+ await page.getByRole('region',{name:'Systemsteuerung',exact:true}).getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).waitFor();
+ if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Restored agent job makes explicit system mode sticky');
  await composer.fill('Agentenabnahme');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});
  const approve=panel.getByRole('button',{name:'Diesen Schritt freigeben und fortsetzen',exact:true});await approve.waitFor();
+ let parallelMessages=0;const blockedPath='**/api/conversations/'+chat.id+'/messages';await page.route(blockedPath,route=>{parallelMessages++;return route.abort()});await composer.fill('Parallelfrage während einer ausstehenden Freigabe');if(await page.getByRole('button',{name:'Nachricht senden',exact:true}).isEnabled())throw Error('Active agent permits parallel normal-chat send');await composer.press('Enter');await page.getByRole('alert').filter({hasText:'Der aktuelle Integrationsauftrag läuft oder wartet auf deine Freigabe.'}).waitFor();if(parallelMessages)throw Error('Keyboard submission bypassed active agent guard');await page.unroute(blockedPath);
  let jobs=await call('/agent-runs?conversation_id='+chat.id);let job=await call('/agent-runs/'+jobs[0].id);
  if(job.status!=='awaiting_approval'||job.steps.some(s=>s.kind==='effect'&&s.status==='succeeded'))throw Error('Effect before exact approval');
  await approve.click();await panel.getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
