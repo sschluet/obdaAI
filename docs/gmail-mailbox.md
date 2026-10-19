@@ -72,9 +72,15 @@ aus URL-Zugriffslogs heraushalten.
 Lokal bestehen alle 1755 Tests, Ruff, mypy, Geheimnisprüfung, TypeScript und Build.
 Die generische Integrations-Browserfolge einschließlich der Schreib-, Agenten-,
 Proton- und neuen Gmail-Prüfungen besteht. OAuth- und Refresh-Grenzen sind
-unabhängig geprüft. Neue vollständige CI und Auslieferung stehen noch aus.
-Ein eigener realer
-Google-OAuth-Client, die persönliche Anmeldung, echte Suche/Nachrichten und die
+unabhängig geprüft. Vollständige [CI39215615382](https://github.com/sschluet/obdaAI/actions/runs/39215615382):
+1749 bestanden, 6 übersprungen; alle 39 Browserabläufe einschließlich
+eingebundener Gmail-Abnahme sowie drei Zusatzprüfungen und Runnersmokes erfolgreich.
+Release `92270a2` / Schema `0045` ist auf der Test-VM verfügbar; beide APIs sind
+gesund. Echte authentifizierte Status-/Redirect-/Frontendprüfung ist erfolgreich,
+keine Google-Anmeldung oder Postfachabfrage. Verschlüsselte Vorab-/Nachab-Sicherungen
+sind außerhalb der VM hashgeprüft; Streamentschlüsselung und 16 Proton-Archivwurzeln
+sind bestätigt. Dies ist kein Restoretest.
+Ein eigener realer Google-OAuth-Client, die persönliche Anmeldung, echte Suche/Nachrichten und die
 Mail-Abnahme in Chat/Aufgaben/Projekten stehen noch aus. Synthetische Prüfungen
 und eine ausgelieferte Oberfläche ersetzen diese reale Kontoverbindung nicht.
 

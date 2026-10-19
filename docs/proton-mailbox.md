@@ -97,16 +97,16 @@ und erhalten keine solche Freigabe.
 Bridge-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
 Die kompakte Integrationsübersicht und der dreistufige Proton-Assistent sind mit
 synthetischen Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests
-sind erfolgreich. Release `7c7e8aa` / Schema `0044` ist auf der Test-VM verfügbar;
+sind erfolgreich. Release `92270a2` / Schema `0045` ist auf der Test-VM verfügbar;
 beide APIs sind gesund. Der echte authentifizierte HTTPS-Status, die ausgelieferte
 Einstellungsdatei und der tokengebundene Brokerzugang aus dem App-Container sind
 separat geprüft. Bestehende Daten, Rechte, Overlays und unabhängige Netzregeln sind
 erhalten; die Live-Prüfung hat keine Mail-Zugangsdaten verändert oder Nachrichten
 abgerufen.
-Vollständige lokale Suite: 1664 bestanden. Vollständige
-[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39165821411): 1658 bestanden,
+Vollständige lokale Suite: 1755 bestanden. Vollständige
+[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39215615382): 1749 bestanden,
 sechs übersprungen; alle 39 Browserabläufe und drei eingebundene Zusatzprüfungen
-sowie Runnersmokes erfolgreich. Die vollständige Browserfolge besteht auch lokal.
+sowie Runnersmokes erfolgreich. Die lokale generische Integrationsfolge einschließlich der Proton-Prüfung besteht.
 
 Die verschlüsselte Nachab-Sicherung umfasst den Bridge-Anmeldespeicher und den
 MCP-/Brokerzustand einschließlich dauerhafter Ausführungsbelege, Dienstdateien,
