@@ -4,7 +4,7 @@ import uuid
 import httpx
 import pytest
 from hub.config import Settings
-from hub.mcp_client import discover, schema_digest
+from hub.mcp_client import MCPTransientHTTPError, discover, schema_digest
 from test_actions import execute, gateway  # noqa: F401
 from test_connections import SCHEMA, URL, response
 
@@ -61,6 +61,38 @@ def transport(calls, schema=SCHEMA, content=None, error=False):
         )
 
     return httpx.MockTransport(handler)
+
+
+@pytest.mark.parametrize("status", [401, 403, 500, 502, 503, 504])
+@pytest.mark.parametrize(
+    "method", ["initialize", "notifications/initialized", "tools/list", "tools/call"]
+)
+def test_http_unavailability_is_typed_without_retry_or_body_disclosure(status, method):
+    calls = []
+    ordinary = transport([])
+
+    def handler(request):
+        name = json.loads(request.content)["method"]
+        calls.append(name)
+        if name == method:
+            return httpx.Response(status, text="PRIVATE UPSTREAM RESPONSE")
+        return ordinary.handle_request(request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ValueError) as caught:
+            discover(
+                client,
+                settings(),
+                URL,
+                "2025-11-25",
+                "",
+                read_tool="status",
+                expected_schema=SHA,
+            )
+    assert isinstance(caught.value, MCPTransientHTTPError) == (status in (502, 503))
+    assert "PRIVATE" not in str(caught.value)
+    assert calls.count(method) == 1
+    assert calls[-1] == method  # No later RPC or uncertain tool-call replay.
 
 
 @pytest.mark.parametrize("version", ["2026-07-28", "2025-11-25", "2025-06-18"])

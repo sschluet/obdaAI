@@ -130,13 +130,22 @@ geforderte Archivwurzeln sind am außerhalb der VM gespeicherten Archiv geprüft
 ohne Klartextdateien zu entpacken. Das ersetzt keinen Restoretest; laufende Dienste
 und atomare Einzeldateien bilden keine gemeinsame Sicherungstransaktion.
 
-Die persönliche Kontoanmeldung in Bridge und die zertifikatsgebundene lesende
-IMAP-Zugangsprüfung sind inzwischen erfolgreich. Ein Fehler im anschließenden
-App-Katalogtest ist im Quellstand `d7fb88c` korrigiert. 51 gezielte Regressionstests
-und die vollständige lokale Suite mit 1776 Tests sowie alle synthetischen
-Browserabläufe bestehen. Dessen Auslieferung und echte Ordner-/Such-/
-Nachrichtenaufrufe sowie Chat-, Aufgaben- und Projektabnahme bleiben offen. Der reale Zugriff muss
-getrennt von synthetischen UI-/API-Prüfungen bestätigt werden. Keine Nachricht wird
+Die persönliche Kontoanmeldung und der gespeicherte Zugang sind über gepinntes
+STARTTLS und lesend geöffneten Posteingang geprüft. Release `b12d4a4` / Schema
+`0045` ist gesund ausgerollt; die vollständige CI besteht mit 1770 Tests und sechs
+übersprungenen Fällen. Daten, Berechtigungen und Overlays sind erhalten.
+Eine frische vollständige verschlüsselte Kopie bei angehaltenen App-/Proton-Schreibern
+ist außerhalb der VM vollständig entschlüsselt und auf alle 16 Archivwurzeln
+geprüft; kein Restoretest.
+
+Die begrenzte Netzfreigabe bleibt während der Einrichtung bestehen. Bei der echten
+Abnahme wurde zusätzlich ein HTTP-502-Startfehler des kurz noch nicht bereiten
+MCP-Dienstes nachgewiesen. Die Folgekorrektur wiederholt ausschließlich die
+lesende Katalogprüfung bei HTTP 502/503 innerhalb des bestehenden Zeitfensters;
+Zugangskonfiguration und Werkzeugaufrufe werden nicht automatisch wiederholt.
+87 gezielte Tests bestehen. Die vollständige CI, Auslieferung und echte
+Verbindungsabnahme dieser Folgekorrektur sowie Ordner-/Such-/Nachrichtenaufrufe
+und Chat-, Aufgaben- und Projektabnahme bleiben offen. Keine Nachricht wurde
 für die Einrichtung verschickt, verschoben oder gelöscht.
 
 Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),

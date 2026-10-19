@@ -23,7 +23,7 @@ from hub.integration_write_adapters import mcp_catalog
 from hub.integration_writes import registry_lock
 from hub.integrations import Integration
 from hub.knowledge_api import Auth
-from hub.mcp_client import schema_digest
+from hub.mcp_client import MCPTransientHTTPError, schema_digest
 from hub.provider_settings import decrypt
 
 READ_TOOLS = frozenset(
@@ -156,7 +156,7 @@ def view(db: Any, cfg: Settings, state: dict[str, Any] | None = None) -> dict[st
 def catalog_ready(
     cfg: Settings, config: dict[str, Any], secret: str, before_attempt: Callable[[], None]
 ) -> dict[str, Any]:
-    """Only retry read-only discovery while the observer installs its bounded lease."""
+    """Retry only discovery while the observer and restarted MCP service become ready."""
     deadline = time.monotonic() + 25
     first = True
     while True:
@@ -166,7 +166,7 @@ def catalog_ready(
         before_attempt()
         try:
             return mcp_catalog(cfg, config, secret)
-        except httpx.ConnectError:
+        except (httpx.ConnectError, MCPTransientHTTPError):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise

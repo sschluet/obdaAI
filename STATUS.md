@@ -1,37 +1,36 @@
 # obdaAI — Status 19.10.2026
 
-## Proton-Einrichtung: Verbindungstest nach Kontoanmeldung
+## Proton-Einrichtung: Wiederanlauf des Postfachdienstes
 
-Die persönliche Bridge-Anmeldung und die zertifikatsgebundene lesende IMAP-Prüfung
-sind inzwischen erfolgreich. Dabei wurde ein Fehler im anschließenden
-App-Verbindungstest nachgewiesen: Das vorübergehend deaktivierte Profil verlor
-seine Netzfreigabe, bevor der MCP-Katalog geprüft werden konnte. Die Korrektur
-begrenzt die Freigabe auf das feste Betreiberprofil und einen kurzen
-Einrichtungszeitraum. Zugangskonfiguration wird bei Netzverzögerungen nicht erneut
-ausgeführt. Lokal bestehen 1776 Tests, alle synthetischen Browserabläufe, Ruff, mypy,
-Geheimnisprüfung und Frontend-Prüfung/Build. Eine unabhängige Prüfung hat keine
-offenen blockierenden Befunde. Die vollständige
-[CI39279915997](https://github.com/sschluet/obdaAI/actions/runs/39279915997)
-meldet nach Wiederaufnahme einen einzelnen fehlgeschlagenen Zeittest
-(1769 bestanden, sechs übersprungen). Der betroffene Erfolgstest verbrauchte
-reale Datenbank-/Runnerzeit aus einem nur 120 ms langen Vorbereitungsbudget.
-Er verwendet jetzt eine lokale virtuelle Uhr; die echten Zeitlimit-Fehlertests
-bleiben unverändert. Acht gezielte Tests bestehen; ein neuer voller CI-Lauf ist
-erforderlich. Produktive Zeitgrenzen wurden nicht geändert. GitHub meldet am 19.10.2026 eine
-[Störung von Actions und Pages](https://www.githubstatus.com/). Auslieferung,
-öffentliche Seitensynchronisierung und echte Postfachabnahme dieser Korrektur
-stehen noch aus; der aktive Stand bleibt bis zum erfolgreichen CI-Abschluss
-unverändert. Der Bridge-Hintergrunddienst läuft; seine gespeicherten Zugangsdaten
-sind erneut über gepinntes STARTTLS und einen lesend geöffneten Posteingang
-geprüft. Es wurden keine Nachrichten abgerufen.
+Release **b12d4a4 / Schema 0045** ist auf der Test-VM installiert; beide APIs
+sind gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
+unabhängige Netzregeln sind unverändert geprüft. Die neue vollständige,
+verschlüsselte Sicherung außerhalb der VM ist per Prüfsummen, vollständiger
+Entschlüsselung und allen 16 Proton-Archivwurzeln geprüft. App- und Proton-Schreiber
+waren während der Kopie angehalten; ein Restore wurde nicht getestet.
 
-Die Vorbereitung hat die laufende App nicht umgestellt. Die lokale VM-Backupablage
-hat ihre Reservegrenze erreicht. Eine neue direkt außerhalb der VM verschlüsselt
-gesicherte Vollkopie hat keinen erfolgreichen Abschluss gemeldet und wird nicht
-als geprüfter Rückkehrpunkt gewertet. Vorhandene Sicherungen sind erhalten. Vor
-einer Auslieferung sind ein erfolgreicher Sicherungsabschluss, exakte CI,
-Migration/Health und anschließende echte App-Verbindungsprüfung erforderlich.
+Vollständige [CI39284285621](https://github.com/sschluet/obdaAI/actions/runs/39284285621):
+**1770 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
+inklusive Browser- und Runnersmokes erfolgreich. Die zwischenzeitlich verzögerte
+GitHub-Statusanzeige meldet inzwischen ebenfalls einen erfolgreichen Abschluss.
+Der zuvor fehlgeschlagene Erfolgstest mit 120-ms-Wanduhrbudget verwendet jetzt
+eine lokale virtuelle Uhr; produktive Zeitgrenzen bleiben unverändert.
 
+Die persönliche Bridge-Anmeldung und der gespeicherte Zugang sind erfolgreich
+über gepinntes STARTTLS und einen lesend geöffneten Posteingang geprüft.
+Die App behält die begrenzte Netzfreigabe während der Katalogprüfung jetzt bei.
+Die echte Einrichtung hat aber einen weiteren Startfehler nachgewiesen:
+Der neu gestartete MCP-Dienst war kurz noch nicht erreichbar, der lokale Proxy
+antwortete mit HTTP 502. Die Zugangskonfiguration war bereits erfolgreich;
+der App-Zugriff bleibt deshalb bis zum abgeschlossenen Katalogtest gesperrt.
+
+Die Folgekorrektur betrifft ausschließlich die lesende Katalogbereitschaft: HTTP 502/503
+können innerhalb des bestehenden Zeitfensters erneut geprüft werden.
+Zugangskonfiguration und Werkzeugaufrufe werden nicht wiederholt; Authentifizierungs-
+und Inhaltsfehler brechen weiter sofort ab. 87 gezielte Tests, Ruff und mypy
+bestehen. Vollständige CI, Auslieferung und echte Verbindungsabnahme dieser
+Folgekorrektur stehen aus. Echte Ordner-/Such-/Nachrichtenabnahme und die Nutzung
+in Chat, Aufgaben und Projekten bleiben offen. Es wurden keine Nachrichten abgerufen.
 
 ## Gmail-Postfach — auf der Test-VM verfügbar
 

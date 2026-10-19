@@ -229,7 +229,10 @@ def test_setup_rejects_coerced_authority(bridge, changes):
     assert not effects
 
 
-def test_catalog_readiness_retries_only_reads_while_profile_disabled(bridge, monkeypatch):
+@pytest.mark.parametrize("unavailable", ["connect", "502", "503"])
+def test_catalog_readiness_retries_only_reads_while_profile_disabled(
+    bridge, monkeypatch, unavailable
+):
     from dataclasses import replace
 
     import httpx
@@ -267,6 +270,8 @@ def test_catalog_readiness_retries_only_reads_while_profile_disabled(bridge, mon
         assert len(effects) == 1  # Broker verified/stored credentials exactly once.
         probes.append("catalog-only")
         if len(probes) < 3:
+            if unavailable != "connect":
+                raise setup.MCPTransientHTTPError("Synthetic proxy startup failure")
             raise httpx.ConnectError("Synthetic observer rule not applied yet")
         return original(*args)
 
@@ -301,12 +306,17 @@ def test_catalog_invalid_data_fails_immediately_without_broker_replay(bridge, mo
         assert not db.get(Integration, profile_id).enabled
 
 
-def test_catalog_connection_deadline_keeps_disabled_without_repeating_broker(bridge, monkeypatch):
+@pytest.mark.parametrize("unavailable", ["connect", "proxy"])
+def test_catalog_connection_deadline_keeps_disabled_without_repeating_broker(
+    bridge, monkeypatch, unavailable
+):
     import httpx
 
     client, factory, cfg, profile_id, effects = bridge
 
     def not_ready(*args):
+        if unavailable == "proxy":
+            raise setup.MCPTransientHTTPError("Synthetic unavailable proxy")
         raise httpx.ConnectError("Synthetic unavailable target")
 
     monkeypatch.setattr(setup, "mcp_catalog", not_ready)
