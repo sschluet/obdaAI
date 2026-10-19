@@ -1,4 +1,25 @@
-# obdaAI — Status 18.10.2026
+# obdaAI — Status 19.10.2026
+
+## Gmail-Postfach — lokal geprüft, Auslieferung offen
+
+Gmail erhält einen eigenen Eintrag in **Verbindung hinzufügen**. Der Assistent
+führt durch ein eigenes Google-OAuth-Projekt, verschlüsselte Client-Zugangsdaten
+und die externe Google-Anmeldung. Die offizielle Gmail API liefert kontogebundene
+lesende Suche, Labels, Nachrichten und Threads über den gemeinsamen lokalen
+Agentenweg. Versand, Labeländerungen, Löschen und Anhangdownloads sind nicht Teil
+dieser Anbindung. Suchanfragen gehen an Google; Ergebnisse bleiben `LOCAL_ONLY`.
+PKCE, einmaliger sitzungsgebundener Zustand, dauerhafte Code-/Refresh-Belege,
+aktuelle Profilgrenzen und lokales Trennen sind berücksichtigt. Schema 0045 ergänzt
+ausschließlich den dauerhaften OAuth-Zustand.
+
+Lokal bestehen alle **1755 Tests**, Ruff, mypy, Geheimnisprüfung sowie TypeScript
+und Frontend-Build. Die vollständige generische Integrations-Browserprüfung
+einschließlich Schreib-, Agenten-, Proton- und Gmail-Assistenten besteht. Eine
+unabhängige Prüfung der OAuth-/Token-/Kontogrenzen hat keine offenen blockierenden
+Befunde. Neue vollständige CI und Test-VM-Auslieferung stehen aus.
+Ein eigener Google-OAuth-Client, persönliche Anmeldung und reale Postfach-/Chat-/
+Aufgaben-/Projektabnahme bleiben offen. Die folgenden Release-/CI-Nachweise gelten
+für die vorherige Auslieferung. Details: [Gmail-Einrichtung](docs/gmail-mailbox.md).
 
 ## Intuitivere Integrationen — auf der Test-VM verfügbar
 

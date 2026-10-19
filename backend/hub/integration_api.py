@@ -29,7 +29,7 @@ from hub.use_case_delivery import default_info
 
 IntegrationKind = Literal["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp"]
 Scope = Literal["project", "task", "conversation"]
-TYPES = ["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp"]
+TYPES = ["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp", "gmail"]
 
 
 class IntegrationInput(StrictInput):
@@ -143,6 +143,11 @@ class BindingInput(StrictInput):
 
 def approved(cfg: Settings, row: Integration) -> bool:
     config = json.loads(row.config)
+    if row.kind == "gmail":
+        from hub.gmail_client import API_BASE
+
+        return bool(cfg.integration_targets_enabled and config.get("url") == API_BASE
+                    and config.get("auth") == "oauth")
     if policy_allows(cfg, config["url"], ssh=row.kind in {"ssh", "smtp"}):
         return True
     if row.kind == "home_assistant":
@@ -177,6 +182,14 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
     connected = bool(
         checked and checked.get("revision") == row.revision and checked.get("status") == "succeeded"
     )
+    gmail_ready = False
+    if row.kind == "gmail":
+        from hub.gmail_setup import read_ready
+
+        gmail_ready = read_ready(cfg, row)
+        reason = (
+            "ready" if gmail_ready else "credential_missing" if target_ok else "network_disabled"
+        )
     return {
         "id": row.id,
         "name": row.name,
@@ -187,7 +200,7 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
         "config": json.loads(row.config),
         "secret_saved": bool(row.encrypted_secret),
         "target_approved": target_ok,
-        "check_available": reason == "ready",
+        "check_available": reason == "ready" and row.kind != "gmail",
         "availability_reason": reason,
         "last_check": checked,
         "execution_available": row.kind in {"paperless", "smtp"}
@@ -324,6 +337,8 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     raise HTTPException(404, "Integration nicht gefunden")
                 if row.revision != body.expected_revision:
                     raise HTTPException(409, "Integration geändert; neu laden")
+                if row.kind == "gmail":
+                    raise HTTPException(422, "Gmail bitte über die Postfacheinrichtung bearbeiten")
                 previous = json.loads(row.config)
                 # Canonical-equivalent URL edits must not erase a working key.
                 if body.kind not in {"ssh", "smtp"}:

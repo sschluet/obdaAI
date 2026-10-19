@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-18",
+  "updated": "2026-10-19",
   "applicationCommit": "7c7e8aa",
   "schema": "0044",
   "tests": 1658,
@@ -268,6 +268,12 @@
       "title": "Proton Mail Schritt für Schritt verbinden.",
       "description": "Proton Mail unter Verbindung hinzufügen auswählen und durch Vorbereitung, Bridge-Zugangsdaten und abschließende Prüfung führen lassen. Ausschließlich synthetische Angaben und simulierte Dienstantworten; die Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI. Kein Nachweis echter Postfachnutzung.",
       "image": "assets/protonbridge.png"
+    },
+    {
+      "id": "gmail",
+      "title": "Gmail Schritt für Schritt verbinden.",
+      "description": "Gmail im Dialog Verbindung hinzufügen auswählen: Google-Cloud-Vorbereitung, eigener OAuth-Webclient und Anmeldung direkt bei Google. Ausschließlich isolierte synthetische Aurora-Daten und fiktive Callback-Adresse; kein echtes Google-Konto oder Postfach dargestellt.",
+      "image": "assets/gmail.png"
     }
   ],
   "groups": [
@@ -617,7 +623,12 @@
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Proton Mail über Verbindung hinzufügen auswählen. Ein Assistent führt durch Vorbereiten, vorhandene Bridge-Zugangsdaten und eine ausdrückliche abschließende Prüfung. Die persönliche Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI; Versand und Postfachänderungen bleiben gesperrt. Die bisherige Einrichtung ist auf dem Testsystem verfügbar, der neue Assistent ist im Quellstand umgesetzt und noch nicht als ausgeliefert bestätigt. Echter Postfachzugang und Nutzungsabnahme bleiben offen.",
+          "description": "Proton Mail über Verbindung hinzufügen auswählen. Ein Assistent führt durch Vorbereiten, vorhandene Bridge-Zugangsdaten und eine ausdrückliche abschließende Prüfung. Die persönliche Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI; Versand und Postfachänderungen bleiben gesperrt. Der dreistufige Assistent ist auf dem Testsystem verfügbar und synthetisch geprüft. Echter Postfachzugang und Nutzungsabnahme bleiben offen.",
+          "status": "implemented"
+        },
+        {
+          "title": "Gmail-Postfach mit Google-Anmeldung",
+          "description": "Eigener Gmail-Eintrag in Verbindung hinzufügen mit geführter OAuth-Einrichtung. Nach ausdrücklicher Lesefreigabe: kontogebundene Suche, Labels, Nachrichtentexte und Threads über den lokalen Agentenweg. Suchanfragen gehen an Google, Ergebnisse bleiben lokal. Kein Versand, keine Postfachänderungen oder Anhangdownloads. Persönliche Google-Anmeldung und echte Postfachabnahme stehen aus; Lokal vollständig und synthetisch geprüft; neue vollständige CI und Auslieferung stehen noch aus.",
           "status": "implemented"
         },
         {

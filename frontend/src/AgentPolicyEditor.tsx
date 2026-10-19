@@ -35,7 +35,7 @@ export function AgentPolicyEditor({api, integration, onClose}: {
   const httpRead = supportsHTTP && rules?.http_prefixes.length > 0 && rules.http_methods.includes('GET');
   const haRead = integration.kind === 'home_assistant' && ['backup/info', 'supervisor/api'].some(command =>
     rules?.ha_websocket_prefixes.some((prefix: string) => prefix.endsWith('/') ? command.startsWith(prefix) : command === prefix));
-  const hasReads = integration.kind === 'ssh' || httpRead || haRead ||
+  const hasReads = integration.kind === 'gmail' && rules?.gmail_read || integration.kind === 'ssh' || httpRead || haRead ||
     integration.kind === 'mcp' && Object.keys(readTools).some(name => !staleReadTools.includes(name));
   const hasChanges = rules && rules.max_effects > 0 && (
     supportsHTTP && rules.http_prefixes.length > 0 && rules.http_methods.some((method: string) => method !== 'GET') ||

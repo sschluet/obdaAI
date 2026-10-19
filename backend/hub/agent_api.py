@@ -133,7 +133,8 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 raise HTTPException(409, "Profil oder Agentenregeln inzwischen geändert")
             rules = body.rules
             if (
-                rules.shell
+                rules.gmail_read and profile.kind != "gmail"
+                or rules.shell
                 and profile.kind != "ssh"
                 or (rules.mcp or rules.mcp_read_tools)
                 and profile.kind != "mcp"

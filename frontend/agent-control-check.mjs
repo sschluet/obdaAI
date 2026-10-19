@@ -1,6 +1,7 @@
 import {chromium} from 'playwright';
 import {loginFixture} from './fixture-login.mjs';
 import {checkProtonBridgeSetup} from './proton-bridge-check.mjs';
+import {checkGmailSetup} from './gmail-setup-check.mjs';
 const base=process.env.HUB_AGENT_ORIGIN||'http://127.0.0.1:18769';
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
@@ -11,6 +12,7 @@ async function call(path,method='GET',data){const r=await page.request.fetch(bas
 try{
  await page.goto(base);const session=await loginFixture(page);headers={'Origin':base,'X-CSRF-Token':session.csrf};
  await checkProtonBridgeSetup({page,base,call});
+ await checkGmailSetup({page,base,call});
  // Synthetic UI contract only: no MCP connection or mailbox content is involved.
  mcpProfile=await call('/integrations','POST',{name:'Postfach Aurora',kind:'mcp',url:'https://mail.example.test/mcp',auth:'none',protocol:'2026-07-28'});
  mcpProfile=await call('/integrations/'+mcpProfile.id+'/control','PATCH',{expected_revision:mcpProfile.revision,enabled:true});

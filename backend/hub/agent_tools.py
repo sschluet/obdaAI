@@ -71,6 +71,7 @@ class Rules(Strict):
     home_assistant_host: bool = False
     production_ha_approved: bool = False
     ha_websocket_prefixes: list[str] = Field(default_factory=list, max_length=30)
+    gmail_read: bool = False
     mcp: bool = False
     mcp_read_tools: dict[str, str] = Field(default_factory=dict, max_length=50)
     mail_recipients: list[str] = Field(default_factory=list, max_length=50)
@@ -219,6 +220,26 @@ class MailCall(Strict):
     text: str = Field(min_length=1, max_length=100000)
 
 
+class GmailCall(Strict):
+    operation: Literal["profile", "labels", "search", "message", "thread"]
+    query: str = Field(default="", max_length=1000)
+    message_id: str = Field(default="", max_length=64, pattern=r"^[a-fA-F0-9]*$")
+    page_token: str = Field(default="", max_length=2048)
+    limit: int = Field(default=20, ge=1, le=50)
+
+    @model_validator(mode="after")
+    def requested_operation(self) -> "GmailCall":
+        if self.operation in {"message", "thread"} and not self.message_id:
+            raise ValueError("A Gmail message or thread ID is required")
+        if self.operation not in {"message", "thread"} and self.message_id:
+            raise ValueError("Unexpected Gmail ID")
+        if self.operation != "search" and (self.query or self.page_token):
+            raise ValueError("Search parameters require search")
+        if any(ord(c) < 32 or ord(c) == 127 for c in self.query + self.page_token):
+            raise ValueError("Invalid search parameters")
+        return self
+
+
 class Decision(Strict):
     kind: Literal["tool", "finish", "ask"]
     message: str = Field(min_length=1, max_length=4000)
@@ -233,6 +254,7 @@ class Decision(Strict):
             "mcp.call",
             "research",
             "mail.send",
+            "gmail.read",
             "ha.websocket",
             "ssh.inspect",
             "http.upload",
@@ -323,7 +345,7 @@ def _interface_rules(
             or identifier not in selected
             or identifier in found
             or not isinstance(kind, str)
-            or kind not in {"ssh", "home_assistant", "paperless", "unifi", "mcp", "smtp"}
+            or kind not in {"ssh", "home_assistant", "paperless", "unifi", "mcp", "smtp", "gmail"}
             or not isinstance(interface.get("rules"), dict)
         ):
             raise ValueError("Invalid bound administration interfaces")
@@ -350,6 +372,8 @@ def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
         return rules.file_upload and "POST" in rules.http_methods
     if tool == "ha.websocket":
         return kind == "home_assistant" and bool(rules.ha_websocket_prefixes)
+    if tool == "gmail.read":
+        return kind == "gmail" and rules.gmail_read
     if tool == "mail.send":
         return kind == "smtp" and bool(rules.mail_recipients)
     if tool in {"mcp.call", "mcp.catalog"}:
@@ -505,6 +529,7 @@ SCHEMAS: dict[str, type[Strict]] = {
     "http.upload": UploadCall,
     "ha.websocket": HACall,
     "mail.send": MailCall,
+    "gmail.read": GmailCall,
     "research": ResearchCall,
     "http": HTTPCall,
     "http.verify": HTTPVerify,
@@ -555,6 +580,10 @@ def validate_tool(
                 "effect_step": 1,
             },
         )
+    if tool == "gmail.read" and kind == "gmail" and rules.gmail_read:
+        if data["query"] and not rules.private_data_to_target:
+            raise PermissionError("Gmail search queries are not authorized")
+        return data, False
     if tool == "research":
         return data, False
     if tool == "ssh.inspect" and kind == "ssh":
@@ -748,6 +777,29 @@ def invoke(
     def credential_boundary(address: str) -> None:
         private_boundary(address, rules)
         before_send()
+
+    if tool == "gmail.read":
+        from hub.gmail_client import API_BASE, GmailClient
+
+        if config.get("kind") != "gmail" or config.get("url") != API_BASE:
+            raise PermissionError("Gmail target changed")
+        validate_tool("gmail", rules, tool, args)
+        credentials = json.loads(secret)
+        with GmailClient(credentials["access_token"], before_send=before_send) as gmail:
+            operation = args["operation"]
+            if operation == "profile":
+                data = gmail.profile()
+            elif operation == "labels":
+                data = gmail.labels()
+            elif operation == "search":
+                data = gmail.messages(
+                    query=args["query"], page_token=args["page_token"], limit=args["limit"]
+                )
+            elif operation == "message":
+                data = gmail.message(args["message_id"])
+            else:
+                data = gmail.thread(args["message_id"])
+        return {"label": "LOCAL_ONLY", "operation": operation, "data": data}
 
     if tool == "ssh.inspect":
         with ssh_client(cfg, config, secret, credential_boundary) as client:

@@ -47,6 +47,7 @@ from hub.db import (
 from hub.db_locks import ownership_lock
 from hub.deletion import DeletionInput
 from hub.execution import execute_run
+from hub.gmail_setup import install_gmail_setup
 from hub.integration_api import freeze_bindings, install_integration_api
 from hub.jobs import enqueue
 from hub.knowledge import context as project_context
@@ -175,6 +176,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_connection_api(app, cfg, factory)
     install_use_case_delivery(app, cfg, factory)
     install_proton_bridge_setup(app, cfg, factory)
+    install_gmail_setup(app, cfg, factory)
     install_integration_api(app, cfg, factory)
     from hub.integration_writes import install_write_api
 
