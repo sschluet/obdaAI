@@ -27,7 +27,17 @@ Lokal bestehen 1847 Tests, Ruff, mypy und Geheimnisprüfung. TypeScript, Build,
 der vollständige normale Browserablauf und die Integrations-/Paperless-Prüfungen
 einschließlich Proton-, Gmail-, Schreib- und Agentenprüfungen sind erfolgreich.
 Die unabhängige Prüfung hat keine offenen blockierenden Befunde. GitHub-CI und
-die reale VM-/Mailfrage-Abnahme dieser neuen Lieferung stehen noch aus. Die folgenden Belege
+die reale VM-/Mailfrage-Abnahme dieser neuen Lieferung stehen noch aus.
+Die erste vollständige CI auf e67cf8d besteht backendseitig mit 1841 Tests und
+sechs übersprungenen Fällen; der Frontendjob scheitert an einem alten pauschalen
+Chat-Mock, der auch den neuen JSON-Routing-Endpunkt als SSE beantwortet. Der Mock
+wird auf Nachrichtenpfade begrenzt; der vollständige gezielte Routing-Browserfall
+besteht anschließend einschließlich Auto/Cloud/Nur lokal, Bearbeiten und Retry.
+Die Anwendung selbst bleibt gegenüber e67cf8d unverändert. Eine neue vollständige
+CI ist erforderlich; der fehlgeschlagene Gesamtlauf ist kein Vollnachweis.
+Ein echter schema-/richtliniengebundener Proton-Suchaufruf gelingt separat auf der
+bisherigen VM-Version, mit maximal fünf Ergebnissen, ohne Ausgabe privater Daten.
+Das ist ein Schnittstellenbeleg und noch kein neuer Chat-Abnahmebeleg. Die folgenden Belege
 für cb5c179 betreffen die vorherige Lieferung.
 
 ## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
