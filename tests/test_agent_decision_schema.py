@@ -34,6 +34,7 @@ VALID = {
         "verification": PROOF,
     },
     "ha.websocket": {"type": "backup/info", "parameters": {}},
+    "gmail.read": {"operation": "labels"},
     "mail.send": {"recipient": "owner@example.test", "subject": "Synthetic", "text": "Test"},
     "research": {"topic": "interfaces"},
     "shell": {"script": "printf test", "verification_script": "test 1 = 1"},

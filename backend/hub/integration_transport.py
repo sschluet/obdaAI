@@ -7,6 +7,7 @@ web research, source connectors or existing operator-bound maintenance tools.
 import ipaddress
 import json
 import socket
+import time
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -127,11 +128,23 @@ def requests_plan(factory: sessionmaker[Session], cfg: Settings) -> list[dict[st
     if not cfg.integration_targets_enabled:
         return []
     with factory() as db:
-        rows = list(db.scalars(select(Integration).where(Integration.enabled.is_(True)).limit(200)))
+        rows = list(db.scalars(select(Integration).where(
+            Integration.enabled.is_(True) | (Integration.kind == "gmail")
+        ).limit(200)))
         plan = []
         for row in rows:
             try:
                 config = json.loads(row.config)
+                if row.kind == "gmail":
+                    from hub.gmail_client import API_BASE, TOKEN_URL
+
+                    if config.get("url") != API_BASE or config.get("auth") != "oauth":
+                        continue
+                    if not row.enabled and config.get("oauth_pending_until", 0) <= time.time():
+                        continue
+                    targets = resolved_targets(cfg, API_BASE) + resolved_targets(cfg, TOKEN_URL)
+                    plan.append({"id": row.id, "kind": row.kind, "targets": sorted(set(targets))})
+                    continue
                 targets = resolved_targets(
                     cfg,
                     config["url"],

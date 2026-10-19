@@ -1,6 +1,7 @@
 from alembic import context
 from hub.config import Settings
 from hub.db import Base
+from hub.gmail_setup import GmailOAuthAttempt  # noqa: F401
 from sqlalchemy import create_engine
 
 config = context.config
