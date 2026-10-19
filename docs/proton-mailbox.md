@@ -130,34 +130,48 @@ sie ist kein Nachweis tatsächlicher Nachrichten-, Thread- oder Anhangabrufe.
 
 ## Abnahme und offene Punkte
 
-Release **cb5c179 / Schema 0045** ist auf der Test-VM installiert; beide APIs sind
-gesund. Die persönliche Bridge-Anmeldung, gepinntes STARTTLS, Katalogprüfung und
-der authentifizierte HTTPS-Einrichtungsweg sind erfolgreich. Der Nutzer bestätigt
-die Verbindung unter Integrationen. Vorhandene Zugangsdaten bleiben erhalten;
-lokaler Lesezugriff ist aktiviert, allgemeiner MCP-Vollzugriff, autonome Änderungen,
+Release **81e9c3a / Schema 0045** ist auf der Test-VM installiert; beide APIs sind
+gesund. Bridge-Anmeldung, gepinntes STARTTLS, Katalogprüfung und authentifizierte
+HTTPS-Einrichtung sind erfolgreich. Die vorhandenen Zugangsdaten und ausdrücklichen
+Lesefreigaben bleiben erhalten; allgemeiner MCP-Vollzugriff, autonome Änderungen,
 Versand und Postfachänderungen bleiben gesperrt.
 
-Die isolierte Schema-Prüfung beginnt ihr CPU-Budget nach vertrauenswürdigen
-Imports. Drei Sekunden Wandzeit, 512 MiB und vorhandene geerbte CPU-Grenzen bleiben
-erhalten. Der echte Adapteraufruf passiert die Schema-Prüfung auf der VM.
-Lokal bestehen **1812 Tests**, Ruff, mypy und Geheimnisprüfung. Vollständige
-[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39293502010): **1806 bestanden,
-sechs übersprungen**; alle sechs verpflichtenden Jobs einschließlich 39
-synthetischer Browserabläufe, drei eingebundener Zusatzprüfungen und Runnersmokes
-sind erfolgreich. Diese Browserprüfungen ersetzen keine echte Postfachabnahme.
+Die Frage **„Welche neuen Mails gab es heute?“** ist in einem frischen Chat mit
+automatisch verfügbaren Verbindungen erfolgreich abgenommen: Zuordnung zum
+vorhandenen Proton-Profil, Katalog, tatsächlicher schema-/richtliniengebundener
+`list_emails`-Aufruf und eine abgeschlossene lokale Antwort. Keine manuelle Auswahl,
+zusätzliche Rückmeldung oder Webrecherche war nötig. Private Ergebnisse bleiben
+`LOCAL_ONLY` und wurden nicht in Prüfbelege oder öffentliche Dateien exportiert.
+
+Die reine Mailplanung verwendet einen kompakten eigenen Leitfaden und vollständige
+beobachtete Schemas, ohne doppelte Katalogdarstellung. Originalbelege bleiben
+unverändert. Der Katalog allein gilt nicht als erfolgreicher Postfachabruf.
+Anbieterzeitlimits, Kontext-/Ausgabegrenzen und Rechte wurden nicht erhöht.
+Die isolierte Schema-Prüfung behält ihre vorhandenen CPU-/Wandzeit-/Speichergrenzen.
+
+Lokal bestehen **1859 Tests**, Ruff, mypy und Geheimnisprüfung. Vollständige
+[App-CI39311706155](https://github.com/sschluet/obdaAI/actions/runs/39311706155):
+**1853 bestanden, sechs übersprungen**; alle sechs Pflichtjobs einschließlich
+39 synthetischer Browserabläufe, drei eingebundener Zusatzprüfungen und Runnersmokes
+erfolgreich. Synthetische Browserprüfungen und echter Mail-Chat sind getrennte Belege.
+
+MCP-Zeitfilter beziehen sich auf das Serverdatum. Zum Beispiel umfasst
+`daily_digest(days=1)` grundsätzlich auch gestern und hat keine obere Tagesgrenze.
+Für „heute“ müssen die zurückgegebenen Datumswerte gegen den eingefrorenen
+Kalenderkontext geprüft werden. `total_recent` zählt die zurückgegebenen Nachrichten,
+keinen garantiert vollständigen Tag; Listenlimits sind bei der Antwort zu beachten.
+
+Einzelabruf vollständiger Nachrichtentexte, Threads und Anhangmetadaten sowie
+reale Mail-Aufgaben-/Projektläufe sind noch nicht gesondert abgenommen. Anhang-
+downloads, Dateiexport, Versand und Postfachänderungen sind nicht freigegeben.
 
 Die frühere vollständige verschlüsselte Kopie außerhalb der VM ist per
 Entschlüsselung, Prüfsummen und allen 16 Proton-Archivwurzeln bestätigt. Vor dem
-aktuellen Codewechsel kam eine aktuelle verschlüsselte Datenbank-/Konfigurations-
-Teilkopie direkt auf der VM hinzu; Pipeline und Chiffretext-Prüfsummen sind
-geprüft, Entschlüsselung dieser Teilkopie und Restore nicht. Bridge, vorhandene
-Backups, Berechtigungen, Overlays und unabhängige Netzregeln bleiben erhalten.
-
-Der echte schema- und richtliniengebundene Ordnerabruf über den gemeinsamen
-KI-Adapter ist erfolgreich. Profil und Richtlinie werden unmittelbar vor dem
-Aufruf erneut geprüft; die Antwort bleibt `LOCAL_ONLY`. Suche, Nachrichten sowie
-vollständige Chat-, Aufgaben- und Projektabnahme bleiben offen. Es wurden keine
-Nachrichten abgerufen, verschickt, verschoben oder gelöscht.
+aktuellen Codewechsel wurde zusätzlich der Datenbank-/Konfigurationszustand auf
+der VM verschlüsselt gesichert. Pipeline und Chiffretext-Prüfsummen sind geprüft,
+Entschlüsselung dieser Teilkopie und Restore nicht. Es ist keine neue vollständige
+Systemkopie. Bridge, vorhandene Backups, Berechtigungen, Overlays und unabhängige
+Netzregeln bleiben erhalten; Reserve und Quote wurden nicht geändert.
 
 Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),
 [Linux-Installation](https://proton.me/support/installing-bridge-linux-deb-file),

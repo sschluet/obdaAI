@@ -1,73 +1,71 @@
 # obdaAI — Status 19.10.2026
 
-## Automatische Integrationen — Implementierung in Prüfung
+## Automatische Integrationen und Proton-Mailfrage — live geprüft
+
+Release **81e9c3a / Schema 0045** ist gesund auf der Test-VM installiert. Beide
+APIs und alle neun Anwendungsdienste laufen mit der exakten Version. Daten,
+Berechtigungen, Compose-Overlays und unabhängige Netzregeln sind erhalten.
+Vollständige [CI39311706155](https://github.com/sschluet/obdaAI/actions/runs/39311706155):
+**1853 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs,
+39 Browserabläufe, drei eingebundene Zusatzprüfungen und Runnersmokes erfolgreich.
+Lokal bestehen **1859 Tests**, Ruff, mypy und Geheimnisprüfung. Die unabhängige
+Prüfung hat keine offenen blockierenden Befunde.
 
 Neue Chats, Projekte und Aufgaben stellen alle aktivierten Profile automatisch
-bereit; bewusste manuelle Auswahl und Ausschlüsse bleiben erhalten. Projektchats
-übernehmen ihre Projektauswahl. Die Oberfläche zeigt den verfügbaren Bestand
-statt einer leeren Projektauswahl und bietet gezielte Auswahl ohne gesperrte
-Checkboxen. Neue Profile werden bei folgenden Anfragen automatisch berücksichtigt.
+bereit. Die Oberfläche zeigt **Automatisch · N verfügbar**; bewusste manuelle
+Auswahl und Ausschlüsse bleiben erhalten. Projektchats übernehmen die Auswahl
+ihres Projekts. Neue aktivierte Profile werden bei folgenden Anfragen berücksichtigt.
+Die lokale Zuordnung bekannter System-/Postfachbegriffe und Verbindungsnamen
+wählt passende konkrete Profile für den gemeinsamen Agentenweg. Kein zusätzlicher
+Agentenschalter ist nötig. Die Zuordnung kontaktiert keinen Dienst und verwendet
+keine Cloud. Es ist eine begrenzte lexikalische Zuordnung, kein allgemeiner
+semantischer Modellrouter. Normale Erklärung und öffentliche Dateierstellung
+bleiben im gewöhnlichen Chat; automatische Verfügbarkeit liest keine
+Paperless-Bestände vorab. Explizit gewähltes Cloud wird für private Systemdaten
+nicht still umgeroutet. Abbruch vor dem Werkzeugstart bleibt wirksam.
 
-Eine lokale, nebenwirkungsfreie Zuordnung bekannter System-/Postfachbegriffe und
-Verbindungsnamen leitet passende gewöhnliche Chatfragen an den gemeinsamen
-Agentenweg. Kein zusätzlicher Schalter ist nötig. Es ist eine begrenzte lexikalische
-Zuordnung, kein allgemeiner semantischer Modellrouter. Gewöhnliche Erklärung,
-öffentliche Nachrichten und Dateierstellung ohne private Quellen bleiben im
-normalen Chat. Automatische Verfügbarkeit liest keine Paperless-Bestände vorab.
-Nur passende konkrete Profile bestimmen die Auftragsgrenzen; unbeteiligte
-Profiländerungen verändern laufende automatische Aufträge nicht. Widerruf,
-aktuelle Policy-/Profilrevisionen und explizite Auswahl bleiben maßgeblich.
-Private Daten bleiben lokal; ausdrücklich gewähltes Cloud wird nicht still
-umgeroutet. Abbruch während der Zuordnung verhindert den Werkzeugstart.
+**Die echte Frage „Welche neuen Mails gab es heute?“ ist in einem frischen Chat
+über die normale authentifizierte HTTPS-Schnittstelle erfolgreich abgenommen:**
+automatische Verfügbarkeit und Zuordnung ausschließlich zum bestehenden Proton,
+Katalogprüfung, erfolgreicher schema-/richtliniengebundener `list_emails`-Aufruf,
+lokale Antwort und Abschluss `observed`. Keine manuelle Auswahl, zusätzliche
+Rückmeldung, erneute Anmeldung oder öffentliche Recherche. Keine Postfachänderung;
+private Mailinhalte wurden nicht in Nachweise, Git oder Website ausgegeben.
 
-Jeder Agentenauftrag erhält einen dauerhaften Zeitkontext mit konfigurierbarer
-IANA-Zeitzone (Standard Europe/Berlin). „Heute“ verwendet lokale Kalendergrenzen
-inklusive Sommerzeitwechsel. Nur lesende Postfächer bekommen keine Schreibrechte.
-Lokal bestehen 1847 Tests, Ruff, mypy und Geheimnisprüfung. TypeScript, Build,
-der vollständige normale Browserablauf und die Integrations-/Paperless-Prüfungen
-einschließlich Proton-, Gmail-, Schreib- und Agentenprüfungen sind erfolgreich.
-Die unabhängige Prüfung dieser Auswahl-/Routingänderung hat keine offenen
-blockierenden Befunde. Vollständige [CI39303013894](https://github.com/sschluet/obdaAI/actions/runs/39303013894)
-besteht auf e98537d mit **1841 Tests, sechs übersprungenen Fällen** und allen
-Frontend-/Runnerprüfungen. e98537d / Schema 0045 ist gesund auf der Test-VM
-installiert; Daten, Rechte, neun Overlays und unabhängige Netzregeln sind erhalten.
-Ein vorheriger Gesamtlauf auf e67cf8d scheiterte an einem alten Chat-Testmock;
-dessen Korrektur ändert keine Anwendungscodefunktion.
+Reine freigegebene Postfach-Leseaufträge bekommen einen kompakten eigenen
+Leitfaden und vollständige beobachtete Werkzeugschemas. Katalogdaten werden in
+der Modellsicht nicht doppelt übertragen; Originalbelege bleiben vollständig.
+Ein Katalog allein zählt nicht als erfolgreiche Mailfrage. Der vorherige Webumweg
+auf e98537d und der Provider-Timeout auf 97dffec waren keine erfolgreichen
+Abnahmen; die aktuelle vollständige Abnahme ersetzt diese offenen Fälle.
+Zeitlimits und andere Anbietergrenzen wurden nicht erhöht.
 
-Die echte Frage „Welche neuen Mails gab es heute?“ in einem neuen automatischen
-Chat erreicht das vorhandene Proton-Profil ohne manuellen Agentenschalter. Der
-Lauf recherchiert jedoch zuerst öffentlich und endet mit einer Rückfrage statt
-einer Postfachabfrage. Das ist **keine erfolgreiche Mail-Chat-Abnahme**. Der
-separate schema-/richtliniengebundene Suchaufruf mit maximal fünf Ergebnissen
-besteht; Transport und Anmeldung sind damit separat geprüft. Eine enge Korrektur
-des lesenden Mailablaufs ist implementiert: einmalige dauerhafte Katalogprüfung
-vor der Planung, unveränderte freigegebene Schemas im begrenzten Modellkontext,
-kein anfänglicher Webumweg und kein Erfolg für einen Katalog allein. Bestehende
-Revisions-/Widerrufprüfungen und kein blindes Replay bleiben wirksam; reguläre
-Systemadministration behält Recherche. Ein Dateisystem-MCP mit nur Ordnerabruf
-wird nicht als Mailzugang gewählt. 129 gezielte Tests, Ruff und mypy bestehen;
-neue vollständige Prüfung und reale Mailfrage ohne zusätzliche Hinweise sind noch offen.
-Die unabhängige Prüfung des eingefrorenen Fixes hat keine blockierenden Befunde. Die nachfolgenden Belege für cb5c179
-betreffen die vorherige Lieferung.
+Aktuelle Profil-/Policyrevisionen, Widerruf, Ziel-/Kontogrenzen, Autonomie und
+Schreibpausen gelten weiterhin. Nur passende konkrete Profile bestimmen das
+Auftragsbudget; unbeteiligte Profiländerungen verändern laufende automatische
+Aufträge nicht. Unterbrochene oder unklare Schritte werden nicht blind wiederholt.
+Jeder Auftrag erhält einen eingefrorenen Kalenderkontext mit konfigurierbarer
+IANA-Zeitzone (Standard Europe/Berlin). Grobe Serverfilter ersetzen keine Prüfung
+lokaler Tagesgrenzen; begrenzte Rückgabezahlen sind keine vollständigen Tageszähler.
 
-Die Folgelieferung **97dffec / Schema 0045** ist gesund installiert. Ihre vollständige
-[CI39307975700](https://github.com/sschluet/obdaAI/actions/runs/39307975700) besteht mit
-**1852 Tests, sechs übersprungenen Fällen** und allen Browser-/Runnerprüfungen;
-lokal bestehen 1858 Tests. Die erneute echte Mailfrage lädt den Katalog ohne
-Webrecherche, scheitert danach aber am lokalen Provider-Timeout nach 31,6 Sekunden
-vor erstem Antwortinhalt. Keine Mailquery und keine erfolgreiche Chatabnahme.
-Die tatsächlichen Kontextgrenzen waren eingehalten; der lokale Modellkatalog ist
-separat erreichbar. Eine eng begrenzte Optimierung ersetzt nun den allgemeinen
-Verwaltungsleitfaden durch einen kurzen reinen Mail-Leitfaden und doppelte
-Katalogdaten durch einen Verweis auf die vollständigen Werkzeugverträge.
-Originalbelege, Schemas, Rechte und bestehende Anbieterlimits bleiben erhalten.
-102 gezielte Tests, Ruff, mypy und unabhängige Prüfung ohne Blocker bestehen.
-Vollständige neue Prüfung und reale Mailfrage bleiben bis zum Erfolgsbeleg offen.
+Vor dem Wechsel wurde der aktuelle Datenbank-/Konfigurationszustand verschlüsselt
+auf der VM gesichert. Pipeline, Quellen, Header und Chiffretext-Prüfsummen sind
+geprüft; diese Teilkopie ist weder entschlüsselt noch restoregetestet und keine
+neue vollständige Systemkopie. Der zuvor vollständig entschlüsselt und per Hash
+geprüfte externe Sicherungsanker sowie Bridge und vorhandene Backups sind erhalten.
+Reserve und Quote bleiben unverändert; der Rückweg betrifft ausschließlich Code/Images.
+
+Einzelabrufe vollständiger Nachrichtentexte, Threads und Anhangmetadaten sowie
+reale Mail-Aufgaben-/Projektläufe sind noch nicht gesondert abgenommen. Gmail
+wartet weiterhin auf persönliche Google-Anmeldung und echte Postfachabnahme.
+Versand/Postfachänderungen über die Proton-/Gmail-Leseprofile sind nicht freigegeben.
+V1 und die umfassende Fremdsystemadministration bleiben partiell.
+Die nachfolgenden Belege für cb5c179 betreffen die vorherige Lieferung.
 
 ## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
 
 Die vorherige Lieferung **cb5c179 / Schema 0045** wurde auf der Test-VM installiert; beide APIs
-sind gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
+waren damals gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
 unabhängige Netzregeln sind unverändert geprüft.
 Vollständige [CI39293502010](https://github.com/sschluet/obdaAI/actions/runs/39293502010):
 **1806 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
