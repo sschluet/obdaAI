@@ -8,7 +8,24 @@ App-Verbindungstest nachgewiesen: Das vorübergehend deaktivierte Profil verlor
 seine Netzfreigabe, bevor der MCP-Katalog geprüft werden konnte. Die Korrektur
 begrenzt die Freigabe auf das feste Betreiberprofil und einen kurzen
 Einrichtungszeitraum. Zugangskonfiguration wird bei Netzverzögerungen nicht erneut
-ausgeführt. Auslieferung und echte Postfachabnahme dieser Korrektur stehen noch aus.
+ausgeführt. Lokal bestehen 1776 Tests, alle synthetischen Browserabläufe, Ruff, mypy,
+Geheimnisprüfung und Frontend-Prüfung/Build. Eine unabhängige Prüfung hat keine
+offenen blockierenden Befunde. Die vollständige
+[CI39279915997](https://github.com/sschluet/obdaAI/actions/runs/39279915997)
+wartet derzeit auf Ausführung. GitHub meldet am 19.10.2026 eine
+[Störung von Actions und Pages](https://www.githubstatus.com/). Auslieferung,
+öffentliche Seitensynchronisierung und echte Postfachabnahme dieser Korrektur
+stehen noch aus; der aktive Stand bleibt bis zum erfolgreichen CI-Abschluss
+unverändert. Der Bridge-Hintergrunddienst läuft; seine gespeicherten Zugangsdaten
+sind erneut über gepinntes STARTTLS und einen lesend geöffneten Posteingang
+geprüft. Es wurden keine Nachrichten abgerufen.
+
+Die Vorbereitung hat die laufende App nicht umgestellt. Die lokale VM-Backupablage
+hat ihre Reservegrenze erreicht. Eine neue direkt außerhalb der VM verschlüsselt
+gesicherte Vollkopie hat keinen erfolgreichen Abschluss gemeldet und wird nicht
+als geprüfter Rückkehrpunkt gewertet. Vorhandene Sicherungen sind erhalten. Vor
+einer Auslieferung sind ein erfolgreicher Sicherungsabschluss, exakte CI,
+Migration/Health und anschließende echte App-Verbindungsprüfung erforderlich.
 
 
 ## Gmail-Postfach — auf der Test-VM verfügbar

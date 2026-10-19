@@ -76,7 +76,7 @@ Ein abgebrochener oder abgelaufener Versuch bleibt gesperrt und benötigt eine
 bewusste neue Einrichtung oder eine geprüfte Wiederaufnahme durch den Betreiber.
 
 Wurde Bridge für die Anmeldung mit `--cli` gestartet, beende diese Konsole nach
-`info` mit `quit`, damit der eingerichtete Hintergrunddienst wieder starten kann.
+`info` mit `exit`, damit der eingerichtete Hintergrunddienst wieder starten kann.
 Die ausgegebenen Zugangsdaten gehören ausschließlich in den Einrichtungsdialog.
 
 ## Gezielte MCP-Lesefreigaben
@@ -130,9 +130,12 @@ geforderte Archivwurzeln sind am außerhalb der VM gespeicherten Archiv geprüft
 ohne Klartextdateien zu entpacken. Das ersetzt keinen Restoretest; laufende Dienste
 und atomare Einzeldateien bilden keine gemeinsame Sicherungstransaktion.
 
-Die persönliche Kontoanmeldung in Bridge und die Eingabe des vorhandenen
-Bridge-Zugangs stehen noch aus. Echte Ordner-/Such-/Nachrichtenaufrufe und die
-Chat-, Aufgaben- und Projektabnahme bleiben deshalb offen. Der reale Zugriff muss
+Die persönliche Kontoanmeldung in Bridge und die zertifikatsgebundene lesende
+IMAP-Zugangsprüfung sind inzwischen erfolgreich. Ein Fehler im anschließenden
+App-Katalogtest ist im Quellstand `d7fb88c` korrigiert. 51 gezielte Regressionstests
+und die vollständige lokale Suite mit 1776 Tests sowie alle synthetischen
+Browserabläufe bestehen. Dessen Auslieferung und echte Ordner-/Such-/
+Nachrichtenaufrufe sowie Chat-, Aufgaben- und Projektabnahme bleiben offen. Der reale Zugriff muss
 getrennt von synthetischen UI-/API-Prüfungen bestätigt werden. Keine Nachricht wird
 für die Einrichtung verschickt, verschoben oder gelöscht.
 
