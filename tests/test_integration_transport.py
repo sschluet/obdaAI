@@ -140,3 +140,134 @@ def test_dynamic_mcp_catalog_preserves_trailing_endpoint_slash(monkeypatch):
             configured_profile=True,
         )
     assert len(requests) == 1 and result["tools"] == []
+
+
+def proton_pending_case():
+    import time
+    from uuid import uuid4
+
+    factory = session_factory("sqlite://")
+    Base.metadata.create_all(factory.kw["bind"])
+    profile_id = str(uuid4())
+    cfg = Settings(
+        integration_targets_enabled=True,
+        proton_bridge_integration_id=profile_id,
+        proton_bridge_mcp_url="http://proton.example.test:18764/mcp",
+    )
+    with factory() as db:
+        row = Integration(
+            id=profile_id,
+            name="Synthetic Proton",
+            kind="mcp",
+            revision=3,
+            enabled=False,
+            writes_enabled=False,
+            config=json.dumps({"url": cfg.proton_bridge_mcp_url}),
+            last_check=json.dumps(
+                {
+                    "revision": 3,
+                    "status": "pending",
+                    "proton_setup": {
+                        "created": time.time(),
+                        "request_id": str(uuid4()),
+                        "fingerprint": "a" * 64,
+                    },
+                }
+            ),
+        )
+        db.add(row)
+        db.commit()
+    return factory, cfg, profile_id
+
+
+def test_only_pinned_disabled_proton_pending_catalog_gets_bounded_egress(monkeypatch):
+    from dataclasses import replace
+
+    answers(monkeypatch, ["192.168.20.10"])
+    factory, cfg, profile_id = proton_pending_case()
+    with factory() as db:
+        pending = db.get(Integration, profile_id)
+        db.add(
+            Integration(
+                name="Other disabled MCP",
+                kind="mcp",
+                enabled=False,
+                writes_enabled=False,
+                revision=3,
+                config=pending.config,
+                last_check=pending.last_check,
+            )
+        )
+        db.commit()
+    assert requests_plan(factory, cfg) == [
+        {"id": profile_id, "kind": "mcp", "targets": [("192.168.20.10", 18764)]}
+    ]
+    assert requests_plan(factory, replace(cfg, integration_targets_enabled=False)) == []
+    assert requests_plan(factory, replace(cfg, proton_bridge_integration_id="")) == []
+    assert (
+        requests_plan(
+            factory, replace(cfg, proton_bridge_mcp_url="http://other.example.test:18764/mcp")
+        )
+        == []
+    )
+    with factory() as db:
+        pending = db.get(Integration, profile_id)
+        assert not pending.enabled and not pending.writes_enabled
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "expired",
+        "future",
+        "nan",
+        "bool_time",
+        "no_time",
+        "bad_request",
+        "bad_fingerprint",
+        "stale_revision",
+        "not_pending",
+        "different_kind",
+        "different_url",
+        "write_enabled",
+        "legacy_marker",
+    ],
+)
+def test_pending_proton_egress_rejects_expired_unbound_or_malformed_state(monkeypatch, change):
+    import time
+
+    answers(monkeypatch, ["192.168.20.10"])
+    factory, cfg, profile_id = proton_pending_case()
+    with factory() as db:
+        row = db.get(Integration, profile_id)
+        checked = json.loads(row.last_check)
+        marker = checked["proton_setup"]
+        if change == "expired":
+            marker["created"] = time.time() - 121
+        elif change == "future":
+            marker["created"] = time.time() + 10
+        elif change == "nan":
+            marker["created"] = float("nan")
+        elif change == "bool_time":
+            marker["created"] = True
+        elif change == "no_time":
+            marker.pop("created")
+        elif change == "bad_request":
+            marker["request_id"] = "not-a-request-identity"
+        elif change == "bad_fingerprint":
+            marker["fingerprint"] = "not-a-fingerprint"
+        elif change == "stale_revision":
+            checked["revision"] = row.revision - 1
+        elif change == "not_pending":
+            checked["status"] = "succeeded"
+        elif change == "different_kind":
+            row.kind = "paperless"
+        elif change == "different_url":
+            row.config = json.dumps({"url": "http://other.example.test:18764/mcp"})
+        elif change == "write_enabled":
+            row.writes_enabled = True
+        elif change == "legacy_marker":
+            checked["proton_setup"] = {"request_id": marker["request_id"], "fingerprint": "a" * 64}
+        row.last_check = json.dumps(checked)
+        db.commit()
+    assert requests_plan(factory, cfg) == []

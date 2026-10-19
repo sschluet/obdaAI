@@ -618,7 +618,7 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft; echte Postfachabnahme wartet auf die persönliche Anmeldung.",
+          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft. Die persönliche Bridge-Anmeldung und IMAP-Zugangsprüfung sind erfolgreich; ein dabei erkannter Fehler im anschließenden App-Verbindungstest wird korrigiert. Echte Postfachabnahme bleibt offen.",
           "status": "implemented"
         },
         {

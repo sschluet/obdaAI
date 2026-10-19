@@ -64,6 +64,21 @@ blinde Wiederholung nach unklarem Ausgang. Alte Profilrechte werden vor einem
 Zugangswechsel entzogen. Die Einrichtung verschickt keine Nachricht und verändert
 keine Postfachinhalte.
 
+## Verbindungstest nach erfolgreicher Bridge-Anmeldung
+
+Bei der Einrichtung wird das bisherige Profil zunächst gesperrt. Der feste
+Postfachadapter bleibt für höchstens 120 Sekunden ausschließlich zur Prüfung
+erreichbar. Diese Ausnahme bindet Betreiberprofil, Adresse und die aktuelle
+Einrichtungsrevision; sie erteilt keine Lesewerkzeuge oder Schreibrechte.
+Nach erfolgreicher Zugangskonfiguration darf die Katalogprüfung kurz auf die
+Netzaktualisierung warten. Die Zugangskonfiguration wird dabei nicht wiederholt.
+Ein abgebrochener oder abgelaufener Versuch bleibt gesperrt und benötigt eine
+bewusste neue Einrichtung oder eine geprüfte Wiederaufnahme durch den Betreiber.
+
+Wurde Bridge für die Anmeldung mit `--cli` gestartet, beende diese Konsole nach
+`info` mit `quit`, damit der eingerichtete Hintergrunddienst wieder starten kann.
+Die ausgegebenen Zugangsdaten gehören ausschließlich in den Einrichtungsdialog.
+
 ## Gezielte MCP-Lesefreigaben
 
 Die kompakte Integrationsübersicht führt über **KI-Zugriff** zu **Kein KI-Zugriff**,

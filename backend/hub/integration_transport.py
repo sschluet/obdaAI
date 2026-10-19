@@ -6,10 +6,13 @@ web research, source connectors or existing operator-bound maintenance tools.
 
 import ipaddress
 import json
+import math
+import re
 import socket
 import time
 from typing import Any
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -123,18 +126,66 @@ def pinned_target(cfg: Settings, value: str) -> tuple[str, dict[str, str], dict[
     )
 
 
+PROTON_CATALOG_LEASE_SECONDS = 120
+
+
+def proton_catalog_pending(cfg: Settings, row: Integration) -> bool:
+    """Bounded catalog connectivity only; a disabled profile grants no tool rights."""
+    if (
+        not cfg.integration_targets_enabled
+        or row.enabled
+        or row.writes_enabled
+        or row.kind != "mcp"
+        or row.id != cfg.proton_bridge_integration_id
+        or not cfg.proton_bridge_mcp_url
+    ):
+        return False
+    try:
+        config = json.loads(row.config)
+        checked = json.loads(row.last_check) if row.last_check else {}
+        marker = checked.get("proton_setup", {})
+        created = marker.get("created")
+        request_id = marker.get("request_id", "")
+        fingerprint = marker.get("fingerprint", "")
+        return bool(
+            config.get("url") == cfg.proton_bridge_mcp_url
+            and checked.get("status") == "pending"
+            and checked.get("revision") == row.revision
+            and isinstance(created, (int, float))
+            and not isinstance(created, bool)
+            and math.isfinite(created)
+            and 0 <= time.time() - created < PROTON_CATALOG_LEASE_SECONDS
+            and isinstance(request_id, str)
+            and str(UUID(request_id)) == request_id
+            and isinstance(fingerprint, str)
+            and re.fullmatch(r"[a-f0-9]{64}", fingerprint)
+        )
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
 def requests_plan(factory: sessionmaker[Session], cfg: Settings) -> list[dict[str, Any]]:
-    """Numeric egress plan from enabled user profiles; never include credentials."""
+    """Numeric egress for enabled profiles and bounded, operator-pinned setup leases."""
     if not cfg.integration_targets_enabled:
         return []
     with factory() as db:
-        rows = list(db.scalars(select(Integration).where(
-            Integration.enabled.is_(True) | (Integration.kind == "gmail")
-        ).limit(200)))
+        rows = list(
+            db.scalars(
+                select(Integration)
+                .where(
+                    Integration.enabled.is_(True)
+                    | (Integration.kind == "gmail")
+                    | (Integration.id == cfg.proton_bridge_integration_id)
+                )
+                .limit(200)
+            )
+        )
         plan = []
         for row in rows:
             try:
                 config = json.loads(row.config)
+                if not row.enabled and row.kind != "gmail" and not proton_catalog_pending(cfg, row):
+                    continue
                 if row.kind == "gmail":
                     from hub.gmail_client import API_BASE, TOKEN_URL
 

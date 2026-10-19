@@ -1,5 +1,16 @@
 # obdaAI — Status 19.10.2026
 
+## Proton-Einrichtung: Verbindungstest nach Kontoanmeldung
+
+Die persönliche Bridge-Anmeldung und die zertifikatsgebundene lesende IMAP-Prüfung
+sind inzwischen erfolgreich. Dabei wurde ein Fehler im anschließenden
+App-Verbindungstest nachgewiesen: Das vorübergehend deaktivierte Profil verlor
+seine Netzfreigabe, bevor der MCP-Katalog geprüft werden konnte. Die Korrektur
+begrenzt die Freigabe auf das feste Betreiberprofil und einen kurzen
+Einrichtungszeitraum. Zugangskonfiguration wird bei Netzverzögerungen nicht erneut
+ausgeführt. Auslieferung und echte Postfachabnahme dieser Korrektur stehen noch aus.
+
+
 ## Gmail-Postfach — auf der Test-VM verfügbar
 
 Gmail steht unter **Verbindung hinzufügen → Gmail** bereit. Der Assistent führt
