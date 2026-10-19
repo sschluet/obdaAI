@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import time
+from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
@@ -17,11 +18,12 @@ from hub.agent_tools import Rules
 from hub.config import Settings, read_secret
 from hub.db_locks import ownership_lock
 from hub.integration_api import approved
+from hub.integration_transport import proton_catalog_pending
 from hub.integration_write_adapters import mcp_catalog
 from hub.integration_writes import registry_lock
 from hub.integrations import Integration
 from hub.knowledge_api import Auth
-from hub.mcp_client import schema_digest
+from hub.mcp_client import MCPTransientHTTPError, schema_digest
 from hub.provider_settings import decrypt
 
 READ_TOOLS = frozenset(
@@ -151,6 +153,26 @@ def view(db: Any, cfg: Settings, state: dict[str, Any] | None = None) -> dict[st
     }
 
 
+def catalog_ready(
+    cfg: Settings, config: dict[str, Any], secret: str, before_attempt: Callable[[], None]
+) -> dict[str, Any]:
+    """Retry only discovery while the observer and restarted MCP service become ready."""
+    deadline = time.monotonic() + 25
+    first = True
+    while True:
+        if not first and time.monotonic() >= deadline:
+            raise TimeoutError("Proton catalog readiness window elapsed")
+        first = False
+        before_attempt()
+        try:
+            return mcp_catalog(cfg, config, secret)
+        except (httpx.ConnectError, MCPTransientHTTPError):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise
+            time.sleep(min(1, remaining))
+
+
 def install_proton_bridge_setup(app: FastAPI, cfg: Settings, factory: Any) -> None:
     @app.get("/api/integrations/proton-bridge-setup")
     def get_setup(auth: Auth) -> dict[str, Any]:
@@ -161,6 +183,8 @@ def install_proton_bridge_setup(app: FastAPI, cfg: Settings, factory: Any) -> No
     def save_setup(body: BridgeInput, auth: Auth) -> dict[str, Any]:
         if not enabled(cfg):
             raise HTTPException(503, "Proton Bridge ist nicht eingerichtet")
+        if not cfg.integration_targets_enabled:
+            raise HTTPException(403, "Verbindungen zu Integrationen sind am Server ausgeschaltet")
         request_id = str(body.request_id)
         try:
             token = read_secret(cfg.proton_bridge_control_token_file)
@@ -189,13 +213,31 @@ def install_proton_bridge_setup(app: FastAPI, cfg: Settings, factory: Any) -> No
             row.enabled, row.writes_enabled = False, False
             row.revision += 1
             revision = row.revision
-            marker = {"request_id": request_id, "fingerprint": fingerprint}
+            marker = {"request_id": request_id, "fingerprint": fingerprint, "created": time.time()}
             row.last_check = encode(
                 {"revision": revision, "status": "pending", "proton_setup": marker}
             )
             db.commit()
+
+        def pending_row(db: Any) -> Integration:
+            current_row = pinned_profile(db, cfg)
+            current = json.loads(current_row.last_check) if current_row.last_check else {}
+            if (
+                current_row.revision != revision
+                or not proton_catalog_pending(cfg, current_row)
+                or current.get("proton_setup") != marker
+            ):
+                raise ValueError("Profile or catalog setup lease changed")
+            return current_row
+
+        def pending_boundary() -> None:
+            with factory() as db:
+                pending_row(db)
+
+        broker_applied = False
         try:
             state = control(cfg)
+            pending_boundary()
             state = control(
                 cfg,
                 {
@@ -205,19 +247,22 @@ def install_proton_bridge_setup(app: FastAPI, cfg: Settings, factory: Any) -> No
                     "request_id": request_id,
                 },
             )
+            broker_applied = True
             with factory() as db:
-                ownership_lock(db)
-                registry_lock(db)
-                row = pinned_profile(db, cfg)
-                if row.revision != revision or row.enabled:
-                    raise ValueError("Profile changed during setup")
+                row = pending_row(db)
                 config = json.loads(row.config)
                 secret = (
                     decrypt(cfg, "integration:" + row.id, row.encrypted_secret)
                     if row.encrypted_secret
                     else ""
                 )
-                catalog = mcp_catalog(cfg, config, secret)
+            # Readiness waits must not retain global mutation locks: revocation
+            # remains available before every probe and final authorization.
+            catalog = catalog_ready(cfg, config, secret, pending_boundary)
+            with factory() as db:
+                ownership_lock(db)
+                registry_lock(db)
+                row = pending_row(db)
                 if catalog.get("label") != "LOCAL_ONLY":
                     raise ValueError("Invalid catalog label")
                 tools = {t["name"]: schema_digest(t["input_schema"]) for t in catalog["tools"]}
@@ -275,6 +320,9 @@ def install_proton_bridge_setup(app: FastAPI, cfg: Settings, factory: Any) -> No
             # Preserve the durable pending marker and disabled profile for reconciliation.
             raise HTTPException(
                 502,
-                "Bridge-Verbindung fehlgeschlagen; Profil bleibt gesperrt. "
+                "Bridge-Zugang wurde gespeichert; die Prüfung des Postfachdienstes ist nicht "
+                "abgeschlossen. Profil bleibt gesperrt; keine automatische Wiederholung."
+                if broker_applied
+                else "Bridge-Verbindung fehlgeschlagen; Profil bleibt gesperrt. "
                 "Zugangsdaten und Bridge-Anmeldung prüfen.",
             ) from None

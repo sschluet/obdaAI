@@ -1,5 +1,56 @@
 # obdaAI — Status 19.10.2026
 
+## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
+
+Release **cb5c179 / Schema 0045** ist auf der Test-VM installiert; beide APIs
+sind gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
+unabhängige Netzregeln sind unverändert geprüft.
+Vollständige [CI39293502010](https://github.com/sschluet/obdaAI/actions/runs/39293502010):
+**1806 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
+inklusive 39 Browserabläufen, drei eingebundenen Zusatzprüfungen und Runnersmokes
+erfolgreich. Lokal bestehen **1812 Tests**, Ruff, mypy und Geheimnisprüfung.
+
+Die persönliche Bridge-Anmeldung, gepinntes STARTTLS und der authentifizierte
+HTTPS-Einrichtungsweg sind erfolgreich. Der Nutzer bestätigt die funktionierende
+Verbindung unter Integrationen. Gespeicherte Zugangsdaten wurden erhalten;
+der lokale Lesezugriff ist aktiviert. Die begrenzte Katalog-Netzfreigabe und
+vorübergehende HTTP-502/503-Startfehler sind korrigiert. Ausschließlich lesende
+Katalogprüfungen werden innerhalb des bestehenden Zeitfensters wiederholt;
+Zugangskonfiguration und Werkzeugaufrufe nicht.
+
+Die isolierte Schema-Prüfung erhält ihre CPU-Sekunde nach vertrauenswürdigen
+Imports; drei Sekunden Wandzeit und 512 MiB bleiben erhalten. Geerbte CPU-Grenzen
+werden nicht erhöht. 26 gezielte Tests einschließlich unabhängiger SIGPROF-Abnahme
+bestehen. Der echte KI-Aufruf passiert diese Prüfung auf der VM.
+Der installierte Community-MCP 0.4.0 benötigte zusätzlich eine private
+Kompatibilitätskorrektur: Sein TLS-Kontext lädt das vorhandene gepinnte
+Bridge-Zertifikat ausdrücklich. Hostnamenprüfung und CERT_REQUIRED bleiben aktiv.
+Original, Prüfsummen, dauerhafter Änderungsbeleg und Code-Rückweg liegen privat
+auf der VM; Zugangsdaten, Richtlinien und Bridge wurden dabei nicht verändert.
+
+Der echte schema- und richtliniengebundene Ordnerabruf über den gemeinsamen
+KI-Adapter ist erfolgreich. Profil und Richtlinie werden unmittelbar vor dem
+Aufruf erneut geprüft; die Antwort bleibt `LOCAL_ONLY`. Der private MCP bündelt
+seine vollständige Ordnerliste ohne Kürzung als einen JSON-Textblock. Seine
+Eingabe- und Ausgabeschemas bleiben unverändert; die bestehenden App-Grenzen von
+16 Textblöcken und 64.000 Zeichen gelten weiterhin. Synthetische Prüfungen decken
+vollständige und leere Listen sowie die Größenablehnung ab. Auch hierfür sind
+Original, Änderungsbeleg und Code-Rückweg privat gesichert; der TLS-Patch bleibt
+erhalten. Keine Zugangsdaten, Richtlinien oder Bridge-Dateien wurden verändert.
+Suche, Nachrichten sowie vollständige Chat-, Aufgaben- und Projektabnahme bleiben
+offen. Es wurden keine Nachrichten abgerufen, verschickt, verschoben oder gelöscht.
+
+Die vorherige vollständige verschlüsselte Sicherung außerhalb der VM ist per
+Prüfsummen, vollständiger Entschlüsselung und allen 16 Proton-Archivwurzeln geprüft;
+App- und Proton-Schreiber waren bei dieser Kopie angehalten. Vor dem aktuellen
+Codewechsel wurde zusätzlich der aktuelle Datenbank-/Konfigurationszustand
+verschlüsselt direkt auf der VM gesichert. Für diese ergänzende Teilkopie sind
+Pipeline, Archivquellen, Chiffretext-Header und Prüfsummen bestätigt; sie wurde
+nicht entschlüsselt und bildet keine neue vollständige Systemkopie. Bridge und
+vorhandene Backups bleiben erhalten, die Reservegrenze wurde nicht geändert.
+Die reguläre Vollsicherung auf der VM bleibt durch ihre Reserveprüfung begrenzt.
+Ein Restore wurde nicht getestet. Rollback betrifft ausschließlich Code/Images.
+
 ## Gmail-Postfach — auf der Test-VM verfügbar
 
 Gmail steht unter **Verbindung hinzufügen → Gmail** bereit. Der Assistent führt

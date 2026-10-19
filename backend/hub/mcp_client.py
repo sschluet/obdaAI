@@ -16,6 +16,10 @@ from hub.config import Settings
 VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18")
 
 
+class MCPTransientHTTPError(ValueError):
+    """A proxy reports temporary unavailability; this client never retries requests."""
+
+
 def endpoint(value: str) -> str:
     u = urlsplit(value)
     if (
@@ -153,6 +157,8 @@ def discover(
             follow_redirects=False,
             timeout=min(8, remaining),
         ) as r:
+            if r.status_code in (502, 503):
+                raise MCPTransientHTTPError("MCP service temporarily unavailable")
             if notify:
                 if r.status_code not in (200, 202, 204):
                     raise ValueError("MCP notification rejected")
