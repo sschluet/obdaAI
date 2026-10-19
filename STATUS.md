@@ -12,7 +12,12 @@ ausgeführt. Lokal bestehen 1776 Tests, alle synthetischen Browserabläufe, Ruff
 Geheimnisprüfung und Frontend-Prüfung/Build. Eine unabhängige Prüfung hat keine
 offenen blockierenden Befunde. Die vollständige
 [CI39279915997](https://github.com/sschluet/obdaAI/actions/runs/39279915997)
-wartet derzeit auf Ausführung. GitHub meldet am 19.10.2026 eine
+meldet nach Wiederaufnahme einen einzelnen fehlgeschlagenen Zeittest
+(1769 bestanden, sechs übersprungen). Der betroffene Erfolgstest verbrauchte
+reale Datenbank-/Runnerzeit aus einem nur 120 ms langen Vorbereitungsbudget.
+Er verwendet jetzt eine lokale virtuelle Uhr; die echten Zeitlimit-Fehlertests
+bleiben unverändert. Acht gezielte Tests bestehen; ein neuer voller CI-Lauf ist
+erforderlich. Produktive Zeitgrenzen wurden nicht geändert. GitHub meldet am 19.10.2026 eine
 [Störung von Actions und Pages](https://www.githubstatus.com/). Auslieferung,
 öffentliche Seitensynchronisierung und echte Postfachabnahme dieser Korrektur
 stehen noch aus; der aktive Stand bleibt bis zum erfolgreichen CI-Abschluss

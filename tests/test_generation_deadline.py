@@ -3,9 +3,11 @@
 import asyncio
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 import httpx
 import pytest
+from hub import execution
 from hub.config import Settings
 from hub.db import Message, Run, RunEvent
 from hub.execution import execute_run
@@ -45,13 +47,57 @@ def short_budget(cfg, *, preparation=0.12, generation=0.3):
 
 
 @pytest.mark.parametrize("external", [False, True])
-def test_answer_budget_restarts_after_preparation_and_allows_long_stream(setup, external):
+def test_answer_budget_restarts_after_preparation_and_allows_long_stream(
+    setup, external, monkeypatch
+):
     app, client, _, _ = setup
     chat_id, run_id = queued(setup, cloud=external)
 
+    class VirtualDeadline:
+        # Database work and CI scheduling must not consume these synthetic
+        # budgets. Advance only the provider's logical preparation/stream time.
+        now = 0.0
+
+        def __init__(self, budget):
+            self.when = self.now + budget
+            self.rescheduled = []
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        def reschedule(self, when):
+            self.when = when
+            self.rescheduled.append(when)
+
+        async def advance(self, seconds):
+            self.now += seconds
+            if self.now >= self.when:
+                raise TimeoutError
+            await asyncio.sleep(0)
+
+    deadline = VirtualDeadline(0.12)
+    # Replace only execution's module reference, never asyncio's global clock
+    # or timeout implementation used by the test client and background tasks.
+    monkeypatch.setattr(
+        execution,
+        "asyncio",
+        SimpleNamespace(
+            **(
+                vars(asyncio)
+                | {
+                    "timeout": lambda budget: deadline,
+                    "get_running_loop": lambda: SimpleNamespace(time=lambda: deadline.now),
+                }
+            )
+        ),
+    )
+
     class Progressing(FakeProviders):
         async def route(self, parts, roles):
-            await asyncio.sleep(0.06)
+            await deadline.advance(0.06)
             return Route(
                 capabilities=["chat"],
                 model_class="cloud" if external else "local",
@@ -61,9 +107,9 @@ def test_answer_budget_restarts_after_preparation_and_allows_long_stream(setup, 
         async def stream(self, parts, roles, *, external, grants):
             self.stream_calls.append(external)
             yield "Synthetic "
-            await asyncio.sleep(0.08)
+            await deadline.advance(0.08)
             yield "long "
-            await asyncio.sleep(0.08)
+            await deadline.advance(0.08)
             yield "answer."
 
     provider = Progressing()
@@ -72,6 +118,9 @@ def test_answer_budget_restarts_after_preparation_and_allows_long_stream(setup, 
     assert detail["runs"][0]["status"] == "succeeded"
     assert detail["messages"][-1]["content"] == "Synthetic long answer."
     assert provider.stream_calls == [external]
+    assert deadline.rescheduled == [pytest.approx(0.36)]
+    assert deadline.now == pytest.approx(0.22)
+    assert deadline.now > 0.12  # The original preparation deadline would fail.
 
 
 def test_generation_deadline_retains_partial_and_actual_processing(setup):
