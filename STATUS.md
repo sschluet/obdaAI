@@ -50,6 +50,20 @@ neue vollständige Prüfung und reale Mailfrage ohne zusätzliche Hinweise sind 
 Die unabhängige Prüfung des eingefrorenen Fixes hat keine blockierenden Befunde. Die nachfolgenden Belege für cb5c179
 betreffen die vorherige Lieferung.
 
+Die Folgelieferung **97dffec / Schema 0045** ist gesund installiert. Ihre vollständige
+[CI39307975700](https://github.com/sschluet/obdaAI/actions/runs/39307975700) besteht mit
+**1852 Tests, sechs übersprungenen Fällen** und allen Browser-/Runnerprüfungen;
+lokal bestehen 1858 Tests. Die erneute echte Mailfrage lädt den Katalog ohne
+Webrecherche, scheitert danach aber am lokalen Provider-Timeout nach 31,6 Sekunden
+vor erstem Antwortinhalt. Keine Mailquery und keine erfolgreiche Chatabnahme.
+Die tatsächlichen Kontextgrenzen waren eingehalten; der lokale Modellkatalog ist
+separat erreichbar. Eine eng begrenzte Optimierung ersetzt nun den allgemeinen
+Verwaltungsleitfaden durch einen kurzen reinen Mail-Leitfaden und doppelte
+Katalogdaten durch einen Verweis auf die vollständigen Werkzeugverträge.
+Originalbelege, Schemas, Rechte und bestehende Anbieterlimits bleiben erhalten.
+102 gezielte Tests, Ruff, mypy und unabhängige Prüfung ohne Blocker bestehen.
+Vollständige neue Prüfung und reale Mailfrage bleiben bis zum Erfolgsbeleg offen.
+
 ## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
 
 Die vorherige Lieferung **cb5c179 / Schema 0045** wurde auf der Test-VM installiert; beide APIs

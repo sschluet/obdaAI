@@ -132,7 +132,22 @@ def test_bootstrap_then_actual_schema_bound_private_read_with_calendar_and_no_re
     decisions = []
 
     async def generate(factory, cfg, providers, job_id, instruction, data):
-        assert runtime.MAIL_READ_INSTRUCTION in instruction
+        assert instruction == runtime.MAIL_READ_INSTRUCTION
+        assert len(instruction) <= 2500
+        assert not any(word in instruction for word in ("SSH", "Backup", "Updates"))
+        assert all(
+            word in instruction
+            for word in (
+                "LOCAL_ONLY",
+                "untrusted",
+                "Passwörter",
+                "clock.today_start",
+                "today_end_exclusive",
+                "schema_sha256",
+                "mcp.call",
+                "gmail.read",
+            )
+        )
         assert data["clock"]["today"] and data["clock"]["today_end_exclusive"]
         assert "research" not in data["tools"]
         contracts = data["mail_read_contracts"]
@@ -140,6 +155,12 @@ def test_bootstrap_then_actual_schema_bound_private_read_with_calendar_and_no_re
         assert contracts["interfaces"][0]["tools"][0]["name"] == "search_emails"
         assert "delete_everything" not in json.dumps(data)
         assert data["history"][0]["document"]["source"] == "application_mail_catalog"
+        assert data["history"][0]["result"] == {
+            "catalog_checked": True,
+            "integration_id": identifier,
+            "granted_tool_count": 1,
+            "contract_source": "mail_read_contracts",
+        }
         assert any(body["method"] == "tools/list" for body in calls)
         decisions.append(data)
         if len(decisions) == 1:
@@ -163,6 +184,12 @@ def test_bootstrap_then_actual_schema_bound_private_read_with_calendar_and_no_re
     assert sum(body["method"] == "tools/call" for body in calls) == 1
     assert [json.loads(step.document)["tool"] for step in history] == ["mcp.catalog", "mcp.call"]
     assert not any(step.kind in {"effect", "research"} for step in history)
+    # Only the model view is deduplicated. The original observed catalog remains
+    # complete in the durable receipt for auditing and fresh contract checks.
+    assert {tool["name"] for tool in json.loads(history[0].result)["tools"]} == {
+        "search_emails",
+        "delete_everything",
+    }
     count = len(calls)
     execute(read_mailbox)
     assert len(calls) == count  # Terminal reentry never replays either read.
@@ -333,3 +360,64 @@ def test_oversized_observed_contract_fails_closed_instead_of_clipping_schema():
     )
     with pytest.raises(ValueError, match="Kontextgrenze"):
         runtime.mail_read_contracts({profile.id: (profile, rules, {})}, [step])
+
+
+def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_mailbox, monkeypatch):
+    import copy
+
+    no_research(monkeypatch)
+    measurements = []
+
+    async def generate(factory, cfg, providers, job_id, instruction, data):
+        sample = copy.deepcopy(data)
+        profile_id = sample["interfaces"][0]["integration_id"]
+        names = sorted(runtime.MAIL_READ_TOOLS)
+        for padding in range(0, 1600, 25):
+            schemas = {
+                name: {
+                    "type": "object",
+                    "title": name,
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Synthetic field metadata. " * 15,
+                        }
+                    },
+                    "description": "Synthetic catalog metadata. " * 5
+                    + ("x" * padding if index == 0 else ""),
+                }
+                for index, name in enumerate(names)
+            }
+            hashes = {name: schema_digest(schema) for name, schema in schemas.items()}
+            rules = Rules(enabled=True, max_effects=0, mcp_read_tools=hashes)
+            profile = SimpleNamespace(kind="mcp", id=profile_id)
+            step = SimpleNamespace(
+                status="succeeded",
+                document=json.dumps({"integration_id": profile_id, "tool": "mcp.catalog"}),
+                result=json.dumps(
+                    {
+                        "tools": [
+                            {"name": name, "input_schema": schema}
+                            for name, schema in schemas.items()
+                        ]
+                    }
+                ),
+            )
+            contracts = runtime.mail_read_contracts({profile_id: (profile, rules, {})}, [step])
+            if len(runtime.encode(contracts).encode()) >= 7100:
+                break
+        assert 7100 <= len(runtime.encode(contracts).encode()) < 7200
+        sample["mail_read_contracts"] = contracts
+        sample["interfaces"][0]["rules"]["mcp_read_tools"] = hashes
+        fitted = fit(sample, instruction, cfg.context_limit)
+        assert fitted["mail_read_contracts"] == contracts
+        assert len(contracts["schemas"]) == 8
+        assert all(contracts["schemas"][hashes[name]] == schemas[name] for name in names)
+        content_bytes = len(instruction.encode()) + len(runtime.encode(fitted).encode())
+        assert content_bytes <= 14000
+        measurements.append(content_bytes)
+        return {"kind": "finish", "message": "Synthetic catalog size proof"}
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    status, _ = execute(read_mailbox)
+    assert status == "unverified" and len(measurements) == 1
