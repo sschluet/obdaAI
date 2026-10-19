@@ -130,23 +130,29 @@ geforderte Archivwurzeln sind am außerhalb der VM gespeicherten Archiv geprüft
 ohne Klartextdateien zu entpacken. Das ersetzt keinen Restoretest; laufende Dienste
 und atomare Einzeldateien bilden keine gemeinsame Sicherungstransaktion.
 
-Die persönliche Kontoanmeldung und der gespeicherte Zugang sind über gepinntes
-STARTTLS und lesend geöffneten Posteingang geprüft. Release `b12d4a4` / Schema
-`0045` ist gesund ausgerollt; die vollständige CI besteht mit 1770 Tests und sechs
-übersprungenen Fällen. Daten, Berechtigungen und Overlays sind erhalten.
-Eine frische vollständige verschlüsselte Kopie bei angehaltenen App-/Proton-Schreibern
-ist außerhalb der VM vollständig entschlüsselt und auf alle 16 Archivwurzeln
-geprüft; kein Restoretest.
+Die persönliche Kontoanmeldung, gepinntes STARTTLS und der authentifizierte
+HTTPS-Einrichtungsweg sind erfolgreich. Release `a717d37` / Schema `0045` ist
+gesund ausgerollt; vollständige CI: 1797 bestanden, sechs übersprungen.
+Die begrenzte Katalog-Netzfreigabe und HTTP-502/503-Startfehler sind korrigiert.
+Gespeicherte Zugangsdaten wurden erhalten; der lokale Lesezugriff ist aktiviert.
 
-Die begrenzte Netzfreigabe bleibt während der Einrichtung bestehen. Bei der echten
-Abnahme wurde zusätzlich ein HTTP-502-Startfehler des kurz noch nicht bereiten
-MCP-Dienstes nachgewiesen. Die Folgekorrektur wiederholt ausschließlich die
-lesende Katalogprüfung bei HTTP 502/503 innerhalb des bestehenden Zeitfensters;
-Zugangskonfiguration und Werkzeugaufrufe werden nicht automatisch wiederholt.
-87 gezielte Tests bestehen. Die vollständige CI, Auslieferung und echte
-Verbindungsabnahme dieser Folgekorrektur sowie Ordner-/Such-/Nachrichtenaufrufe
-und Chat-, Aufgaben- und Projektabnahme bleiben offen. Keine Nachricht wurde
-für die Einrichtung verschickt, verschoben oder gelöscht.
+Der echte Ordnerabruf über den KI-Adapter scheitert derzeit noch vor dem
+Mail-Aufruf an der Laufzeit der isolierten Schema-Prüfung: Bibliotheksinitialisierung
+verbraucht bereits das bisherige Ein-Sekunden-CPU-Limit. Die Folgekorrektur
+gewährt dem untrusted Parsen und Prüfen eine eigene CPU-Sekunde nach den
+vertrauenswürdigen Imports. Drei Sekunden Wandzeit und 512 MiB bleiben erhalten;
+geerbte CPU-Grenzen werden nicht erhöht. 26 gezielte Tests und eine synthetische
+Prüfung auf der VM bestehen; vollständige CI, Auslieferung und echte Ordnerabnahme
+dieser Folgekorrektur bleiben offen. Keine installierten VM-Dateien wurden für
+den synthetischen Test geändert.
+
+Die geprüfte vollständige verschlüsselte Kopie außerhalb der VM bleibt erhalten.
+Vor dem aktuellen Codewechsel kam eine aktuelle verschlüsselte Datenbank-/
+Konfigurations-Teilkopie direkt auf der VM hinzu; Pipeline und Chiffretext-
+Prüfsummen sind geprüft, Entschlüsselung dieser Teilkopie und Restore nicht.
+Bridge bleibt dabei unberührt. Echte Suche, Nachrichten sowie Chat-, Aufgaben-
+und Projektabnahme bleiben offen. Keine Nachricht wurde verschickt, verschoben
+oder gelöscht.
 
 Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),
 [Linux-Installation](https://proton.me/support/installing-bridge-linux-deb-file),

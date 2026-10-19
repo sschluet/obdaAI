@@ -1,36 +1,47 @@
 # obdaAI — Status 19.10.2026
 
-## Proton-Einrichtung: Wiederanlauf des Postfachdienstes
+## Proton-Einrichtung: verbunden, KI-Werkzeugprüfung wird korrigiert
 
-Release **b12d4a4 / Schema 0045** ist auf der Test-VM installiert; beide APIs
+Release **a717d37 / Schema 0045** ist auf der Test-VM installiert; beide APIs
 sind gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
-unabhängige Netzregeln sind unverändert geprüft. Die neue vollständige,
-verschlüsselte Sicherung außerhalb der VM ist per Prüfsummen, vollständiger
-Entschlüsselung und allen 16 Proton-Archivwurzeln geprüft. App- und Proton-Schreiber
-waren während der Kopie angehalten; ein Restore wurde nicht getestet.
+unabhängige Netzregeln sind unverändert geprüft.
+Vollständige [CI39289475685](https://github.com/sschluet/obdaAI/actions/runs/39289475685):
+**1797 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
+inklusive Browser- und Runnersmokes erfolgreich. Lokal bestehen 1803 Tests,
+Ruff, mypy und Geheimnisprüfung.
 
-Vollständige [CI39284285621](https://github.com/sschluet/obdaAI/actions/runs/39284285621):
-**1770 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
-inklusive Browser- und Runnersmokes erfolgreich. Die zwischenzeitlich verzögerte
-GitHub-Statusanzeige meldet inzwischen ebenfalls einen erfolgreichen Abschluss.
-Der zuvor fehlgeschlagene Erfolgstest mit 120-ms-Wanduhrbudget verwendet jetzt
-eine lokale virtuelle Uhr; produktive Zeitgrenzen bleiben unverändert.
+Die persönliche Bridge-Anmeldung, gepinntes STARTTLS und der authentifizierte
+HTTPS-Einrichtungsweg sind erfolgreich. Gespeicherte Zugangsdaten wurden erhalten;
+der lokale Lesezugriff ist aktiviert. Die begrenzte Katalog-Netzfreigabe und
+vorübergehende HTTP-502/503-Startfehler sind korrigiert. Ausschließlich lesende
+Katalogprüfungen werden innerhalb des bestehenden Zeitfensters wiederholt;
+Zugangskonfiguration und Werkzeugaufrufe nicht.
 
-Die persönliche Bridge-Anmeldung und der gespeicherte Zugang sind erfolgreich
-über gepinntes STARTTLS und einen lesend geöffneten Posteingang geprüft.
-Die App behält die begrenzte Netzfreigabe während der Katalogprüfung jetzt bei.
-Die echte Einrichtung hat aber einen weiteren Startfehler nachgewiesen:
-Der neu gestartete MCP-Dienst war kurz noch nicht erreichbar, der lokale Proxy
-antwortete mit HTTP 502. Die Zugangskonfiguration war bereits erfolgreich;
-der App-Zugriff bleibt deshalb bis zum abgeschlossenen Katalogtest gesperrt.
+Der anschließende echte Ordnerabruf über den gemeinsamen KI-Adapter hat jedoch
+eine weitere Laufzeitgrenze nachgewiesen: Schon das Laden der vertrauenswürdigen
+Schema-Bibliotheken verbraucht auf der VM das bisher für den gesamten Kindprozess
+geltende Ein-Sekunden-CPU-Limit. Selbst eine gültige leere Eingabe wurde vor dem
+Mail-Aufruf beendet; die OOM-Zähler blieben unverändert.
+Die Folgekorrektur beginnt das Ein-Sekunden-CPU-Budget erst vor dem Parsen und
+Prüfen untrusted Eingaben. Drei Sekunden Elternprozess-Wandzeit und 512 MiB
+Speichergrenze bleiben unverändert; geerbte CPU-Grenzen werden nicht erhöht.
+26 gezielte Tests bestehen, einschließlich einer separat erzwungenen CPU-Timer-
+Abnahme mit pathologischem Regex. Eine rein synthetische Prüfung des neuen
+Prüfcodes auf der VM gelingt ohne Änderung installierter Dateien.
+Vollständige CI, Auslieferung und echte Ordnerabnahme dieser Korrektur stehen aus.
+Suche, Nachrichten sowie Chat-, Aufgaben- und Projektabnahme bleiben offen.
+Es wurden keine Nachrichten abgerufen, verschickt, verschoben oder gelöscht.
 
-Die Folgekorrektur betrifft ausschließlich die lesende Katalogbereitschaft: HTTP 502/503
-können innerhalb des bestehenden Zeitfensters erneut geprüft werden.
-Zugangskonfiguration und Werkzeugaufrufe werden nicht wiederholt; Authentifizierungs-
-und Inhaltsfehler brechen weiter sofort ab. 87 gezielte Tests, Ruff und mypy
-bestehen. Vollständige CI, Auslieferung und echte Verbindungsabnahme dieser
-Folgekorrektur stehen aus. Echte Ordner-/Such-/Nachrichtenabnahme und die Nutzung
-in Chat, Aufgaben und Projekten bleiben offen. Es wurden keine Nachrichten abgerufen.
+Die vorherige vollständige verschlüsselte Sicherung außerhalb der VM ist per
+Prüfsummen, vollständiger Entschlüsselung und allen 16 Proton-Archivwurzeln geprüft;
+App- und Proton-Schreiber waren bei dieser Kopie angehalten. Vor dem aktuellen
+Codewechsel wurde zusätzlich der aktuelle Datenbank-/Konfigurationszustand
+verschlüsselt direkt auf der VM gesichert. Für diese ergänzende Teilkopie sind
+Pipeline, Archivquellen, Chiffretext-Header und Prüfsummen bestätigt; sie wurde
+nicht entschlüsselt und bildet keine neue vollständige Systemkopie. Bridge und
+vorhandene Backups bleiben erhalten, die Reservegrenze wurde nicht geändert.
+Die reguläre Vollsicherung auf der VM bleibt durch ihre Reserveprüfung begrenzt.
+Ein Restore wurde nicht getestet. Rollback betrifft ausschließlich Code/Images.
 
 ## Gmail-Postfach — auf der Test-VM verfügbar
 
