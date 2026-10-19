@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-19",
-  "applicationCommit": "a717d37",
+  "applicationCommit": "cb5c179",
   "schema": "0045",
-  "tests": 1797,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39289475685",
+  "tests": 1806,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39293502010",
   "screenshots": [
     {
       "id": "chat",
@@ -618,12 +618,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft. Bridge-Anmeldung, IMAP-Zugangsprüfung und authentifizierter App-Verbindungstest sind erfolgreich; lokaler Lesezugriff ist aktiviert. Ein CPU-Startfehler der isolierten Schema-Prüfung blockiert noch echte KI-Postfachaufrufe und wird korrigiert.",
+          "description": "MCP-Profile mit Katalogprüfung und ausdrücklich einzeln freigegebenen Lesewerkzeugen unter Erweiterte Berechtigungen. Werkzeugname und Eingabeschema bleiben gebunden; Nur lesen erzeugt keine pauschale Werkzeugfreigabe. Der Proton-Bridge-Katalog ist auf der Test-VM geprüft. Bridge-Anmeldung, IMAP-Zugangsprüfung und authentifizierter App-Verbindungstest sind erfolgreich; lokaler Lesezugriff ist aktiviert. Die korrigierte Schema-Prüfung und der echte schema- und richtliniengebundene KI-Ordnerabruf sind erfolgreich. Suche, Nachrichten und vollständige Chat-/Aufgaben-/Projektabnahme bleiben offen.",
           "status": "implemented"
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Proton Mail über Verbindung hinzufügen auswählen. Ein Assistent führt durch Vorbereiten, vorhandene Bridge-Zugangsdaten und eine ausdrückliche abschließende Prüfung. Die persönliche Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI; Versand und Postfachänderungen bleiben gesperrt. Der dreistufige Assistent und der echte App-Verbindungstest sind geprüft; lokaler Lesezugriff ist aktiviert. Der anschließende KI-Ordnerabruf scheitert noch vor dem Mail-Aufruf an der Schema-Prüfung. Weitere Postfach- und Nutzungsabnahme bleiben offen.",
+          "description": "Proton Mail über Verbindung hinzufügen auswählen. Ein Assistent führt durch Vorbereiten, vorhandene Bridge-Zugangsdaten und eine ausdrückliche abschließende Prüfung. Die persönliche Kontoanmeldung in Bridge erfolgt weiterhin außerhalb von obdaAI; Versand und Postfachänderungen bleiben gesperrt. Der dreistufige Assistent und der echte App-Verbindungstest sind geprüft; lokaler Lesezugriff ist aktiviert. Der echte Ordnerabruf über den gemeinsamen KI-Adapter gelingt. Suche, Nachrichten und vollständige Chat-/Aufgaben-/Projektabnahme bleiben offen.",
           "status": "implemented"
         },
         {
@@ -788,15 +788,15 @@
     "schema": "0045",
     "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "a717d37",
-    "ciTests": 1797,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39289475685",
-    "deployedCommit": "a717d37",
+    "commit": "cb5c179",
+    "ciTests": 1806,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39293502010",
+    "deployedCommit": "cb5c179",
     "deployedSchema": "0045",
-    "liveScope": "Gmail-Assistent unter Verbindung hinzufügen mit eigener Google-OAuth-Konfiguration und lokaler Postfachverarbeitung ausgeliefert. Authentifizierter HTTPS-Status, Redirect-URI und ausgelieferte Oberfläche echt geprüft. Persönliche Google-Anmeldung und reale Postfach-/Chat-/Aufgaben-/Projektabnahme stehen aus; kein Gmail-Versand, keine Änderungen und keine Anhangdownloads. Release a717d37 / Schema 0045 gesund auf dem Testsystem installiert. Vollständige CI: 1797 Backend-/PostgreSQLtests bestanden, 6 übersprungen, 39 synthetische Browserabläufe plus drei eingebundene Zusatzprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die kompakte Übersicht und der dreistufige Assistent über Verbindung hinzufügen → Proton Mail sind auf dem Testsystem verfügbar. Bestehende Rechte bleiben erhalten; Details sind aufklappbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Die persönliche Bridge-Anmeldung und IMAP-Zugangsprüfung sind erfolgreich. Der Bridge-Hintergrunddienst und seine gespeicherten Zugangsdaten sind mit gepinntem STARTTLS und lesend geöffnetem Posteingang geprüft, ohne Nachrichten abzurufen. Katalog-Netzfreigabe und HTTP-502/503-Startfehler sind korrigiert und ausgerollt. Die authentifizierte HTTPS-Einrichtung gelingt mit gespeicherten Zugangsdaten; lokaler Lesezugriff ist aktiviert. Der echte KI-Ordnerabruf wird noch vor dem Mail-Aufruf durch die CPU-Grenze der Schema-Prüfung beendet. Die Initialisierung dieser Prüfung wird separat korrigiert; vollständige CI, Auslieferung und echte Ordnerabnahme der Folgekorrektur bleiben offen. Echte Postfach- und Mail-Agentenabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
+    "liveScope": "Gmail-Assistent unter Verbindung hinzufügen mit eigener Google-OAuth-Konfiguration und lokaler Postfachverarbeitung ausgeliefert. Authentifizierter HTTPS-Status, Redirect-URI und ausgelieferte Oberfläche echt geprüft. Persönliche Google-Anmeldung und reale Postfach-/Chat-/Aufgaben-/Projektabnahme stehen aus; kein Gmail-Versand, keine Änderungen und keine Anhangdownloads. Release cb5c179 / Schema 0045 gesund auf dem Testsystem installiert. Vollständige CI: 1806 Backend-/PostgreSQLtests bestanden, 6 übersprungen, 39 synthetische Browserabläufe plus drei eingebundene Zusatzprüfungen. Proton Bridge 3.27.1 und lesender Community-MCP installiert; die kompakte Übersicht und der dreistufige Assistent über Verbindung hinzufügen → Proton Mail sind auf dem Testsystem verfügbar. Bestehende Rechte bleiben erhalten; Details sind aufklappbar. HTTPS-Status, ausgelieferte Oberfläche und App-Zugang zum lokalen Einrichtungsdienst sind echt geprüft. Die persönliche Bridge-Anmeldung und IMAP-Zugangsprüfung sind erfolgreich. Der Bridge-Hintergrunddienst und seine gespeicherten Zugangsdaten sind mit gepinntem STARTTLS und lesend geöffnetem Posteingang geprüft, ohne Nachrichten abzurufen. Katalog-Netzfreigabe und HTTP-502/503-Startfehler sind korrigiert und ausgerollt. Die authentifizierte HTTPS-Einrichtung gelingt mit gespeicherten Zugangsdaten; lokaler Lesezugriff ist aktiviert. Die CPU-Startgrenze der Schema-Prüfung ist korrigiert und vollständig geprüft ausgerollt. Der private Community-MCP lädt das gepinnte TLS-Zertifikat ausdrücklich; die Hostnamen- und Zertifikatsprüfung bleibt aktiv. Der echte schema- und richtliniengebundene KI-Ordnerabruf ist erfolgreich; Ergebnisse bleiben lokal. Der private MCP bündelt die vollständige Ordnerliste ohne Kürzung in einem Textblock, mit unveränderten Schemas und App-Grenzen. Suche, Nachrichten und vollständige Chat-/Aufgaben-/Projektabnahme stehen aus. Reales SSH-Schreiben im Chat und hashgebundenes Löschen durch eine Aufgabe separat geprüft; die Aufgabe benötigte eine klärende Rückmeldung. Reiner HA-Lesechat auf fd56e02 gelingt ohne Formatkorrektur oder menschliche Fortsetzung. Paperless- und HA-Projektläufe führen öffentliche Suche und echte GET-Schritte aus, bleiben aber vor Änderungen an fehlerhafter Planung beziehungsweise einer bestehenden Anbieterzeitgrenze stehen. Zielgebundene Werkzeuggrammatik sowie begrenzte Text-/JSON-Dokumentation sind geprüft und ausgerollt. Vollständige öffentliche Seitenabrufe bleiben durch bestehende Netzgrenzen eingeschränkt; Inferenzwerte und Netzfreigaben wurden nicht erweitert. HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "a717d37",
+    "lastSuccessfulCICommit": "cb5c179",
     "lastSuccessfulCIUI": 39
   }
 }

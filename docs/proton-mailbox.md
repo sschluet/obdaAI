@@ -107,52 +107,51 @@ Für das geprüfte Postfach sind `list_folders`, `list_emails`, `search_emails`,
 vorgesehenen Lesewerkzeuge. `save_attachment` und `export_email` erzeugen Dateien
 und erhalten keine solche Freigabe.
 
+## Betrieb des festgeschriebenen Community-MCP
+
+Die installierte Version 0.4.0 benötigt eine private Laufzeitkorrektur für das
+bereits gepinnte Bridge-Zertifikat: Ihr selbst erzeugter `SSLContext` lädt die
+Zertifikatsdatei ausdrücklich mit `load_verify_locations`. Die Umgebungsvariable
+`SSL_CERT_FILE` allein genügt bei diesem Kontext nicht. Hostnamenprüfung und
+`CERT_REQUIRED` bleiben eingeschaltet; es wird kein globaler Zertifikatsspeicher
+geändert. Original, Prüfsummen und Rückweg werden außerhalb von Git erhalten.
+Der Dienst ist damit lokal angepasst und kein unverändertes Upstream-Paket.
+
+Der Dienst bündelt außerdem die vollständige Ordnerliste als einen JSON-Textblock,
+ohne Kürzung oder Schemaänderung. Die App-Grenzen bleiben unverändert. Diese
+private Kompatibilitätskorrektur verhindert, dass das SDK pro Ordner einen
+separaten Antwortblock erzeugt. Leere und übergroße Listen sind separat geprüft.
+
 ## Abnahme und offene Punkte
 
-Bridge-Installation und geschützter MCP-Katalogzugriff sind auf der Test-VM geprüft.
-Die kompakte Integrationsübersicht und der dreistufige Proton-Assistent sind mit
-synthetischen Zugangsdaten im Browser geprüft; 21 gezielte Backend-/Broker-Tests
-sind erfolgreich. Release `92270a2` / Schema `0045` ist auf der Test-VM verfügbar;
-beide APIs sind gesund. Der echte authentifizierte HTTPS-Status, die ausgelieferte
-Einstellungsdatei und der tokengebundene Brokerzugang aus dem App-Container sind
-separat geprüft. Bestehende Daten, Rechte, Overlays und unabhängige Netzregeln sind
-erhalten; die Live-Prüfung hat keine Mail-Zugangsdaten verändert oder Nachrichten
-abgerufen.
-Vollständige lokale Suite: 1755 bestanden. Vollständige
-[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39215615382): 1749 bestanden,
-sechs übersprungen; alle 39 Browserabläufe und drei eingebundene Zusatzprüfungen
-sowie Runnersmokes erfolgreich. Die lokale generische Integrationsfolge einschließlich der Proton-Prüfung besteht.
+Release **cb5c179 / Schema 0045** ist auf der Test-VM installiert; beide APIs sind
+gesund. Die persönliche Bridge-Anmeldung, gepinntes STARTTLS, Katalogprüfung und
+der authentifizierte HTTPS-Einrichtungsweg sind erfolgreich. Der Nutzer bestätigt
+die Verbindung unter Integrationen. Vorhandene Zugangsdaten bleiben erhalten;
+lokaler Lesezugriff ist aktiviert, allgemeiner MCP-Vollzugriff, autonome Änderungen,
+Versand und Postfachänderungen bleiben gesperrt.
 
-Die verschlüsselte Nachab-Sicherung umfasst den Bridge-Anmeldespeicher und den
-MCP-/Brokerzustand einschließlich dauerhafter Ausführungsbelege, Dienstdateien,
-Zertifikat und eigenem Compose-Overlay. Prüfsummen, Entschlüsselbarkeit und 16
-geforderte Archivwurzeln sind am außerhalb der VM gespeicherten Archiv geprüft,
-ohne Klartextdateien zu entpacken. Das ersetzt keinen Restoretest; laufende Dienste
-und atomare Einzeldateien bilden keine gemeinsame Sicherungstransaktion.
+Die isolierte Schema-Prüfung beginnt ihr CPU-Budget nach vertrauenswürdigen
+Imports. Drei Sekunden Wandzeit, 512 MiB und vorhandene geerbte CPU-Grenzen bleiben
+erhalten. Der echte Adapteraufruf passiert die Schema-Prüfung auf der VM.
+Lokal bestehen **1812 Tests**, Ruff, mypy und Geheimnisprüfung. Vollständige
+[App-CI](https://github.com/sschluet/obdaAI/actions/runs/39293502010): **1806 bestanden,
+sechs übersprungen**; alle sechs verpflichtenden Jobs einschließlich 39
+synthetischer Browserabläufe, drei eingebundener Zusatzprüfungen und Runnersmokes
+sind erfolgreich. Diese Browserprüfungen ersetzen keine echte Postfachabnahme.
 
-Die persönliche Kontoanmeldung, gepinntes STARTTLS und der authentifizierte
-HTTPS-Einrichtungsweg sind erfolgreich. Release `a717d37` / Schema `0045` ist
-gesund ausgerollt; vollständige CI: 1797 bestanden, sechs übersprungen.
-Die begrenzte Katalog-Netzfreigabe und HTTP-502/503-Startfehler sind korrigiert.
-Gespeicherte Zugangsdaten wurden erhalten; der lokale Lesezugriff ist aktiviert.
+Die frühere vollständige verschlüsselte Kopie außerhalb der VM ist per
+Entschlüsselung, Prüfsummen und allen 16 Proton-Archivwurzeln bestätigt. Vor dem
+aktuellen Codewechsel kam eine aktuelle verschlüsselte Datenbank-/Konfigurations-
+Teilkopie direkt auf der VM hinzu; Pipeline und Chiffretext-Prüfsummen sind
+geprüft, Entschlüsselung dieser Teilkopie und Restore nicht. Bridge, vorhandene
+Backups, Berechtigungen, Overlays und unabhängige Netzregeln bleiben erhalten.
 
-Der echte Ordnerabruf über den KI-Adapter scheitert derzeit noch vor dem
-Mail-Aufruf an der Laufzeit der isolierten Schema-Prüfung: Bibliotheksinitialisierung
-verbraucht bereits das bisherige Ein-Sekunden-CPU-Limit. Die Folgekorrektur
-gewährt dem untrusted Parsen und Prüfen eine eigene CPU-Sekunde nach den
-vertrauenswürdigen Imports. Drei Sekunden Wandzeit und 512 MiB bleiben erhalten;
-geerbte CPU-Grenzen werden nicht erhöht. 26 gezielte Tests und eine synthetische
-Prüfung auf der VM bestehen; vollständige CI, Auslieferung und echte Ordnerabnahme
-dieser Folgekorrektur bleiben offen. Keine installierten VM-Dateien wurden für
-den synthetischen Test geändert.
-
-Die geprüfte vollständige verschlüsselte Kopie außerhalb der VM bleibt erhalten.
-Vor dem aktuellen Codewechsel kam eine aktuelle verschlüsselte Datenbank-/
-Konfigurations-Teilkopie direkt auf der VM hinzu; Pipeline und Chiffretext-
-Prüfsummen sind geprüft, Entschlüsselung dieser Teilkopie und Restore nicht.
-Bridge bleibt dabei unberührt. Echte Suche, Nachrichten sowie Chat-, Aufgaben-
-und Projektabnahme bleiben offen. Keine Nachricht wurde verschickt, verschoben
-oder gelöscht.
+Der echte schema- und richtliniengebundene Ordnerabruf über den gemeinsamen
+KI-Adapter ist erfolgreich. Profil und Richtlinie werden unmittelbar vor dem
+Aufruf erneut geprüft; die Antwort bleibt `LOCAL_ONLY`. Suche, Nachrichten sowie
+vollständige Chat-, Aufgaben- und Projektabnahme bleiben offen. Es wurden keine
+Nachrichten abgerufen, verschickt, verschoben oder gelöscht.
 
 Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),
 [Linux-Installation](https://proton.me/support/installing-bridge-linux-deb-file),

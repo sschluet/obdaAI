@@ -1,36 +1,44 @@
 # obdaAI — Status 19.10.2026
 
-## Proton-Einrichtung: verbunden, KI-Werkzeugprüfung wird korrigiert
+## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
 
-Release **a717d37 / Schema 0045** ist auf der Test-VM installiert; beide APIs
+Release **cb5c179 / Schema 0045** ist auf der Test-VM installiert; beide APIs
 sind gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
 unabhängige Netzregeln sind unverändert geprüft.
-Vollständige [CI39289475685](https://github.com/sschluet/obdaAI/actions/runs/39289475685):
-**1797 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
-inklusive Browser- und Runnersmokes erfolgreich. Lokal bestehen 1803 Tests,
-Ruff, mypy und Geheimnisprüfung.
+Vollständige [CI39293502010](https://github.com/sschluet/obdaAI/actions/runs/39293502010):
+**1806 bestanden, sechs übersprungen**, alle sechs verpflichtenden Prüfjobs
+inklusive 39 Browserabläufen, drei eingebundenen Zusatzprüfungen und Runnersmokes
+erfolgreich. Lokal bestehen **1812 Tests**, Ruff, mypy und Geheimnisprüfung.
 
 Die persönliche Bridge-Anmeldung, gepinntes STARTTLS und der authentifizierte
-HTTPS-Einrichtungsweg sind erfolgreich. Gespeicherte Zugangsdaten wurden erhalten;
+HTTPS-Einrichtungsweg sind erfolgreich. Der Nutzer bestätigt die funktionierende
+Verbindung unter Integrationen. Gespeicherte Zugangsdaten wurden erhalten;
 der lokale Lesezugriff ist aktiviert. Die begrenzte Katalog-Netzfreigabe und
 vorübergehende HTTP-502/503-Startfehler sind korrigiert. Ausschließlich lesende
 Katalogprüfungen werden innerhalb des bestehenden Zeitfensters wiederholt;
 Zugangskonfiguration und Werkzeugaufrufe nicht.
 
-Der anschließende echte Ordnerabruf über den gemeinsamen KI-Adapter hat jedoch
-eine weitere Laufzeitgrenze nachgewiesen: Schon das Laden der vertrauenswürdigen
-Schema-Bibliotheken verbraucht auf der VM das bisher für den gesamten Kindprozess
-geltende Ein-Sekunden-CPU-Limit. Selbst eine gültige leere Eingabe wurde vor dem
-Mail-Aufruf beendet; die OOM-Zähler blieben unverändert.
-Die Folgekorrektur beginnt das Ein-Sekunden-CPU-Budget erst vor dem Parsen und
-Prüfen untrusted Eingaben. Drei Sekunden Elternprozess-Wandzeit und 512 MiB
-Speichergrenze bleiben unverändert; geerbte CPU-Grenzen werden nicht erhöht.
-26 gezielte Tests bestehen, einschließlich einer separat erzwungenen CPU-Timer-
-Abnahme mit pathologischem Regex. Eine rein synthetische Prüfung des neuen
-Prüfcodes auf der VM gelingt ohne Änderung installierter Dateien.
-Vollständige CI, Auslieferung und echte Ordnerabnahme dieser Korrektur stehen aus.
-Suche, Nachrichten sowie Chat-, Aufgaben- und Projektabnahme bleiben offen.
-Es wurden keine Nachrichten abgerufen, verschickt, verschoben oder gelöscht.
+Die isolierte Schema-Prüfung erhält ihre CPU-Sekunde nach vertrauenswürdigen
+Imports; drei Sekunden Wandzeit und 512 MiB bleiben erhalten. Geerbte CPU-Grenzen
+werden nicht erhöht. 26 gezielte Tests einschließlich unabhängiger SIGPROF-Abnahme
+bestehen. Der echte KI-Aufruf passiert diese Prüfung auf der VM.
+Der installierte Community-MCP 0.4.0 benötigte zusätzlich eine private
+Kompatibilitätskorrektur: Sein TLS-Kontext lädt das vorhandene gepinnte
+Bridge-Zertifikat ausdrücklich. Hostnamenprüfung und CERT_REQUIRED bleiben aktiv.
+Original, Prüfsummen, dauerhafter Änderungsbeleg und Code-Rückweg liegen privat
+auf der VM; Zugangsdaten, Richtlinien und Bridge wurden dabei nicht verändert.
+
+Der echte schema- und richtliniengebundene Ordnerabruf über den gemeinsamen
+KI-Adapter ist erfolgreich. Profil und Richtlinie werden unmittelbar vor dem
+Aufruf erneut geprüft; die Antwort bleibt `LOCAL_ONLY`. Der private MCP bündelt
+seine vollständige Ordnerliste ohne Kürzung als einen JSON-Textblock. Seine
+Eingabe- und Ausgabeschemas bleiben unverändert; die bestehenden App-Grenzen von
+16 Textblöcken und 64.000 Zeichen gelten weiterhin. Synthetische Prüfungen decken
+vollständige und leere Listen sowie die Größenablehnung ab. Auch hierfür sind
+Original, Änderungsbeleg und Code-Rückweg privat gesichert; der TLS-Patch bleibt
+erhalten. Keine Zugangsdaten, Richtlinien oder Bridge-Dateien wurden verändert.
+Suche, Nachrichten sowie vollständige Chat-, Aufgaben- und Projektabnahme bleiben
+offen. Es wurden keine Nachrichten abgerufen, verschickt, verschoben oder gelöscht.
 
 Die vorherige vollständige verschlüsselte Sicherung außerhalb der VM ist per
 Prüfsummen, vollständiger Entschlüsselung und allen 16 Proton-Archivwurzeln geprüft;
