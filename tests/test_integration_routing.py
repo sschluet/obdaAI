@@ -293,3 +293,15 @@ def test_auto_job_keeps_concrete_authority_but_respects_selected_revocation(agen
         ).status_code
         == 409
     )
+
+
+def test_filesystem_folder_tool_does_not_make_a_profile_a_mailbox(agent):
+    add_profile(
+        agent[0],
+        name="Filesystem",
+        rules=Rules(enabled=True, max_effects=0, mcp_read_tools={"list_folders": "a" * 64}),
+    )
+    assert route(agent, standalone(agent), "Welche neuen Mails gab es heute?").json() == {
+        "route": "chat",
+        "integration_ids": [],
+    }

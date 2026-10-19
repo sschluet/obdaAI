@@ -71,7 +71,7 @@ def relevant(goal: str, row: Integration, rules: Rules) -> bool:
     if row.kind == "mcp":
         names = set(rules.mcp_read_tools)
         mail_interface = bool(
-            names & {"list_emails", "read_email", "search_emails", "list_folders"}
+            names & {"list_emails", "read_email", "search_emails", "daily_digest", "get_thread"}
         )
         if mail_interface and SEND.search(text) and not EXISTING_MAIL.search(text):
             return False
@@ -94,7 +94,7 @@ def mail_interface(row: Integration, rules: Rules) -> bool:
         or row.kind == "mcp"
         and bool(
             set(rules.mcp_read_tools)
-            & {"list_emails", "read_email", "search_emails", "list_folders"}
+            & {"list_emails", "read_email", "search_emails", "daily_digest", "get_thread"}
         )
     )
 

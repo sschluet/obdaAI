@@ -61,3 +61,13 @@ ihre bisherige lokale Kontextfunktion. Ergebnisse aus Systemen und Postfächern
 bleiben lokal und sind untrusted Daten. Die Anwendung friert den Zeitkontext
 für jeden Agentenauftrag ein; `HUB_AGENT_TIMEZONE` bestimmt die IANA-Zeitzone
 (Standard `Europe/Berlin`). Tagesgrenzen berücksichtigen Sommerzeitwechsel.
+
+Reine Leseaufträge an freigegebene Postfächer beginnen mit ihren tatsächlichen
+Werkzeugen statt mit öffentlicher Recherche. Bei MCP wird der Katalog einmal über
+den dauerhaften Leseweg geladen; nur beobachtete, unverändert freigegebene
+Werkzeugschemas werden als eigener Vertrag für die Planung bereitgestellt.
+Das ersetzt weder eine Postfachabfrage noch deren Ergebnis. Unterbrochene oder
+unklare Aufrufe werden nicht automatisch wiederholt. Zeitraumfilter richten sich
+nach dem wirklichen Schema; grobe Tagesfilter dürfen nicht als exakte lokale
+Kalendertagsgrenzen ausgegeben werden. Normale Systemadministration behält ihre
+freigegebene Recherche.

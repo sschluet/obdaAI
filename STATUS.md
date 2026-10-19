@@ -26,23 +26,33 @@ inklusive Sommerzeitwechsel. Nur lesende Postfächer bekommen keine Schreibrecht
 Lokal bestehen 1847 Tests, Ruff, mypy und Geheimnisprüfung. TypeScript, Build,
 der vollständige normale Browserablauf und die Integrations-/Paperless-Prüfungen
 einschließlich Proton-, Gmail-, Schreib- und Agentenprüfungen sind erfolgreich.
-Die unabhängige Prüfung hat keine offenen blockierenden Befunde. GitHub-CI und
-die reale VM-/Mailfrage-Abnahme dieser neuen Lieferung stehen noch aus.
-Die erste vollständige CI auf e67cf8d besteht backendseitig mit 1841 Tests und
-sechs übersprungenen Fällen; der Frontendjob scheitert an einem alten pauschalen
-Chat-Mock, der auch den neuen JSON-Routing-Endpunkt als SSE beantwortet. Der Mock
-wird auf Nachrichtenpfade begrenzt; der vollständige gezielte Routing-Browserfall
-besteht anschließend einschließlich Auto/Cloud/Nur lokal, Bearbeiten und Retry.
-Die Anwendung selbst bleibt gegenüber e67cf8d unverändert. Eine neue vollständige
-CI ist erforderlich; der fehlgeschlagene Gesamtlauf ist kein Vollnachweis.
-Ein echter schema-/richtliniengebundener Proton-Suchaufruf gelingt separat auf der
-bisherigen VM-Version, mit maximal fünf Ergebnissen, ohne Ausgabe privater Daten.
-Das ist ein Schnittstellenbeleg und noch kein neuer Chat-Abnahmebeleg. Die folgenden Belege
-für cb5c179 betreffen die vorherige Lieferung.
+Die unabhängige Prüfung dieser Auswahl-/Routingänderung hat keine offenen
+blockierenden Befunde. Vollständige [CI39303013894](https://github.com/sschluet/obdaAI/actions/runs/39303013894)
+besteht auf e98537d mit **1841 Tests, sechs übersprungenen Fällen** und allen
+Frontend-/Runnerprüfungen. e98537d / Schema 0045 ist gesund auf der Test-VM
+installiert; Daten, Rechte, neun Overlays und unabhängige Netzregeln sind erhalten.
+Ein vorheriger Gesamtlauf auf e67cf8d scheiterte an einem alten Chat-Testmock;
+dessen Korrektur ändert keine Anwendungscodefunktion.
+
+Die echte Frage „Welche neuen Mails gab es heute?“ in einem neuen automatischen
+Chat erreicht das vorhandene Proton-Profil ohne manuellen Agentenschalter. Der
+Lauf recherchiert jedoch zuerst öffentlich und endet mit einer Rückfrage statt
+einer Postfachabfrage. Das ist **keine erfolgreiche Mail-Chat-Abnahme**. Der
+separate schema-/richtliniengebundene Suchaufruf mit maximal fünf Ergebnissen
+besteht; Transport und Anmeldung sind damit separat geprüft. Eine enge Korrektur
+des lesenden Mailablaufs ist implementiert: einmalige dauerhafte Katalogprüfung
+vor der Planung, unveränderte freigegebene Schemas im begrenzten Modellkontext,
+kein anfänglicher Webumweg und kein Erfolg für einen Katalog allein. Bestehende
+Revisions-/Widerrufprüfungen und kein blindes Replay bleiben wirksam; reguläre
+Systemadministration behält Recherche. Ein Dateisystem-MCP mit nur Ordnerabruf
+wird nicht als Mailzugang gewählt. 129 gezielte Tests, Ruff und mypy bestehen;
+neue vollständige Prüfung und reale Mailfrage ohne zusätzliche Hinweise sind noch offen.
+Die unabhängige Prüfung des eingefrorenen Fixes hat keine blockierenden Befunde. Die nachfolgenden Belege für cb5c179
+betreffen die vorherige Lieferung.
 
 ## Proton-Einrichtung und KI-Ordnerabruf erfolgreich
 
-Release **cb5c179 / Schema 0045** ist auf der Test-VM installiert; beide APIs
+Die vorherige Lieferung **cb5c179 / Schema 0045** wurde auf der Test-VM installiert; beide APIs
 sind gesund. Bestehende Daten und Berechtigungen, alle neun Compose-Overlays sowie
 unabhängige Netzregeln sind unverändert geprüft.
 Vollständige [CI39293502010](https://github.com/sschluet/obdaAI/actions/runs/39293502010):
