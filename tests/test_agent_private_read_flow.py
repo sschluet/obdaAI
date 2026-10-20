@@ -232,7 +232,8 @@ def test_model_cannot_smuggle_generic_http_change_into_private_read(archive, mon
 
 
 @pytest.mark.parametrize(
-    "goal", ["Ändere das Dokument im Archiv", "Lösche Dokument 42", "Update Paperless"]
+    "goal", ["Ändere das Dokument im Archiv", "Lösche Dokument 42", "Update Paperless",
+             "Benenne das synthetische Dokument um und prüfe den gespeicherten Titel."]
 )
 def test_clear_administration_keeps_existing_path_and_effect_budget(agent, goal):
     app, client, headers, _, _, chat, *_ = agent

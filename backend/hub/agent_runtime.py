@@ -234,7 +234,7 @@ def mail_read_job(job: AgentJob, profiles: dict[str, Any]) -> bool:
 def paperless_administration_intent(goal: str) -> bool:
     """Explicit administration is never reclassified from older document evidence."""
     return bool(re.search(
-        r"\b(änder\w*|aender\w*|lösch\w*|loesch\w*|entfern\w*|umbenenn\w*|"
+        r"\b(änder\w*|aender\w*|lösch\w*|loesch\w*|entfern\w*|umbenenn\w*|benenn\w*|"
         r"aktualisier\w*|installier\w*|konfigurier\w*|hochlad\w*|upload\w*|"
         r"füg\w*|hinzufüg\w*|zuordn\w*|setze\w*|markier\w*|tagg\w*|verschieb\w*|"
         r"bearbeit\w*|speicher\w*|remove|assign|set|change|add|modify|edit|move|save|"

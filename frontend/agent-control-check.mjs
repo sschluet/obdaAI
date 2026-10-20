@@ -121,7 +121,7 @@ try{
  const taskJobs=await call('/agent-runs?task_id='+task.id);
  if(taskJobs[0]?.status!=='succeeded')throw Error('Task did not use the verified shared loop');
  await page.getByRole('button',{name:'Chat',exact:true}).click();await page.goto(base+'/?chat='+chat.id);
- await page.getByLabel('Systeme steuern',{exact:true}).check();await composer.fill('Synthetischer Abnahmetest mit Antwortverlust.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+ await page.getByLabel('Systeme steuern',{exact:true}).check();await composer.fill('Benenne das synthetische Dokument um: Abnahmetest mit Antwortverlust.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await panel.getByText(/Wirkung unklar/).first().waitFor();
  jobs=await call('/agent-runs?conversation_id='+chat.id);job=await call('/agent-runs/'+jobs[0].id);
  if(job.status!=='uncertain'||job.steps.filter(s=>s.kind==='effect').length!==1)throw Error('Uncertain effect retried');
