@@ -84,6 +84,16 @@ def relevant(goal: str, row: Integration, rules: Rules) -> bool:
     aliases = ALIASES.get(row.kind)
     if aliases and aliases.search(text):
         return True
+    if (
+        row.kind == "paperless"
+        and re.search(r"\b(\w*unterlagen|vertr[aä]g\w*|belege[n]?)\b", text)
+        and re.search(
+            r"\b(mein\w*|unser\w*|my|our|such\w*|finde\w*|zeig\w*|lies|"
+            r"liste\w*|steht|enthalt\w*|letzten)\b",
+            text,
+        )
+    ):
+        return True
     name = row.name.strip().casefold()
     return len(name) >= 3 and name in text
 
@@ -136,7 +146,12 @@ def usable(kind: str, rules: Rules) -> bool:
 
 
 def matching_integrations(
-    db: Session, cfg: Settings, selected: dict[str, Any], goal: str
+    db: Session,
+    cfg: Settings,
+    selected: dict[str, Any],
+    goal: str,
+    *,
+    conversation_id: str | None = None,
 ) -> list[str]:
     candidates = []
     for item in selected["bindings"]:
@@ -172,6 +187,22 @@ def matching_integrations(
         if relevant(goal, row, rules)
         and (not named or not mail_interface(row, rules) or row.id in named)
     ]
+    if (
+        not matches
+        and conversation_id
+        and not EXPLANATION.search(goal.casefold())
+        and not PUBLIC_RESEARCH.search(goal.casefold())
+        and not FILE_CREATION.search(goal.casefold())
+        and re.search(
+            r"\b(davon|darin|darauf|dazu|diese[rmns]?|vorhin|genannten|"
+            r"aufgelisteten|geantwortet|beantwortet)\b",
+            goal.casefold(),
+        )
+    ):
+        from hub.agent_read_references import previous_profile_ids
+
+        profiles = {row.id: (row, rules, json.loads(row.config)) for row, rules in candidates}
+        matches = list(previous_profile_ids(db, conversation_id, profiles))
     return sorted(matches)
 
 
@@ -179,6 +210,10 @@ def route_integrations(
     db: Session, cfg: Settings, conversation_id: str, goal: str
 ) -> dict[str, Any]:
     matches = matching_integrations(
-        db, cfg, freeze_bindings(db, "conversation", conversation_id), goal
+        db,
+        cfg,
+        freeze_bindings(db, "conversation", conversation_id),
+        goal,
+        conversation_id=conversation_id,
     )
     return {"route": "agent" if matches else "chat", "integration_ids": matches}

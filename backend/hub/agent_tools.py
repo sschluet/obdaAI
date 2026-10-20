@@ -162,6 +162,25 @@ class HTTPCall(Strict):
         return self
 
 
+class PaperlessCall(Strict):
+    operation: Literal["search", "document"] = "search"
+    query: str = Field(default="", max_length=500)
+    document_id: int | None = Field(default=None, ge=1)
+    page: int = Field(default=1, ge=1, le=10000)
+    limit: int = Field(default=10, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def operation_shape(self) -> "PaperlessCall":
+        if any(ord(c) < 32 for c in self.query):
+            raise ValueError("Invalid Paperless query")
+        if self.operation == "document":
+            if self.document_id is None or self.query or self.page != 1:
+                raise ValueError("Document reads require only a document ID")
+        elif self.document_id is not None:
+            raise ValueError("Search cannot select a document ID")
+        return self
+
+
 class ShellCall(Strict):
     script: str = Field(min_length=1, max_length=64000)
     verification_script: str = Field(min_length=1, max_length=16000)
@@ -255,6 +274,7 @@ class Decision(Strict):
             "research",
             "mail.send",
             "gmail.read",
+            "paperless.read",
             "ha.websocket",
             "ssh.inspect",
             "http.upload",
@@ -290,7 +310,10 @@ def research_schema() -> dict[str, Any]:
 
 
 def decision_envelope_schema(
-    integration_ids: Sequence[str], tool_names: Sequence[str] | None = None
+    integration_ids: Sequence[str],
+    tool_names: Sequence[str] | None = None,
+    *,
+    allow_finish: bool = True,
 ) -> dict[str, Any]:
     """Compact prompt contract; full typed arguments live in tools and native grammar."""
     if not integration_ids:
@@ -320,7 +343,7 @@ def decision_envelope_schema(
             "type": "object",
             "additionalProperties": False,
             "properties": {
-                "kind": {"type": "string", "enum": ["ask", "finish"]},
+                "kind": {"type": "string", "enum": ["ask", "finish"] if allow_finish else ["ask"]},
                 "message": message,
             },
             "required": ["kind", "message"],
@@ -372,6 +395,15 @@ def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
         return rules.file_upload and "POST" in rules.http_methods
     if tool == "ha.websocket":
         return kind == "home_assistant" and bool(rules.ha_websocket_prefixes)
+    if tool == "paperless.read":
+        return bool(
+            kind == "paperless"
+            and "GET" in rules.http_methods
+            and any(
+                prefix.startswith("/api/documents/") or "/api/documents/".startswith(prefix)
+                for prefix in rules.http_prefixes
+            )
+        )
     if tool == "gmail.read":
         return kind == "gmail" and rules.gmail_read
     if tool == "mail.send":
@@ -449,9 +481,11 @@ def decision_schema(
     integration_ids: Sequence[str],
     tool_names: Sequence[str] | None = None,
     interfaces: Sequence[dict[str, Any]] | None = None,
+    *,
+    allow_finish: bool = True,
 ) -> dict[str, Any]:
     """Constrain generation to typed, available tools; runtime gates remain authoritative."""
-    envelope = decision_envelope_schema(integration_ids, tool_names)
+    envelope = decision_envelope_schema(integration_ids, tool_names, allow_finish=allow_finish)
     names = sorted(SCHEMAS if tool_names is None else set(tool_names))
     bound = _interface_rules(integration_ids, interfaces) if interfaces is not None else None
     definitions: dict[str, Any] = {}
@@ -530,6 +564,7 @@ SCHEMAS: dict[str, type[Strict]] = {
     "ha.websocket": HACall,
     "mail.send": MailCall,
     "gmail.read": GmailCall,
+    "paperless.read": PaperlessCall,
     "research": ResearchCall,
     "http": HTTPCall,
     "http.verify": HTTPVerify,
@@ -583,6 +618,17 @@ def validate_tool(
     if tool == "gmail.read" and kind == "gmail" and rules.gmail_read:
         if data["query"] and not rules.private_data_to_target:
             raise PermissionError("Gmail search queries are not authorized")
+        return data, False
+    if tool == "paperless.read":
+        from hub.agent_paperless import request_path
+
+        path = request_path(data)
+        if (
+            kind != "paperless"
+            or "GET" not in rules.http_methods
+            or not any(path.startswith(prefix) for prefix in rules.http_prefixes)
+        ):
+            raise PermissionError("Paperless read is outside the approved rules")
         return data, False
     if tool == "research":
         return data, False
@@ -777,6 +823,11 @@ def invoke(
     def credential_boundary(address: str) -> None:
         private_boundary(address, rules)
         before_send()
+
+    if tool == "paperless.read":
+        from hub.agent_paperless import invoke as paperless_read
+
+        return paperless_read(cfg, config, secret, args, rules, before_send)
 
     if tool == "gmail.read":
         from hub.gmail_client import API_BASE, GmailClient

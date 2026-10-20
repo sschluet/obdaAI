@@ -282,6 +282,29 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 else None,
             )
             if not old:
+                from hub.agent_read_references import bind
+
+                # Follow-up questions refer to actual, still-authorized reads,
+                # not IDs reconstructed from a model-written chat summary.
+                current_profiles = (
+                    gate(db, cfg, job)
+                    if any(m.role == "assistant" and m.agent_job_id for m in history)
+                    else {}
+                )
+                references = bind(db, job, history, current_profiles) if current_profiles else []
+                if references:
+                    job.context = encode([*json.loads(job.context), *references])
+                    from hub.agent_paperless import is_read_profile
+                    from hub.agent_runtime import paperless_administration_intent
+
+                    if not paperless_administration_intent(job.goal) and all(
+                        is_read_profile(*profile) for profile in current_profiles.values()
+                    ):
+                        # A short follow-up inherits evidence, never write
+                        # authority. Explicit administration keeps its own path.
+                        bindings = json.loads(job.bindings)
+                        bindings["read_only"] = True
+                        job.bindings, job.max_effects = encode(bindings), 0
                 db.add(
                     Message(
                         conversation_id=owner.id, role="user", content=body.goal, label="LOCAL_ONLY"

@@ -256,7 +256,8 @@ def test_catalog_only_finish_is_not_a_successful_mailbox_answer(read_mailbox, mo
 
     monkeypatch.setattr(runtime, "generate", finish)
     status, history = execute(read_mailbox)
-    assert status == "unverified"
+    assert status == "failed"
+    assert sum(step.kind == "feedback" for step in history) == 2
     assert not any(body["method"] == "tools/call" for body in read_mailbox[-1])
 
 
@@ -628,8 +629,9 @@ def test_prepared_catalog_is_not_duplicated_and_dispatching_catalog_is_never_rep
 
     monkeypatch.setattr(runtime, "generate", finish)
     status, history = execute(read_mailbox)
-    assert status == ("uncertain" if interrupted else "unverified")
-    assert len(history) == 1
+    assert status == ("uncertain" if interrupted else "failed")
+    assert sum(step.kind == "read" for step in history) == 1
+    assert sum(step.kind == "feedback" for step in history) == (0 if interrupted else 2)
     assert bool(calls) is not interrupted
 
 
@@ -930,8 +932,10 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
         assert "excerpt" not in typed and len(contracts["schemas"]) == 8
         assert len(instruction.encode()) + len(runtime.encode(final).encode()) <= 14000
         measurements.append(content_bytes)
-        return {"kind": "finish", "message": "Synthetic catalog size proof"}
+        # This context-only fixture has no actual current message query.
+        # A genuine missing-detail question preserves the one-turn size measurement.
+        return {"kind": "ask", "message": "Which missing synthetic search detail?"}
 
     monkeypatch.setattr(runtime, "generate", generate)
     status, trace = execute(read_mailbox)
-    assert status == "unverified" and len(measurements) == 1, (phases, trace[-1].document)
+    assert status == "awaiting_input" and len(measurements) == 1, (phases, trace[-1].document)

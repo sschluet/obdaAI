@@ -1,5 +1,20 @@
 # obdaAI — Status 20.10.2026
 
+## Private Integrationsfolgefragen — Korrektur in Prüfung
+
+Die aktuelle Untersuchung bestätigt zwei getrennte Fehler: Der Mailplaner konnte
+nach dem Werkzeugkatalog ohne Nachrichtenprüfung enden; Paperless hatte bereits
+Dokumente gelesen, scheiterte danach aber am großen lokalen Modellkontext.
+Der neue Stand bindet Folgefragen an gültige Abrufbelege desselben Gesprächs und
+Kontos. Ein Abschluss benötigt einen tatsächlichen Datenabruf. Private Archivfragen
+verwenden begrenzte typisierte Suche und OCR statt des allgemeinen Verwaltungsplans.
+Antwortflags und belegte Beziehungen zu gesendeten Nachrichten bleiben getrennt;
+fehlende Belege bedeuten unbekannt, nicht unbeantwortet. Private Daten bleiben lokal.
+
+Gezielte synthetische API-/Transport-/Berechtigungsprüfungen sind ergänzt.
+Vollständige Prüfung, neue CI, Test-VM-Rollout und echte Mail-/Paperless-Folgeabnahme
+stehen für diese Korrektur noch aus. Der folgende Stand beschreibt frühere Abnahmen.
+
 ## Natürliche Mailfrage ohne Bestätigungsschleife — echte Tagesabnahme erfolgreich
 
 Die genaue Frage „Was gab es heute für neue Mails?“ ist mit Release

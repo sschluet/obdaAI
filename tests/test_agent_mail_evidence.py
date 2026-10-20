@@ -18,12 +18,13 @@ GOAL = "Welche Mails gab es diese Woche ?"
 def test_mail_planner_uses_existing_read_authority_clock_and_defaults_without_reconfirmation():
     instruction = runtime.MAIL_READ_INSTRUCTION
     assert len(instruction) <= 2500  # Keep all guidance within the existing planner budget.
-    assert "keine Ausführungsbestätigung verlangen" in instruction
-    assert "folder.default" in instruction and "beobachteten freigegebenen Schema" in instruction
-    assert "Zeitraum aus clock" in instruction and "nicht bestätigen lassen" in instruction
-    assert "Konto-/Ordner-/Filterangaben, Kontext und latest_input" in instruction
-    assert "Geklärtes nicht erneut" in instruction
-    assert '"kind":"ask"' in instruction  # Genuine missing information remains askable.
+    assert "keine Passwörter/Bestätigung erfragen" in instruction
+    assert "folder.default" in instruction and "beobachtetes" in instruction
+    assert "Zeitraum/Ordner nicht bestätigen" in instruction
+    assert "Konto/Ordner/Filter/Kontext/latest_input gehen vor" in instruction
+    assert "nur Fehlendes erfragen" in instruction
+    assert "ask nur bei fehlender Information" in instruction
+    assert "prior_read_results" in instruction and "Answered-Flag separat" in instruction
 
 
 @pytest.mark.parametrize(

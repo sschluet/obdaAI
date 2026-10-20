@@ -4,13 +4,145 @@ import json
 from uuid import uuid4
 
 import pytest
-from hub.agent_models import AgentJob, AgentPolicy
+from hub.agent_models import AgentJob, AgentPolicy, AgentStep
 from hub.agent_tools import Rules
 from hub.db import Message, Run
 from hub.integrations import Integration
 from sqlalchemy import func, select
 
 pytest_plugins = ["test_agents"]
+
+
+@pytest.mark.parametrize(
+    "goal",
+    [
+        "Was steht in meinen Verträgen?",
+        "Finde meine Versicherungsunterlagen",
+        "Suche die letzten Belege",
+    ],
+)
+def test_private_archive_vocabulary_routes_to_existing_get_authority(agent, monkeypatch, goal):
+    identifier = add_profile(
+        agent[0],
+        kind="paperless",
+        name="Private archive",
+        rules=Rules(enabled=True, http_prefixes=["/api/documents/"], http_methods=["GET"]),
+    )
+    monkeypatch.setattr("socket.getaddrinfo", lambda *a, **k: pytest.fail("Local routing only"))
+    assert route(agent, standalone(agent), goal).json() == {
+        "route": "agent",
+        "integration_ids": sorted([agent[4], identifier]),
+    }
+
+
+@pytest.mark.parametrize("goal", ["Belege deine Antwort", "Welche Verträge sind allgemein üblich?"])
+def test_document_words_do_not_turn_public_explanation_into_archive_access(agent, goal):
+    add_profile(
+        agent[0],
+        kind="paperless",
+        name="Private archive",
+        rules=Rules(enabled=True, http_prefixes=["/api/documents/"]),
+    )
+    assert route(agent, standalone(agent), goal).json()["route"] == "chat"
+
+
+@pytest.mark.parametrize(
+    "change", [None, "inactive_message", "revoked_policy", "other_conversation"]
+)
+def test_anaphoric_followup_uses_only_still_selected_observed_read(agent, change):
+    from hub.action_api import digest, encode
+
+    app = agent[0]
+    identifier = add_profile(app)
+    chat = standalone(agent)
+    with app.state.sessions() as db:
+        profile = db.get(Integration, identifier)
+        policy = db.get(AgentPolicy, identifier)
+        assert profile and policy
+        source = AgentJob(
+            request_id=str(uuid4()),
+            request_digest="b" * 64,
+            scope="conversation",
+            owner_id=chat,
+            conversation_id=chat,
+            model_conversation_id=str(uuid4()),
+            goal="Synthetic mailbox question",
+            status="observed",
+            bindings=encode(
+                {
+                    "profiles": [
+                        {
+                            "id": identifier,
+                            "profile_revision": profile.revision,
+                            "policy_revision": policy.revision,
+                        }
+                    ]
+                }
+            ),
+        )
+        db.add(source)
+        db.flush()
+        document = {
+            "kind": "tool",
+            "integration_id": identifier,
+            "tool": "mcp.call",
+            "arguments": {"name": "list_emails", "schema_sha256": "a" * 64, "arguments": {}},
+            "target": {
+                "kind": "mcp",
+                "url": json.loads(profile.config)["url"],
+                "profile_revision": profile.revision,
+                "config_sha256": digest(profile.config),
+            },
+        }
+        db.add(
+            AgentStep(
+                job_id=source.id,
+                sequence=1,
+                kind="read",
+                status="succeeded",
+                document=encode(document),
+                sha256=digest(encode(document)),
+                result=encode(
+                    {
+                        "response": {
+                            "content": [
+                                encode(
+                                    {
+                                        "messages": [
+                                            {
+                                                "uid": 12,
+                                                "folder": "INBOX",
+                                                "message_id": "<synthetic@example.invalid>",
+                                            }
+                                        ]
+                                    }
+                                )
+                            ]
+                        }
+                    }
+                ),
+            )
+        )
+        db.add(
+            Message(
+                conversation_id=chat,
+                role="assistant",
+                agent_job_id=source.id,
+                content="Synthetic overview",
+                active=change != "inactive_message",
+            )
+        )
+        if change == "revoked_policy":
+            policy.rules = Rules(enabled=False).model_dump_json()
+        db.commit()
+    destination = standalone(agent) if change == "other_conversation" else chat
+    result = route(agent, destination, "Welche davon habe ich bereits beantwortet?").json()
+    expected = (
+        {"route": "agent", "integration_ids": [identifier]}
+        if change is None
+        else {"route": "chat", "integration_ids": []}
+    )
+    assert result == expected
 
 
 def add_profile(app, *, kind="mcp", name="Proton Mail", rules=None):

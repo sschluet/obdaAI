@@ -181,6 +181,8 @@ def _projected_mail_observation(entry: dict[str, Any]) -> dict[str, Any] | None:
     content = response.get("content") if isinstance(response, dict) else None
     if isinstance(content, list) and content and isinstance(content[0], dict):
         projection = content[0].get("model_projection", projection)
+    if projection in {"paperless_query_receipt", "mail_read_metadata"}:
+        return {"sequence": entry.get("sequence"), "result": result}
     if projection not in {"mail_catalog", "mail_query_receipt", "folder_catalog", "folder_status"}:
         return None
     return {
@@ -222,7 +224,8 @@ def fit(
     for size in (6000, 3000, 1500, 600, 180):
         if latest is not None:
             protected = (
-                _projected_mail_observation(latest) if "mail_read_progress" in data else None
+                _projected_mail_observation(latest)
+                if "mail_read_progress" in data or "private_read_evidence" in data else None
             )
             result["latest_observation"] = protected or _observation(
                 latest,
@@ -232,7 +235,10 @@ def fit(
         result["private_context"] = view(data.get("private_context", []), size)
 
         def history_result(entry: dict[str, Any], limit: int, budget: int = size) -> Any:
-            projected = _projected_mail_observation(entry) if "mail_read_progress" in data else None
+            projected = (
+                _projected_mail_observation(entry)
+                if "mail_read_progress" in data or "private_read_evidence" in data else None
+            )
             if projected is not None and budget <= 600:
                 return {
                     "evidence_source": "mail_read_progress",
@@ -240,7 +246,10 @@ def fit(
             return view(entry["result"], limit)
 
         def history_document(entry: dict[str, Any], budget: int = size) -> Any:
-            projected = _projected_mail_observation(entry) if "mail_read_progress" in data else None
+            projected = (
+                _projected_mail_observation(entry)
+                if "mail_read_progress" in data or "private_read_evidence" in data else None
+            )
             document = entry["document"]
             if projected is not None and budget <= 600 and isinstance(document, dict):
                 return {

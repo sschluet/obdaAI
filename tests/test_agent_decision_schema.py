@@ -35,6 +35,7 @@ VALID = {
     },
     "ha.websocket": {"type": "backup/info", "parameters": {}},
     "gmail.read": {"operation": "labels"},
+    "paperless.read": {"operation": "search", "query": "Synthetic invoice"},
     "mail.send": {"recipient": "owner@example.test", "subject": "Synthetic", "text": "Test"},
     "research": {"topic": "interfaces"},
     "shell": {"script": "printf test", "verification_script": "test 1 = 1"},
@@ -391,4 +392,30 @@ def test_scoped_ha_type_keeps_original_maximum_length():
     validator.validate({**decision("ha.websocket", {"type": allowed}), "integration_id": HA_TARGET})
     assert not validator.is_valid(
         {**decision("ha.websocket", {"type": allowed + "a"}), "integration_id": HA_TARGET}
+    )
+
+
+@pytest.mark.parametrize("schema_factory", [decision_envelope_schema, decision_schema])
+def test_finish_requires_observed_evidence_but_questions_and_tools_stay_valid(schema_factory):
+    schema = schema_factory([TARGET], ["paperless.read"], allow_finish=False)
+    validator = Draft202012Validator(schema)
+    assert not validator.is_valid({"kind": "finish", "message": "Invented answer"})
+    assert validator.is_valid({"kind": "ask", "message": "Which actual missing account?"})
+    assert validator.is_valid(decision("paperless.read", VALID["paperless.read"]))
+    allowed = schema_factory([TARGET], ["paperless.read"], allow_finish=True)
+    assert Draft202012Validator(allowed).is_valid({"kind": "finish", "message": "Observed"})
+
+
+def test_evidence_gate_keeps_actual_interface_rules():
+    rules = Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET"])
+    schema = decision_schema(
+        [TARGET], ["paperless.read", "shell", "http"],
+        [{"integration_id": TARGET, "kind": "paperless", "rules": rules.model_dump()}],
+        allow_finish=False,
+    )
+    validator = Draft202012Validator(schema)
+    assert validator.is_valid(decision("paperless.read", VALID["paperless.read"]))
+    assert not validator.is_valid(decision("shell", VALID["shell"]))
+    assert not validator.is_valid(
+        decision("http", {"method": "DELETE", "path": "/api/documents/7/"})
     )

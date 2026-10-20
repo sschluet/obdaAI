@@ -503,6 +503,7 @@ async def execute_run(
                             snapshot["agent_generation"].get("integration_ids", []),
                             snapshot["agent_generation"].get("tool_names"),
                             snapshot["agent_generation"].get("interfaces"),
+                            allow_finish=snapshot["agent_generation"].get("allow_finish", True),
                         )
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()

@@ -278,3 +278,15 @@ Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),
 die ursprüngliche Frage in den Composer. Erst erneutes Senden startet einen neuen
 Auftrag mit aktuellen Profilen und Freigaben; frühere Werkzeugschritte werden
 nicht automatisch wiederholt.
+
+## Folgefragen und Antwortmerkmale
+
+Der neue Entwicklungsstand erhält kontogebundene Nachrichtenreferenzen aus echten
+Abrufen für Folgefragen. Ein Katalogabruf allein erlaubt keinen erfolgreichen
+Abschluss. Der geprüfte Metadatenpatch ergänzt vom Server gelieferte Antwortflags
+sowie In-Reply-To und References. Ein Antwortflag bedeutet „als beantwortet
+markiert“. Eine Antwortbeziehung benötigt passende Nachrichtenkennungen und einen
+beobachteten Gesendet-Ordner desselben Kontos; ähnliche Betreffzeilen genügen nicht.
+Ohne hinreichende Belege bleibt der Antwortstatus unbekannt. Versand und tatsächliche
+Zustellung werden damit nicht bewiesen. Installation und reale Folgeabnahme dieser
+Erweiterung stehen noch aus; vorhandene Lesefreigaben bleiben unverändert.

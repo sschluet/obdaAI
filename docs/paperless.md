@@ -52,3 +52,13 @@ Protokollbezug: [offizielle REST-API](https://docs.paperless-ngx.com/api/) und
 
 Gezielte lokale und synthetische Prüfungen belegen den Funktionsvertrag; tatsächliche
 Server-/Schlüsselabnahme ist getrennt in [STATUS](../STATUS.md) dokumentiert.
+
+## Dokumentfragen im gemeinsamen Agentenweg
+
+Private Archivfragen verwenden im neuen Entwicklungsstand `paperless.read` mit
+begrenzter Suche und konkretem Dokumentabruf. Inhaltsfragen benötigen OCR-Belege;
+eine Trefferliste genügt dafür nicht. Folgefragen beziehen sich auf weiterhin
+berechtigte Abrufe desselben Gesprächs. Der Modellkontext bleibt begrenzt, Kürzungen
+und fehlende Belege werden ausgewiesen. Bestehende GET-Freigaben werden am Versand
+geprüft; dieser Leseweg eröffnet keine Schreib- oder Downloadrechte und nutzt weder
+öffentliche Recherche noch Cloud. Echte Abnahme dieses neuen Wegs steht noch aus.
