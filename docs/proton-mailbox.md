@@ -144,6 +144,11 @@ Bei einem lokalen Planungs-Timeout nennt die Antwort den wirklichen Fehlertyp
 und beendet den Auftrag. Es gibt keinen Cloudfallback oder automatischen Replay.
 Ein Fehler beim Wiederholen oder anschließenden Laden lässt den Composer wieder
 benutzbar. Aktive Aufträge behalten ihre Sperre gegen parallele Starts.
+Auf dem ersten Korrekturstand a861ffa läuft der zweite Planungsschritt erfolgreich,
+aber die echte Wochenfrage bleibt in wiederholten Ordnerabfragen hängen und endet
+ohne Nachrichtenabfrage. Sie gilt deshalb weiterhin als nicht abgenommen.
+Die Folgekorrektur ergänzt strukturierte Ordneransichten, expliziten Lesefortschritt
+und eine Sperre gegen identische erfolgreiche Vorbereitung ohne neue Nutzereingabe.
 Die erneute echte Wochenabnahme ist noch offen.
 
 ## Abnahme und offene Punkte — vorheriger Stand

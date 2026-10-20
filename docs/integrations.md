@@ -86,3 +86,16 @@ gesperrt; ein fehlgeschlagener Versuch darf keine dauerhafte Wartemeldung erzeug
 die ursprüngliche Frage in den Composer. Erst erneutes Senden startet einen neuen
 Auftrag mit aktuellen Profilen und Freigaben; frühere Werkzeugschritte werden
 nicht automatisch wiederholt.
+
+
+Große `list_folders`-/`get_status`-Ergebnisse erhalten eine strukturierte Modellansicht
+mit beobachteten Ordnernamen, Auswahlmerkmalen, Rückgabe-/Auslassungszahlen und
+Originalhash. Tatsächlich beobachtetes INBOX beziehungsweise vorhandene All-/Inbox-
+Flags werden bevorzugt sichtbar gehalten. Ein geschützter Lesefortschritt bleibt
+auch bei gekürztem Verlauf verfügbar. Identische bereits erfolgreiche Vorbereitung
+wird innerhalb desselben Auftrags ohne neue Nutzereingabe nicht erneut versandt;
+die Planung erhält begrenztes Feedback statt eines erfundenen frischen Leseergebnisses.
+Nach einer echten Nutzerrückmeldung ist eine erneute Vorbereitung möglich.
+Die ursprüngliche Katalogprüfung erfolgt weiterhin dauerhaft vor der Mailplanung;
+der redundante Katalogaufruf wird dem Modell nicht nochmals angeboten. Alle
+freigegebenen Eingabeschemas und Prüfungen an der Ausführungsgrenze bleiben erhalten.

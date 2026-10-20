@@ -132,6 +132,24 @@ def test_byte_budget_bounds_multibyte_evidence_without_clipping_authority():
         fit({"goal": "漢" * 3000}, "", 24000, max_bytes=7000)
 
 
+def test_observed_mail_progress_remains_structured_when_history_is_clipped():
+    original = payload({"content": "Synthetic folder metadata " * 3000})
+    original["mail_read_progress"] = {
+        "folder_choices": [
+            {
+                "integration_id": "approved-only",
+                "name": "INBOX",
+                "flags": ["\\Inbox"],
+                "selectable": True,
+            }
+        ],
+        "next_action": "query_messages",
+    }
+    fitted = fit(original, "Local only", 24000, max_bytes=5000)
+    assert fitted["history"][-1]["result"]["truncated"]
+    assert fitted["mail_read_progress"] == original["mail_read_progress"]
+
+
 def test_shapes_bound_keys_names_depth_and_sample_arrays():
     body = {
         str(i) + "k" * 100: [{"field" + str(j): {"deep": "x" * 10} for j in range(100)}] * 3

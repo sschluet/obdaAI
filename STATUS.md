@@ -17,8 +17,20 @@ Composer wieder frei. Während eines tatsächlich aktiven Agentenlaufs bleiben
 Bearbeiten und Wiederholen gesperrt; Antworten auf Rückfragen bleiben möglich.
 Anbieterzeitlimits, Rechte und Postfach-Schreibsperren werden nicht erhöht.
 
-Lokale Prüfung, exakte CI, Test-VM-Ausrollung und die erneute echte Wochenfrage
-stehen für diese Korrektur noch aus. Die folgenden Belege betreffen den vorherigen Stand.
+Der erste Korrekturstand **a861ffa / Schema 0045** ist nach vollständiger
+[CI39396423500](https://github.com/sschluet/obdaAI/actions/runs/39396423500)
+(**1860 bestanden, sechs übersprungen**) gesund auf der Test-VM installiert.
+Lokal bestehen 1866 Tests. Die echte Wochenfrage hat den zweiten Planungsschritt
+nun erfolgreich ausgeführt, aber anschließend wiederholt `list_folders` angefordert,
+ohne Nachrichten abzufragen. Dieser eigene Prüflauf ist fehlgeschlagen; er ist
+keine erfolgreiche Mailabnahme. Die Laufansichten blieben unter 14 kB UTF-8.
+Der Abbruchversuch traf bereits auf den beendeten Prüflauf und löste keinen
+weiteren Abbruch aus; bestehende Nutzeraufträge wurden nicht verändert.
+
+Die Folgekorrektur strukturiert große Ordnerlisten, zeigt den beobachteten
+Lese-Fortschritt und verhindert wiederholte identische Vorbereitung ohne neue
+Nutzereingabe. Erneute vollständige Prüfung und echte Wochenabnahme stehen aus.
+Die folgenden Belege betreffen den vorherigen Stand.
 
 ## Automatische Integrationen und Proton-Mailfrage — vorherige Tagesabnahme
 

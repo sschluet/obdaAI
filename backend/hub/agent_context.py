@@ -5,6 +5,10 @@ import json
 from typing import Any
 
 
+class AgentContextLimitError(ValueError):
+    reason = "local_context_limit"
+
+
 def pointer(value: Any, path: str) -> Any:
     if path == "":
         return value
@@ -155,7 +159,7 @@ def _observation(
         if len(json.dumps(summary, ensure_ascii=False)) <= metadata_limit:
             break
     else:
-        raise ValueError("Observation metadata exceeds the model context limit")
+        raise AgentContextLimitError("Observation metadata exceeds the model context limit")
     encoded = json.dumps(observed, ensure_ascii=False, separators=(",", ":"))
     return {
         "sequence": entry.get("sequence"),
@@ -213,4 +217,4 @@ def fit(
             json.dumps(result, ensure_ascii=False)
         ) <= context_limit - 200 and (max_bytes is None or byte_length <= max_bytes):
             return result
-    raise ValueError("Goal, authority or evidence exceeds the model context limit")
+    raise AgentContextLimitError("Goal, authority or evidence exceeds the model context limit")

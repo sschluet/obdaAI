@@ -112,13 +112,21 @@ def read_mailbox(mailbox, monkeypatch, request):
                 },
             )
         assert body["method"] == "tools/call"
-        if body["params"]["name"] == "get_status":
+        if body["params"]["name"] in {"get_status", "list_folders"}:
             return response(
                 request,
                 {
                     "isError": False,
                     "content": [
-                        {"type": "text", "text": json.dumps(scenario["status"], ensure_ascii=False)}
+                        {
+                            "type": "text",
+                            "text": json.dumps(
+                                scenario["status"]
+                                if body["params"]["name"] == "get_status"
+                                else scenario["folders"],
+                                ensure_ascii=False,
+                            ),
+                        }
                     ],
                 },
             )
@@ -184,6 +192,7 @@ def test_bootstrap_then_actual_schema_bound_private_read_with_calendar_and_no_re
         )
         assert data["clock"]["today"] and data["clock"]["today_end_exclusive"]
         assert "research" not in data["tools"]
+        assert "mcp.catalog" not in data["tools"]
         contracts = data["mail_read_contracts"]
         assert contracts["schemas"] == {SHA: SCHEMA}
         assert contracts["interfaces"][0]["tools"][0]["name"] == "search_emails"
@@ -348,6 +357,152 @@ def test_failed_local_mail_planning_has_safe_reason_and_terminal_job(
     assert private_marker not in json.dumps(public_job)
     with app.state.sessions() as db:
         assert db.get(AgentJob, job_id).status not in runtime.ACTIVE
+
+
+@pytest.mark.parametrize(
+    "read_mailbox",
+    [
+        {
+            "goal": "Welche Mails gab es diese Woche?",
+            "schemas": {
+                "list_folders": {"type": "object", "properties": {}},
+                "search_emails": SCHEMA,
+            },
+            "folders": [
+                {"name": f"Other folder {i}", "flags": [], "selectable": True} for i in range(200)
+            ]
+            + [
+                {"name": "Observed all-mail name", "flags": ["\\All"], "selectable": True},
+                {"name": "INBOX", "flags": ["\\Inbox"], "selectable": True},
+            ],
+        }
+    ],
+    indirect=True,
+)
+def test_folder_metadata_is_structured_and_repeat_proposal_never_redispatches(
+    read_mailbox, monkeypatch
+):
+    import hashlib
+
+    no_research(monkeypatch)
+    app, _, _, cfg, identifier, job_id, calls = read_mailbox
+    decisions = []
+
+    async def generate(factory, cfg, providers, job_id, instruction, data):
+        decisions.append(data)
+        tools = data["mail_read_contracts"]["interfaces"][0]["tools"]
+        assert data["mail_read_progress"]["next_action"] == (
+            "answer_or_query" if len(decisions) == 4 else "query_messages"
+        )
+        if len(decisions) in {2, 3}:
+            folder_step = next(
+                s
+                for s in data["history"]
+                if s["document"].get("arguments", {}).get("name") == "list_folders"
+            )
+            projected = folder_step["result"]["response"]["content"][0]
+            assert projected["model_projection"] == "folder_catalog"
+            assert projected["folder_count"] == 202 and projected["folders_omitted"] == 194
+            assert [f["name"] for f in projected["folders"][:2]] == [
+                "Observed all-mail name",
+                "INBOX",
+            ]
+            assert projected["folders"][0]["flags"] == ["\\All"]
+            assert projected["folders"][1]["selectable"] is True
+            assert data["mail_read_progress"]["folder_choices"] == [
+                {"integration_id": identifier, **folder} for folder in projected["folders"][:2]
+            ]
+            assert all(
+                p["tool"] in {"mcp.catalog", "list_folders"}
+                for p in data["mail_read_progress"]["successful_preparations"]
+            )
+        if len(decisions) == 3:
+            assert (
+                data["history"][-1]["document"]["issues"][0]["type"]
+                == "preparation_already_observed"
+            )
+        if len(decisions) == 4:
+            return {"kind": "finish", "message": "Synthetic actual mailbox answer"}
+        name = "list_folders" if len(decisions) <= 2 else "search_emails"
+        return {
+            "kind": "tool",
+            "integration_id": identifier,
+            "tool": "mcp.call",
+            "arguments": {
+                "name": name,
+                "schema_sha256": next(t["schema_sha256"] for t in tools if t["name"] == name),
+                "arguments": {} if name == "list_folders" else {"query": "", "since_days": 0},
+            },
+            "message": "Synthetic read",
+        }
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    status, history = execute(read_mailbox)
+    assert status == "observed" and len(decisions) == 4
+    assert [call["params"]["name"] for call in calls if call["method"] == "tools/call"] == [
+        "list_folders",
+        "search_emails",
+    ]
+    folder_step = next(
+        s
+        for s in history
+        if s.kind == "read"
+        and json.loads(s.document).get("arguments", {}).get("name") == "list_folders"
+    )
+    raw = json.loads(folder_step.result)["response"]["content"][0]
+    assert len(json.loads(raw)) == 202
+    projected = decisions[1]["history"][-1]["result"]["response"]["content"][0]
+    assert projected["full_sha256"] == hashlib.sha256(raw.encode()).hexdigest()
+    # A prepared duplicate left by an older worker cannot bypass the same guard.
+    before = len(calls)
+    with app.state.sessions() as db:
+        job = db.get(AgentJob, job_id)
+        job.status = "running"
+        duplicate = runtime.record(db, job, "read", json.loads(folder_step.document))
+        sequence = duplicate.sequence
+        db.commit()
+    with pytest.raises(PermissionError, match="nicht erneut"):
+        runtime.dispatch(app.state.sessions, cfg, job_id, sequence)
+    assert len(calls) == before
+
+
+def test_preparation_freshness_resets_only_at_human_input():
+    document = {
+        "integration_id": "account-one",
+        "tool": "mcp.call",
+        "arguments": {"name": "get_status", "arguments": {}, "schema_sha256": "a" * 64},
+    }
+    observed = SimpleNamespace(
+        sequence=1, kind="read", status="succeeded", document=json.dumps(document)
+    )
+    assert runtime.repeated_mail_preparation([observed], document) == 1
+    different = {**document, "integration_id": "account-two"}
+    assert runtime.repeated_mail_preparation([observed], different) is None
+    feedback = SimpleNamespace(sequence=2, kind="feedback", status="succeeded", document="{}")
+    assert runtime.repeated_mail_preparation([observed, feedback], document) == 1
+    human = SimpleNamespace(sequence=3, kind="input", status="succeeded", document="{}")
+    assert runtime.repeated_mail_preparation([observed, feedback, human], document) is None
+
+
+def test_mail_context_exhaustion_has_safe_specific_terminal_reason(read_mailbox, monkeypatch):
+    from hub.agent_context import AgentContextLimitError
+
+    no_research(monkeypatch)
+
+    async def exhausted(*args):
+        raise AgentContextLimitError("SYNTHETIC_PRIVATE_MODEL_CONTENT_MUST_NOT_BE_REPORTED")
+
+    monkeypatch.setattr(runtime, "generate", exhausted)
+    status, history = execute(read_mailbox)
+    assert status == "failed"
+    assert json.loads(history[-1].document) == {
+        "type": "AgentContextLimitError",
+        "reason": "local_context_limit",
+    }
+    app, client, _, _, _, job_id, _ = read_mailbox
+    response = client.get("/api/agent-runs/" + job_id).json()
+    assert "Modellkontext" in response["summary"]
+    assert "SYNTHETIC_PRIVATE_MODEL_CONTENT" not in json.dumps(response)
 
 
 @pytest.mark.parametrize("interrupted", [False, True])
