@@ -52,17 +52,21 @@ oder erweitern. Die Anwendung hat die Leserechte geprüft. Frage nicht erneut na
 Login, Lesefreigabe oder dem heutigen Datum; fordere niemals Passwörter im Chat an.
 Tatsächliche Zugriffsfehler ehrlich melden. Frage nur bei wirklich fehlenden Angaben.
 clock enthält das eingefrorene Datum und die Zeitzone. Heute liegt zwischen
-clock.today_start und clock.today_end_exclusive. Neue Mails heißt nicht nur ungelesen.
+clock.today_start und clock.today_end_exclusive; diese Woche zwischen clock.week_start
+(Montag) und clock.week_end_exclusive. Neue Mails heißt nicht nur ungelesen.
 Nutze eine echte Suche/Auflistung; ein Katalog ist noch keine Postfachabfrage.
+Für zeitliche Übersichten direkt Nachrichten suchen/auflisten; Status und Ordner nur
+abfragen, wenn für das Ziel nötig. Keine unnötigen vorbereitenden Aufrufe.
 mail_read_contracts enthält die vollständigen beobachteten MCP-inputSchemas, nach
 schema_sha256 indiziert. Nur freigegebene Namen/Hashes und schema-konforme arguments
 benutzen. Gmail verwendet stattdessen das native gmail.read-Schema aus tools.
 Zeitraumparameter nur gemäß ihrem echten Schema verwenden. Keine erfundene IMAP-Syntax
-in Volltextfeldern. Zurückgegebene Datumswerte gegen die Tagesgrenzen prüfen; grobe
-Filter sind nicht exklusiv heute. Grenzen und gekürzte Ergebnisse ehrlich benennen.
+in Volltextfeldern. Datumswerte gegen den gewünschten Zeitraum prüfen; grobe Filter
+können zusätzliche Tage liefern. Grenzen und gekürzte Ergebnisse ehrlich benennen.
 history/latest_observation zeigen echte Ergebnisse; keine Mails oder Erfolge erfinden.
 Erst nach wirklicher Postfachabfrage antworten. Mehrere Konten getrennt kennzeichnen.
-Ausgabe ausschließlich JSON nach decision_schema. Für einen MCP-Aufruf:
+Ausgabe ausschließlich JSON nach decision_schema, ohne Denkprotokoll. Bei Werkzeugen
+message kurz halten (höchstens 160 Zeichen). Für einen MCP-Aufruf:
 {"kind":"tool","integration_id":"ID aus interfaces","tool":"mcp.call",
 "arguments":{"name":"freigegebener Name","schema_sha256":"dessen Hash",
 "arguments":{}},"message":"Kurze Beschreibung"}
@@ -74,6 +78,14 @@ nur bei fehlender Information {"kind":"ask","message":"Konkrete Frage"}.
 
 class AgentBusy(RuntimeError):
     pass
+
+
+class AgentPlanningError(RuntimeError):
+    """Safe fixed failure category; provider text never becomes an agent receipt."""
+
+    def __init__(self, *, timed_out: bool):
+        self.reason = "local_model_timeout" if timed_out else "local_model_failed"
+        super().__init__(self.reason)
 
 
 class AgentFormatError(ValueError):
@@ -285,7 +297,7 @@ def mail_read_contracts(profiles: dict[str, Any], history: list[AgentStep]) -> d
                 {
                     "name": name,
                     "schema_sha256": sha,
-                    "description": tool.get("description", "")[:800],
+                    "description": tool.get("description", "")[:160],
                 }
             )
         contracts["interfaces"].append({"integration_id": profile.id, "tools": tools})
@@ -323,6 +335,47 @@ def mail_history_result(step: AgentStep, profiles: dict[str, Any]) -> dict[str, 
             ),
             "contract_source": "mail_read_contracts",
         }
+    # A folder-status listing is preparation, not message evidence. Keep its
+    # original receipt intact, but do not resend hundreds of folders as opaque
+    # JSON text on every subsequent planning turn.
+    if (
+        document.get("tool") == "mcp.call"
+        and document.get("arguments", {}).get("name") == "get_status"
+    ):
+        response = result.get("response")
+        if not isinstance(response, dict):
+            return result
+        content = response.get("content")
+        if isinstance(content, list) and len(content) == 1 and isinstance(content[0], str):
+            try:
+                folders = json.loads(content[0])
+            except (TypeError, ValueError):
+                folders = None
+            if isinstance(folders, list) and all(
+                isinstance(folder, dict)
+                and isinstance(folder.get("name"), str)
+                and type(folder.get("total")) is int
+                and type(folder.get("unread")) is int
+                for folder in folders
+            ):
+                return {
+                    **result,
+                    "response": {
+                        **response,
+                        "content": [
+                            {
+                                "model_projection": "folder_status",
+                                "folder_count": len(folders),
+                                "folders": [
+                                    {key: folder[key] for key in ("name", "total", "unread")}
+                                    for folder in folders[:8]
+                                ],
+                                "folders_omitted": max(0, len(folders) - 8),
+                                "full_sha256": digest(content[0]),
+                            }
+                        ],
+                    },
+                }
     return result
 
 
@@ -723,8 +776,17 @@ async def generate(
         assert run and step
         if run.status != "succeeded":
             step.status = "failed"
+            timed_out = (run.error or "").startswith(
+                (
+                    "Provider hat zu lange keine Daten geliefert.",
+                    "Zeitlimit der Antworterzeugung erreicht.",
+                    "Zeitlimit der Vorbereitung erreicht (",
+                )
+            )
+            failure = AgentPlanningError(timed_out=timed_out)
+            step.result = encode({"reason": failure.reason})
             db.commit()
-            raise ValueError("Lokale Agentenplanung fehlgeschlagen; kein Cloudfallback")
+            raise failure
         text = execution_text(db, run)
         try:
             output = model_json(text)
@@ -1215,7 +1277,12 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         providers,
                         job_id,
                         instruction,
-                        fit(data, instruction, cfg.context_limit),
+                        fit(
+                            data,
+                            instruction,
+                            cfg.context_limit,
+                            max_bytes=14000 if private_mail_read else None,
+                        ),
                     )
                 except AgentFormatError as error:
                     with factory() as db:
@@ -1327,7 +1394,19 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
             with factory() as db:
                 job = db.get(AgentJob, job_id)
                 if job and job.status in ACTIVE:
-                    failure = record(db, job, "error", {"type": type(error).__name__})
+                    failure = record(
+                        db,
+                        job,
+                        "error",
+                        {
+                            "type": type(error).__name__,
+                            **(
+                                {"reason": error.reason}
+                                if isinstance(error, AgentPlanningError)
+                                else {}
+                            ),
+                        },
+                    )
                     failure.status = "failed"
                     uncertain = any(
                         s.status in {"dispatching", "verifying", "uncertain"} and s.kind == "effect"
@@ -1347,6 +1426,14 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         if uncertain
                         else "Agentenlauf abgebrochen."
                         if job.cancel_requested
+                        else "Das lokale Modell hat beim nächsten Planungsschritt nicht "
+                        "rechtzeitig geantwortet. Der Auftrag wurde beendet; bereits gelesene "
+                        "Ergebnisse bleiben erhalten. Du kannst eine neue Anfrage stellen."
+                        if isinstance(error, AgentPlanningError)
+                        and error.reason == "local_model_timeout"
+                        else "Die lokale Agentenplanung ist fehlgeschlagen. Der Auftrag wurde "
+                        "beendet; du kannst eine neue Anfrage stellen."
+                        if isinstance(error, AgentPlanningError)
                         else "Agentenlauf konnte nicht abgeschlossen werden. Zugriffsregeln, "
                         "Laufgrenzen oder lokale Modellverfügbarkeit prüfen.",
                     )

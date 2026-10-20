@@ -1,6 +1,26 @@
-# obdaAI — Status 19.10.2026
+# obdaAI — Status 20.10.2026
 
-## Automatische Integrationen und Proton-Mailfrage — live geprüft
+## Korrektur mehrstufiger Mailfragen — Abnahme läuft
+
+Der Nutzertest „Welche Mails gab es diese Woche ?“ auf Release 81e9c3a ist
+fehlgeschlagen. Katalog und Postfachstatus waren erfolgreich; die folgende lokale
+Planung überschritt das unveränderte Provider-Wartezeitlimit vor dem ersten
+Antwortinhalt. Der Kontext wuchs dabei von rund 13,5 auf 23,1 kB. Die frühere
+Tagesfrage belegt diesen mehrstufigen Fall nicht. Mailinhalte wurden nicht exportiert.
+
+Die Korrektur begrenzt die abgeleitete Mail-Planung auch nach weiteren Leseaufrufen
+in UTF-8-Bytes, erhält vollständige Eingabeschemas, aktuelle Rechte und Originalbelege
+und ergänzt anwendungsseitige Kalenderwochengrenzen einschließlich Sommerzeit.
+Eine eindeutige lokale Fehlermeldung ersetzt den unspezifischen ValueError-Hinweis.
+Nach fehlgeschlagenem Retry oder nachgelagertem Ladefehler gibt die Oberfläche den
+Composer wieder frei. Während eines tatsächlich aktiven Agentenlaufs bleiben
+Bearbeiten und Wiederholen gesperrt; Antworten auf Rückfragen bleiben möglich.
+Anbieterzeitlimits, Rechte und Postfach-Schreibsperren werden nicht erhöht.
+
+Lokale Prüfung, exakte CI, Test-VM-Ausrollung und die erneute echte Wochenfrage
+stehen für diese Korrektur noch aus. Die folgenden Belege betreffen den vorherigen Stand.
+
+## Automatische Integrationen und Proton-Mailfrage — vorherige Tagesabnahme
 
 Release **81e9c3a / Schema 0045** ist gesund auf der Test-VM installiert. Beide
 APIs und alle neun Anwendungsdienste laufen mit der exakten Version. Daten,

@@ -120,7 +120,9 @@ def _json_type(value: Any) -> str:
     return "number"
 
 
-def _observation(entry: dict[str, Any]) -> dict[str, Any]:
+def _observation(
+    entry: dict[str, Any], *, result_limit: int = 1500, metadata_limit: int = 2500
+) -> dict[str, Any]:
     observed = entry["result"]
     summary: dict[str, Any] = {}
     if isinstance(observed, dict):
@@ -150,7 +152,7 @@ def _observation(entry: dict[str, Any]) -> dict[str, Any]:
         summary["result_shape"] = _shape(observed, width=width)
         if isinstance(observed, dict) and "body" in observed:
             summary["body_shape"] = _shape(observed["body"], width=width)
-        if len(json.dumps(summary, ensure_ascii=False)) <= 2500:
+        if len(json.dumps(summary, ensure_ascii=False)) <= metadata_limit:
             break
     else:
         raise ValueError("Observation metadata exceeds the model context limit")
@@ -159,11 +161,13 @@ def _observation(entry: dict[str, Any]) -> dict[str, Any]:
         "sequence": entry.get("sequence"),
         "full_sha256": hashlib.sha256(encoded.encode()).hexdigest(),
         "summary": summary,
-        "result": view(observed, 1500),
+        "result": view(observed, result_limit),
     }
 
 
-def fit(data: dict[str, Any], instruction: str, context_limit: int) -> dict[str, Any]:
+def fit(
+    data: dict[str, Any], instruction: str, context_limit: int, *, max_bytes: int | None = None
+) -> dict[str, Any]:
     """Reduce evidence views, never authority, targets, goal or tool contracts.
 
     The latest tool observation keeps an independent structural/verification summary
@@ -187,9 +191,13 @@ def fit(data: dict[str, Any], instruction: str, context_limit: int) -> dict[str,
     )
     if latest_input is not None:
         result["latest_input"] = latest_input
-    if latest is not None:
-        result["latest_observation"] = _observation(latest)
     for size in (6000, 3000, 1500, 600, 180):
+        if latest is not None:
+            result["latest_observation"] = _observation(
+                latest,
+                result_limit=min(size, 1500) if max_bytes is not None else 1500,
+                metadata_limit=1000 if max_bytes is not None else 2500,
+            )
         result["private_context"] = view(data.get("private_context", []), size)
         result["history"] = [
             {
@@ -199,6 +207,10 @@ def fit(data: dict[str, Any], instruction: str, context_limit: int) -> dict[str,
             }
             for i, entry in enumerate(original)
         ]
-        if len(instruction) + len(json.dumps(result, ensure_ascii=False)) <= context_limit - 200:
+        encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+        byte_length = len(instruction.encode()) + len(encoded.encode())
+        if len(instruction) + len(
+            json.dumps(result, ensure_ascii=False)
+        ) <= context_limit - 200 and (max_bytes is None or byte_length <= max_bytes):
             return result
     raise ValueError("Goal, authority or evidence exceeds the model context limit")

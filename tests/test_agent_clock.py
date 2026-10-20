@@ -33,6 +33,23 @@ def test_agent_timezone_from_explicit_environment(monkeypatch):
     assert frozen["today"] == "2026-10-18"
 
 
+@pytest.mark.parametrize(
+    ("instant", "monday", "hours"),
+    [
+        ("2026-10-20T12:00:00+00:00", "2026-10-19", 169),
+        ("2026-03-29T12:00:00+00:00", "2026-03-23", 167),
+        ("2026-10-18T23:30:00+00:00", "2026-10-19", 169),
+    ],
+)
+def test_this_week_uses_local_monday_and_dst(instant, monday, hours):
+    frozen = freeze_clock("Europe/Berlin", datetime.fromisoformat(instant).timestamp())
+    assert frozen["week_start"].startswith(monday + "T00:00:00")
+    begin = datetime.fromisoformat(frozen["week_start_utc"])
+    end = datetime.fromisoformat(frozen["week_end_exclusive_utc"])
+    assert (end - begin).total_seconds() == hours * 3600
+    assert begin <= datetime.fromisoformat(instant) < end
+
+
 def test_invalid_agent_timezone_rejected():
     with pytest.raises(ValidationError):
         Settings(agent_timezone="Not/A_Timezone")

@@ -128,7 +128,25 @@ Vollständige, leere und übergroße Listen sind synthetisch geprüft. `list_ema
 benötigen diese Anpassung nicht. Die Erweiterung ist privat auf der VM angewandt;
 sie ist kein Nachweis tatsächlicher Nachrichten-, Thread- oder Anhangabrufe.
 
-## Abnahme und offene Punkte
+## Mehrstufige Mailfragen und Fehlerbehandlung
+
+Der Nutzertest „Welche Mails gab es diese Woche ?“ auf Release 81e9c3a scheiterte
+nach erfolgreichem `get_status` beim nächsten lokalen Planungsschritt. Die vorherige
+Tagesabnahme deckt diesen Fall nicht ab. Die Korrektur begrenzt abgeleitete
+Mail-Ergebnisansichten nach UTF-8-Bytes, ohne Originalbelege, vollständige
+Werkzeugschemas oder Rechte zu verändern. Zeitliche Übersichten sollen direkt
+Nachrichten abfragen; Status und Ordner nur bei Bedarf. `clock.week_start` und
+`clock.week_end_exclusive` liefern Montag bis zum folgenden Montag in der
+konfigurierten Zeitzone einschließlich Sommerzeitwechsel. Ergebnisdaten müssen
+weiterhin gegen diesen Zeitraum geprüft werden; grobe Serverfilter reichen nicht.
+
+Bei einem lokalen Planungs-Timeout nennt die Antwort den wirklichen Fehlertyp
+und beendet den Auftrag. Es gibt keinen Cloudfallback oder automatischen Replay.
+Ein Fehler beim Wiederholen oder anschließenden Laden lässt den Composer wieder
+benutzbar. Aktive Aufträge behalten ihre Sperre gegen parallele Starts.
+Die erneute echte Wochenabnahme ist noch offen.
+
+## Abnahme und offene Punkte — vorheriger Stand
 
 Release **81e9c3a / Schema 0045** ist auf der Test-VM installiert; beide APIs sind
 gesund. Bridge-Anmeldung, gepinntes STARTTLS, Katalogprüfung und authentifizierte
@@ -178,3 +196,8 @@ Quellen: [Proton IMAP/SMTP](https://proton.me/support/imap-smtp-and-pop3-setup),
 [Signaturprüfung](https://proton.me/support/verifying-bridge-package),
 [Bridge CLI](https://proton.me/support/bridge-cli-guide),
 [Community-MCP](https://github.com/mhbxyz/protonmail-mcp).
+
+**Frage erneut vorbereiten** übernimmt nach einem fehlgeschlagenen Auftrag nur
+die ursprüngliche Frage in den Composer. Erst erneutes Senden startet einen neuen
+Auftrag mit aktuellen Profilen und Freigaben; frühere Werkzeugschritte werden
+nicht automatisch wiederholt.

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ import httpx
 import pytest
 from hub import agent_runtime as runtime
 from hub import agent_tools
+from hub.agent_clock import freeze_clock
 from hub.agent_context import fit
 from hub.agent_models import AgentJob, AgentPolicy
 from hub.agent_tools import Rules
@@ -30,15 +32,21 @@ SHA = schema_digest(SCHEMA)
 
 
 @pytest.fixture
-def read_mailbox(mailbox, monkeypatch):
+def read_mailbox(mailbox, monkeypatch, request):
     app, client, headers, cfg, identifier = mailbox
+    scenario = getattr(request, "param", {})
+    schemas = scenario.get("schemas", {"search_emails": SCHEMA})
     with app.state.sessions() as db:
         row = db.get(Integration, identifier)
         row.last_check = json.dumps(
             {
                 "revision": row.revision,
                 "status": "succeeded",
-                "result": {"tools": [{"name": "search_emails", "input_schema": SCHEMA}]},
+                "result": {
+                    "tools": [
+                        {"name": name, "input_schema": schema} for name, schema in schemas.items()
+                    ]
+                },
             }
         )
         db.add(
@@ -46,7 +54,11 @@ def read_mailbox(mailbox, monkeypatch):
                 integration_id=identifier,
                 profile_revision=row.revision,
                 rules=Rules(
-                    enabled=True, max_effects=0, mcp_read_tools={"search_emails": SHA}
+                    enabled=True,
+                    max_effects=0,
+                    mcp_read_tools={
+                        name: schema_digest(schema) for name, schema in schemas.items()
+                    },
                 ).model_dump_json(),
             )
         )
@@ -57,11 +69,20 @@ def read_mailbox(mailbox, monkeypatch):
         headers=headers,
         json={
             "request_id": str(uuid4()),
-            "goal": "Welche neuen Mails gab es heute?",
+            "goal": scenario.get("goal", "Welche neuen Mails gab es heute?"),
             "research_allowed": True,
         },
     )
     assert started.status_code == 200, started.text
+    if "clock_at" in scenario:
+        with app.state.sessions() as db:
+            job = db.get(AgentJob, started.json()["id"])
+            bindings = json.loads(job.bindings)
+            bindings["clock"] = freeze_clock(
+                "Europe/Berlin", datetime.fromisoformat(scenario["clock_at"]).timestamp()
+            )
+            job.bindings = json.dumps(bindings)
+            db.commit()
     calls = []
 
     def wire(request):
@@ -78,7 +99,10 @@ def read_mailbox(mailbox, monkeypatch):
                 request,
                 {
                     "tools": [
-                        {"name": "search_emails", "inputSchema": SCHEMA},
+                        *[
+                            {"name": name, "inputSchema": schema}
+                            for name, schema in schemas.items()
+                        ],
                         {
                             "name": "delete_everything",
                             "inputSchema": {"type": "object"},
@@ -88,9 +112,19 @@ def read_mailbox(mailbox, monkeypatch):
                 },
             )
         assert body["method"] == "tools/call"
+        if body["params"]["name"] == "get_status":
+            return response(
+                request,
+                {
+                    "isError": False,
+                    "content": [
+                        {"type": "text", "text": json.dumps(scenario["status"], ensure_ascii=False)}
+                    ],
+                },
+            )
         assert body["params"] == {
             "name": "search_emails",
-            "arguments": {"query": "", "since_days": 0},
+            "arguments": {"query": "", "since_days": scenario.get("since_days", 0)},
         }
         return response(
             request,
@@ -205,6 +239,115 @@ def test_catalog_only_finish_is_not_a_successful_mailbox_answer(read_mailbox, mo
     status, history = execute(read_mailbox)
     assert status == "unverified"
     assert not any(body["method"] == "tools/call" for body in read_mailbox[-1])
+
+
+@pytest.mark.parametrize(
+    "read_mailbox",
+    [
+        {
+            "goal": "Welche Mails gab es diese Woche?",
+            "clock_at": "2026-10-20T12:00:00+00:00",
+            "schemas": {
+                "get_status": {"type": "object", "properties": {}},
+                "search_emails": SCHEMA,
+            },
+            "status": [
+                {"name": "Ordner äöü " + str(i), "total": i, "unread": i} for i in range(200)
+            ],
+            "since_days": 1,
+        }
+    ],
+    indirect=True,
+)
+def test_weekly_multistep_mail_context_remains_bounded_after_large_status(
+    read_mailbox, monkeypatch
+):
+    no_research(monkeypatch)
+    identifier = read_mailbox[4]
+    observed = []
+
+    async def generate(factory, cfg, providers, job_id, instruction, data):
+        # This is the actual fitted input supplied by the shared execution loop,
+        # including a large intermediate read, not a separate fabricated payload.
+        assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
+        assert data["clock"]["week_start"] and data["clock"]["week_end_exclusive"]
+        assert data["clock"]["today"] == "2026-10-20"
+        assert data["clock"]["week_start"].startswith("2026-10-19T00:00:00")
+        assert data["clock"]["week_end_exclusive"].startswith("2026-10-26T00:00:00")
+        contracts = data["mail_read_contracts"]
+        assert contracts["schemas"][SHA] == SCHEMA
+        observed.append(data)
+        if len(observed) == 2:
+            projected = data["history"][-1]["result"]["response"]["content"][0]
+            assert projected["folder_count"] == 200 and projected["folders_omitted"] == 192
+            assert len(projected["folders"]) == 8
+        if len(observed) <= 2:
+            name = "get_status" if len(observed) == 1 else "search_emails"
+            return {
+                "kind": "tool",
+                "integration_id": identifier,
+                "tool": "mcp.call",
+                "arguments": {
+                    "name": name,
+                    "schema_sha256": next(
+                        tool["schema_sha256"]
+                        for tool in contracts["interfaces"][0]["tools"]
+                        if tool["name"] == name
+                    ),
+                    "arguments": {} if name == "get_status" else {"query": "", "since_days": 1},
+                },
+                "message": "Synthetic bounded weekly read",
+            }
+        return {"kind": "finish", "message": "Synthetic weekly answer; broad filter is bounded"}
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    status, history = execute(read_mailbox)
+    assert status == "observed" and len(observed) == 3
+    reads = [json.loads(step.document) for step in history if step.kind == "read"]
+    assert [step.get("arguments", {}).get("name") for step in reads] == [
+        None,
+        "get_status",
+        "search_emails",
+    ]
+    assert not any(step.kind in {"effect", "research"} for step in history)
+    assert len(history[1].result.encode()) > 7000  # Durable evidence is never clipped.
+
+
+@pytest.mark.parametrize("timeout", [False, True])
+def test_failed_local_mail_planning_has_safe_reason_and_terminal_job(
+    read_mailbox, monkeypatch, timeout
+):
+    from hub.db import Run
+
+    no_research(monkeypatch)
+    app, client, _, _, _, job_id, _ = read_mailbox
+    private_marker = "SYNTHETIC_PRIVATE_PROVIDER_BODY_MUST_STAY_OUT_OF_RECEIPTS"
+
+    async def fail(factory, cfg, providers, run_id):
+        with factory() as db:
+            run = db.get(Run, run_id)
+            run.status = "failed"
+            run.error = (
+                "Provider hat zu lange keine Daten geliefert. Der bisherige Text bleibt erhalten; "
+                "bitte erneut versuchen."
+                if timeout
+                else private_marker
+            )
+            db.commit()
+
+    monkeypatch.setattr("hub.execution.execute_run", fail)
+    status, history = execute(read_mailbox)
+    assert status == "failed"
+    reason = "local_model_timeout" if timeout else "local_model_failed"
+    assert json.loads(history[-1].document) == {"type": "AgentPlanningError", "reason": reason}
+    assert json.loads(next(step for step in history if step.kind == "model").result) == {
+        "reason": reason
+    }
+    public_job = client.get("/api/agent-runs/" + job_id).json()
+    assert "neue Anfrage" in public_job["summary"]
+    assert private_marker not in json.dumps(public_job)
+    with app.state.sessions() as db:
+        assert db.get(AgentJob, job_id).status not in runtime.ACTIVE
 
 
 @pytest.mark.parametrize("interrupted", [False, True])
@@ -409,12 +552,36 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
         assert 7100 <= len(runtime.encode(contracts).encode()) < 7200
         sample["mail_read_contracts"] = contracts
         sample["interfaces"][0]["rules"]["mcp_read_tools"] = hashes
-        fitted = fit(sample, instruction, cfg.context_limit)
+        fitted = fit(sample, instruction, cfg.context_limit, max_bytes=14000)
         assert fitted["mail_read_contracts"] == contracts
         assert len(contracts["schemas"]) == 8
         assert all(contracts["schemas"][hashes[name]] == schemas[name] for name in names)
         content_bytes = len(instruction.encode()) + len(runtime.encode(fitted).encode())
         assert content_bytes <= 14000
+        # Regression: the next decision previously ballooned to 23 KB after the
+        # 100-folder get_status result. Exact contracts and authority stay intact.
+        sample["history"].append(
+            {
+                "kind": "read",
+                "status": "succeeded",
+                "sequence": 3,
+                "document": {"tool": "mcp.call", "arguments": {"name": "get_status"}},
+                "result": {
+                    "content": [
+                        json.dumps(
+                            [
+                                {"name": f"Synthetic folder {i}", "total": i, "unread": 0}
+                                for i in range(100)
+                            ]
+                        )
+                    ]
+                },
+            }
+        )
+        fitted_next = fit(sample, instruction, cfg.context_limit, max_bytes=14000)
+        assert fitted_next["mail_read_contracts"] == contracts
+        assert fitted_next["interfaces"] == sample["interfaces"]
+        assert len(instruction.encode()) + len(runtime.encode(fitted_next).encode()) <= 14000
         measurements.append(content_bytes)
         return {"kind": "finish", "message": "Synthetic catalog size proof"}
 
