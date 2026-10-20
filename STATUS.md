@@ -1,16 +1,37 @@
 # obdaAI — Status 20.10.2026
 
-## Natürliche Mailfragen: Bestätigungsschleife wird korrigiert
+## Natürliche Mailfrage ohne Bestätigungsschleife — echte Tagesabnahme erfolgreich
 
-Der neue Nutzertest „Was gab es heute für neue Mails?“ fällt trotz bestehender
-Lesefreigabe in wiederholte Modellrückfragen zu Zugriff, Zeitraum und Ordner.
-Die zuvor erfolgreich abgenommene Wochenformulierung deckte diese natürliche
-Tagesformulierung nicht ab. Die Korrektur erweitert die eng begrenzte Erkennung
-reiner Heute-/Wochenübersichten und präzisiert die Modellanweisung: vorhandene
-Leserechte, eingefrorene Kalendergrenzen und beobachtete Schema-Standardordner
-brauchen keine erneute Bestätigung. Explizite Filter, Kontext und echte fehlende
-Angaben behalten ihre Bedeutung. Neue vollständige Prüfung und echte Abnahme
-mit dem genauen gemeldeten Wortlaut stehen noch aus.
+Die genaue Frage „Was gab es heute für neue Mails?“ ist mit Release
+**a1edf85 / Schema 0045** in einem frischen authentifizierten Chat erfolgreich
+abgenommen: automatische Proton-Auswahl, aktueller Katalog, genau eine echte
+Nachrichtensuche und eine belegte Antwort, Abschluss `observed`. Keine Rückfrage,
+Nutzereingabe, manuelle Freigabe, Modellplanung oder öffentliche Recherche.
+Die VM-lokale Qualitätsprüfung bestätigt Tagesgrenzen und Antwortbelege; private
+Mailwerte und Nachrichtenzahlen bleiben auf der VM.
+
+Die enge Erkennung einfacher Heute-/Wochenübersichten berücksichtigt natürlichere
+Formulierungen. Vorhandene Lesefreigaben, eingefrorene Kalendergrenzen und
+beobachtete Schema-Standardordner benötigen keine erneute Bestätigung. Explizite
+Filter, Kontowünsche, bestehender Kontext und tatsächlich fehlende Angaben bleiben
+maßgeblich; hierfür bleibt der lokale Planer erhalten. Alte wartende Nutzerläufe
+werden weder automatisch fortgesetzt noch abgebrochen oder umgedeutet. Die neue
+Tagesabnahme gilt für den geprüften frischen Auftrag und ist kein Nachweis für
+beliebige Formulierungen oder bestehende Rückfrageschleifen.
+
+Alle neun Anwendungsdienste laufen mit der exakten Version; beide APIs sind gesund.
+Bestehende Daten, Freigaben, Compose-Overlays und unabhängige Netzregeln sind erhalten.
+Vor dem Update wurde der kritische Datenbank-/Konfigurationsstand verschlüsselt auf
+der VM gesichert. Das ist keine neue vollständige oder restoregetestete Systemkopie;
+der vorher verifizierte externe Sicherungsanker bleibt erhalten.
+
+Lokal **1953 Tests**, Ruff, mypy und Geheimnisprüfung erfolgreich; die isolierte
+Testdatenbank ist gestoppt. Vollständige [CI39451467433](https://github.com/sschluet/obdaAI/actions/runs/39451467433):
+**1947 bestanden, 6 übersprungen**, alle Pflichtjobs einschließlich Browser-
+und Runner-Prüfungen erfolgreich. Nachrichtentexte, Threads, Anhangmetadaten,
+Mail-Aufgaben-/Projektläufe und Gmail bleiben gesondert offen. Versand und
+Postfachänderungen bleiben über die Leseprofile gesperrt; V1 bleibt partiell.
+Die folgenden Abschnitte dokumentieren frühere getrennte Abnahmen.
 
 ## Wochenübersicht aus Proton korrigiert — echte Abnahme erfolgreich
 

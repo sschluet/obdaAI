@@ -130,13 +130,23 @@ sie ist kein Nachweis tatsächlicher Nachrichten-, Thread- oder Anhangabrufe.
 
 ## Mehrstufige Mailfragen und Fehlerbehandlung
 
-Der weitere Nutzertest „Was gab es heute für neue Mails?“ zeigte wiederholte
-unnötige Bestätigungen. Die frühere Abnahme galt für eine andere Formulierung.
-Natürliche reine Heute-/Wochenfragen erhalten deshalb eine breitere, weiterhin
-vollständig verankerte Erkennung. Der Modellweg soll vorhandene Lesefreigaben,
-bekannte Kalendergrenzen und beobachtete Standardordner ohne Rückfrage verwenden;
-explizite Filter und tatsächlich notwendige fehlende Angaben bleiben erhalten.
-Die erneute echte Abnahme mit dem genauen Wortlaut steht noch aus.
+Release a1edf85 korrigiert die Bestätigungsschleife für unterstützte einfache
+Heute-/Wochenübersichten. Die genaue Frage „Was gab es heute für neue Mails?“ ist
+in einem frischen authentifizierten Chat tatsächlich abgenommen: automatisches
+Proton-Profil, aktueller Katalog, genau eine Nachrichtensuche, belegte Antwort und
+Abschluss `observed`, ohne Rückfrage, Nutzereingabe oder Modellaufruf.
+Tagesgrenzen, Antwortbelege und sichtbare Umfangsgrenzen sind auf der VM geprüft;
+private Mailwerte und Nachrichtenzahlen wurden nicht exportiert.
+
+Vorhandene Lesefreigaben, bekannte Kalendergrenzen und beobachtete Standardordner
+benötigen keine erneute Bestätigung. Explizite Filter, Ordner-/Kontowünsche,
+bestehender Kontext und tatsächlich notwendige fehlende Angaben bleiben erhalten.
+Alte wartende Nutzeraufträge werden nicht automatisch fortgesetzt, abgebrochen
+oder in eine Standardabfrage umgedeutet. Für die neue Tagesabnahme wurde ein neuer
+Chat verwendet; bestehende Rückfrageschleifen sind kein erneut ausgeführter Test.
+Lokal 1953 Tests und vollständige [CI39451467433](https://github.com/sschluet/obdaAI/actions/runs/39451467433) mit 1947
+bestandenen und 6 übersprungenen Tests sind erfolgreich. Der nachfolgende
+Wochenbeleg dokumentiert die vorherige, getrennte Abnahme.
 
 Release b59b6e6 ist vollständig geprüft und auf der Test-VM installiert. Eine
 frische echte Wochenübersicht ist über den normalen authentifizierten Chat-Weg
