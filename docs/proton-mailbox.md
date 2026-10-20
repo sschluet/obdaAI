@@ -299,3 +299,10 @@ Originalbelegen und aktuellen Werkzeugschemas. Vor dem ersten Nachrichtenabruf
 begrenzt er die Modellauswahl auf vorhandene belegte Leseschritte; keine Bestätigung,
 erfundene Kennung oder erneute Katalogschleife. Ohne sichere Kennung bleibt ein
 qualifizierter Abbruch möglich. Die neue reale Folgeabnahme steht noch aus.
+
+Nach einem Nachrichtenabruf entfällt die doppelte Werkzeugbeschreibung; die acht
+beobachteten Eingabeschemas, Namen und Hashes bleiben vollständig erhalten.
+Ältere Quellbelege erhalten dann eine kleinere Modellsicht mit unveränderten
+Quellenkennungen und expliziten Auslassungen. Aktuelle Detail- und Antwortbelege
+behalten ihre eigenen Budgets. Ein zusätzlicher synthetischer Grenztest prüft auch
+die anschließende Antwortplanung innerhalb der bestehenden Kontextgrenze.

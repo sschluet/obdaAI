@@ -642,6 +642,22 @@ def test_mail_followup_without_mail_keyword_uses_account_bound_prior_uid_then_ac
                 return candidate
             assert data["allow_finish"]
             assert data["allow_stop"] and "ready_reads" not in data
+            post_contracts = data["mail_read_contracts"]
+            assert post_contracts["schemas"] == {
+                schema_digest(schema): schema for schema in _MAIL_SCENARIO["schemas"].values()
+            }
+            assert all(
+                "description" not in tool
+                for interface in post_contracts["interfaces"]
+                for tool in interface["tools"]
+            )
+            prior = data["prior_read_results"]
+            assert len(runtime.encode(prior).encode()) <= 1024
+            assert all(
+                item["source_id"].startswith(f"agent-read:{first_id}:")
+                and item["integration_id"] == identifier
+                for item in prior
+            )
             latest = data["latest_observation"]["result"]
             assert latest["model_projection"] == "mail_read_metadata"
             assert latest["messages"][0]["marked_answered"] is True
@@ -817,12 +833,25 @@ def test_private_mail_rejects_ask_but_reads_current_messages_then_answers(
     assert sum(c["method"] == "tools/call" for c in calls) == 1
 
 
-@pytest.mark.parametrize("ready", [[], [{
-    "kind": "tool", "integration_id": "synthetic", "tool": "mcp.call",
-    "arguments": {"name": "read_email", "schema_sha256": "a" * 64,
-                  "arguments": {"uid": 7, "folder": "INBOX"}},
-    "message": "Read original identity",
-}]])
+@pytest.mark.parametrize(
+    "ready",
+    [
+        [],
+        [
+            {
+                "kind": "tool",
+                "integration_id": "synthetic",
+                "tool": "mcp.call",
+                "arguments": {
+                    "name": "read_email",
+                    "schema_sha256": "a" * 64,
+                    "arguments": {"uid": 7, "folder": "INBOX"},
+                },
+                "message": "Read original identity",
+            }
+        ],
+    ],
+)
 def test_private_decision_flags_are_persisted_for_native_generation(archive, monkeypatch, ready):
     from hub.db import Run
 
@@ -914,3 +943,223 @@ def test_private_mail_stop_remains_unverified_with_or_without_current_data(
         assert job.summary.startswith("Anfrage nicht vollständig beantwortet: ")
         assert not any(s.kind in {"effect", "input"} for s in runtime.steps(db, job_id))
     assert sum(c["method"] == "tools/call" for c in calls) == int(queried)
+
+
+@pytest.mark.parametrize("saturated", [False, True])
+def test_postread_full_eight_schemas_current_detail_reply_and_prior_fit_together(saturated):
+    """The post-read phase adds reply evidence while retaining full tool authority.
+
+    Find a capacity boundary where redundant catalog prose alone previously made
+    the next planning turn fail. This exercises complete schemas plus simultaneous
+    prior provenance, current detail and reply facts, rather than an overview-only
+    or empty-description fixture.
+    """
+    import copy
+    from types import SimpleNamespace
+
+    from hub.agent_clock import freeze_clock
+    from hub.agent_context import AgentContextLimitError
+    from hub.agent_mail_read import model_result
+    from hub.mcp_client import schema_digest
+
+    identifier = "00000000-0000-0000-0000-000000000007"
+    names = sorted(runtime.MAIL_READ_TOOLS)
+    profile = SimpleNamespace(kind="mcp", id=identifier)
+    clock = freeze_clock("Europe/Berlin", 1792497600)
+    original_id = "<original-message-000000000007@synthetic.invalid>"
+    raw_message = {
+        "message_id": original_id,
+        "folder": "INBOX",
+        "uid": 7,
+        "subject": "Synthetic original " * 12,
+        "sender": "Synthetic sender " * 12,
+        "recipients": "Synthetic recipient " * 12,
+        "received": clock["request_at"],
+        "date": clock["request_at"],
+        "answered": True,
+        "in_reply_to": "<parent@synthetic.invalid>",
+        "references": "<parent@synthetic.invalid>",
+        "body_text": "字" * 300,
+    }
+    detail = model_result(
+        "read_email",
+        {"response": {"content": [runtime.encode(raw_message)]}},
+        max_bytes=1400,
+        account_id=identifier,
+    )
+    assert detail and detail["messages"][0]["uid"] == 7
+    assert len(runtime.encode(detail).encode()) <= 1400
+    reply = SimpleNamespace(
+        kind="read",
+        status="succeeded",
+        sequence=7,
+        document=runtime.encode(
+            {
+                "integration_id": identifier,
+                "tool": "mcp.call",
+                "arguments": {
+                    "name": "read_email",
+                    "arguments": {"message_id": original_id, "folder": "INBOX"},
+                },
+            }
+        ),
+        result=runtime.encode({"response": {"content": [runtime.encode(raw_message)]}}),
+    )
+    reply_facts = runtime.mail_reply_progress([reply])
+    assert len(runtime.encode(reply_facts).encode()) <= 1400
+    assert reply_facts["proofs"][0]["marked_answered"] is True
+    prior = [
+        {
+            "source_id": f"agent-read:00000000-0000-0000-0000-00000000000{i}:3",
+            "integration_id": identifier,
+            "result_sha256": str(i) * 64,
+            "label": "LOCAL_ONLY",
+            "untrusted": True,
+            "result": {
+                "messages": [
+                    {"uid": i, "folder": "INBOX", "message_id": f"<prior-{i}@synthetic.invalid>"}
+                ]
+            },
+        }
+        for i in (1, 2)
+    ]
+    assert len(runtime.encode(prior).encode()) <= 1024
+    boundary = None
+    for padding in range(0, 8000, 32):
+        schemas = {
+            name: {
+                "type": "object",
+                "title": name,
+                "properties": {
+                    "message_id": {"type": "string", "description": "Observed identity " * 7},
+                    "folder": {"type": "string", "default": "INBOX"},
+                    "limit": {"type": "integer", "default": 20, "maximum": 100},
+                },
+                "required": ["message_id"],
+                "additionalProperties": False,
+                "description": "Synthetic read schema " * 5 + ("x" * padding if i == 0 else ""),
+            }
+            for i, name in enumerate(names)
+        }
+        hashes = {name: schema_digest(schema) for name, schema in schemas.items()}
+        rules = agent_tools.Rules(enabled=True, max_effects=0, mcp_read_tools=hashes)
+        catalog = SimpleNamespace(
+            status="succeeded",
+            document=runtime.encode({"tool": "mcp.catalog", "integration_id": identifier}),
+            result=runtime.encode(
+                {
+                    "tools": [
+                        {
+                            "name": name,
+                            "input_schema": schema,
+                            "description": "Observed tool description. " * 12,
+                        }
+                        for name, schema in schemas.items()
+                    ]
+                }
+            ),
+        )
+        profiles = {identifier: (profile, rules, {})}
+        contracts = runtime.mail_read_contracts(profiles, [catalog], include_descriptions=False)
+        redundant = runtime.mail_read_contracts(profiles, [catalog], include_descriptions=True)
+        history = [
+            {
+                "kind": "read",
+                "status": "succeeded",
+                "sequence": n,
+                "document": {
+                    "tool": "mcp.call",
+                    "integration_id": identifier,
+                    "arguments": {"name": "get_status"},
+                },
+                "result": {
+                    "model_projection": "folder_status",
+                    "untrusted": True,
+                    "observed_scope": "Synthetic folder " * (1000 if saturated else 2),
+                },
+            }
+            for n in range(1, 5 if saturated else 3)
+        ]
+        history.append(
+            {
+                "kind": "read",
+                "status": "succeeded",
+                "sequence": 30,
+                "document": {
+                    "tool": "mcp.call",
+                    "integration_id": identifier,
+                    "arguments": {
+                        "name": "read_email",
+                        "schema_sha256": hashes["read_email"],
+                        "arguments": {"message_id": original_id, "folder": "INBOX"},
+                    },
+                },
+                "result": detail,
+            }
+        )
+        payload = {
+            "goal": "Auf welche davon habe ich bereits geantwortet?",
+            "clock": clock,
+            "allow_finish": True,
+            "allow_ask": False,
+            "allow_stop": True,
+            "read_only": True,
+            "private_read_evidence": True,
+            "interfaces": [
+                {
+                    "integration_id": identifier,
+                    "kind": "mcp",
+                    "name": "Synthetic mailbox",
+                    "writes_enabled": False,
+                    "rules": rules.model_dump(),
+                }
+            ],
+            "tools": {"mcp.call": agent_tools.MCPCall.model_json_schema()},
+            "decision_schema": agent_tools.decision_envelope_schema(
+                [identifier], ["mcp.call"], allow_ask=False, allow_stop=True
+            ),
+            "mail_read_contracts": contracts,
+            "mail_read_progress": {
+                "mailbox_queried": True,
+                "next_action": "answer_or_query",
+                "reply_evidence": reply_facts,
+            },
+            "prior_read_results": prior,
+            "private_context": [
+                {
+                    "source_id": "synthetic-private-history",
+                    "label": "LOCAL_ONLY",
+                    "content": "Private context 字 " * (5000 if saturated else 100),
+                }
+            ],
+            "history": history,
+        }
+        try:
+            fitted = fit(payload, runtime.MAIL_READ_INSTRUCTION, 24000, max_bytes=14000)
+        except AgentContextLimitError:
+            continue
+        old = copy.deepcopy(payload)
+        old["mail_read_contracts"] = redundant
+        try:
+            fit(old, runtime.MAIL_READ_INSTRUCTION, 24000, max_bytes=14000)
+        except AgentContextLimitError:
+            boundary = payload, fitted, schemas, hashes
+            break
+    assert boundary is not None, "Fixture must reproduce the post-read duplicate-prose overflow"
+    payload, fitted, schemas, hashes = boundary
+    assert len(schemas) == 8
+    assert fitted["mail_read_contracts"]["schemas"] == {
+        schema_digest(schema): schema for schema in schemas.values()
+    }
+    assert {
+        tool["name"]: tool["schema_sha256"]
+        for tool in fitted["mail_read_contracts"]["interfaces"][0]["tools"]
+    } == hashes
+    for field in ("interfaces", "tools", "decision_schema", "clock", "prior_read_results"):
+        assert fitted[field] == payload[field]
+    assert fitted["mail_read_progress"]["reply_evidence"] == reply_facts
+    assert fitted["latest_observation"]["result"] == detail
+    assert fitted["latest_observation"]["result"]["messages"][0]["message_id"] == original_id
+    assert (
+        len(runtime.MAIL_READ_INSTRUCTION.encode()) + len(runtime.encode(fitted).encode()) <= 14000
+    )

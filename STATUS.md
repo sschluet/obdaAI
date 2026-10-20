@@ -19,6 +19,17 @@ Ausführungsprüfung die Auswahl auf diese Abrufe. Fehlende Identitäten werden 
 erfunden. Nach dem Lesen bleiben Umfang und unbekannte Antwortbeziehungen sichtbar.
 Die neue reale Folgeabnahme steht noch aus.
 
+Der Zwischenstand **1870d24** wurde ausdrücklich nicht ausgerollt. Sein zusätzlicher
+statischer Grenztest mit den aktuellen acht Werkzeugverträgen zeigte nach einem
+synthetischen Detailabruf einen möglichen Kontextüberlauf. Der dadurch überholte
+CI-Lauf wurde abgebrochen; lokal waren 2140 Tests erfolgreich.
+Die anschließende Korrektur entfernt nach dem Abruf doppelte Katalogbeschreibungen
+und verkleinert nur die Modellsicht älterer Belege. Vollständige Schemas, Namen,
+Hashes, aktuelle Detailbelege und Rechte bleiben erhalten. Der entsprechende
+statische Grenztest passt einschließlich gesättigter Belegbudgets mit 13557 UTF-8-
+Bytes in die bestehende 14000-Byte-Grenze. Die synthetische Prüfung ersetzt keine
+reale Detailabnahme; neue vollständige Tests und CI bleiben erforderlich.
+
 ### Getrennte Nachweise des vorherigen Stands
 
 Release **43f6af3 / Schema 0045** war auf allen neun Anwendungsdiensten gesund geprüft.

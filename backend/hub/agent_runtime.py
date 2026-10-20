@@ -330,7 +330,10 @@ def prepare_mail_catalogs(db: Any, job: AgentJob, profiles: dict[str, Any]) -> N
         )
 
 
-def mail_read_contracts(profiles: dict[str, Any], history: list[AgentStep]) -> dict[str, Any]:
+def mail_read_contracts(
+    profiles: dict[str, Any], history: list[AgentStep], *, include_descriptions: bool = True
+) -> dict[str, Any]:
+    """Preserve every schema byte; optional catalog prose is no execution authority."""
     from hub.mcp_client import schema_digest
 
     contracts: dict[str, Any] = {
@@ -362,7 +365,8 @@ def mail_read_contracts(profiles: dict[str, Any], history: list[AgentStep]) -> d
                 {
                     "name": name,
                     "schema_sha256": sha,
-                    "description": tool.get("description", "")[:160],
+                    **({"description": tool.get("description", "")[:160]}
+                       if include_descriptions else {}),
                 }
             )
         contracts["interfaces"].append({"integration_id": profile.id, "tools": tools})
@@ -1950,9 +1954,14 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         mailbox_queried(history) if private_mail_read
                         else paperless_queried(history) if private_archive_read else True
                     )
-                    prior_read_results = read_reference_context(db, job, profiles, max_bytes=1800)
+                    prior_read_results = read_reference_context(
+                        db, job, profiles,
+                        max_bytes=1024 if private_mail_read and allow_finish else 1800,
+                    )
                     contracts = (
-                        mail_read_contracts(profiles, history)
+                        mail_read_contracts(
+                            profiles, history, include_descriptions=not allow_finish
+                        )
                         if private_mail_read and sequence is None else {}
                     )
                     from hub.agent_mail_progress import ready_reads
