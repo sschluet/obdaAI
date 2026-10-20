@@ -260,7 +260,7 @@ class GmailCall(Strict):
 
 
 class Decision(Strict):
-    kind: Literal["tool", "finish", "ask"]
+    kind: Literal["tool", "finish", "ask", "stop"]
     message: str = Field(min_length=1, max_length=4000)
     integration_id: str | None = None
     tool: (
@@ -314,6 +314,8 @@ def decision_envelope_schema(
     tool_names: Sequence[str] | None = None,
     *,
     allow_finish: bool = True,
+    allow_ask: bool = True,
+    allow_stop: bool = False,
 ) -> dict[str, Any]:
     """Compact prompt contract; full typed arguments live in tools and native grammar."""
     if not integration_ids:
@@ -338,17 +340,25 @@ def decision_envelope_schema(
                 "required": ["kind", "message", "integration_id", "tool", "arguments"],
             }
         )
-    branches.append(
-        {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {
-                "kind": {"type": "string", "enum": ["ask", "finish"] if allow_finish else ["ask"]},
-                "message": message,
-            },
-            "required": ["kind", "message"],
-        }
+    terminal = (
+        (["ask"] if allow_ask else [])
+        + (["finish"] if allow_finish else [])
+        + (["stop"] if allow_stop else [])
     )
+    if terminal:
+        branches.append(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "kind": {"type": "string", "enum": terminal},
+                    "message": message,
+                },
+                "required": ["kind", "message"],
+            }
+        )
+    if not branches:
+        raise ValueError("Decision generation requires an allowed decision")
     return {"type": "object", "anyOf": branches}
 
 
@@ -483,9 +493,14 @@ def decision_schema(
     interfaces: Sequence[dict[str, Any]] | None = None,
     *,
     allow_finish: bool = True,
+    allow_ask: bool = True,
+    allow_stop: bool = False,
 ) -> dict[str, Any]:
     """Constrain generation to typed, available tools; runtime gates remain authoritative."""
-    envelope = decision_envelope_schema(integration_ids, tool_names, allow_finish=allow_finish)
+    envelope = decision_envelope_schema(
+        integration_ids, tool_names, allow_finish=allow_finish,
+        allow_ask=allow_ask, allow_stop=allow_stop,
+    )
     names = sorted(SCHEMAS if tool_names is None else set(tool_names))
     bound = _interface_rules(integration_ids, interfaces) if interfaces is not None else None
     definitions: dict[str, Any] = {}
@@ -553,7 +568,10 @@ def decision_schema(
         expected = definition.get("properties", {}).get("expected")
         if expected is not None:
             expected["additionalProperties"] = False
-    branches.append(envelope["anyOf"][-1])
+    branches.extend(
+        branch for branch in envelope["anyOf"]
+        if branch["properties"]["kind"].get("const") != "tool"
+    )
     return {"type": "object", "$defs": definitions, "anyOf": branches}
 
 

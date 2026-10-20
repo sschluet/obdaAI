@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-20",
-  "applicationCommit": "a1edf85",
+  "updated": "2026-10-21",
+  "applicationCommit": "43f6af3",
   "schema": "0045",
-  "tests": 1947,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39451467433",
+  "tests": 2091,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39502206203",
   "screenshots": [
     {
       "id": "integration-selection",
@@ -473,7 +473,7 @@
         },
         {
           "title": "Paperless-Dokumente als privater KI-Kontext",
-          "description": "Suche und Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Gewählte Archive werden in Chats, Aufgaben und projektbezogenen Use Cases lokal gelesen; Auswahl- und Profiländerungen stoppen den Zugriff. Gekürzte Auszüge bleiben gekennzeichnet. Paperless-Schreiboperationen sind nicht umgesetzt.",
+          "description": "Suche, Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Der gemeinsame lokale Agentenweg ist mit echter Dokumentensuche und anschließender Folgefrage samt zusätzlichem OCR-Abruf und belegter Zusammenfassung auf 43f6af3 geprüft, ohne Rückfrage oder öffentliche Recherche. Aktuelle Kontorechte und Quellenbezüge bleiben gebunden; Kürzungen sind sichtbar. Dieser Leseweg eröffnet keine Schreib- oder Downloadrechte und belegt keine vollständige Archivauswertung.",
           "status": "live"
         }
       ]
@@ -630,12 +630,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "Aktivierte Integrationen stehen neuen Chats automatisch zur Verfügung. Bekannte System- und Postfachbegriffe wählen passende konkret freigegebene Werkzeuge; bewusste Auswahl und Ausschlüsse bleiben erhalten. Die Zuordnung ist lexikalisch. Eine frische Proton-Wochenübersicht ist mit echter Nachrichtensuche und belegter Antwort abgenommen, ohne manuelle Fortsetzung. Für unterstützte einfache Heute-/Wochenfragen ohne bisherigen Kontext erzeugt die App einen schema- und kalendergebundenen Leseplan über denselben freigegebenen Ausführungsweg. Höchstens 20 Kopfzeilen, Konto-/Ordnerumfang, Datumsunsicherheit und Grenzen bleiben sichtbar. Dieser Weg benötigt kein Modell; komplexe Fragen bleiben beim lokalen Planer mit geschützter Nachrichtensicht und vollständigen Schemas. Weitere reale Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme stehen gesondert aus. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt.",
+          "description": "Aktivierte Integrationen stehen neuen Chats automatisch zur Verfügung. Bekannte System- und Postfachbegriffe wählen passende konkret freigegebene Werkzeuge; bewusste Auswahl und Ausschlüsse bleiben erhalten. Die Zuordnung ist lexikalisch. Eine frische Proton-Wochenübersicht ist mit echter Nachrichtensuche und belegter Antwort abgenommen, ohne manuelle Fortsetzung. Für unterstützte einfache Heute-/Wochenfragen ohne bisherigen Kontext erzeugt die App einen schema- und kalendergebundenen Leseplan über denselben freigegebenen Ausführungsweg. Höchstens 20 Kopfzeilen, Konto-/Ordnerumfang, Datumsunsicherheit und Grenzen bleiben sichtbar. Dieser Weg benötigt kein Modell; komplexe Fragen bleiben beim lokalen Planer mit geschützter Nachrichtensicht und vollständigen Schemas. Weitere reale Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme stehen gesondert aus. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist auf 43f6af3 wegen einer unnötigen Bestätigungsfrage nicht abgenommen; die strukturelle Rückfragebegrenzung befindet sich in Prüfung.",
           "status": "implemented"
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Proton Mail über Verbindung hinzufügen auswählen. Der Assistent führt durch Vorbereitung, vorhandene Bridge-Zugangsdaten und abschließende Prüfung; persönliche Anmeldung erfolgt direkt in Bridge. Authentifizierte HTTPS-Einrichtung und Lesefreigabe sind geprüft. Eine frische Wochenfrage nutzt das vorhandene Postfach automatisch und zeigt tatsächlich abgerufene Kopfzeilen mit sichtbarem Umfang, ohne Modellentscheid oder Rückfrage. Versand, Postfachänderungen und Anhangdownloads bleiben gesperrt. Weitere Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme bleiben offen. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt.",
+          "description": "Proton Mail über Verbindung hinzufügen auswählen. Der Assistent führt durch Vorbereitung, vorhandene Bridge-Zugangsdaten und abschließende Prüfung; persönliche Anmeldung erfolgt direkt in Bridge. Authentifizierte HTTPS-Einrichtung und Lesefreigabe sind geprüft. Eine frische Wochenfrage nutzt das vorhandene Postfach automatisch und zeigt tatsächlich abgerufene Kopfzeilen mit sichtbarem Umfang, ohne Modellentscheid oder Rückfrage. Versand, Postfachänderungen und Anhangdownloads bleiben gesperrt. Weitere Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme bleiben offen. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist auf 43f6af3 wegen einer unnötigen Bestätigungsfrage nicht abgenommen; die strukturelle Rückfragebegrenzung befindet sich in Prüfung.",
           "status": "implemented"
         },
         {
@@ -800,15 +800,15 @@
     "schema": "0045",
     "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "a1edf85",
-    "ciTests": 1947,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39451467433",
-    "deployedCommit": "a1edf85",
+    "commit": "43f6af3",
+    "ciTests": 2091,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39502206203",
+    "deployedCommit": "43f6af3",
     "deployedSchema": "0045",
-    "liveScope": "Release a1edf85 / Schema 0045 gesund auf dem Testsystem installiert. Vollständige CI: 1947 Tests bestanden, 6 übersprungen; Browser- und Runner-Prüfungen erfolgreich; lokal 1953 Tests bestanden. Neue Chats stellen aktivierte Integrationen automatisch bereit; bekannte System-/Postfachbegriffe wählen passende freigegebene Ziele. Die Zuordnung bleibt lexikalisch. Frühere echte Proton-Wochenabnahme auf b59b6e6: aktueller Katalog, tatsächliche Nachrichtensuche, belegte Übersicht und Abschluss ohne manuelle Fortsetzung, neue Anmeldung, Modellaufruf oder öffentliche Recherche. Die Standardübersicht verwendet einen schema- und kalendergebundenen Anwendungsplan am bereits ausgewählten Profil über den normalen dauerhaften Ausführungsweg. Konto, Rechte, Ziel-/Policyrevisionen und Abbruch-/Wiederholungssperren bleiben bindend. Höchstens 20 Kopfzeilen, Ordnerumfang, Datumsunsicherheit und Auslassungen sind sichtbar; keine Vollständigkeitsbehauptung. Komplexe Fragen und vorhandener Kontext bleiben beim lokalen Modellplaner mit geschützten Belegen und vollständigen Schemas. Anbietergrenzen und Rechte bleiben unverändert. Proton Bridge 3.27.1 und Community-MCP 0.4.0 samt privater TLS-/Listenkompatibilität bleiben gepinnt. Reale Nachrichtentexte, Threads, Anhangmetadaten und Mail-Aufgaben-/Projektläufe bleiben gesondert offen. Gmail wartet auf persönliche Anmeldung und echte Abnahme. Kein Versand, keine Postfachänderungen oder Anhangdownloads über Leseprofile. Reale SSH-Schreibabnahme und frühere HA-Leseabnahme bleiben getrennte Belege; HA-Konfiguration, HA-Update und umfassende Fremdsystemadministration sind offen. V1 bleibt partiell. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Neue private Folgebelege, typisierte Paperless-Dokumentabfragen und Antwortmetadaten befinden sich in Prüfung; dafür ist noch keine neue reale Abnahme ausgewiesen.",
+    "liveScope": "Release 43f6af3 / Schema 0045 gesund auf dem Testsystem. Vollständige CI: 2091 bestanden, sechs übersprungen; Browser- und Runner-Prüfungen erfolgreich. Lokal 2097 Tests bestanden. Echte Paperless-Suche und Folgefrage mit zusätzlichem OCR-Abruf sowie belegter Zusammenfassung erfolgreich, ohne Rückfrage, öffentliche Recherche, Cloud oder Änderungen. Die Mailübersicht funktioniert; die Antwortstatus-Folgefrage ist auf diesem Stand nicht abgenommen, da das Modell trotz gültiger aktueller Nachrichtenbezüge eine unnötige Bestätigung verlangte. Die strukturelle Begrenzung dieses Rückfragezweigs befindet sich in Prüfung. Der getrennte MCP-Antwortmetadatenpatch ist installiert; Werkzeugnamen, Eingabeschemas, Leserechte, Zugangsdaten, Originale und unabhängige Konfiguration bleiben erhalten. Fehlende Antwortbelege bedeuten unbekannt; keine Zustellungs- oder Vollständigkeitsbehauptung. Mail-/Archivwerte und Kennungen bleiben lokal. Weitere Postfach-/Threadabdeckung, Anhänge, Aufgaben-/Projektläufe, persönliche Gmail-Abnahme, HA-Konfiguration/-Updates und umfassende Administration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "a1edf85",
+    "lastSuccessfulCICommit": "43f6af3",
     "lastSuccessfulCIUI": 39
   }
 }

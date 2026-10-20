@@ -22,8 +22,8 @@ def test_mail_planner_uses_existing_read_authority_clock_and_defaults_without_re
     assert "folder.default" in instruction and "beobachtetes" in instruction
     assert "Zeitraum/Ordner nicht bestätigen" in instruction
     assert "Konto/Ordner/Filter/Kontext/latest_input gehen vor" in instruction
-    assert "nur Fehlendes erfragen" in instruction
-    assert "ask nur bei fehlender Information" in instruction
+    assert "vorhandene Rechte/Defaults/Belege nutzen" in instruction
+    assert "Nie ask" in instruction and "stop nur bei konkret fehlender" in instruction
     assert "prior_read_results" in instruction and "Answered-Flag separat" in instruction
 
 

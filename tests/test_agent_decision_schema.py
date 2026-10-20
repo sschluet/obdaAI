@@ -409,7 +409,8 @@ def test_finish_requires_observed_evidence_but_questions_and_tools_stay_valid(sc
 def test_evidence_gate_keeps_actual_interface_rules():
     rules = Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET"])
     schema = decision_schema(
-        [TARGET], ["paperless.read", "shell", "http"],
+        [TARGET],
+        ["paperless.read", "shell", "http"],
         [{"integration_id": TARGET, "kind": "paperless", "rules": rules.model_dump()}],
         allow_finish=False,
     )
@@ -419,3 +420,29 @@ def test_evidence_gate_keeps_actual_interface_rules():
     assert not validator.is_valid(
         decision("http", {"method": "DELETE", "path": "/api/documents/7/"})
     )
+
+
+@pytest.mark.parametrize("schema_factory", [decision_envelope_schema, decision_schema])
+@pytest.mark.parametrize("queried", [False, True])
+def test_private_read_grammar_never_asks_and_can_stop_without_inventing_parameters(
+    schema_factory, queried
+):
+    schema = schema_factory(
+        [TARGET],
+        ["paperless.read"],
+        allow_finish=queried,
+        allow_ask=False,
+        allow_stop=True,
+    )
+    validator = Draft202012Validator(schema)
+    assert not validator.is_valid({"kind": "ask", "message": "Confirm the authorized read?"})
+    assert validator.is_valid({"kind": "stop", "message": "Required identity is not available."})
+    assert validator.is_valid(decision("paperless.read", VALID["paperless.read"]))
+    assert validator.is_valid({"kind": "finish", "message": "Observed with limits"}) is queried
+
+
+@pytest.mark.parametrize("schema_factory", [decision_envelope_schema, decision_schema])
+def test_ordinary_administration_keeps_questions_and_does_not_offer_private_stop(schema_factory):
+    validator = Draft202012Validator(schema_factory([TARGET], ["http"]))
+    assert validator.is_valid({"kind": "ask", "message": "Which actual administrative target?"})
+    assert not validator.is_valid({"kind": "stop", "message": "Private terminal"})

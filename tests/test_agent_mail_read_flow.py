@@ -933,9 +933,9 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
         assert len(instruction.encode()) + len(runtime.encode(final).encode()) <= 14000
         measurements.append(content_bytes)
         # This context-only fixture has no actual current message query.
-        # A genuine missing-detail question preserves the one-turn size measurement.
-        return {"kind": "ask", "message": "Which missing synthetic search detail?"}
+        # Stop without success preserves the one-turn size measurement.
+        return {"kind": "stop", "message": "Missing essential synthetic search detail."}
 
     monkeypatch.setattr(runtime, "generate", generate)
     status, trace = execute(read_mailbox)
-    assert status == "awaiting_input" and len(measurements) == 1, (phases, trace[-1].document)
+    assert status == "unverified" and len(measurements) == 1, (phases, trace[-1].document)

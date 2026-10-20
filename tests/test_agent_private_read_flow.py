@@ -232,8 +232,13 @@ def test_model_cannot_smuggle_generic_http_change_into_private_read(archive, mon
 
 
 @pytest.mark.parametrize(
-    "goal", ["Ändere das Dokument im Archiv", "Lösche Dokument 42", "Update Paperless",
-             "Benenne das synthetische Dokument um und prüfe den gespeicherten Titel."]
+    "goal",
+    [
+        "Ändere das Dokument im Archiv",
+        "Lösche Dokument 42",
+        "Update Paperless",
+        "Benenne das synthetische Dokument um und prüfe den gespeicherten Titel.",
+    ],
 )
 def test_clear_administration_keeps_existing_path_and_effect_budget(agent, goal):
     app, client, headers, _, _, chat, *_ = agent
@@ -364,6 +369,8 @@ def test_eight_full_mail_contracts_prior_receipts_and_typed_thread_fit_together(
     ]
     payload = {
         "allow_finish": True,
+        "allow_ask": False,
+        "allow_stop": True,
         "goal": "Auf welche dieser Mails habe ich schon geantwortet?",
         "clock": freeze_clock("Europe/Berlin"),
         "read_only": True,
@@ -377,7 +384,9 @@ def test_eight_full_mail_contracts_prior_receipts_and_typed_thread_fit_together(
             }
         ],
         "tools": {"mcp.call": agent_tools.MCPCall.model_json_schema()},
-        "decision_schema": agent_tools.decision_envelope_schema([identifier], ["mcp.call"]),
+        "decision_schema": agent_tools.decision_envelope_schema(
+            [identifier], ["mcp.call"], allow_ask=False, allow_stop=True
+        ),
         "mail_read_contracts": contracts,
         "mail_read_progress": {"mailbox_queried": True, "next_action": "answer_or_query"},
         "prior_read_results": prior,
@@ -672,3 +681,231 @@ def test_mail_followup_without_mail_keyword_uses_account_bound_prior_uid_then_ac
                 }
             ]
         }
+
+
+@pytest.mark.parametrize("when", ["before", "after", "both"])
+def test_private_archive_rejects_confirmation_before_and_after_reads_then_answers(
+    archive, monkeypatch, when
+):
+    agent, start, _, calls = archive
+    responses = []
+    if when in {"before", "both"}:
+        responses.append({"kind": "ask", "message": "Confirm reading the authorized archive?"})
+    responses.append(decision(agent[4], operation="search"))
+    if when in {"after", "both"}:
+        responses.append({"kind": "ask", "message": "Confirm interpreting the actual results?"})
+    responses.append({"kind": "finish", "message": "Document 42 found, limited to this search."})
+    states = []
+
+    async def generate(*args):
+        data = args[-1]
+        assert data["allow_ask"] is False and data["allow_stop"] is True
+        states.append(data["allow_finish"])
+        return responses.pop(0)
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    result = execute(archive, start())
+    assert result["status"] == "observed" and len(calls) == 1
+    assert False in states and True in states
+    assert not any(s["kind"] == "input" for s in result["steps"])
+    assert sum(s["kind"] == "feedback" for s in result["steps"]) == (2 if when == "both" else 1)
+    assert "Confirm" not in result["summary"]
+
+
+@pytest.mark.parametrize("queried", [False, True])
+def test_private_archive_can_stop_unverified_without_permission_question_or_invented_id(
+    archive, monkeypatch, queried
+):
+    agent, start, _, calls = archive
+    responses = ([decision(agent[4], operation="search")] if queried else []) + [
+        {
+            "kind": "stop",
+            "message": "The requested exact identity is absent from available evidence.",
+        },
+    ]
+
+    async def generate(*args):
+        assert args[-1]["allow_stop"] and not args[-1]["allow_ask"]
+        return responses.pop(0)
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    result = execute(archive, start())
+    assert result["status"] == "unverified" and len(calls) == int(queried)
+    assert result["summary"].startswith("Anfrage nicht vollständig beantwortet: ")
+    assert not any(s["kind"] in {"effect", "input", "feedback"} for s in result["steps"])
+
+
+def test_repeated_private_confirmation_is_bounded_and_never_waits_for_user(archive, monkeypatch):
+    _, start, _, calls = archive
+    count = []
+
+    async def ask(*args):
+        count.append(True)
+        return {"kind": "ask", "message": "Please confirm again."}
+
+    monkeypatch.setattr(runtime, "generate", ask)
+    result = execute(archive, start())
+    assert result["status"] == "failed" and len(count) == 3 and not calls
+    assert sum(s["kind"] == "feedback" for s in result["steps"]) == 2
+
+
+def test_administrative_question_remains_askable_and_private_stop_is_rejected(archive, monkeypatch):
+    _, start, _, calls = archive
+    phases = []
+
+    async def generate(*args):
+        data = args[-1]
+        assert data["allow_ask"] is True and data["allow_stop"] is False
+        phases.append(True)
+        if len(phases) == 1:
+            return {"kind": "stop", "message": "Unavailable private terminal"}
+        return {"kind": "ask", "message": "Which actual API configuration should be compared?"}
+
+    async def disabled_research(factory, cfg, providers, job_id):
+        with factory() as db:
+            assert not db.get(AgentJob, job_id).research_allowed
+
+    monkeypatch.setattr(runtime, "research", disabled_research)
+    monkeypatch.setattr(runtime, "generate", generate)
+    result = execute(
+        archive, start("Prüfe die Paperless API Konfiguration", research_allowed=False)
+    )
+    assert result["status"] == "awaiting_input" and len(phases) == 2 and not calls
+    assert sum(s["kind"] == "feedback" for s in result["steps"]) == 1
+
+
+@pytest.mark.parametrize("read_mailbox", [_MAIL_SCENARIO], indirect=True)
+@pytest.mark.parametrize("when", ["before", "after"])
+def test_private_mail_rejects_ask_but_reads_current_messages_then_answers(
+    read_mailbox, monkeypatch, when
+):
+    from hub.mcp_client import schema_digest
+
+    app, _, _, cfg, identifier, job_id, calls = read_mailbox
+    query = {
+        "kind": "tool",
+        "integration_id": identifier,
+        "tool": "mcp.call",
+        "arguments": {
+            "name": "search_emails",
+            "schema_sha256": schema_digest(_MAIL_SCENARIO["schemas"]["search_emails"]),
+            "arguments": {"query": "", "since_days": 0},
+        },
+        "message": "Read authorized mailbox",
+    }
+    ask = {"kind": "ask", "message": "May I access the selected mailbox?"}
+    responses = ([ask, query] if when == "before" else [query, ask]) + [
+        {
+            "kind": "finish",
+            "message": "Actual bounded message evidence, reply coverage remains unknown.",
+        },
+    ]
+
+    async def forbidden(*args):
+        pytest.fail("Private mail never researches to obtain read permission")
+
+    async def generate(*args):
+        instruction, data = args[-2:]
+        assert not data["allow_ask"] and data["allow_stop"]
+        assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
+        return responses.pop(0)
+
+    monkeypatch.setattr(runtime, "research", forbidden)
+    monkeypatch.setattr(runtime, "generate", generate)
+    asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, job_id))
+    with app.state.sessions() as db:
+        job = db.get(AgentJob, job_id)
+        assert job.status == "observed", job.summary
+        assert sum(s.kind == "feedback" for s in runtime.steps(db, job_id)) == 1
+    assert sum(c["method"] == "tools/call" for c in calls) == 1
+
+
+def test_private_decision_flags_are_persisted_for_native_generation(archive, monkeypatch):
+    from hub.db import Run
+
+    agent, start, _, _ = archive
+    job_id = start()
+    snapshots = []
+
+    async def execute_run(factory, cfg, providers, run_id):
+        with factory() as db:
+            row = db.get(Run, run_id)
+            snapshot = json.loads(row.context_snapshot)
+            snapshots.append(snapshot["agent_generation"])
+            row.status = "succeeded"
+            db.commit()
+
+    monkeypatch.setattr("hub.execution.execute_run", execute_run)
+    monkeypatch.setattr(
+        runtime, "execution_text", lambda *args: '{"kind":"stop","message":"Missing evidence"}'
+    )
+    result = asyncio.run(
+        runtime.generate(
+            agent[0].state.sessions,
+            agent[3],
+            None,
+            job_id,
+            "Synthetic private policy",
+            {
+                "allow_finish": False,
+                "allow_ask": False,
+                "allow_stop": True,
+                "decision_schema": {},
+                "tools": {"paperless.read": agent_tools.PaperlessCall.model_json_schema()},
+                "interfaces": [{"integration_id": agent[4], "kind": "paperless", "rules": {}}],
+            },
+        )
+    )
+    assert result["kind"] == "stop"
+    assert snapshots[0]["allow_finish"] is False
+    assert snapshots[0]["allow_ask"] is False and snapshots[0]["allow_stop"] is True
+
+
+@pytest.mark.parametrize("read_mailbox", [_MAIL_SCENARIO], indirect=True)
+@pytest.mark.parametrize("queried", [False, True])
+def test_private_mail_stop_remains_unverified_with_or_without_current_data(
+    read_mailbox, monkeypatch, queried
+):
+    from hub.mcp_client import schema_digest
+
+    app, _, _, cfg, identifier, job_id, calls = read_mailbox
+    responses = (
+        [
+            {
+                "kind": "tool",
+                "integration_id": identifier,
+                "tool": "mcp.call",
+                "arguments": {
+                    "name": "search_emails",
+                    "schema_sha256": schema_digest(_MAIL_SCENARIO["schemas"]["search_emails"]),
+                    "arguments": {"query": "", "since_days": 0},
+                },
+                "message": "Read permitted messages",
+            }
+        ]
+        if queried
+        else []
+    ) + [
+        {
+            "kind": "stop",
+            "message": "Available tools do not establish the requested exact identity.",
+        },
+    ]
+
+    async def forbidden(*args):
+        pytest.fail("Stopping a private read does not authorize public research")
+
+    async def generate(*args):
+        data = args[-1]
+        assert not data["allow_ask"] and data["allow_stop"]
+        return responses.pop(0)
+
+    monkeypatch.setattr(runtime, "research", forbidden)
+    monkeypatch.setattr(runtime, "generate", generate)
+    asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, job_id))
+    with app.state.sessions() as db:
+        job = db.get(AgentJob, job_id)
+        assert job.status == "unverified"
+        assert job.summary.startswith("Anfrage nicht vollständig beantwortet: ")
+        assert not any(s.kind in {"effect", "input"} for s in runtime.steps(db, job_id))
+    assert sum(c["method"] == "tools/call" for c in calls) == int(queried)

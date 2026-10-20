@@ -1,19 +1,39 @@
-# obdaAI — Status 20.10.2026
+# obdaAI — Status 21.10.2026
 
-## Private Integrationsfolgefragen — Korrektur in Prüfung
+## Integrationsfolgefragen — Paperless live geprüft, Mailvertrag in Korrektur
 
-Die aktuelle Untersuchung bestätigt zwei getrennte Fehler: Der Mailplaner konnte
-nach dem Werkzeugkatalog ohne Nachrichtenprüfung enden; Paperless hatte bereits
-Dokumente gelesen, scheiterte danach aber am großen lokalen Modellkontext.
-Der neue Stand bindet Folgefragen an gültige Abrufbelege desselben Gesprächs und
-Kontos. Ein Abschluss benötigt einen tatsächlichen Datenabruf. Private Archivfragen
-verwenden begrenzte typisierte Suche und OCR statt des allgemeinen Verwaltungsplans.
-Antwortflags und belegte Beziehungen zu gesendeten Nachrichten bleiben getrennt;
-fehlende Belege bedeuten unbekannt, nicht unbeantwortet. Private Daten bleiben lokal.
+Release **43f6af3 / Schema 0045** läuft gesund auf allen neun Anwendungsdiensten.
+Vollständige [CI39502206203](https://github.com/sschluet/obdaAI/actions/runs/39502206203):
+2091 Tests bestanden, sechs übersprungen; alle Pflichtjobs einschließlich Browser-
+und Runner-Prüfungen erfolgreich. Lokal 2097 Tests, Ruff, mypy und Geheimnisprüfung
+bestanden; die isolierte Testdatenbank ist gestoppt. Bestehende Daten, Rechte,
+Zugangsdaten, Overlays, Netzregeln und wartende Benutzeraufträge sind erhalten.
+Vor dem Update wurde der kritische Datenbank-/Konfigurationsstand verschlüsselt
+auf der VM gesichert. Das ersetzt keinen Restoretest; der externe Sicherungsanker
+bleibt erhalten. Der getrennte MCP-Metadatenpatch bewahrt Schemas und Lesefreigaben.
 
-Gezielte synthetische API-/Transport-/Berechtigungsprüfungen sind ergänzt.
-Vollständige Prüfung, neue CI, Test-VM-Rollout und echte Mail-/Paperless-Folgeabnahme
-stehen für diese Korrektur noch aus. Der folgende Stand beschreibt frühere Abnahmen.
+Paperless ist mit echter Dokumentensuche und anschließendem zusätzlichen OCR-Abruf
+des ersten gefundenen Dokuments samt quellengestützter Zusammenfassung abgenommen.
+Beide Aufträge endeten beobachtet, ohne Rückfrage, öffentliche Recherche, Cloud,
+Änderungen oder Downloads. Modellkontexte: höchstens 9640 UTF-8-Bytes. Diese Abnahme
+belegt die geprüfte Lese- und Folgefrage, keine vollständige Archivauswertung.
+Ein zusätzlicher Test des früheren individuellen Archivauftrags läuft noch.
+
+Die neue Mailübersicht funktioniert. Die Antwortstatus-Folgefrage auf 43f6af3 ist
+jedoch ausdrücklich **nicht abgenommen**: Trotz gültiger aktueller Vorbelege mit
+Nachrichtenkennung, UID, Ordner und Konto wählte das lokale Modell nach dem Katalog
+eine Bestätigungsfrage, ohne einen neuen Nachrichtenabruf. Kontext und Rechte waren
+vorhanden; der Modelllauf blieb mit 13493 UTF-8-Bytes innerhalb der Grenze.
+
+Der nächste Entwicklungsstand sperrt Rückfragen strukturell für bereits freigegebene
+private Leseabläufe, einschließlich nativer Grammatik und Ausführungsprüfung.
+Echte fehlende Möglichkeiten können ohne Erfolgsbehauptung beendet werden; sie
+öffnen keine Bestätigungsschleife. Verwaltungsaufträge behalten ihre notwendigen
+Rückfragen. Vollständige Prüfung, neue CI und reale Mail-Folgeabnahme dieses nächsten
+Stands stehen noch aus. Mail-/Archivwerte und Kennungen bleiben ausschließlich auf
+der VM. Weitere Postfach-/Threadabdeckung, Anhänge, Aufgaben-/Projektläufe, Gmail
+und vollständige Fremdsystemadministration bleiben getrennt offen; V1 bleibt partiell.
+Die folgenden Abschnitte dokumentieren frühere getrennte Abnahmen.
 
 ## Natürliche Mailfrage ohne Bestätigungsschleife — echte Tagesabnahme erfolgreich
 

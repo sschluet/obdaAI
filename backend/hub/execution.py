@@ -504,6 +504,8 @@ async def execute_run(
                             snapshot["agent_generation"].get("tool_names"),
                             snapshot["agent_generation"].get("interfaces"),
                             allow_finish=snapshot["agent_generation"].get("allow_finish", True),
+                            allow_ask=snapshot["agent_generation"].get("allow_ask", True),
+                            allow_stop=snapshot["agent_generation"].get("allow_stop", False),
                         )
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()
