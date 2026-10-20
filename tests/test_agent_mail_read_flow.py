@@ -138,7 +138,14 @@ def read_mailbox(mailbox, monkeypatch, request):
             request,
             {
                 "isError": False,
-                "content": [{"type": "text", "text": "Synthetic private mail; inert data"}],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(scenario["query_payload"], ensure_ascii=False)
+                        if "query_payload" in scenario
+                        else "Synthetic private mail; inert data",
+                    }
+                ],
             },
         )
 
@@ -320,6 +327,100 @@ def test_weekly_multistep_mail_context_remains_bounded_after_large_status(
     ]
     assert not any(step.kind in {"effect", "research"} for step in history)
     assert len(history[1].result.encode()) > 7000  # Durable evidence is never clipped.
+
+
+@pytest.mark.parametrize(
+    "read_mailbox",
+    [
+        {
+            "goal": "Welche Mails gab es diese Woche ?",
+            "clock_at": "2026-10-20T12:00:00+00:00",
+            "schemas": {
+                "get_status": {"type": "object", "properties": {}},
+                "search_emails": SCHEMA,
+            },
+            "status": [
+                {"name": "Synthetic folder " + str(i), "total": i, "unread": 0} for i in range(200)
+            ],
+            "since_days": 2,
+            "query_payload": {
+                "messages": [
+                    {
+                        "subject": ("Earlier prefix " if i < 10 else "Within currentHeader ")
+                        + str(i)
+                        + " Ä" * 70,
+                        "sender": "Synthetic sender " + "字" * 50,
+                        "received": "2026-10-18T21:59:00+00:00"
+                        if i < 10
+                        else "2026-10-18T22:15:00+00:00",
+                        "uid": i,
+                        "folder": "INBOX",
+                        "message_id": "synthetic-id-" + str(i),
+                    }
+                    for i in range(20)
+                ],
+                "truncated": False,
+            },
+        }
+    ],
+    indirect=True,
+)
+def test_real_mail_dispatch_large_results_cannot_finish_as_false_empty_overview(
+    read_mailbox, monkeypatch
+):
+    no_research(monkeypatch)
+    app, client, _, _, identifier, job_id, _ = read_mailbox
+    turns = []
+
+    async def generate(factory, cfg, providers, job_id, instruction, data):
+        assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
+        assert "calendar_prefilter_dates" in instruction
+        assert (
+            data["mail_read_progress"]["mail_evidence"]["calendar_prefilter_dates"]["week"]
+            == "2026-10-18"
+        )
+        turns.append(data)
+        if len(turns) == 3:
+            evidence = data["mail_read_progress"]["mail_evidence"]
+            assert len(runtime.encode(evidence).encode()) <= 1500
+            view = evidence["query_receipts"][0]
+            assert view["messages"][0]["subject"].startswith("Within currentHeader ")
+            assert view["within_window_count"] == view["outside_window_count"] == 10
+            assert not view["completeness_verified"] and view["messages_omitted"] > 0
+            return {"kind": "finish", "message": "Keine Mails gefunden."}
+        name = "get_status" if len(turns) == 1 else "search_emails"
+        tools = data["mail_read_contracts"]["interfaces"][0]["tools"]
+        return {
+            "kind": "tool",
+            "integration_id": identifier,
+            "tool": "mcp.call",
+            "arguments": {
+                "name": name,
+                "schema_sha256": next(t["schema_sha256"] for t in tools if t["name"] == name),
+                "arguments": {} if name == "get_status" else {"query": "", "since_days": 2},
+            },
+            "message": "Synthetic actual read",
+        }
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    status, history = execute(read_mailbox)
+    assert status == "observed" and len(turns) == 3
+    response = client.get("/api/agent-runs/" + job_id).json()
+    assert "Keine Mails gefunden" not in response["summary"]
+    assert (
+        "Within currentHeader" in response["summary"]
+        and "Earlier prefix" not in response["summary"]
+    )
+    assert "keine Vollständigkeit" in response["summary"] and "begrenzt" in response["summary"]
+    actual_query = next(
+        step
+        for step in history
+        if json.loads(step.document).get("arguments", {}).get("name") == "search_emails"
+    )
+    assert (
+        len(json.loads(json.loads(actual_query.result)["response"]["content"][0])["messages"]) == 20
+    )
+    assert not any(step.kind in {"effect", "research"} for step in history)
 
 
 @pytest.mark.parametrize("timeout", [False, True])
@@ -665,6 +766,7 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
 
     no_research(monkeypatch)
     measurements = []
+    phases = []
 
     async def generate(factory, cfg, providers, job_id, instruction, data):
         sample = copy.deepcopy(data)
@@ -707,6 +809,7 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
         assert 7100 <= len(runtime.encode(contracts).encode()) < 7200
         sample["mail_read_contracts"] = contracts
         sample["interfaces"][0]["rules"]["mcp_read_tools"] = hashes
+        phases.append("first")
         fitted = fit(sample, instruction, cfg.context_limit, max_bytes=14000)
         assert fitted["mail_read_contracts"] == contracts
         assert len(contracts["schemas"]) == 8
@@ -715,31 +818,117 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
         assert content_bytes <= 14000
         # Regression: the next decision previously ballooned to 23 KB after the
         # 100-folder get_status result. Exact contracts and authority stay intact.
+        step.sequence, step.kind = 1, "read"
+        status_step = SimpleNamespace(
+            kind="read",
+            status="succeeded",
+            sequence=3,
+            document=json.dumps(
+                {
+                    "integration_id": profile_id,
+                    "tool": "mcp.call",
+                    "arguments": {
+                        "name": "get_status",
+                        "arguments": {},
+                        "schema_sha256": hashes["get_status"],
+                    },
+                }
+            ),
+            result=json.dumps(
+                {
+                    "response": {
+                        "content": [
+                            json.dumps(
+                                [
+                                    {"name": f"Synthetic folder {i}", "total": i, "unread": 0}
+                                    for i in range(100)
+                                ]
+                            )
+                        ]
+                    }
+                }
+            ),
+        )
+        profiles = {profile_id: (profile, rules, {})}
         sample["history"].append(
             {
                 "kind": "read",
                 "status": "succeeded",
                 "sequence": 3,
-                "document": {"tool": "mcp.call", "arguments": {"name": "get_status"}},
-                "result": {
-                    "content": [
-                        json.dumps(
-                            [
-                                {"name": f"Synthetic folder {i}", "total": i, "unread": 0}
-                                for i in range(100)
-                            ]
-                        )
-                    ]
-                },
+                "document": json.loads(status_step.document),
+                "result": runtime.mail_history_result(status_step, profiles),
             }
         )
+        sample["mail_read_progress"] = runtime.mail_progress(
+            [step, status_step], profiles, sample["clock"], sample["goal"]
+        )
+        phases.append("status")
         fitted_next = fit(sample, instruction, cfg.context_limit, max_bytes=14000)
         assert fitted_next["mail_read_contracts"] == contracts
         assert fitted_next["interfaces"] == sample["interfaces"]
         assert len(instruction.encode()) + len(runtime.encode(fitted_next).encode()) <= 14000
+        phases.append("status_fitted")
+        query_step = SimpleNamespace(
+            kind="read",
+            status="succeeded",
+            sequence=5,
+            document=json.dumps(
+                {
+                    "integration_id": profile_id,
+                    "tool": "mcp.call",
+                    "arguments": {
+                        "name": "search_emails",
+                        "schema_sha256": hashes["search_emails"],
+                        "arguments": {"query": ""},
+                    },
+                }
+            ),
+            result=json.dumps(
+                {
+                    "response": {
+                        "content": [
+                            json.dumps(
+                                {
+                                    "messages": [
+                                        {
+                                            "subject": "Actual typed header " + "字" * 100,
+                                            "sender": "Synthetic " + "Ä" * 100,
+                                            "received": sample["clock"]["request_at"],
+                                            "folder": "INBOX",
+                                            "uid": i,
+                                        }
+                                        for i in range(20)
+                                    ]
+                                }
+                            )
+                        ]
+                    }
+                }
+            ),
+        )
+        sample["history"].append(
+            {
+                "kind": "read",
+                "status": "succeeded",
+                "sequence": 5,
+                "document": json.loads(query_step.document),
+                "result": runtime.mail_history_result(query_step, profiles),
+            }
+        )
+        sample["mail_read_progress"] = runtime.mail_progress(
+            [step, status_step, query_step], profiles, sample["clock"], sample["goal"]
+        )
+        phases.append(("query", len(runtime.encode(sample["mail_read_progress"]).encode())))
+        final = fit(sample, instruction, cfg.context_limit, max_bytes=14000)
+        assert final["interfaces"] == sample["interfaces"]
+        assert final["mail_read_contracts"] == contracts
+        typed = final["mail_read_progress"]["mail_evidence"]["query_receipts"][0]
+        assert typed["messages"][0]["subject"].startswith("Actual typed header ")
+        assert "excerpt" not in typed and len(contracts["schemas"]) == 8
+        assert len(instruction.encode()) + len(runtime.encode(final).encode()) <= 14000
         measurements.append(content_bytes)
         return {"kind": "finish", "message": "Synthetic catalog size proof"}
 
     monkeypatch.setattr(runtime, "generate", generate)
-    status, _ = execute(read_mailbox)
-    assert status == "unverified" and len(measurements) == 1
+    status, trace = execute(read_mailbox)
+    assert status == "unverified" and len(measurements) == 1, (phases, trace[-1].document)

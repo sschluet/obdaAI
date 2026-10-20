@@ -27,9 +27,28 @@ keine erfolgreiche Mailabnahme. Die Laufansichten blieben unter 14 kB UTF-8.
 Der Abbruchversuch traf bereits auf den beendeten Prüflauf und löste keinen
 weiteren Abbruch aus; bestehende Nutzeraufträge wurden nicht verändert.
 
-Die Folgekorrektur strukturiert große Ordnerlisten, zeigt den beobachteten
-Lese-Fortschritt und verhindert wiederholte identische Vorbereitung ohne neue
-Nutzereingabe. Erneute vollständige Prüfung und echte Wochenabnahme stehen aus.
+Die Folgekorrektur **9bd18a9 / Schema 0045** strukturiert große Ordnerlisten,
+zeigt den beobachteten Lese-Fortschritt und verhindert wiederholte identische
+Vorbereitung ohne neue Nutzereingabe. Vollständige
+[CI39400233375](https://github.com/sschluet/obdaAI/actions/runs/39400233375):
+**1864 bestanden, sechs übersprungen**; lokal **1870 bestanden**. Alle neun
+Anwendungsdienste sind mit dieser exakten Version installiert, beide APIs gesund.
+Die echte Wochenfrage führt nun Status und Nachrichtensuche aus und endet formal
+als `observed`. Die zusätzliche Antwortprüfung scheitert jedoch: Die generisch
+gekürzte Suchantwort verliert die Nachrichtendaten im letzten Modellkontext;
+die abschließende Leermeldung ist nicht durch den Suchbeleg gedeckt.
+Dieser Lauf ist keine erfolgreiche Mailabnahme. Private Nachrichten und
+Nachrichtenzahlen bleiben auf der VM.
+
+Die nächste Korrektur erhält eine strukturierte, begrenzte Nachrichtenauswahl
+mit Datums-, Ordner- und Ergebnisgrenzen auch im letzten Modellkontext. Einfache
+Heute-/Wochenübersichten entstehen nach tatsächlichem Abruf aus den Originalbelegen,
+mit höchstens 20 Kopfzeilen und ausdrücklichen Umfangs- und Datumsgrenzen.
+Lokal sind **1881 Tests**, Ruff, mypy und Geheimnisprüfung erfolgreich. Der
+Regressionstest widerlegt eine absichtlich falsche Modell-Leermeldung; vollständige
+acht Werkzeugschemas, unveränderte Rechte und relevante Nachrichtendaten bleiben
+auch im letzten Planungsschritt innerhalb der 14-kB-Grenze. Erneute CI, Installation
+und echte Wochenabnahme stehen aus.
 Die folgenden Belege betreffen den vorherigen Stand.
 
 ## Automatische Integrationen und Proton-Mailfrage — vorherige Tagesabnahme

@@ -149,7 +149,20 @@ aber die echte Wochenfrage bleibt in wiederholten Ordnerabfragen hängen und end
 ohne Nachrichtenabfrage. Sie gilt deshalb weiterhin als nicht abgenommen.
 Die Folgekorrektur ergänzt strukturierte Ordneransichten, expliziten Lesefortschritt
 und eine Sperre gegen identische erfolgreiche Vorbereitung ohne neue Nutzereingabe.
-Die erneute echte Wochenabnahme ist noch offen.
+Release 9bd18a9 behebt diese Vorbereitungsschleife und führt die Nachrichtensuche
+aus. Seine echte Antwortprüfung scheitert trotzdem: Die generische Kürzung des
+Suchergebnisses entfernt die Nachrichtendaten aus dem letzten Modellkontext;
+die Leermeldung ist deshalb nicht durch den Suchbeleg gedeckt. Eine strukturierte,
+begrenzte Nachrichtensicht muss diese Daten und ihre zeitlichen sowie mengenmäßigen
+Grenzen erhalten. Die neue Korrektur führt einen geschützten, typisierten Ausschnitt tatsächlich
+beobachteter Kopfzeilen mit Datumsbasis und Ergebnisgrenzen mit. Einfache reine
+Heute-/Wochenübersichten werden nach erfolgreicher Nachrichtenabfrage und lokalem
+Planungsabschluss direkt aus den Originalbelegen aufgebaut, mit höchstens 20
+Kopfzeilen, getrennten Konten und ausdrücklichen Umfangsgrenzen. Unbekannte Daten
+stehen getrennt von zugeordneten Nachrichten; Mail-Header werden als inerte
+Anzeigedaten behandelt. Komplexe Inhaltsfragen behalten die lokale Modellantwort.
+Lokal bestehen 1881 Tests, Ruff, mypy und Geheimnisprüfung. Neue vollständige CI,
+Installation und echte Wochenabnahme stehen aus.
 
 ## Abnahme und offene Punkte — vorheriger Stand
 

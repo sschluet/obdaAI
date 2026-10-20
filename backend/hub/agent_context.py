@@ -169,6 +169,30 @@ def _observation(
     }
 
 
+def _projected_mail_observation(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """Typed mail evidence already has a protected semantic view; do not duplicate it."""
+    result = entry["result"]
+    if not isinstance(result, dict):
+        return None
+    projection = result.get("model_projection")
+    if result.get("catalog_checked") is True:
+        projection = "mail_catalog"
+    response = result.get("response")
+    content = response.get("content") if isinstance(response, dict) else None
+    if isinstance(content, list) and content and isinstance(content[0], dict):
+        projection = content[0].get("model_projection", projection)
+    if projection not in {"mail_catalog", "mail_query_receipt", "folder_catalog", "folder_status"}:
+        return None
+    return {
+        "sequence": entry.get("sequence"),
+        "full_sha256": hashlib.sha256(
+            json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode()
+        ).hexdigest(),
+        "model_projection": projection,
+        "evidence_source": "mail_read_progress",
+    }
+
+
 def fit(
     data: dict[str, Any], instruction: str, context_limit: int, *, max_bytes: int | None = None
 ) -> dict[str, Any]:
@@ -197,17 +221,43 @@ def fit(
         result["latest_input"] = latest_input
     for size in (6000, 3000, 1500, 600, 180):
         if latest is not None:
-            result["latest_observation"] = _observation(
+            protected = (
+                _projected_mail_observation(latest) if "mail_read_progress" in data else None
+            )
+            result["latest_observation"] = protected or _observation(
                 latest,
                 result_limit=min(size, 1500) if max_bytes is not None else 1500,
                 metadata_limit=1000 if max_bytes is not None else 2500,
             )
         result["private_context"] = view(data.get("private_context", []), size)
+
+        def history_result(entry: dict[str, Any], limit: int, budget: int = size) -> Any:
+            projected = _projected_mail_observation(entry) if "mail_read_progress" in data else None
+            if projected is not None and budget <= 600:
+                return {
+                    "evidence_source": "mail_read_progress",
+                }
+            return view(entry["result"], limit)
+
+        def history_document(entry: dict[str, Any], budget: int = size) -> Any:
+            projected = _projected_mail_observation(entry) if "mail_read_progress" in data else None
+            document = entry["document"]
+            if projected is not None and budget <= 600 and isinstance(document, dict):
+                return {
+                    key: document[key] for key in ("tool", "integration_id") if key in document
+                } | (
+                    {"arguments": {"name": document["arguments"]["name"]}}
+                    if isinstance(document.get("arguments"), dict)
+                    and "name" in document["arguments"]
+                    else {}
+                )
+            return view(document, budget)
+
         result["history"] = [
             {
                 **entry,
-                "document": view(entry["document"], size),
-                "result": view(entry["result"], size if i == len(original) - 1 else size // 2),
+                "document": history_document(entry),
+                "result": history_result(entry, size if i == len(original) - 1 else size // 2),
             }
             for i, entry in enumerate(original)
         ]
