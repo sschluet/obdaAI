@@ -288,4 +288,14 @@ sowie In-Reply-To und References. Ein Antwortflag bedeutet „als beantwortet
 markiert“. Eine Antwortbeziehung benötigt passende Nachrichtenkennungen und einen
 beobachteten Gesendet-Ordner desselben Kontos; ähnliche Betreffzeilen genügen nicht.
 Ohne hinreichende Belege bleibt der Antwortstatus unbekannt. Versand und tatsächliche
-Zustellung werden damit nicht bewiesen. Der Metadatenpatch ist installiert und bewahrt die vorhandenen Lesefreigaben. Die reale Antwortstatus-Folgefrage auf 43f6af3 blieb trotzdem in einer unnötigen Bestätigungsfrage stehen, obwohl alle Nachrichtenbezüge vorhanden waren. Diese Folgeabnahme ist nicht erfolgreich; der nächste Entwicklungsstand begrenzt Rückfragen deshalb strukturell im privaten Lesevertrag.
+Zustellung werden damit nicht bewiesen. Der Metadatenpatch ist installiert und
+bewahrt die vorhandenen Lesefreigaben. Die reale Antwortstatus-Folgefrage auf
+43f6af3 blieb trotz vorhandener Nachrichtenbezüge in einer Bestätigungsfrage stehen.
+678d07e sperrt diesen Rückfragezweig, beendete die echte Folgefrage aber ebenfalls
+ohne Nachrichtenabruf. Beide Folgeabnahmen sind ausdrücklich fehlgeschlagen.
+
+Der nächste Entwicklungsstand bildet konkrete Leseschritte aus validierten
+Originalbelegen und aktuellen Werkzeugschemas. Vor dem ersten Nachrichtenabruf
+begrenzt er die Modellauswahl auf vorhandene belegte Leseschritte; keine Bestätigung,
+erfundene Kennung oder erneute Katalogschleife. Ohne sichere Kennung bleibt ein
+qualifizierter Abbruch möglich. Die neue reale Folgeabnahme steht noch aus.

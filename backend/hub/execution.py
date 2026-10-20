@@ -496,10 +496,14 @@ async def execute_run(
                     cloud_only=bool(snapshot.get("model_cloud_only")),
                 )
                 if snapshot.get("agent_generation"):
-                    from hub.agent_tools import decision_schema, research_schema
+                    from hub.agent_tools import decision_schema, ready_read_schema, research_schema
 
                     providers.local_json_schema = (
-                        decision_schema(
+                        ready_read_schema(
+                            snapshot["agent_generation"]["ready_reads"],
+                            snapshot["agent_generation"].get("interfaces", []),
+                        )
+                        if snapshot["agent_generation"].get("ready_reads") else decision_schema(
                             snapshot["agent_generation"].get("integration_ids", []),
                             snapshot["agent_generation"].get("tool_names"),
                             snapshot["agent_generation"].get("interfaces"),

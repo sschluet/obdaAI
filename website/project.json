@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-21",
-  "applicationCommit": "43f6af3",
+  "applicationCommit": "678d07e",
   "schema": "0045",
-  "tests": 2091,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39502206203",
+  "tests": 2109,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39507370909",
   "screenshots": [
     {
       "id": "integration-selection",
@@ -630,12 +630,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "Aktivierte Integrationen stehen neuen Chats automatisch zur Verfügung. Bekannte System- und Postfachbegriffe wählen passende konkret freigegebene Werkzeuge; bewusste Auswahl und Ausschlüsse bleiben erhalten. Die Zuordnung ist lexikalisch. Eine frische Proton-Wochenübersicht ist mit echter Nachrichtensuche und belegter Antwort abgenommen, ohne manuelle Fortsetzung. Für unterstützte einfache Heute-/Wochenfragen ohne bisherigen Kontext erzeugt die App einen schema- und kalendergebundenen Leseplan über denselben freigegebenen Ausführungsweg. Höchstens 20 Kopfzeilen, Konto-/Ordnerumfang, Datumsunsicherheit und Grenzen bleiben sichtbar. Dieser Weg benötigt kein Modell; komplexe Fragen bleiben beim lokalen Planer mit geschützter Nachrichtensicht und vollständigen Schemas. Weitere reale Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme stehen gesondert aus. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist auf 43f6af3 wegen einer unnötigen Bestätigungsfrage nicht abgenommen; die strukturelle Rückfragebegrenzung befindet sich in Prüfung.",
+          "description": "Aktivierte Integrationen stehen neuen Chats automatisch zur Verfügung. Bekannte System- und Postfachbegriffe wählen passende konkret freigegebene Werkzeuge; bewusste Auswahl und Ausschlüsse bleiben erhalten. Die Zuordnung ist lexikalisch. Eine frische Proton-Wochenübersicht ist mit echter Nachrichtensuche und belegter Antwort abgenommen, ohne manuelle Fortsetzung. Für unterstützte einfache Heute-/Wochenfragen ohne bisherigen Kontext erzeugt die App einen schema- und kalendergebundenen Leseplan über denselben freigegebenen Ausführungsweg. Höchstens 20 Kopfzeilen, Konto-/Ordnerumfang, Datumsunsicherheit und Grenzen bleiben sichtbar. Dieser Weg benötigt kein Modell; komplexe Fragen bleiben beim lokalen Planer mit geschützter Nachrichtensicht und vollständigen Schemas. Weitere reale Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme stehen gesondert aus. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist weder auf 43f6af3 (unnötige Bestätigung) noch auf 678d07e (Abbruch ohne Nachrichtenabruf) abgenommen. Konkrete Leseschritte aus gültigen Originalbelegen und aktuellen Schemas befinden sich in Prüfung.",
           "status": "implemented"
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Proton Mail über Verbindung hinzufügen auswählen. Der Assistent führt durch Vorbereitung, vorhandene Bridge-Zugangsdaten und abschließende Prüfung; persönliche Anmeldung erfolgt direkt in Bridge. Authentifizierte HTTPS-Einrichtung und Lesefreigabe sind geprüft. Eine frische Wochenfrage nutzt das vorhandene Postfach automatisch und zeigt tatsächlich abgerufene Kopfzeilen mit sichtbarem Umfang, ohne Modellentscheid oder Rückfrage. Versand, Postfachänderungen und Anhangdownloads bleiben gesperrt. Weitere Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme bleiben offen. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist auf 43f6af3 wegen einer unnötigen Bestätigungsfrage nicht abgenommen; die strukturelle Rückfragebegrenzung befindet sich in Prüfung.",
+          "description": "Proton Mail über Verbindung hinzufügen auswählen. Der Assistent führt durch Vorbereitung, vorhandene Bridge-Zugangsdaten und abschließende Prüfung; persönliche Anmeldung erfolgt direkt in Bridge. Authentifizierte HTTPS-Einrichtung und Lesefreigabe sind geprüft. Eine frische Wochenfrage nutzt das vorhandene Postfach automatisch und zeigt tatsächlich abgerufene Kopfzeilen mit sichtbarem Umfang, ohne Modellentscheid oder Rückfrage. Versand, Postfachänderungen und Anhangdownloads bleiben gesperrt. Weitere Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme bleiben offen. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist weder auf 43f6af3 (unnötige Bestätigung) noch auf 678d07e (Abbruch ohne Nachrichtenabruf) abgenommen. Konkrete Leseschritte aus gültigen Originalbelegen und aktuellen Schemas befinden sich in Prüfung.",
           "status": "implemented"
         },
         {
@@ -800,15 +800,15 @@
     "schema": "0045",
     "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "43f6af3",
-    "ciTests": 2091,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39502206203",
-    "deployedCommit": "43f6af3",
+    "commit": "678d07e",
+    "ciTests": 2109,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39507370909",
+    "deployedCommit": "678d07e",
     "deployedSchema": "0045",
-    "liveScope": "Release 43f6af3 / Schema 0045 gesund auf dem Testsystem. Vollständige CI: 2091 bestanden, sechs übersprungen; Browser- und Runner-Prüfungen erfolgreich. Lokal 2097 Tests bestanden. Echte Paperless-Suche und Folgefrage mit zusätzlichem OCR-Abruf sowie belegter Zusammenfassung erfolgreich, ohne Rückfrage, öffentliche Recherche, Cloud oder Änderungen. Die Mailübersicht funktioniert; die Antwortstatus-Folgefrage ist auf diesem Stand nicht abgenommen, da das Modell trotz gültiger aktueller Nachrichtenbezüge eine unnötige Bestätigung verlangte. Die strukturelle Begrenzung dieses Rückfragezweigs befindet sich in Prüfung. Der getrennte MCP-Antwortmetadatenpatch ist installiert; Werkzeugnamen, Eingabeschemas, Leserechte, Zugangsdaten, Originale und unabhängige Konfiguration bleiben erhalten. Fehlende Antwortbelege bedeuten unbekannt; keine Zustellungs- oder Vollständigkeitsbehauptung. Mail-/Archivwerte und Kennungen bleiben lokal. Weitere Postfach-/Threadabdeckung, Anhänge, Aufgaben-/Projektläufe, persönliche Gmail-Abnahme, HA-Konfiguration/-Updates und umfassende Administration bleiben offen. V1 bleibt partiell.",
+    "liveScope": "Release 678d07e / Schema 0045 gesund auf dem Testsystem. Vollständige CI: 2109 bestanden, sechs übersprungen; Browser- und Runner-Prüfungen erfolgreich. Lokal 2115 Tests bestanden. Auf dem vorherigen Stand 43f6af3 sind echte Paperless-Suche, OCR-Folgefrage und der frühere individuelle Archivauftrag mit belegten Antworten erfolgreich geprüft. Die Mailübersicht funktioniert; die Antwortstatus-Folgefrage bleibt nach unnötiger Bestätigung auf 43f6af3 und Abbruch ohne neuen Nachrichtenabruf auf 678d07e ausdrücklich nicht abgenommen. Die aktuelle Korrektur begrenzt den ersten Folgeschritt auf konkrete aktuelle schema- und quellengebundene Nachrichtenabrufe. Deren reale Folgeabnahme steht aus. Der getrennte MCP-Metadatenpatch und bestehende Leserechte bleiben erhalten. Fehlende Antwortbelege bedeuten unbekannt; keine Zustellungs- oder Vollständigkeitsbehauptung. Mail-/Archivwerte und Kennungen bleiben lokal. Weitere Postfach-/Threadabdeckung, Anhänge, Aufgaben-/Projektläufe, Gmail und umfassende Administration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "43f6af3",
+    "lastSuccessfulCICommit": "678d07e",
     "lastSuccessfulCIUI": 39
   }
 }

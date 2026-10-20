@@ -321,3 +321,30 @@ def previous_profile_ids(
     ))
     return {json.loads(part["content"])["integration_id"]
             for part in bind(db, candidate, messages, profiles)}
+
+
+def validated_receipts(
+    db: Any, job: AgentJob, profiles: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Return full, currently authorized evidence for local application planning.
+
+    These copied source documents and results confer no execution authority. Every
+    subsequent read still needs its current observed schema and final dispatch gate.
+    Never obtain identities from a shortened model view or assistant prose.
+    """
+    receipts = []
+    for reference, result, tool in _validated(db, job, profiles):
+        step = db.get(AgentStep, (reference["source_job_id"], reference["sequence"]))
+        if (
+            not step
+            or digest(step.document) != reference["document_sha256"]
+            or digest(step.result) != reference["result_sha256"]
+        ):
+            raise PermissionError("Private read provenance changed")
+        receipts.append({
+            "reference": reference,
+            "document": json.loads(step.document),
+            "result": result,
+            "tool": tool,
+        })
+    return receipts

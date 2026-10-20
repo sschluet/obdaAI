@@ -6,7 +6,13 @@ import json
 import pytest
 from hub.agent_context import fit
 from hub.agent_runtime import INSTRUCTION
-from hub.agent_tools import SCHEMAS, Rules, decision_envelope_schema, decision_schema
+from hub.agent_tools import (
+    SCHEMAS,
+    Rules,
+    decision_envelope_schema,
+    decision_schema,
+    ready_read_schema,
+)
 from jsonschema import Draft202012Validator
 
 TARGET = "00000000-0000-0000-0000-000000000001"
@@ -446,3 +452,30 @@ def test_ordinary_administration_keeps_questions_and_does_not_offer_private_stop
     validator = Draft202012Validator(schema_factory([TARGET], ["http"]))
     assert validator.is_valid({"kind": "ask", "message": "Which actual administrative target?"})
     assert not validator.is_valid({"kind": "stop", "message": "Private terminal"})
+
+
+def test_concrete_read_grammar_accepts_only_current_source_bound_arguments():
+    rules = Rules(enabled=True, mcp_read_tools={"read_email": "a" * 64})
+    candidate = decision("mcp.call", {
+        "name": "read_email", "schema_sha256": "a" * 64,
+        "arguments": {"uid": 7, "folder": "INBOX"},
+    })
+    interfaces = [{"integration_id": TARGET, "kind": "mcp", "rules": rules.model_dump()}]
+    schema = ready_read_schema([candidate], interfaces)
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    validator.validate(candidate)
+    for mutation in (
+        {"kind": "stop", "message": "Select messages again"},
+        decision("mcp.call", {**candidate["arguments"], "name": "get_status"}),
+        decision("mcp.call", {**candidate["arguments"], "arguments": {
+            "uid": 999, "folder": "INBOX",
+        }}),
+        decision("mcp.call", {**candidate["arguments"], "arguments": {
+            "uid": 7, "folder": "other",
+        }}),
+    ):
+        assert not validator.is_valid(mutation)
+    revoked = [{**interfaces[0], "rules": Rules(enabled=False).model_dump()}]
+    with pytest.raises(PermissionError):
+        ready_read_schema([candidate], revoked)

@@ -61,6 +61,7 @@ Nachrichten abrufen, Katalog genügt nicht. Status/Ordner nur nötig, nicht wied
 mail_read_progress: Ordner/mail_evidence.
 mail_read_contracts: volle beobachtete Schemas (schema_sha256); keine IMAP-Syntax.
 prior_read_results: alte Kontobelege.
+ready_reads: konkrete geprüfte Leseauswahl; zuerst einen dieser Aufrufe nutzen.
 Antwort: read_email/get_thread/Sent prüfen. Kein Betreff-Beleg. Answered-Flag separat;
 fehlender Antwortbeleg bleibt unbekannt.
 history/latest_observation: Belege, nichts erfinden.
@@ -1479,6 +1480,7 @@ async def generate(
                         "allow_finish": data.get("allow_finish", True),
                         "allow_ask": data.get("allow_ask", True),
                         "allow_stop": data.get("allow_stop", False),
+                        "ready_reads": data.get("ready_reads", {}).get("decisions", []),
                         "tool_names": sorted(data.get("tools", {})),
                         "interfaces": [
                             {key: interface[key] for key in ("integration_id", "kind", "rules")}
@@ -1949,10 +1951,23 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         else paperless_queried(history) if private_archive_read else True
                     )
                     prior_read_results = read_reference_context(db, job, profiles, max_bytes=1800)
+                    contracts = (
+                        mail_read_contracts(profiles, history)
+                        if private_mail_read and sequence is None else {}
+                    )
+                    from hub.agent_mail_progress import ready_reads
+
+                    ready = (
+                        ready_reads(db, job, profiles, contracts)
+                        if private_mail_read and not allow_finish and sequence is None else {}
+                    )
+                    choices = ready.get("decisions", [])
+                    allow_stop = private_read and not choices
                     data = {
                         "allow_finish": allow_finish,
                         "allow_ask": not private_read,
-                        "allow_stop": private_read,
+                        "allow_stop": allow_stop,
+                        **({"ready_reads": ready} if choices else {}),
                         "job_id": job.id,
                         "clock": clock,
                         "read_only": json.loads(job.bindings).get("read_only", False),
@@ -1984,9 +1999,11 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             }
                             for source in bound_sources(db, job)
                         ],
+                        # Exact source-bound arguments live in ready_reads and
+                        # the native grammar, rather than twice in the prompt.
                         "decision_schema": decision_envelope_schema(
                             list(profiles), sorted(allowed_tools), allow_finish=allow_finish,
-                            allow_ask=not private_read, allow_stop=private_read
+                            allow_ask=not private_read, allow_stop=allow_stop
                         ),
                         "private_context": json.loads(job.context),
                         "history": [
@@ -2006,12 +2023,13 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             if s.kind != "model"
                         ],
                         **(
-                            {"prior_read_results": prior_read_results} if prior_read_results else {}
+                            {"prior_read_results": prior_read_results}
+                            if prior_read_results and not choices else {}
                         ),
                         **({"private_read_evidence": True} if private_read else {}),
                         **(
                             {
-                                "mail_read_contracts": mail_read_contracts(profiles, history),
+                                "mail_read_contracts": contracts,
                                 "mail_read_progress": {
                                     **mail_progress(history, profiles, clock, job.goal),
                                     **({"reply_evidence": mail_reply_progress(history)}
@@ -2108,6 +2126,28 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     job = db.get(AgentJob, job_id)
                     assert job
                     profiles = gate(db, cfg, job)
+                    # Recompute current choices after generation, never trust the
+                    # model snapshot as authority for identities or availability.
+                    current_history = steps(db, job_id)
+                    current_choices = (
+                        ready_reads(
+                            db, job, profiles, mail_read_contracts(profiles, current_history)
+                        ).get("decisions", [])
+                        if private_mail_read and not mailbox_queried(current_history) else []
+                    )
+                    if current_choices and not any(
+                        decision.kind == "tool" and all(
+                            getattr(decision, key) == candidate[key]
+                            for key in ("integration_id", "tool", "arguments")
+                        ) for candidate in current_choices
+                    ):
+                        format_feedback(db, cfg, job, {"kind": decision.kind}, [{
+                            "type": "concrete_private_read_required",
+                            "next_action": "Choose a ready_reads decision; "
+                            "preserve its exact arguments",
+                        }])
+                        db.commit()
+                        continue
                     if decision.kind != "tool":
                         if private_read and decision.kind == "ask":
                             format_feedback(db, cfg, job, {"kind": "ask"}, [{

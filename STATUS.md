@@ -2,7 +2,26 @@
 
 ## Integrationsfolgefragen — Paperless live geprüft, Mailvertrag in Korrektur
 
-Release **43f6af3 / Schema 0045** läuft gesund auf allen neun Anwendungsdiensten.
+Der nachfolgende Zwischenstand **678d07e / Schema 0045** läuft gesund auf allen
+neun Anwendungsdiensten. Vollständige
+[CI39507370909](https://github.com/sschluet/obdaAI/actions/runs/39507370909):
+2109 Tests bestanden, sechs übersprungen; lokal 2115 Tests und statische Prüfungen
+erfolgreich. Die reale Mailfolgefrage ist weiterhin **nicht abgenommen**: Das Modell
+beendete sie nach der Katalogprüfung ohne neuen Nachrichtenabruf. Rechte und gültige
+Nachrichtenbezüge waren vorhanden; der lokale Modellkontext umfasste 13380 UTF-8-Bytes.
+Bestehende Benutzeraufträge und Belege blieben unverändert. Dieser Versuch ist
+ein fehlgeschlagener Funktionsnachweis trotz erfolgreicher technischer Tests.
+
+In Entwicklung: konkrete nächste Nachrichtenabrufe aus aktuell validierten
+Originalbelegen und dem beobachteten Werkzeugschema. Solange ein solcher Abruf
+vorliegt und noch keine Nachricht gelesen wurde, begrenzen native Grammatik und
+Ausführungsprüfung die Auswahl auf diese Abrufe. Fehlende Identitäten werden nicht
+erfunden. Nach dem Lesen bleiben Umfang und unbekannte Antwortbeziehungen sichtbar.
+Die neue reale Folgeabnahme steht noch aus.
+
+### Getrennte Nachweise des vorherigen Stands
+
+Release **43f6af3 / Schema 0045** war auf allen neun Anwendungsdiensten gesund geprüft.
 Vollständige [CI39502206203](https://github.com/sschluet/obdaAI/actions/runs/39502206203):
 2091 Tests bestanden, sechs übersprungen; alle Pflichtjobs einschließlich Browser-
 und Runner-Prüfungen erfolgreich. Lokal 2097 Tests, Ruff, mypy und Geheimnisprüfung
@@ -17,7 +36,8 @@ des ersten gefundenen Dokuments samt quellengestützter Zusammenfassung abgenomm
 Beide Aufträge endeten beobachtet, ohne Rückfrage, öffentliche Recherche, Cloud,
 Änderungen oder Downloads. Modellkontexte: höchstens 9640 UTF-8-Bytes. Diese Abnahme
 belegt die geprüfte Lese- und Folgefrage, keine vollständige Archivauswertung.
-Ein zusätzlicher Test des früheren individuellen Archivauftrags läuft noch.
+Auch der zusätzliche Test des früheren individuellen Archivauftrags ist erfolgreich
+mit einer echten Dokumentabfrage und belegter Antwort abgeschlossen worden.
 
 Die neue Mailübersicht funktioniert. Die Antwortstatus-Folgefrage auf 43f6af3 ist
 jedoch ausdrücklich **nicht abgenommen**: Trotz gültiger aktueller Vorbelege mit

@@ -487,6 +487,54 @@ def _scoped_arguments(tool: str, schema: dict[str, Any], rules: Rules) -> dict[s
     return {"anyOf": retained} if tool == "http" else retained[0]
 
 
+def ready_read_schema(
+    decisions: Sequence[dict[str, Any]], interfaces: Sequence[dict[str, Any]]
+) -> dict[str, Any]:
+    """Narrow a planning turn to concrete reads; this never grants execution rights."""
+    if not 1 <= len(decisions) <= 4:
+        raise ValueError("Expected a bounded set of concrete reads")
+    bound = {identifier: (kind, rules) for identifier, kind, rules in _interface_rules(
+        [interface["integration_id"] for interface in interfaces], interfaces
+    )}
+
+    def constant(value: Any) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return {
+                "type": "object", "additionalProperties": False,
+                "properties": {key: constant(item) for key, item in value.items()},
+                "required": list(value),
+            }
+        if isinstance(value, list):
+            raise ValueError("Concrete read choices cannot contain arrays")
+        scalar_type = (
+            "null" if value is None else "boolean" if type(value) is bool
+            else "integer" if type(value) is int else "string" if isinstance(value, str) else None
+        )
+        if scalar_type is None:
+            raise ValueError("Unsupported concrete read value")
+        return {"type": scalar_type, "const": value}
+
+    branches = []
+    for candidate in decisions:
+        decision = Decision.model_validate(candidate)
+        if decision.kind != "tool" or decision.integration_id not in bound:
+            raise ValueError("Concrete read must use a bound interface")
+        kind, rules = bound[decision.integration_id]
+        args, effect = validate_tool(kind, rules, decision.tool or "", decision.arguments)
+        if effect or decision.tool != "mcp.call" or args["name"] not in {
+            "read_email", "get_thread",
+        }:
+            raise ValueError("Expected a concrete message read")
+        branch = constant({
+            "kind": "tool", "integration_id": decision.integration_id,
+            "tool": decision.tool, "arguments": args,
+        })
+        branch["properties"]["message"] = Decision.model_json_schema()["properties"]["message"]
+        branch["required"].append("message")
+        branches.append(branch)
+    return {"type": "object", "anyOf": branches}
+
+
 def decision_schema(
     integration_ids: Sequence[str],
     tool_names: Sequence[str] | None = None,

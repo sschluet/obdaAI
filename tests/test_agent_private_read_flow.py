@@ -551,8 +551,9 @@ _MAIL_SCENARIO = {
 
 
 @pytest.mark.parametrize("read_mailbox", [_MAIL_SCENARIO], indirect=True)
+@pytest.mark.parametrize("invalid_first", [None, "stop", "invented_uid"])
 def test_mail_followup_without_mail_keyword_uses_account_bound_prior_uid_then_actual_thread(
-    read_mailbox, monkeypatch
+    read_mailbox, monkeypatch, invalid_first
 ):
     from hub.mcp_client import schema_digest
 
@@ -627,24 +628,20 @@ def test_mail_followup_without_mail_keyword_uses_account_bound_prior_uid_then_ac
             assert "research" not in data["tools"]
             assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
             seen.append(data)
-            if len(seen) == 1:
+            if not data["allow_finish"]:
                 assert not data["allow_finish"]
-                prior = data["prior_read_results"][0]
-                assert prior["integration_id"] == identifier
-                assert prior["result"]["messages"][0]["uid"] == 7
-                assert prior["result"]["messages"][0]["account_id"] == identifier
-                return {
-                    "kind": "tool",
-                    "integration_id": identifier,
-                    "tool": "mcp.call",
-                    "arguments": {
-                        "name": "get_thread",
-                        "schema_sha256": schema_digest(_THREAD_SCHEMA),
-                        "arguments": {"uid": 7, "folder": "INBOX"},
-                    },
-                    "message": "Check actual message relationship metadata",
-                }
+                assert not data["allow_stop"]
+                candidate = json.loads(runtime.encode(data["ready_reads"]["decisions"][0]))
+                assert candidate["integration_id"] == identifier
+                assert candidate["arguments"]["arguments"] == {"uid": 7, "folder": "INBOX"}
+                assert candidate["arguments"]["schema_sha256"] == schema_digest(_THREAD_SCHEMA)
+                if len(seen) == 1 and invalid_first == "stop":
+                    return {"kind": "stop", "message": "Ask for mail selection again"}
+                if len(seen) == 1 and invalid_first == "invented_uid":
+                    candidate["arguments"]["arguments"]["uid"] = 999
+                return candidate
             assert data["allow_finish"]
+            assert data["allow_stop"] and "ready_reads" not in data
             latest = data["latest_observation"]["result"]
             assert latest["model_projection"] == "mail_read_metadata"
             assert latest["messages"][0]["marked_answered"] is True
@@ -820,7 +817,13 @@ def test_private_mail_rejects_ask_but_reads_current_messages_then_answers(
     assert sum(c["method"] == "tools/call" for c in calls) == 1
 
 
-def test_private_decision_flags_are_persisted_for_native_generation(archive, monkeypatch):
+@pytest.mark.parametrize("ready", [[], [{
+    "kind": "tool", "integration_id": "synthetic", "tool": "mcp.call",
+    "arguments": {"name": "read_email", "schema_sha256": "a" * 64,
+                  "arguments": {"uid": 7, "folder": "INBOX"}},
+    "message": "Read original identity",
+}]])
+def test_private_decision_flags_are_persisted_for_native_generation(archive, monkeypatch, ready):
     from hub.db import Run
 
     agent, start, _, _ = archive
@@ -850,6 +853,7 @@ def test_private_decision_flags_are_persisted_for_native_generation(archive, mon
                 "allow_finish": False,
                 "allow_ask": False,
                 "allow_stop": True,
+                "ready_reads": {"decisions": ready},
                 "decision_schema": {},
                 "tools": {"paperless.read": agent_tools.PaperlessCall.model_json_schema()},
                 "interfaces": [{"integration_id": agent[4], "kind": "paperless", "rules": {}}],
@@ -859,6 +863,7 @@ def test_private_decision_flags_are_persisted_for_native_generation(archive, mon
     assert result["kind"] == "stop"
     assert snapshots[0]["allow_finish"] is False
     assert snapshots[0]["allow_ask"] is False and snapshots[0]["allow_stop"] is True
+    assert snapshots[0]["ready_reads"] == ready
 
 
 @pytest.mark.parametrize("read_mailbox", [_MAIL_SCENARIO], indirect=True)

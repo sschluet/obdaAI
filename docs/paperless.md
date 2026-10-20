@@ -61,4 +61,4 @@ eine Trefferliste genügt dafür nicht. Folgefragen beziehen sich auf weiterhin
 berechtigte Abrufe desselben Gesprächs. Der Modellkontext bleibt begrenzt, Kürzungen
 und fehlende Belege werden ausgewiesen. Bestehende GET-Freigaben werden am Versand
 geprüft; dieser Leseweg eröffnet keine Schreib- oder Downloadrechte und nutzt weder
-öffentliche Recherche noch Cloud. Release 43f6af3 ist mit tatsächlicher Suche und anschließender Dokument-/OCR-Folgefrage samt belegter Zusammenfassung erfolgreich abgenommen. Keine Rückfrage oder öffentliche Recherche war nötig; Modellkontexte blieben unter 14.000 UTF-8-Bytes. Der frühere individuelle Archivauftrag wird getrennt geprüft.
+öffentliche Recherche noch Cloud. Release 43f6af3 ist mit tatsächlicher Suche und anschließender Dokument-/OCR-Folgefrage samt belegter Zusammenfassung erfolgreich abgenommen. Keine Rückfrage oder öffentliche Recherche war nötig; Modellkontexte blieben unter 14.000 UTF-8-Bytes. Auch der frühere individuelle Archivauftrag wurde anschließend mit einer echten Dokumentabfrage und belegter Antwort erfolgreich geprüft.
