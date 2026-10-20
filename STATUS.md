@@ -1,67 +1,84 @@
 # obdaAI — Status 20.10.2026
 
-## Korrektur mehrstufiger Mailfragen — Abnahme läuft
+## Wochenübersicht aus Proton korrigiert — echte Abnahme erfolgreich
 
-Der Nutzertest „Welche Mails gab es diese Woche ?“ auf Release 81e9c3a ist
-fehlgeschlagen. Katalog und Postfachstatus waren erfolgreich; die folgende lokale
-Planung überschritt das unveränderte Provider-Wartezeitlimit vor dem ersten
-Antwortinhalt. Der Kontext wuchs dabei von rund 13,5 auf 23,1 kB. Die frühere
-Tagesfrage belegt diesen mehrstufigen Fall nicht. Mailinhalte wurden nicht exportiert.
+Release **b59b6e6 / Schema 0045** ist gesund auf der autorisierten Test-VM
+installiert. Beide APIs und alle neun Anwendungsdienste laufen mit der exakten
+Version. Vorhandene Daten, Berechtigungen, Originalkonfigurationen und unabhängige
+Netzregeln sind erhalten. Das private Compose-Overlay wurde gezielt angepasst:
+Genau zwei nicht geheime, bereits für die APIs konfigurierte Betreiber-Pins werden
+auch an den ausführenden Worker weitergegeben. Unabhängige Konfiguration und
+Zugangsdaten bleiben erhalten; Bridge-Control-URL und Control-Token bleiben nur
+bei den APIs. Der Anwendungscode und das Image b59b6e6 bleiben dabei identisch.
+Vollständige [CI39410505466](https://github.com/sschluet/obdaAI/actions/runs/39410505466):
+**1896 bestanden, 6 übersprungen**, alle sechs Pflichtjobs und offizieller
+App-Nachweis erfolgreich. 39 Browser-Skripte mit eingebundenen Zusatzprüfungen sowie
+beide Runner-Prüfungen sind erfolgreich. Lokal bestehen **1902 Tests**, Ruff, mypy
+und Geheimnisprüfung; die isolierte Testdatenbank ist wieder gestoppt.
 
-Die Korrektur begrenzt die abgeleitete Mail-Planung auch nach weiteren Leseaufrufen
-in UTF-8-Bytes, erhält vollständige Eingabeschemas, aktuelle Rechte und Originalbelege
-und ergänzt anwendungsseitige Kalenderwochengrenzen einschließlich Sommerzeit.
-Eine eindeutige lokale Fehlermeldung ersetzt den unspezifischen ValueError-Hinweis.
-Nach fehlgeschlagenem Retry oder nachgelagertem Ladefehler gibt die Oberfläche den
-Composer wieder frei. Während eines tatsächlich aktiven Agentenlaufs bleiben
-Bearbeiten und Wiederholen gesperrt; Antworten auf Rückfragen bleiben möglich.
-Anbieterzeitlimits, Rechte und Postfach-Schreibsperren werden nicht erhöht.
+Die echte Frage nach den Mails der laufenden Woche ist in einem frischen Chat
+über die normale authentifizierte HTTPS-Schnittstelle erfolgreich abgenommen:
+automatische Auswahl des vorhandenen Proton-Profils, aktueller Katalog, tatsächliche
+schema-/richtliniengebundene Nachrichtensuche und belegte Übersicht, Abschluss
+`observed`. Keine manuelle Auswahl, Rückfrage, neue Anmeldung oder öffentliche
+Recherche. Die zusätzliche Antwortprüfung bestätigt passende Nachrichtenbezüge,
+Kalendergrenzen und sichtbare Umfangshinweise. Mailinhalte und Nachrichtenzahlen
+bleiben auf der VM; sie wurden nicht in Git, Website oder Entwicklungsnachweise
+exportiert. Eine vollständige Postfachzählung oder lückenlos verifizierte
+Empfangszeit-Auswertung wird damit ausdrücklich nicht behauptet.
 
-Der erste Korrekturstand **a861ffa / Schema 0045** ist nach vollständiger
-[CI39396423500](https://github.com/sschluet/obdaAI/actions/runs/39396423500)
-(**1860 bestanden, sechs übersprungen**) gesund auf der Test-VM installiert.
-Lokal bestehen 1866 Tests. Die echte Wochenfrage hat den zweiten Planungsschritt
-nun erfolgreich ausgeführt, aber anschließend wiederholt `list_folders` angefordert,
-ohne Nachrichten abzufragen. Dieser eigene Prüflauf ist fehlgeschlagen; er ist
-keine erfolgreiche Mailabnahme. Die Laufansichten blieben unter 14 kB UTF-8.
-Der Abbruchversuch traf bereits auf den beendeten Prüflauf und löste keinen
-weiteren Abbruch aus; bestehende Nutzeraufträge wurden nicht verändert.
+Für unterstützte reine Heute-/Wochenfragen ohne bestehenden Kontext verwendet die App
+jetzt eine enge schema- und kalendergebundene Vorbereitung am bereits ausgewählten
+Proton-Profil. Sie benötigt keinen Modellentscheid. Ausgewähltes Konto,
+Profil-/Policyrevisionen, Konfigurationshash, eingefrorene Uhrzeit und tatsächliches
+Werkzeugschema bleiben gebunden. Der dauerhafte Lese-Intent durchläuft dasselbe
+aktuelle Berechtigungsgate und denselben Dispatchweg. Widerruf, Abbruch,
+Schrittgrenzen und unklare Ausgänge werden nicht umgangen; unbekannte Schemas
+werden nicht geraten. Nur ein erfolgreicher echter Abruf erlaubt den Abschluss.
 
-Die Folgekorrektur **9bd18a9 / Schema 0045** strukturiert große Ordnerlisten,
-zeigt den beobachteten Lese-Fortschritt und verhindert wiederholte identische
-Vorbereitung ohne neue Nutzereingabe. Vollständige
-[CI39400233375](https://github.com/sschluet/obdaAI/actions/runs/39400233375):
-**1864 bestanden, sechs übersprungen**; lokal **1870 bestanden**. Alle neun
-Anwendungsdienste sind mit dieser exakten Version installiert, beide APIs gesund.
-Die echte Wochenfrage führt nun Status und Nachrichtensuche aus und endet formal
-als `observed`. Die zusätzliche Antwortprüfung scheitert jedoch: Die generisch
-gekürzte Suchantwort verliert die Nachrichtendaten im letzten Modellkontext;
-die abschließende Leermeldung ist nicht durch den Suchbeleg gedeckt.
-Dieser Lauf ist keine erfolgreiche Mailabnahme. Private Nachrichten und
-Nachrichtenzahlen bleiben auf der VM.
+Die Übersicht zeigt höchstens 20 tatsächlich abgerufene Kopfzeilen mit Konto und
+Ordnerumfang. Datumswerte werden gegen den lokalen Zeitraum geprüft; unsichere
+Empfangszeitzonen und ersatzweise verwendete Header-Daten bleiben sichtbar.
+Unzuordenbare Daten stehen getrennt. Begrenzungen und Auslassungen werden genannt;
+Mailheader sind inerte Anzeigedaten. Komplexe Fragen, vorhandener Gesprächs-/
+Projektkontext, andere Konten und Gmail bleiben beim bisherigen lokalen Planer.
+Damit werden frühere Filter nicht durch eine Standardabfrage übergangen.
 
-Die nächste Korrektur erhält eine strukturierte, begrenzte Nachrichtenauswahl
-mit Datums-, Ordner- und Ergebnisgrenzen auch im letzten Modellkontext. Einfache
-Heute-/Wochenübersichten entstehen nach tatsächlichem Abruf aus den Originalbelegen,
-mit höchstens 20 Kopfzeilen und ausdrücklichen Umfangs- und Datumsgrenzen.
-Lokal sind **1881 Tests**, Ruff, mypy und Geheimnisprüfung erfolgreich. Der
-Regressionstest widerlegt eine absichtlich falsche Modell-Leermeldung; vollständige
-acht Werkzeugschemas, unveränderte Rechte und relevante Nachrichtendaten bleiben
-auch im letzten Planungsschritt innerhalb der 14-kB-Grenze. Der Stand
-**7c3f8e8 / Schema 0045** ist nach vollständiger
-[CI39406633336](https://github.com/sschluet/obdaAI/actions/runs/39406633336)
-(**1875 bestanden, sechs übersprungen**) gesund installiert. Die neue echte
-Wochenfrage scheitert jedoch schon an einer unnötigen Rückfrage nach Ordner und
-Suchfilter, bevor Nachrichten abgefragt werden. Konto, Uhrzeit und Leserechte
-waren vollständig vorhanden. Der ausschließlich eigene wartende Prüflauf wurde
-anschließend abgebrochen; andere Aufträge blieben unberührt.
+Der Modellweg erhält zusätzlich geschützte strukturierte Mailbelege, anstelle
+abgeschnittener JSON-Texte. Vollständige acht Werkzeugschemas, Zielrechte und
+relevante Nachrichtendaten bestehen die 14-kB-Regression auch nach großen
+Status- und Suchantworten. Anbietergrenzen und Rechte wurden nicht erhöht.
+Die Oberfläche gibt den Composer nach Fehlern wieder frei; aktive Aufträge
+bleiben gegen parallele Starts gesperrt. „Frage erneut vorbereiten“ übernimmt
+die Frage in den Entwurf und startet erst nach Senden einen neuen Auftrag.
 
-Für die reine Heute-/Wochenübersicht mit dem bereits gebundenen Proton-Profil
-wird deshalb eine schema- und kalendergebundene Anwendungsplanung ergänzt.
-Sie verwendet weiter den gemeinsamen Freigabe-/Intent-/Dispatchweg und tatsächliche
-Suchbelege; unbekannte Schemas werden nicht geraten. Komplexe Fragen und vorhandener Gesprächs-/Projektkontext bleiben beim
-lokalen Modellplaner; frühere Filter werden nicht durch die Standardabfrage übergangen. Neue vollständige Prüfung und echte Wochenabnahme stehen aus.
-Die folgenden Belege betreffen den vorherigen Stand.
+Die vorherigen echten Wochenläufe waren keine erfolgreichen Abnahmen: Auf dem
+ursprünglichen Stand scheiterte die zweite Planung an einem Timeout; danach
+folgten wiederholte Ordnerabfragen, eine durch Kontextkürzung unbelegte Leermeldung
+und zuletzt eine unnötige Ordner-/Filterrückfrage. Auch der erste Wochenprüflauf
+mit Image b59b6e6 bestand die Abnahme noch nicht: Die Proton-Pin-Konfiguration
+war nur in den APIs vorhanden und fehlte im ausführenden Worker. Daher wurde der
+enge Anwendungsplan dort übersprungen. Dieser ausschließlich eigene wartende
+Prüflauf wurde kontrolliert abgebrochen; Nutzeraufträge blieben unberührt.
+Erst nach der gezielten Weitergabe beider vorhandenen Pins und Prüfung der
+effektiven API-/Worker-Einstellungen wurde eine neue Wochenabnahme durchgeführt.
+Die aktuelle Abnahme ersetzt diese offenen Fälle für die frische einfache
+Proton-Wochenübersicht, nicht für sämtliche Mailfunktionen.
+
+Vor dem Update wurde der aktuelle Datenbank-/Konfigurationsstand verschlüsselt
+auf der VM gesichert und anhand von Quellen-/Chiffretext-Prüfsummen geprüft.
+Diese Teilkopie ist keine neue vollständige Systemkopie und nicht entschlüsselt
+oder restoregetestet. Der vorher verifizierte vollständige externe Sicherungsanker
+bleibt erhalten. Rückweg: Code/Images ohne Wiederherstellung privater Daten.
+Bridge, Zugangsdaten und Netzregeln bleiben unverändert.
+Die Originale der absichtlich angepassten Worker-Konfiguration sind separat
+gesichert; die Korrektur erweitert weder Zielrechte noch Bridge-Control-Zugriffe.
+
+Reale Einzelabrufe von Nachrichtentexten, Threads, Anhangmetadaten sowie Mail-
+Aufgaben-/Projektläufe sind gesondert offen. Gmail wartet auf persönliche Anmeldung
+und echte Postfachabnahme. Versand, Postfachänderungen und Anhangdownloads bleiben
+über die Leseprofile gesperrt. V1 und die umfassende Fremdsystemadministration
+bleiben partiell. Die nachfolgenden Abschnitte dokumentieren frühere Stände.
 
 ## Automatische Integrationen und Proton-Mailfrage — vorherige Tagesabnahme
 

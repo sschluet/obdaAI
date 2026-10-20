@@ -130,44 +130,80 @@ sie ist kein Nachweis tatsächlicher Nachrichten-, Thread- oder Anhangabrufe.
 
 ## Mehrstufige Mailfragen und Fehlerbehandlung
 
-Der Nutzertest „Welche Mails gab es diese Woche ?“ auf Release 81e9c3a scheiterte
-nach erfolgreichem `get_status` beim nächsten lokalen Planungsschritt. Die vorherige
-Tagesabnahme deckt diesen Fall nicht ab. Die Korrektur begrenzt abgeleitete
-Mail-Ergebnisansichten nach UTF-8-Bytes, ohne Originalbelege, vollständige
-Werkzeugschemas oder Rechte zu verändern. Zeitliche Übersichten sollen direkt
-Nachrichten abfragen; Status und Ordner nur bei Bedarf. `clock.week_start` und
-`clock.week_end_exclusive` liefern Montag bis zum folgenden Montag in der
-konfigurierten Zeitzone einschließlich Sommerzeitwechsel. Ergebnisdaten müssen
-weiterhin gegen diesen Zeitraum geprüft werden; grobe Serverfilter reichen nicht.
+Release b59b6e6 ist vollständig geprüft und auf der Test-VM installiert. Eine
+frische echte Wochenübersicht ist über den normalen authentifizierten Chat-Weg
+abgenommen: automatische Proton-Auswahl, aktueller Katalog, tatsächliche Suche,
+belegte lokale Übersicht und Abschluss `observed`. Kontoanmeldung, manuelle
+Auswahl oder Ordner-/Filterrückfrage sind dafür nicht nötig. Die Qualitätsprüfung
+bleibt auf der VM; reale Mailtexte und Nachrichtenzahlen werden nicht exportiert.
 
-Bei einem lokalen Planungs-Timeout nennt die Antwort den wirklichen Fehlertyp
-und beendet den Auftrag. Es gibt keinen Cloudfallback oder automatischen Replay.
-Ein Fehler beim Wiederholen oder anschließenden Laden lässt den Composer wieder
-benutzbar. Aktive Aufträge behalten ihre Sperre gegen parallele Starts.
-Auf dem ersten Korrekturstand a861ffa läuft der zweite Planungsschritt erfolgreich,
-aber die echte Wochenfrage bleibt in wiederholten Ordnerabfragen hängen und endet
-ohne Nachrichtenabfrage. Sie gilt deshalb weiterhin als nicht abgenommen.
-Die Folgekorrektur ergänzt strukturierte Ordneransichten, expliziten Lesefortschritt
-und eine Sperre gegen identische erfolgreiche Vorbereitung ohne neue Nutzereingabe.
-Release 9bd18a9 behebt diese Vorbereitungsschleife und führt die Nachrichtensuche
-aus. Seine echte Antwortprüfung scheitert trotzdem: Die generische Kürzung des
-Suchergebnisses entfernt die Nachrichtendaten aus dem letzten Modellkontext;
-die Leermeldung ist deshalb nicht durch den Suchbeleg gedeckt. Eine strukturierte,
-begrenzte Nachrichtensicht muss diese Daten und ihre zeitlichen sowie mengenmäßigen
-Grenzen erhalten. Die neue Korrektur führt einen geschützten, typisierten Ausschnitt tatsächlich
-beobachteter Kopfzeilen mit Datumsbasis und Ergebnisgrenzen mit. Einfache reine
-Heute-/Wochenübersichten werden nach erfolgreicher Nachrichtenabfrage und lokalem
-Planungsabschluss direkt aus den Originalbelegen aufgebaut, mit höchstens 20
-Kopfzeilen, getrennten Konten und ausdrücklichen Umfangsgrenzen. Unbekannte Daten
-stehen getrennt von zugeordneten Nachrichten; Mail-Header werden als inerte
-Anzeigedaten behandelt. Komplexe Inhaltsfragen behalten die lokale Modellantwort.
-Lokal bestehen 1881 Tests, Ruff, mypy und Geheimnisprüfung. Der anschließend
-vollständig geprüfte und installierte Stand 7c3f8e8 fragt im echten Test dennoch
-unnötig nach Ordner/Suchfilter, statt Nachrichten abzufragen. Die einfache
-Kalenderübersicht erhält deshalb eine schema- und kalendergebundene Vorbereitung
-über den gemeinsamen Ausführungsweg. Bestehender Gesprächs-/Projektkontext bleibt
-beim lokalen Modellplaner, damit frühere Filter nicht übergangen werden. Neue vollständige Prüfung und echte
-Wochenabnahme stehen aus.
+Die unterstützte einfache Heute-/Wochenfrage ohne bestehenden Kontext verwendet einen engen
+Anwendungsplan aus tatsächlich beobachteten, ausdrücklich lesend freigegebenen
+Schemas. Konto, aktuelle Ziel-/Policyrevisionen und eingefrorener Kalender bleiben
+gebunden. Ein dauerhafter Lese-Intent wird vor dem normalen gemeinsamen Dispatch
+festgehalten; Widerruf, Abbruch und unklare Ausgänge behalten ihre Sperren.
+Unbekannte Schemas werden nicht geraten. Ein Modellaufruf ist hierfür nicht nötig;
+die Modellkontextgrenze ist bei diesem Lauf ausdrücklich nicht anwendbar.
+
+### Betreiberkonfiguration für API und Worker
+
+Der ausführende Agent-Worker benötigt dieselben zwei Betreiber-Pins wie die APIs.
+Ergänze im geprüften privaten Compose-Overlay unter `services.worker.environment`
+die bereits für `api` und `api_https` gesetzten Werte:
+
+- `HUB_PROTON_BRIDGE_INTEGRATION_ID`: identische ID des vorhandenen freigegebenen Profils.
+- `HUB_PROTON_BRIDGE_MCP_URL`: identische bereits zugelassene MCP-Adresse.
+
+Keine neue ID und kein neues Ziel erzeugen. `HUB_PROTON_BRIDGE_CONTROL_URL` und
+`HUB_PROTON_BRIDGE_CONTROL_TOKEN_FILE` bleiben ausschließlich bei den APIs;
+Control-Token und sonstige Zugangsdaten nicht an den Worker weiterreichen.
+Original-Overlay sichern und ausschließlich diese zwei nicht geheimen Werte
+weitergeben. Nach Prüfung der effektiven Compose-Konfiguration den betroffenen
+Worker im autorisierten Deployment mit demselben Anwendungsimage neu erstellen
+und seine Gesundheit prüfen. Vergleiche anschließend die tatsächlich geladenen
+Settings in beiden APIs und im Worker auf Gleichheit, ohne Werte oder Secrets zu
+protokollieren. Eine Prüfung allein im API-Container genügt nicht. Erst danach
+eine frische authentifizierte Übersicht als eigenen Prüflauf starten; alte oder
+unklare Intents nicht wiederholen und keine Nutzeraufträge abbrechen.
+
+Der erste eigene Wochenprüflauf mit Image b59b6e6 hatte wegen fehlender Pins im
+Worker nur den Katalog gelesen und eine unnötige Ordner-/Filterrückfrage gestellt.
+Diese Abnahme war nicht erfolgreich; ausschließlich dieser eigene wartende Lauf
+wurde kontrolliert abgebrochen. Nach gezielter Konfigurationsweitergabe ohne
+Änderung von Anwendungscode, Kontorechten oder Geheimnissen wurde die neue echte
+Wochenabnahme erfolgreich durchgeführt. Originale und unabhängige Konfiguration
+bleiben erhalten; das private Overlay wird ausdrücklich nicht als unverändert
+beschrieben.
+
+### Belegte Anzeige und verbleibende Grenzen
+
+Nach wirklichem Abruf entstehen höchstens 20 Kopfzeilen aus den Originalbelegen,
+mit Konto, Ordnerumfang und sichtbaren Grenzen. Aware Datumswerte werden lokal
+gefiltert; bei fehlender Empfangszeitzone wird ein ersatzweise verwendetes
+Header-Datum gekennzeichnet. Unzuordenbare Nachrichten stehen getrennt. Die
+Übersicht behauptet weder Vollständigkeit noch eine verifizierte Empfangszeit.
+Der grobe Vorfilter beginnt am Vortag der Kalendergrenze: IMAP-SINCE vergleicht
+Kalenderdaten ohne Zeit und Zeitzone ([RFC3501](https://www.rfc-editor.org/rfc/rfc3501.html)).
+Die eingefrorenen Grenzen einschließlich Sommerzeitwechsel bleiben maßgeblich.
+
+Bestehender Gesprächs-/Projektkontext, mehrere Konten, Gmail und komplexe Fragen
+nutzen weiter den lokalen Modellplaner. Dessen strukturierte, geschützte
+Nachrichtensicht bewahrt relevante Kopfzeilen und Ergebnisgrenzen trotz Kürzung;
+Originalbelege und vollständige Werkzeugschemas bleiben erhalten. Acht vollständige
+Schemas mit großen Status-/Suchergebnissen bestehen die unveränderte 14-kB-Grenze.
+Es gibt keinen Cloudfallback, keine zusätzlichen Rechte und keinen blinden Replay.
+
+Lokale Planungsfehler nennen den wirklichen Fehlertyp. Der Composer wird nach
+Fehlern und nachgelagerten Ladefehlern wieder benutzbar; aktive Aufträge behalten
+ihre Sperre. „Frage erneut vorbereiten“ kopiert die ursprüngliche Frage, ohne sie
+automatisch zu senden oder einen alten Intent erneut auszuführen.
+
+Lokal **1902 Tests** erfolgreich; vollständige [CI39410505466](https://github.com/sschluet/obdaAI/actions/runs/39410505466):
+**1896 bestanden, 6 übersprungen**, Browser- und Runner-Prüfungen erfolgreich.
+Echte Wochenabnahme und synthetische Tests sind getrennte Nachweise. Frühere
+Timeout-, Vorbereitungsschleifen-, Leermeldungs- und Rückfrageläufe zählen nicht
+als erfolgreiche Mailabnahme. Nachrichtentexte, Threads, Anhangmetadaten sowie
+reale Aufgaben-/Projekt- und Gmail-Läufe bleiben gesondert offen.
 
 ## Abnahme und offene Punkte — vorheriger Stand
 
