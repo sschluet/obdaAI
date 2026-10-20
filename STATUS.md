@@ -47,8 +47,20 @@ mit höchstens 20 Kopfzeilen und ausdrücklichen Umfangs- und Datumsgrenzen.
 Lokal sind **1881 Tests**, Ruff, mypy und Geheimnisprüfung erfolgreich. Der
 Regressionstest widerlegt eine absichtlich falsche Modell-Leermeldung; vollständige
 acht Werkzeugschemas, unveränderte Rechte und relevante Nachrichtendaten bleiben
-auch im letzten Planungsschritt innerhalb der 14-kB-Grenze. Erneute CI, Installation
-und echte Wochenabnahme stehen aus.
+auch im letzten Planungsschritt innerhalb der 14-kB-Grenze. Der Stand
+**7c3f8e8 / Schema 0045** ist nach vollständiger
+[CI39406633336](https://github.com/sschluet/obdaAI/actions/runs/39406633336)
+(**1875 bestanden, sechs übersprungen**) gesund installiert. Die neue echte
+Wochenfrage scheitert jedoch schon an einer unnötigen Rückfrage nach Ordner und
+Suchfilter, bevor Nachrichten abgefragt werden. Konto, Uhrzeit und Leserechte
+waren vollständig vorhanden. Der ausschließlich eigene wartende Prüflauf wurde
+anschließend abgebrochen; andere Aufträge blieben unberührt.
+
+Für die reine Heute-/Wochenübersicht mit dem bereits gebundenen Proton-Profil
+wird deshalb eine schema- und kalendergebundene Anwendungsplanung ergänzt.
+Sie verwendet weiter den gemeinsamen Freigabe-/Intent-/Dispatchweg und tatsächliche
+Suchbelege; unbekannte Schemas werden nicht geraten. Komplexe Fragen bleiben beim
+lokalen Modellplaner. Neue vollständige Prüfung und echte Wochenabnahme stehen aus.
 Die folgenden Belege betreffen den vorherigen Stand.
 
 ## Automatische Integrationen und Proton-Mailfrage — vorherige Tagesabnahme

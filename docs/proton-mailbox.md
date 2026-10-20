@@ -161,8 +161,12 @@ Planungsabschluss direkt aus den Originalbelegen aufgebaut, mit höchstens 20
 Kopfzeilen, getrennten Konten und ausdrücklichen Umfangsgrenzen. Unbekannte Daten
 stehen getrennt von zugeordneten Nachrichten; Mail-Header werden als inerte
 Anzeigedaten behandelt. Komplexe Inhaltsfragen behalten die lokale Modellantwort.
-Lokal bestehen 1881 Tests, Ruff, mypy und Geheimnisprüfung. Neue vollständige CI,
-Installation und echte Wochenabnahme stehen aus.
+Lokal bestehen 1881 Tests, Ruff, mypy und Geheimnisprüfung. Der anschließend
+vollständig geprüfte und installierte Stand 7c3f8e8 fragt im echten Test dennoch
+unnötig nach Ordner/Suchfilter, statt Nachrichten abzufragen. Die einfache
+Kalenderübersicht erhält deshalb eine schema- und kalendergebundene Vorbereitung
+über den gemeinsamen Ausführungsweg. Neue vollständige Prüfung und echte
+Wochenabnahme stehen aus.
 
 ## Abnahme und offene Punkte — vorheriger Stand
 

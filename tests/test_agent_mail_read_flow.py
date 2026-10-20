@@ -131,8 +131,11 @@ def read_mailbox(mailbox, monkeypatch, request):
                 },
             )
         assert body["params"] == {
-            "name": "search_emails",
-            "arguments": {"query": "", "since_days": scenario.get("since_days", 0)},
+            "name": scenario.get("expected_query_tool", "search_emails"),
+            "arguments": scenario.get(
+                "expected_query_arguments",
+                {"query": "", "since_days": scenario.get("since_days", 0)},
+            ),
         }
         return response(
             request,

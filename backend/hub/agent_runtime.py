@@ -411,6 +411,171 @@ def mail_overview_window(goal: str) -> str | None:
     return ("today" if match[1] == "heute" else "week") if match else None
 
 
+def prepare_mail_overview(
+    db: Any, cfg: Settings, job: AgentJob, profiles: dict[str, Any], history: list[AgentStep]
+) -> bool:
+    """One schema-bound read for a plain overview of the operator-pinned mailbox.
+
+    This is application planning, never model evidence. The prepared intent uses
+    the same dispatch, current-policy gates and interrupted-call rules as any read.
+    """
+    window = mail_overview_window(job.goal)
+    if (
+        window is None
+        or len(profiles) != 1
+        or any(s.kind in {"input", "model"} for s in history)
+        or cfg.proton_bridge_integration_id not in profiles
+    ):
+        return False
+    profile, rules, config = profiles[cfg.proton_bridge_integration_id]
+    if (
+        profile.kind != "mcp"
+        or not cfg.proton_bridge_mcp_url
+        or config.get("url") != cfg.proton_bridge_mcp_url
+        or not mail_read_job(job, profiles)
+    ):
+        return False
+    planned = [
+        s for s in history if json.loads(s.document).get("source") == "application_mail_overview"
+    ]
+    clock = json.loads(job.bindings).get("clock") or freeze_clock(cfg.agent_timezone, job.created)
+    if planned:
+        if len(planned) != 1:
+            raise PermissionError("Mehrere vorbereitete Postfachübersichten")
+        if planned[0].status == "succeeded":
+            summary = mail_overview_summary(history, clock, job.goal, profiles)
+            complete(
+                db,
+                job,
+                "observed" if summary else "unverified",
+                summary
+                or "Postfachabfrage abgeschlossen; das Ergebnisformat erlaubt "
+                "keine belegte Kopfzeilenübersicht. Originalbeleg bleibt im Auftrag.",
+            )
+        return True
+    # Never turn an existing remote attempt or an unrelated prepared operation
+    # into permission to send a second read under a new sequence number.
+    if any(
+        s.status == "prepared"
+        or s.kind == "read"
+        and json.loads(s.document).get("tool") != "mcp.catalog"
+        for s in history
+    ):
+        return False
+    if not any(s.kind == "read" and s.status == "succeeded" for s in history):
+        return False  # The normal pending catalog intent must finish first.
+    contracts = mail_read_contracts(profiles, history)
+    from hub.agent_schema import validate
+
+    start = datetime.fromisoformat(clock[f"{window}_start"])
+    prefilter = start.date() - timedelta(days=1)
+    reference = max(
+        datetime.fromisoformat(clock["request_at"]).date(),
+        datetime.fromisoformat(clock["request_at_utc"]).date(),
+    )
+    since_days = max(0, (reference - prefilter).days)
+    known = {
+        "query",
+        "folder",
+        "limit",
+        "since_days",
+        "sender",
+        "recipient",
+        "subject",
+        "before_days",
+        "unread_only",
+        "has_attachment",
+        "before",
+    }
+    selected: dict[str, Any] | None = None
+    for name in ("search_emails", "list_emails"):
+        sha = rules.mcp_read_tools.get(name)
+        schema = contracts["schemas"].get(sha)
+        properties = schema.get("properties") if isinstance(schema, dict) else None
+        if (
+            not isinstance(properties, dict)
+            or "since_days" not in properties
+            or set(properties) - known
+            or not isinstance(properties.get("folder"), dict)
+            or not isinstance(properties["folder"].get("default"), str)
+            or not properties["folder"]["default"]
+        ):
+            continue
+        neutral = {
+            "query": "",
+            "folder": properties["folder"]["default"],
+            "limit": 20,
+            "since_days": since_days,
+            "sender": None,
+            "recipient": None,
+            "subject": None,
+            "before_days": None,
+            "before": None,
+            "unread_only": False,
+            "has_attachment": False,
+        }
+        arguments = {key: neutral[key] for key in properties}
+        try:
+            validate(schema, arguments)
+            normalized, effect = validate_tool(
+                "mcp",
+                rules,
+                "mcp.call",
+                {
+                    "name": name,
+                    "schema_sha256": sha,
+                    "arguments": arguments,
+                },
+            )
+            assert not effect
+        except (ValueError, ValidationError):
+            continue
+        selected = normalized
+        break
+    if selected is None:
+        complete(
+            db,
+            job,
+            "unverified",
+            "Die freigegebenen Werkzeug-Schemas erlauben keine "
+            "sicher vorbereitete Standardübersicht. Es wurde keine Nachrichtensuche gestartet.",
+        )
+        return True
+    if sum(s.kind in {"read", "effect"} for s in history) >= job.max_steps:
+        complete(db, job, "failed", "Schrittlimit erreicht; Nachrichtensuche nicht gestartet.")
+        return True
+    binding = next(b for b in json.loads(job.bindings)["profiles"] if b["id"] == profile.id)
+    record(
+        db,
+        job,
+        "read",
+        {
+            "kind": "tool",
+            "tool": "mcp.call",
+            "integration_id": profile.id,
+            "arguments": selected,
+            "message": "Mail-Kopfzeilen im angefragten Kalenderzeitraum abrufen",
+            "source": "application_mail_overview",
+            "planner": "schema_bound_calendar_read_v1",
+            "calendar_plan": {
+                "window": window,
+                "frozen_clock_sha256": digest(encode(clock)),
+                "prefilter_start_date": prefilter.isoformat(),
+                "since_days": since_days,
+            },
+            "target": {
+                "name": profile.name,
+                "kind": profile.kind,
+                "url": config["url"],
+                "profile_revision": profile.revision,
+                "config_sha256": digest(profile.config),
+                "policy_revision": binding["policy_revision"],
+            },
+        },
+    )
+    return True
+
+
 def mail_text(value: Any, budget: int) -> tuple[str, bool]:
     text = value if isinstance(value, str) else ""
     encoded = text.encode()
@@ -1510,6 +1675,11 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         )
                         db.commit()
                         return
+                    if private_mail_read and prepare_mail_overview(db, cfg, job, profiles, history):
+                        db.commit()  # Durable application intent before any transport dispatch.
+                        if job.status != "running":
+                            return
+                        history = steps(db, job_id)
                     pending = next(
                         (
                             s
