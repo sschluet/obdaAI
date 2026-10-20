@@ -130,6 +130,14 @@ sie ist kein Nachweis tatsächlicher Nachrichten-, Thread- oder Anhangabrufe.
 
 ## Mehrstufige Mailfragen und Fehlerbehandlung
 
+Der weitere Nutzertest „Was gab es heute für neue Mails?“ zeigte wiederholte
+unnötige Bestätigungen. Die frühere Abnahme galt für eine andere Formulierung.
+Natürliche reine Heute-/Wochenfragen erhalten deshalb eine breitere, weiterhin
+vollständig verankerte Erkennung. Der Modellweg soll vorhandene Lesefreigaben,
+bekannte Kalendergrenzen und beobachtete Standardordner ohne Rückfrage verwenden;
+explizite Filter und tatsächlich notwendige fehlende Angaben bleiben erhalten.
+Die erneute echte Abnahme mit dem genauen Wortlaut steht noch aus.
+
 Release b59b6e6 ist vollständig geprüft und auf der Test-VM installiert. Eine
 frische echte Wochenübersicht ist über den normalen authentifizierten Chat-Weg
 abgenommen: automatische Proton-Auswahl, aktueller Katalog, tatsächliche Suche,

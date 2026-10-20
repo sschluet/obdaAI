@@ -143,6 +143,44 @@ def test_pinned_week_overview_is_schema_bound_durable_real_read_without_model(
     assert len(overview[-1]) == before  # Terminal worker reentry never repeats the read.
 
 
+@pytest.mark.parametrize(
+    "read_mailbox",
+    [
+        {
+            **SCENARIO,
+            "goal": goal,
+            "expected_query_arguments": {**ARGS, "since_days": since_days},
+            "query_payload": {
+                "messages": [
+                    {
+                        **SCENARIO["query_payload"]["messages"][0],
+                        "received": "2026-10-20T10:00:00+02:00",
+                    }
+                ]
+            },
+        }
+        for goal, since_days in (
+            ("Was gab es heute für neue Mails?", 1),
+            ("Welche Mails sind heute eingegangen?", 1),
+            ("Zeig mir meine neuen Mails von heute", 1),
+            ("Was gab es diese Woche für neue Mails?", 2),
+        )
+    ],
+    indirect=True,
+)
+def test_natural_arrival_questions_query_once_without_confirmation_or_folder_question(overview):
+    _, client, _, _, _, job_id, _ = overview
+    status, history = execute(overview)
+    assert status == "observed" and len(query_calls(overview)) == 1
+    assert not any(s.kind in {"input", "model", "effect", "research"} for s in history)
+    response = client.get("/api/agent-runs/" + job_id).json()
+    assert "Observed synthetic message" in response["summary"]
+    assert "INBOX" in response["summary"] and "keine Vollständigkeit" in response["summary"]
+    before = len(overview[-1])
+    execute(overview)
+    assert len(overview[-1]) == before
+
+
 @pinned_case
 @pytest.mark.parametrize("change", ["policy", "profile", "cancel"])
 def test_revocation_or_cancel_after_intent_before_dispatch_prevents_mail_read(

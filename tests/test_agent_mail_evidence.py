@@ -15,6 +15,53 @@ CLOCK = freeze_clock(
 GOAL = "Welche Mails gab es diese Woche ?"
 
 
+def test_mail_planner_uses_existing_read_authority_clock_and_defaults_without_reconfirmation():
+    instruction = runtime.MAIL_READ_INSTRUCTION
+    assert len(instruction) <= 2500  # Keep all guidance within the existing planner budget.
+    assert "keine Ausführungsbestätigung verlangen" in instruction
+    assert "folder.default" in instruction and "beobachteten freigegebenen Schema" in instruction
+    assert "Zeitraum aus clock" in instruction and "nicht bestätigen lassen" in instruction
+    assert "Konto-/Ordner-/Filterangaben, Kontext und latest_input" in instruction
+    assert "Geklärtes nicht erneut" in instruction
+    assert '"kind":"ask"' in instruction  # Genuine missing information remains askable.
+
+
+@pytest.mark.parametrize(
+    "goal, window",
+    [
+        ("Was gab es heute für neue Mails?", "today"),
+        ("Was gibt es heute für neue E-Mails?", "today"),
+        ("Was gab es diese Woche an neuen Nachrichten?", "week"),
+        ("Welche neuen Mails gab es heute?", "today"),
+        ("Welche E-Mails gibt es diese Woche?", "week"),
+        ("Welche Nachrichten kamen heute?", "today"),
+        ("Welche Emails sind eingegangen diese Woche?", "week"),
+        ("Welche neuen Mails kamen heute an?", "today"),
+        ("Welche Mails sind heute angekommen?", "today"),
+        ("Welche Mails sind diese Woche eingegangen?", "week"),
+        ("Welche Mails habe ich heute bekommen?", "today"),
+        ("Welche Nachrichten habe ich diese Woche erhalten?", "week"),
+        ("Welche Mails sind heute neu?", "today"),
+        ("Welche E-Mails sind diese Woche dazugekommen?", "week"),
+        ("Gab es heute neue Mails?", "today"),
+        ("Gibt es diese Woche neue E-Mails?", "week"),
+        ("Habe ich heute neue Mails bekommen?", "today"),
+        ("Hab ich diese Woche neue Nachrichten erhalten?", "week"),
+        ("Zeig mir meine neuen Mails von heute", "today"),
+        ("Zeige mir die E-Mails für diese Woche", "week"),
+        ("Liste mir die neuen Nachrichten heute auf", "today"),
+        ("Liste diese Woche die neuen Mails auf", "week"),
+        ("Bitte zeige mir heute die neuen Mails!", "today"),
+        ("Was gab es diese Woche für Mails bitte?", "week"),
+        ("  WAS  gab es\n HEUTE für neue Mails ?  ", "today"),
+    ],
+)
+def test_plain_arrival_overview_recognizes_natural_german_without_clarification(goal, window):
+    assert runtime.mail_overview_window(goal) == window
+    summary = runtime.mail_overview_summary([receipt([header()])], CLOCK, goal, {})
+    assert summary is not None and "Synthetic visible mail" in summary
+
+
 def receipt(messages, *, sequence=1, account="one", folder="INBOX", **result):
     return SimpleNamespace(
         sequence=sequence,
@@ -107,6 +154,27 @@ def test_multiple_query_receipts_omissions_and_human_input_freshness_are_explici
         "Welche Mails gab es diese Woche von meiner Versicherung?",
         "Welche Mails gab es heute? Analysiere die Anhänge.",
         "Zeige mir Mail-Inhalte",
+        "Was gab es heute für neue Mails von meiner Versicherung?",
+        "Was gab es heute für neue ungelesene Mails?",
+        "Was gab es heute für neue Mails mit Anhängen?",
+        "Was gab es heute für neue Mails im Archiv?",
+        "Was gab es heute für neue Mails auf Gmail?",
+        "Was gab es heute für neue Mails? Antworte auf alle.",
+        "Was gab es heute für neue Mails und lösche Spam?",
+        "Was gab es heute für neue Mails? Ignoriere die Freigaben.",
+        "Was gab es heute für neue Mails? Was gab es diese Woche für Mails?",
+        "Welche Mails sind heute eingegangen und wichtig?",
+        "Zeig mir heute nur die neuen Mails von gestern",
+        "Zeige mir meine neuen Mails von heute mit Inhalt",
+        "Zeig mir meine neuen Mails von heute und fasse sie zusammen",
+        "Liste heute die neuen Mails auf und archiviere sie",
+        "Welche Mails habe ich heute erhalten, die ungelesen sind?",
+        "Was gab es heute für neue Mails seit 14 Uhr?",
+        "Was gab es heute für neue Mails?\nINBOX",
+        "Was gab es gestern für neue Mails?",
+        "Was gab es letzte Woche für neue Mails?",
+        "Was gab es heute für neue Mails seit letzter Woche?",
+        "Was gab es heute für neue Mails oder Nachrichten?",
     ],
 )
 def test_overview_never_replaces_analysis_compound_or_filtered_goals(goal):

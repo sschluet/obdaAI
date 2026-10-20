@@ -1,5 +1,17 @@
 # obdaAI — Status 20.10.2026
 
+## Natürliche Mailfragen: Bestätigungsschleife wird korrigiert
+
+Der neue Nutzertest „Was gab es heute für neue Mails?“ fällt trotz bestehender
+Lesefreigabe in wiederholte Modellrückfragen zu Zugriff, Zeitraum und Ordner.
+Die zuvor erfolgreich abgenommene Wochenformulierung deckte diese natürliche
+Tagesformulierung nicht ab. Die Korrektur erweitert die eng begrenzte Erkennung
+reiner Heute-/Wochenübersichten und präzisiert die Modellanweisung: vorhandene
+Leserechte, eingefrorene Kalendergrenzen und beobachtete Schema-Standardordner
+brauchen keine erneute Bestätigung. Explizite Filter, Kontext und echte fehlende
+Angaben behalten ihre Bedeutung. Neue vollständige Prüfung und echte Abnahme
+mit dem genauen gemeldeten Wortlaut stehen noch aus.
+
 ## Wochenübersicht aus Proton korrigiert — echte Abnahme erfolgreich
 
 Release **b59b6e6 / Schema 0045** ist gesund auf der autorisierten Test-VM
