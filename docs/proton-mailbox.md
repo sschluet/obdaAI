@@ -165,7 +165,8 @@ Lokal bestehen 1881 Tests, Ruff, mypy und Geheimnisprüfung. Der anschließend
 vollständig geprüfte und installierte Stand 7c3f8e8 fragt im echten Test dennoch
 unnötig nach Ordner/Suchfilter, statt Nachrichten abzufragen. Die einfache
 Kalenderübersicht erhält deshalb eine schema- und kalendergebundene Vorbereitung
-über den gemeinsamen Ausführungsweg. Neue vollständige Prüfung und echte
+über den gemeinsamen Ausführungsweg. Bestehender Gesprächs-/Projektkontext bleibt
+beim lokalen Modellplaner, damit frühere Filter nicht übergangen werden. Neue vollständige Prüfung und echte
 Wochenabnahme stehen aus.
 
 ## Abnahme und offene Punkte — vorheriger Stand

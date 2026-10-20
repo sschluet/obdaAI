@@ -289,7 +289,7 @@ def test_failed_mail_read_is_terminal_and_never_replayed(overview, monkeypatch):
 
 
 @pinned_case
-@pytest.mark.parametrize("unsupported", ["analysis", "wrong_pin", "native", "multiple"])
+@pytest.mark.parametrize("unsupported", ["analysis", "wrong_pin", "native", "multiple", "context"])
 def test_other_goals_accounts_and_native_mail_remain_outside_automatic_preparation(
     overview, unsupported
 ):
@@ -303,6 +303,8 @@ def test_other_goals_accounts_and_native_mail_remain_outside_automatic_preparati
             object.__setattr__(cfg, "proton_bridge_integration_id", "different")
         elif unsupported == "native":
             profiles[identifier][0].kind = "gmail"
+        elif unsupported == "context":
+            job.context = json.dumps([{"content": "Use only the synthetic Archive folder"}])
         else:
             profiles["second"] = profiles[identifier]
         assert not runtime.prepare_mail_overview(db, cfg, job, profiles, [])

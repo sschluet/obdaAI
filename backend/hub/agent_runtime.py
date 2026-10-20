@@ -423,6 +423,7 @@ def prepare_mail_overview(
     if (
         window is None
         or len(profiles) != 1
+        or bool(json.loads(job.context))
         or any(s.kind in {"input", "model"} for s in history)
         or cfg.proton_bridge_integration_id not in profiles
     ):

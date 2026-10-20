@@ -59,8 +59,8 @@ anschließend abgebrochen; andere Aufträge blieben unberührt.
 Für die reine Heute-/Wochenübersicht mit dem bereits gebundenen Proton-Profil
 wird deshalb eine schema- und kalendergebundene Anwendungsplanung ergänzt.
 Sie verwendet weiter den gemeinsamen Freigabe-/Intent-/Dispatchweg und tatsächliche
-Suchbelege; unbekannte Schemas werden nicht geraten. Komplexe Fragen bleiben beim
-lokalen Modellplaner. Neue vollständige Prüfung und echte Wochenabnahme stehen aus.
+Suchbelege; unbekannte Schemas werden nicht geraten. Komplexe Fragen und vorhandener Gesprächs-/Projektkontext bleiben beim
+lokalen Modellplaner; frühere Filter werden nicht durch die Standardabfrage übergangen. Neue vollständige Prüfung und echte Wochenabnahme stehen aus.
 Die folgenden Belege betreffen den vorherigen Stand.
 
 ## Automatische Integrationen und Proton-Mailfrage — vorherige Tagesabnahme
