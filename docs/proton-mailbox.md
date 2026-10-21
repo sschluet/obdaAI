@@ -317,3 +317,15 @@ Validierung fremder Eingaben. CPU-, Speicher- und Referenzgrenzen bleiben erhalt
 Feste Fehlerkategorien enthalten keine Servertexte, Mailwerte oder Zugangsdaten.
 Die echte Antwortstatus-Folgeabnahme bleibt bis zu einem erfolgreichen neuen
 Lauf offen; bestehende fehlgeschlagene Aufträge werden nicht wiederholt.
+
+
+Die weitere Korrektur erhält die gesamte ursprüngliche Übersicht als gebundene
+Menge. Zeitraum, Dubletten, Reihenfolge und maximal 20 Einträge entsprechen der
+früheren sichtbaren Antwort. Die begrenzte Modellsicht enthält für jeden Eintrag
+dessen Antwortflag und den Status belegter Beziehungen; Ordinalzahlen beziehen
+sich auf diese frühere Reihenfolge. Betreffbeispiele sind ausdrücklich ein Auszug.
+Vorhandene Flags aus der Übersicht bleiben von aktuellen zusätzlichen Abrufen
+unterscheidbar. Die neue reale Prüfung verlangt eine Antwort über den gesamten
+angezeigten Umfang; ein einzelner Teilabruf genügt nicht. Dieser Stand ist noch
+nicht real abgenommen. 35a0ec6 blieb als lokal geprüfter, nicht ausgerollter
+Zwischenstand mit abgebrochener vollständiger CI erhalten.

@@ -662,6 +662,11 @@ def test_mail_followup_without_mail_keyword_uses_account_bound_prior_uid_then_ac
             assert latest["model_projection"] == "mail_read_metadata"
             assert latest["messages"][0]["marked_answered"] is True
             assert latest["messages"][0]["account_id"] == identifier
+            reply = data["mail_read_progress"]["reply_evidence"]
+            # Generic source prose has no known display scope.
+            assert reply["cohort_known"] is False
+            assert any(p["marked_answered"] is True for p in reply["proofs"])
+            assert len(runtime.encode(reply).encode()) <= 1400
             return {
                 "kind": "finish",
                 "message": "UID 7 is marked answered; sent relationship not verified.",

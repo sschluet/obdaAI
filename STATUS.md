@@ -25,6 +25,23 @@ technische Abrufprobleme unterscheidbar. Fehlgeschlagene Absichten werden nicht
 automatisch wiederholt. Vollständige Prüfungen, CI und erneute Live-Abnahme dieser
 Korrektur stehen noch aus. Unsichere bestehende Läufe bleiben unverändert erhalten.
 
+Zusätzlich wird die Antwortstatus-Sicht auf die gesamte vorher angezeigte Mailmenge
+gebunden. Die ursprüngliche Übersichtsauswahl wird aus gültigen Originalbelegen,
+ihrem eingefrorenen Zeitraum, Dubletten und Reihenfolge rekonstruiert. Alle bis zu
+20 sichtbaren Einträge behalten Antwortflags oder einen ausdrücklichen unbekannten
+Status; zusätzliche Beispiele dürfen diese Abdeckung nicht ersetzen. Falsche Flags
+beweisen keine unbeantwortete Mail. Vorfiltertreffer außerhalb der Übersicht dürfen
+nicht versehentlich Kandidaten für „davon“ werden. Die verschärfte reale Abnahme
+verlangt vollständige dargestellte Flag-Abdeckung und eine entsprechend qualifizierte
+Antwort; sie steht noch aus.
+
+Der Zwischenstand **35a0ec6** wurde vor dem Rollout überholt: Die Validator-Korrektur
+bestand lokal 2182 Tests und eine einmalige statische VM-Prüfung. Die zusätzliche
+Prüfung zeigte jedoch die oben beschriebene Umfangslücke. Der vollständige CI-Lauf
+39519479108 wurde abgebrochen und ist kein erfolgreicher Gesamtprüfungsnachweis.
+Vorbereitete inaktive Images und die verschlüsselte Sicherung bleiben erhalten;
+es gab keinen App-Rollout und keine reale Mailabnahme dieses Zwischenstands.
+
 ### Frühere Zwischenschritte
 
 Der frühere Zwischenstand **678d07e / Schema 0045** wurde gesund auf allen

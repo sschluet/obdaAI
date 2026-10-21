@@ -113,6 +113,17 @@ def ready_reads(
     if type(max_bytes) is not int or not 1024 <= max_bytes <= 4000:
         raise ValueError("Ready mail read evidence budget is out of bounds")
     receipts = validated_receipts(db, job, profiles)
+    from hub.agent_mail_cohort import selected_receipt_rows
+    from hub.agent_runtime import mail_header_identity
+
+    cohort = selected_receipt_rows(db, job, profiles, receipts)
+    displayed = {
+        (
+            item["integration_id"], item["reference"]["source_job_id"],
+            item["reference"]["sequence"], mail_header_identity(item["row"]),
+        )
+        for item in cohort["rows"]
+    } if cohort["cohort_known"] else None
     result: dict[str, Any] = {
         "decisions": [],
         "decision_sources": [],
@@ -134,6 +145,15 @@ def ready_reads(
             continue
         rows, prefix, payload = _messages(receipt)
         ref = receipt["reference"]
+        indexed_rows = list(enumerate(rows))
+        if displayed is not None:
+            indexed_rows = [
+                (index, row) for index, row in indexed_rows if isinstance(row, dict) and (
+                    ref["integration_id"], ref["source_job_id"], ref["sequence"],
+                    mail_header_identity(row),
+                ) in displayed
+            ]
+        rows = [row for _, row in indexed_rows]
         index = len(result["source_receipts"])
         result["source_receipts"].append(
             {
@@ -147,11 +167,11 @@ def ready_reads(
             }
         )
         result["source_rows"] += len(rows)
-        sources.append((index, ref["integration_id"], rows, prefix))
+        sources.append((index, ref["integration_id"], indexed_rows, prefix))
     result["source_rows_omitted"] = result["source_rows"]
     attempts = 0
     seen = set()
-    for source_index, identifier, rows, prefix in sources:
+    for source_index, identifier, indexed_rows, prefix in sources:
         if identifier not in profiles:
             raise PermissionError("Prior mailbox target is no longer selected")
         profile, rules, _ = profiles[identifier]
@@ -165,7 +185,7 @@ def ready_reads(
             ),
             {},
         )
-        for row_index, row in enumerate(rows[:100]):
+        for row_index, row in indexed_rows[:100]:
             if not isinstance(row, dict):
                 continue
             for name in ("read_email", "get_thread"):

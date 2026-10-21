@@ -197,6 +197,40 @@ def test_full_source_not_model_projection_creates_exact_choices_with_coverage(co
     assert not context[0].dirty
 
 
+def test_known_displayed_cohort_filters_choices_without_changing_raw_source_pointers(
+    context, monkeypatch
+):
+    from hub import agent_mail_cohort
+
+    def selected(db, job, profiles, receipts):
+        receipt = receipts[0]
+        rows = json.loads(receipt["result"]["response"]["content"][0])["messages"]
+        return {
+            "cohort_known": True,
+            "rows": [
+                {"integration_id": receipt["reference"]["integration_id"],
+                 "reference": receipt["reference"], "row": rows[index]}
+                for index in (2, 4)
+            ],
+        }
+
+    monkeypatch.setattr(agent_mail_cohort, "selected_receipt_rows", selected)
+    result = call(context)
+    assert [d["arguments"]["arguments"]["uid"] for d in result["decisions"]] == [3, 5]
+    assert [s["pointer"] for s in result["decision_sources"]] == ["/messages/2", "/messages/4"]
+    assert result["source_rows"] == 2 and result["source_rows_omitted"] == 0
+
+
+def test_known_empty_display_never_substitutes_an_out_of_window_prefilter_row(context, monkeypatch):
+    from hub import agent_mail_cohort
+
+    monkeypatch.setattr(
+        agent_mail_cohort, "selected_receipt_rows", lambda *_: {"cohort_known": True, "rows": []}
+    )
+    result = call(context)
+    assert result["decisions"] == [] and result["source_rows"] == 0
+
+
 def test_skips_missing_source_identity_instead_of_guessing_folder_default(context):
     rebind(context, [{"uid": 42}, {"folder": "Archive"}, {"uid": 99, "folder": "Archive"}])
     result = call(context)
