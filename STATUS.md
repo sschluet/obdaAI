@@ -2,20 +2,21 @@
 
 ## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand
 
-Die Memory-Erweiterung **2c85335 / Schema 0046** läuft auf der autorisierten
-Test-VM. Migration, gesunde APIs und Erhalt bestehender Daten, Rechte und Aufträge
-sind belegt. Die erste synthetische HTTP-/Workerabnahme bestand Lernen und Abruf
-in einem neuen Chat, scheiterte jedoch an der ausdrücklichen Berufskorrektur:
-Das lokale Extraktionsmodell lieferte dafür keine Fakten. Dieser fehlgeschlagene
-Beleg bleibt erhalten; er wird nicht als vollständige Abnahme gewertet.
-Der nachfolgende enge Parser für vollständige eigene Berufsangaben ist lokal
-implementiert und gezielt geprüft; seine Gesamtprüfungen und neue VM-Abnahme
-stehen noch aus. Persönliche Runtime-Inhalte dienen nicht als Testmaterial.
+Die Memory-Erweiterung **aa4a5ae / Schema 0046** läuft auf der autorisierten
+Test-VM. Der App-Patch erhielt das schon mit 2c85335 eingeführte Schema samt
+nativem Memory und allen bestehenden Zuständen. Die neue getrennte synthetische
+HTTP-/Workerabnahme bestand initiale Berufsangabe, späteren Abruf und Korrektur:
+Die Berufsfakten stammen hier aus einem engen deterministischen Direktparser;
+ein echtes lokales Antwortmodell beantwortete die Chatfragen. Dies ist kein
+Nachweis einer erfolgreichen LLM-Extraktion der Korrektur. Die erste Abnahme
+unter 2c85335 scheiterte genau daran und bleibt unverändert dokumentiert.
+Persönliche Laufzeitdaten dienen nicht als Testmaterial; allgemeine Sprach- und
+Langzeitqualität sowie reale optionale Embeddings bleiben offen.
 
 | Statusklasse | Befund im tatsächlichen Quellcode und Konsequenz |
 | --- | --- |
 | Bereits vollständig implementiert | Manuell gepflegtes persönliches Profil mit Revision/CAS und feldweiser Cloudfreigabe; vorhandene Memory-/Versionsobjekte, kanonische Vault-Markdown-Dateien, begrenzte Schreibrechte und Dateikonfliktabgleich; persistente Chat-/Run-Historie, Providerabstraktion, Privacy-Gateway und PostgreSQL-Jobverarbeitung. Diese Bausteine werden erhalten und wiederverwendet. |
-| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Release 2c85335 bestand Gesamtprüfungen und Installation; Lernen und späterer Abruf bestanden im VM-Chat, die Berufskorrektur scheiterte am leeren Modellergebnis. Der enge Berufsparser benötigt seine eigene Gesamtprüfung und neue Abnahme. |
+| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Release 2c85335 bestand Gesamtprüfungen und Installation; Lernen und späterer Abruf bestanden im VM-Chat, die Berufskorrektur scheiterte am leeren Modellergebnis. Der enge Berufsparser bestand nun Gesamtprüfungen und eine getrennte synthetische VM-Abnahme; beliebige Formulierungen bleiben modellabhängig. |
 | Vorhanden, aber für das neue Ziel technisch unzureichend | Das bisherige Profil besteht aus acht manuellen Feldern mit konservativer Regex-Relevanz; bisherige Vault-Notizen allein sind kein automatisches persönliches Gedächtnis gewöhnlicher Chats. Der neue strukturierte/lexikalische Abruf mit optionalen lokalen Vektoren ergänzt diese Lücke. Er ist weiterhin begrenzt und keine vollständige semantische Suche in der gesamten Vergangenheit. |
 | Noch nicht implementiert bzw. nicht zugesagt | Vollständige automatische Interpretation beliebiger Aussagen und indirekter Persönlichkeitsmerkmale, unbegrenzte Rekonstruktion aller Gespräche sowie rückwirkendes systemweites Vergessen einschließlich alter Chatantworten, Run-Snapshots und externer Sicherungen. Eine neue Vektordatenbank, pgvector oder ein zweites Memory-System wird dafür nicht eingeführt. |
 
@@ -87,6 +88,36 @@ bei nativen Erinnerungen oder vorhandenen neuen Zustandsdaten. Eine Sicherung vo
 Rollout bleibt erforderlich; bestandene Migrationstests oder ein Backup ersetzen
 keine geprüfte Wiederherstellung.
 
+**Finaler exakter Release-Nachweis:** **aa4a5ae / Schema 0046** bestand
+**2707 lokale Tests**, Ruff, mypy (131 Quelldateien),
+Secret-Scan (687 Dateien), Frontend-Build und
+synthetische Browserprüfungen. Die isolierte Testdatenbank ist gestoppt.
+[GitHub-CI 39647243916](https://github.com/sschluet/obdaAI/actions/runs/39647243916) bestand **2701 Tests**, **6 übersprungen**.
+Diese Zahlen stammen aus dem tatsächlichen gesicherten Python-Joblog. Alle sechs
+vollständigen CI-Jobs und der passende App-Fingerprint sind bestätigt.
+
+**Getrennter App-Patch und neue Abnahme:** Die erste additive Migration d5940db →
+2c85335 / 0046 bleibt ihr eigener Nachweis. Der Patch 2c85335 → aa4a5ae
+behielt Schema 0046 ohne erneute Migration oder Downgrade. Sämtliche vorhandenen
+Memoryspalten/Revisionen sowie Settings, Kandidaten, Lernjobs, Vektoren, Auszüge
+und frühere QA-Zustände blieben erhalten; ebenso Profile, Benutzeraufträge,
+Integrationregeln, Netzwerkeinstellungen und Compose-Overlays. Ein frisches
+verschlüsseltes kritisches Backup liegt auf der VM, der vorhandene externe
+Vollbackupanker bleibt erhalten. Für dieses neue Backup wird weder Entschlüsselung
+noch Restore behauptet.
+
+Die neue synthetische HTTP-Abnahme erzeugte Lernjobs im bestehenden PostgreSQL-
+Worker, rief eine Berufsangabe aus einem neuen Chat ab und prüfte die explizite
+Korrektur einschließlich ersetztem Alt-Fakt und aktivem neuen Fakt. Die genau
+geprüften vollständigen Berufsangaben wurden **deterministisch vor einem optionalen
+Extraktionsmodell** übernommen. Ein echtes lokales **Antwortmodell** verarbeitete
+die Chatfragen. Dies belegt HTTP-/Worker-/Parserintegration und Antwortabruf,
+**keine erfolgreiche LLM-Extraktion dieser Berufskorrektur**. Alle neuen QA-Läufe
+blieben lokal, ohne Cloud oder öffentliche Websuche. Nur neue eigene QA-Erinnerungen
+wurden vergessen und QA-Chats/Projekt archiviert; temporäre Anmeldung entfernt.
+
+Die alten fehlgeschlagenen QA-Objekte wurden erst nach dem neuen Live-PASS in einem eigenen Cleanup-Intent geprüft: nur eigene Erinnerungen vergessen und Chats/Projekt archiviert; Originalnachrichten, Jobs und beide QA-Belegketten blieben unverändert.
+
 **Geprüfter Zwischenrelease:** **2c85335** bestand **2.679 lokale Tests**,
 Ruff, mypy (131 Quelldateien) und Secret-Scan (686 Dateien). Die vollständige
 [GitHub-CI 39640566187](https://github.com/sschluet/obdaAI/actions/runs/39640566187)
@@ -143,14 +174,15 @@ geprüft, einschließlich Reitdauer mit Ziffern und deutschen Zahlwörtern eins 
 zwölf. Dieser getrennte, wörtlich gebundene Parser überschreibt keine
 Modellkonfidenz. Für übrige Aussagen bleibt das lokale Modell konfigurierbar;
 Review, Quellrevisionen und Datenschutz bleiben verbindlich. Der Familienparser ist im geprüften Zwischenrelease enthalten. Der neue
-Berufsparser benötigt weiterhin seinen eigenen vollständigen Prüf- und CI-Nachweis.
+Berufsparser besitzt den oben ausgewiesenen eigenen Prüf- und CI-Nachweis; dies erweitert keine allgemeinen Modellfähigkeiten.
 
-**Noch offen:** Gesamtprüfung und exakte CI des nachfolgenden Berufsfixes,
-gesicherter App-Patch bei erhaltenem Schema 0046, neue getrennte HTTP-/Workerabnahme
-und öffentliche Showcase-Synchronisierung. Der optionale reale Embeddingserver
-ist nicht konfiguriert und nicht live geprüft. Langzeitqualität und beliebige
-Formulierungen sind nicht abgenommen. Das persönliche Gedächtnis wird weder als
-unbegrenzt noch als vollständig fertig abgenommen bezeichnet.
+**Noch offen:** Allgemeine Sprach- und Berufskorrekturen außerhalb des engen
+Parsers, Langzeitqualität, vollständige semantische Suche und ein realer optionaler
+Embeddingserver sind nicht abgenommen. Manuelles Profil und Antwortpräferenzen
+bleiben maßgeblich; Memory-Vergessen löscht keine ursprünglichen Chats oder
+historischen Antworten. Die öffentliche Website erfordert weiterhin ihre eigene
+passende CI-, Publisher- und HTTP-Hashprüfung. Kein unbegrenztes oder vollständig
+fertiges Gedächtnis wird zugesagt.
 
 ## Private Integrationsfolgefragen — reale Mail- und Archivabnahme erfolgreich
 

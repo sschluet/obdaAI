@@ -166,14 +166,71 @@ Erinnerungen oder vorhandenen neuen Zustandsdaten. Vor einem Rollout bleiben
 aktuelle Sicherung und Prüfung des konkreten Zielstands erforderlich; eine
 erfolgreiche additive Migration oder Sicherung ist kein Wiederherstellungsnachweis.
 
-Gezielte synthetische Unit-, API-, Browser- und Migrationsprüfungen belegen die
-einzelnen Verträge. Der Zwischenstand `b8189bb` bestand die lokale Gesamtsuite
-mit 2.640 Tests einschließlich PostgreSQL; seine exakte GitHub-CI ist noch offen.
-Eine isolierte Prüfung gegen das reale lokale Modell der VM belegt synthetische
-Berufsangabe, Korrektur und sensible Pointer sowie Persistenz nach Neuöffnung,
-Abruf und Vergessen. Eine Familien-Reitaussage wurde vom kleinen Modell dagegen
-nicht zuverlässig extrahiert; daraus folgt der enge deterministische Aufnahmeweg,
-keine allgemeine Qualitätszusage. Die nachfolgende Korrektur benötigt neue passende
-Checks. Schema-0046-Rollout, echter HTTP-Chat-Lernablauf der Anwendung und ein
-reales optionales Embeddingmodell sind weiterhin getrennte offene Nachweise.
-Den verbindlichen aktuellen Stand führt `STATUS.md`.
+Der exakte Patch `aa4a5ae` bestand 2707 lokale Tests und die
+vollständige CI (2701 bestanden, 6 übersprungen). Die erste Migration
+unter 2c85335 führte 0046 ein; der neue Patch erhielt dieses Schema und vorhandene
+native/abgeleitete Zustände ohne erneute Migration. Die erste HTTP-Abnahme unter
+2c85335 bestand initiales Modell-Lernen und Abruf, scheiterte aber an der leeren
+LLM-Berufskorrektur. Ihr Fehlerbeleg bleibt erhalten. Die neue getrennte Prüfung
+belegt den engen Berufsparser im HTTP-/PostgreSQL-Workerweg, späteren Abruf,
+Korrekturlebenszyklus und ein echtes lokales Antwortmodell; sie ist keine neue
+LLM-Extraktionsabnahme der Korrektur. Allgemeine Sprach-/Langzeitqualität und
+reale optionale Embeddings bleiben offen. Den verbindlichen Umfang führt STATUS.
+
+### Gedächtnis konfigurieren und betreiben
+
+`GET /api/memory-settings` liefert die aktuelle vollständige Konfiguration mit
+`revision`. `PUT /api/memory-settings` übernimmt dieselbe Struktur mit der zuvor
+angezeigten Revision (CAS); bei HTTP 409 aktuellen Stand neu laden und den eigenen
+Entwurf vergleichen. `enabled` steuert die Nutzung, `extraction_enabled` das Lernen.
+Im `config`-Objekt steuern `review_required`, `learn_from_projects`,
+`max_memories`, `max_context_chars`, `min_confidence` und `summary_enabled` die
+begrenzten Abläufe. `sensitive_review_required` bleibt serverseitig eingeschaltet.
+`extractor_provider_id` ist die ID eines aktivierten bestehenden lokalen Modells;
+`null` verwendet das lokale Standardmodell. Sensible Prüfung bleibt verbindlich.
+Das UI zeigt verständliche Modellnamen statt technischer IDs. Der gewöhnliche
+Memory-Abruf besitzt zusätzlich eine Obergrenze von **2.400 UTF-8-Bytes**; Modell-
+und Chatbudget können tatsächlich verwendete Anzahl und Textumfang weiter senken.
+Ein höherer Einstellwert ist deshalb keine Zusage entsprechend großen Kontexts.
+
+`GET/POST /api/memories`, `GET/PATCH/DELETE /api/memories/{id}` und
+`GET /api/memories/{id}/versions` verwalten vorhandene native oder Vault-Einträge.
+Native Erstellung wählt ausdrücklich `storage="app"`; der alte API-Standard
+bleibt `vault`. Änderungen/Löschungen benötigen die aktuelle Revision.
+`GET /api/memory-candidates` zeigt quellengebundene Vorschläge;
+`POST /api/memory-candidates/{id}/review` benötigt `expected_revision` und
+`decision="approve"` oder `"reject"`. Geänderte Quellen werden nicht übernommen.
+Alle schreibenden Aufrufe benötigen die bestehende Anmeldung, Origin- und
+CSRF-Prüfung; Erinnerungen verleihen keine Werkzeuge oder weiteren Rechte.
+
+Optionale Embeddings werden ausschließlich serverseitig eingerichtet:
+`HUB_MEMORY_EMBEDDING_BASE_URL`, `HUB_MEMORY_EMBEDDING_MODEL` und optional
+`HUB_MEMORY_EMBEDDING_KEY_FILE`. Die Basisadresse muss exakt einer freigegebenen
+lokalen `/v1`-Adresse in `HUB_LOCAL_ENDPOINTS_JSON` entsprechen; deren festgelegte
+IP wird am Transport geprüft. HTTPS-/Netzwerkfreigaben werden nicht automatisch
+erweitert. Erst `config.embedding_enabled=true` aktiviert diesen Pfad. Die
+bestehende interne Indexpflege verarbeitet höchstens 20 fehlende/veraltete
+Einträge je Minute. Modell oder Konfigurationsfingerprint ändern die Cachebindung;
+veraltete Vektoren werden nicht als aktuelle Belege verwendet und können begrenzt
+neu aufgebaut werden. Ohne erreichbaren passenden Dienst bleibt Textsuche
+verfügbar. **Für diese Lieferung wurde kein Embeddingdienst installiert oder
+konfiguriert und keine reale Embedding-Abnahme behauptet.**
+
+Die vorhandene nachrangige Memory-Queue verarbeitet Lernen und Indexpflege.
+Lernjobstatus und feste Fehlerkategorien trennen fehlendes Modell, veränderte
+Quelle, Widerruf und unterbrochene Arbeit. Diagnose verwendet Status/Metadaten;
+keine vertraulichen Quelltexte, Tokens oder Providerfehler als öffentliche Logs
+weiterreichen. Unsichere oder unterbrochene Ausführung nicht blind wiederholen.
+Die Prüfung von Aufnahme, Aktualisierung und Abbruchrechten bleibt am finalen
+Speicher-/Providerübergang verbindlich.
+
+Vor Updates PostgreSQL einschließlich Queue-/Memorytabellen, kanonischen Vault,
+Konfiguration und erforderliche Schlüssel geschützt sichern. Schlüssel getrennt
+und sicher verwahren; weder Sicherungen noch Inhalte gehören in Git. Ein Backup
+ist kein bestätigter Restore. Der 0046-Downgrade besitzt Verlustschutz und darf
+bei nativen Erinnerungen oder neuen Zustandsdaten nicht erzwungen werden.
+**App-only-Rollback auf den früheren Vault-Code ist bei vorhandenen
+`storage="app"`-Zeilen unsicher**: alte Reconciliation versteht diese Speicherart
+nicht. Writer stoppen, Daten erhalten und eine geprüfte kompatible Recovery
+vorbereiten; keine nativen Zeilen löschen, keinen destruktiven Downgrade und
+keine ungeprüfte Datenbankwiederherstellung durchführen, um Rollback zu erzwingen.

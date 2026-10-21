@@ -73,7 +73,7 @@ activation, always/keyword/explicit-invocation modes and a chat picker. Private
 profile fields and skill revisions need their own explicit cloud sharing. See
 [personal profile](docs/personal-profile.md) and STATUS for acceptance evidence.
 
-### Intelligent memory — development delivery
+### Intelligent memory — verified limited delivery
 
 The memory extension reuses the existing application database, personal profile,
 revisioned Vault notes and provider boundary. New app-native memories also work
@@ -110,15 +110,16 @@ notes, profiles or conversations. Forgetting removes app-memory text, its memory
 versions and derived vectors, but does **not** erase original conversations,
 historical run snapshots or external backups. The architecture and current
 acceptance gaps are recorded in [Architecture](docs/architecture.md) and
-[STATUS](STATUS.md). Release **2c85335 / schema 0046** passed 2,679 local tests and
-[full CI](https://github.com/sschluet/obdaAI/actions/runs/39640566187)
-(2,673 passed, six skipped), frontend/build and synthetic browser checks. Its
-VM migration preserved existing data and permissions. Real synthetic HTTP chats
-passed initial learning and later recall, but explicit profession correction
-failed because the local extractor returned no facts. This failed acceptance
-remains recorded. A narrow literal profession parser is now implemented and
-locally tested; its full checks, separate patch and new live acceptance remain
-pending. Optional real embeddings and long-term language quality are unverified.
+[STATUS](STATUS.md). Release **aa4a5ae / schema 0046** passed 2707 local tests and
+[exact full CI](https://github.com/sschluet/obdaAI/actions/runs/39647243916) (2701 passed, 6 skipped). Its app-only patch
+preserved schema 0046 and existing native memories. A new synthetic real HTTP-chat
+and PostgreSQL-worker acceptance passed profession recall and explicit correction:
+these exact statements use a narrow deterministic parser; a real local answer
+model responds. This does not prove LLM extraction of the correction. The first
+2c85335 attempt learned/recalled the initial fact but failed the correction and
+remains recorded separately. Optional real embeddings and general language or
+long-term learning quality remain unverified. See STATUS for precise evidence,
+original-history retention and backup/rollback limits.
 
 Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.
 Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen Anbieter-Dialog; Unterschiede und Freigabegrenzen stehen in [docs/model-modes.md](docs/model-modes.md).
