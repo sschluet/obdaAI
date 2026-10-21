@@ -110,14 +110,15 @@ notes, profiles or conversations. Forgetting removes app-memory text, its memory
 versions and derived vectors, but does **not** erase original conversations,
 historical run snapshots or external backups. The architecture and current
 acceptance gaps are recorded in [Architecture](docs/architecture.md) and
-[STATUS](STATUS.md). The intermediate commit **b8189bb** passed 2,640 local tests,
-including PostgreSQL checks, plus Ruff, mypy and a scan of 684 source files. Its
-exact CI run is still pending; subsequent quality corrections need their own
-matching checks. An isolated test using the VM's real local model passed synthetic
-profession, correction and sensitive-pointer cases, database reopening, retrieval
-and forgetting. This is not a schema-0046 rollout or acceptance of production HTTP
-chat learning. A real optional embedding service and long-term learning quality
-remain unverified.
+[STATUS](STATUS.md). Release **2c85335 / schema 0046** passed 2,679 local tests and
+[full CI](https://github.com/sschluet/obdaAI/actions/runs/39640566187)
+(2,673 passed, six skipped), frontend/build and synthetic browser checks. Its
+VM migration preserved existing data and permissions. Real synthetic HTTP chats
+passed initial learning and later recall, but explicit profession correction
+failed because the local extractor returned no facts. This failed acceptance
+remains recorded. A narrow literal profession parser is now implemented and
+locally tested; its full checks, separate patch and new live acceptance remain
+pending. Optional real embeddings and long-term language quality are unverified.
 
 Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.
 Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen Anbieter-Dialog; Unterschiede und Freigabegrenzen stehen in [docs/model-modes.md](docs/model-modes.md).

@@ -111,11 +111,17 @@ Modellantworten werden nicht automatisch zu persönlichen Fakten.
 
 `memory_learning.py` prüft vor dem Modellaufruf eine kleine geschlossene Grammatik
 vollständiger eigener Familienaussagen: Name, Alter und Reitfähigkeit einer Tochter
-oder eines Sohns. Reitdauer unterstützt Ziffern und deutsche Zahlwörter von eins
+oder eines Sohns. Hinzu kommen vollständige eigene Berufsangaben nach
+„Ich arbeite [jetzt|inzwischen] als …“ mit begrenzten Rollenwörtern; Pläne,
+Qualifikationen, Fragen und zusammengesetzte Aussagen werden nicht so gedeutet.
+Reitdauer unterstützt Ziffern und deutsche Zahlwörter von eins
 bis zwölf. Nur exakt passende vollständige Aussagen werden deterministisch als
 wörtlich belegte Fakten verarbeitet; Fragen, unsichere Formulierungen und fremde
 Quellen erhalten dadurch keine Sonderfreigabe. Diese strukturelle Prüfung ist
 ein eigener Aufnahmeweg und keine nachträgliche Erhöhung einer Modellkonfidenz.
+Eine belegte aktuelle explizite Vault-Speicherung derselben Nachricht verhindert
+ein zusätzliches automatisches App-Memory. Dafür werden Server-Ursprung, Scope,
+Revision/Inhalt und die kanonische Datei geprüft.
 Andere zugelassene Aussagen verwenden den konfigurierten begrenzten lokalen
 JSON-Schema-Aufruf; jedes Ergebnis wird zusätzlich gegen den unveränderten
 Originaltext geprüft. Sensible Prüfung, Quellenbindung und Privacy gelten für

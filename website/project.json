@@ -460,12 +460,12 @@
         {
           "title": "Modellunabhängiges persönliches Gedächtnis",
           "status": "local",
-          "description": "Persönliches, Projekt-, Gesprächs- und Vorliebenwissen in der vorhandenen App-Datenbank. Native Einträge benötigen keinen Vault; das manuell gepflegte Profil bleibt unabhängig. Synthetische API- und Browserfälle geprüft. Schema-0046-Ausrollung und echter App-Lernablauf stehen aus."
+          "description": "Persönliches, Projekt-, Gesprächs- und Vorliebenwissen in der vorhandenen App-Datenbank. Native Einträge benötigen keinen Vault; das Profil bleibt unabhängig. Schema 0046 läuft auf der Test-VM. Begrenztes Lernen und späterer Abruf bestanden, die Berufskorrektur scheiterte und wird weiter geprüft."
         },
         {
           "title": "Aus eigenen Gesprächen lernen",
           "status": "local",
-          "description": "Eigene Aussagen lokal und mit aktueller Quelle auswerten. Ausgewählte Berufs-, Korrektur- und sensible Pointer-Fälle mit echtem lokalen Modell und synthetischen Daten geprüft. Enge vollständige Familienangaben werden separat strukturell erkannt; beliebige Formulierungen sind nicht zugesagt. Lernmodell konfigurierbar, sensible Übernahme bleibt prüfpflichtig."
+          "description": "Eigene Aussagen lokal und quellengebunden auswerten. Die erste echte App-Abnahme fand eine ausgelassene Modellkorrektur. Enge vollständige Familien- und Berufsangaben werden deshalb direkt am Wortlaut erkannt; der Berufsfix ist noch nicht live abgenommen. Übrige Aussagen bleiben modellabhängig. Sensible Übernahme bleibt prüfpflichtig."
         },
         {
           "title": "Erinnerungen suchen, prüfen und entfernen",

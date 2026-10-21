@@ -98,6 +98,27 @@ def family_subject(quote: str) -> str | None:
     return None
 
 
+def profession_statement(quote: str) -> bool:
+    """Complete present-tense own-role statements, not plans or qualified guesses."""
+    if len(quote) > 140 or "\n" in quote:
+        return False
+    match = re.fullmatch(
+        r"(?i:ich arbeite (?:(?:jetzt|inzwischen) )?als) "
+        r"([A-ZÄÖÜ][^\W\d_ -]{1,39}(?:[ -][A-ZÄÖÜ][^\W\d_ -]{1,39}){0,3})[.!]?",
+        quote.strip(),
+    )
+    if not match or len(match[1]) > 80:
+        return False
+    qualifiers = set(
+        (
+            "nicht kein keine keinen vielleicht vermutlich eventuell möglicherweise ehemals früher "
+            "zukünftig künftig bald morgen nur auch oder und aber wenn falls bei für als mit ohne "
+            "unter vorbehalt auf seit gestern voraussichtlich hypothetisch probe"
+        ).split()
+    )
+    return not (set(re.split(r"[ -]", match[1].casefold())) & qualifiers)
+
+
 def response_style_preference(quote: str, predicate: str) -> bool:
     """A closed vocabulary, never arbitrary model prose promoted into policy."""
     if predicate != "preference" or len(quote) > 220 or "\n" in quote:
@@ -450,11 +471,18 @@ async def execute_learning(
             message, _ = _current(db, job)
             if len(message.content) > 12000:
                 raise ValueError("source_too_large")
-            # Exactly recognized own-family statements are already fully grounded.
+            # Exactly recognized own-family/role statements are already fully grounded.
             # A model cannot improve this closed structural read or reduce its certainty.
             quote = message.content.strip()
+            literal_predicate: Literal["family", "profession"] | None = (
+                "family"
+                if family_subject(quote) is not None
+                else "profession"
+                if profession_statement(quote)
+                else None
+            )
             if (
-                family_subject(quote) is not None
+                literal_predicate is not None
                 and not UNSAFE_SOURCE.search(message.content)
                 and "?" not in message.content
             ):
@@ -464,7 +492,10 @@ async def execute_learning(
                     Extraction(
                         facts=[
                             ExtractedFact(
-                                quote=quote, predicate="family", fact_type="fact", confidence=1.0
+                                quote=quote,
+                                predicate=literal_predicate,
+                                fact_type="fact",
+                                confidence=1.0,
                             )
                         ]
                     ),

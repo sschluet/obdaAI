@@ -2,17 +2,20 @@
 
 ## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand
 
-Die neue Memory-Entwicklung erweitert vorhandene Bausteine. Der zuvor abgenommene
-Integrationsrelease **d5940db / Schema 0045** bleibt der zuletzt hier belegte
-VM-Stand; die nachfolgende Memory-Erweiterung ist noch nicht als Schema 0046
-ausgerollt. Eine separate isolierte Prüfung gegen das reale lokale VM-Modell ist
-unten ausgewiesen und ersetzt keinen echten HTTP-Chat-Lernablauf. Persönliche Runtime-Inhalte wurden für
-die Gap-Analyse nicht ausgelesen oder als Testmaterial übernommen.
+Die Memory-Erweiterung **2c85335 / Schema 0046** läuft auf der autorisierten
+Test-VM. Migration, gesunde APIs und Erhalt bestehender Daten, Rechte und Aufträge
+sind belegt. Die erste synthetische HTTP-/Workerabnahme bestand Lernen und Abruf
+in einem neuen Chat, scheiterte jedoch an der ausdrücklichen Berufskorrektur:
+Das lokale Extraktionsmodell lieferte dafür keine Fakten. Dieser fehlgeschlagene
+Beleg bleibt erhalten; er wird nicht als vollständige Abnahme gewertet.
+Der nachfolgende enge Parser für vollständige eigene Berufsangaben ist lokal
+implementiert und gezielt geprüft; seine Gesamtprüfungen und neue VM-Abnahme
+stehen noch aus. Persönliche Runtime-Inhalte dienen nicht als Testmaterial.
 
 | Statusklasse | Befund im tatsächlichen Quellcode und Konsequenz |
 | --- | --- |
 | Bereits vollständig implementiert | Manuell gepflegtes persönliches Profil mit Revision/CAS und feldweiser Cloudfreigabe; vorhandene Memory-/Versionsobjekte, kanonische Vault-Markdown-Dateien, begrenzte Schreibrechte und Dateikonfliktabgleich; persistente Chat-/Run-Historie, Providerabstraktion, Privacy-Gateway und PostgreSQL-Jobverarbeitung. Diese Bausteine werden erhalten und wiederverwendet. |
-| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Der Zwischenstand b8189bb bestand die lokale Gesamtsuite; eine isolierte reale lokale Modellprüfung bestand ausgewählte synthetische Fälle. Die anschließende Qualitätskorrektur, exakte CI sowie echte App-/VM-Abnahme bleiben getrennte Schritte. |
+| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Release 2c85335 bestand Gesamtprüfungen und Installation; Lernen und späterer Abruf bestanden im VM-Chat, die Berufskorrektur scheiterte am leeren Modellergebnis. Der enge Berufsparser benötigt seine eigene Gesamtprüfung und neue Abnahme. |
 | Vorhanden, aber für das neue Ziel technisch unzureichend | Das bisherige Profil besteht aus acht manuellen Feldern mit konservativer Regex-Relevanz; bisherige Vault-Notizen allein sind kein automatisches persönliches Gedächtnis gewöhnlicher Chats. Der neue strukturierte/lexikalische Abruf mit optionalen lokalen Vektoren ergänzt diese Lücke. Er ist weiterhin begrenzt und keine vollständige semantische Suche in der gesamten Vergangenheit. |
 | Noch nicht implementiert bzw. nicht zugesagt | Vollständige automatische Interpretation beliebiger Aussagen und indirekter Persönlichkeitsmerkmale, unbegrenzte Rekonstruktion aller Gespräche sowie rückwirkendes systemweites Vergessen einschließlich alter Chatantworten, Run-Snapshots und externer Sicherungen. Eine neue Vektordatenbank, pgvector oder ein zweites Memory-System wird dafür nicht eingeführt. |
 
@@ -84,12 +87,29 @@ bei nativen Erinnerungen oder vorhandenen neuen Zustandsdaten. Eine Sicherung vo
 Rollout bleibt erforderlich; bestandene Migrationstests oder ein Backup ersetzen
 keine geprüfte Wiederherstellung.
 
-**Lokale Prüfungen:** Der Zwischenstand **b8189bb** bestand die vollständige
-lokale Suite mit **2.640 Tests einschließlich PostgreSQL-Prüfungen**, Ruff, mypy,
-Frontend-Typprüfung/Build und Secret-Scan über 684 Quelldateien. Das ist ein
-konkreter Zwischenstand und kein Beleg für die nachfolgende Qualitätskorrektur.
-Seine exakte GitHub-CI [39636036848](https://github.com/sschluet/obdaAI/actions/runs/39636036848)
-ist derzeit noch ausstehend; ein grünes Ergebnis wird nicht vorweggenommen.
+**Geprüfter Zwischenrelease:** **2c85335** bestand **2.679 lokale Tests**,
+Ruff, mypy (131 Quelldateien) und Secret-Scan (686 Dateien). Die vollständige
+[GitHub-CI 39640566187](https://github.com/sschluet/obdaAI/actions/runs/39640566187)
+bestand **2.673 Tests**, sechs übersprungen, sowie Frontend und die vollständige
+synthetische Browsersuite. Die isolierte PostgreSQL-Testdatenbank ist gestoppt.
+Diese Zahlen gelten für 2c85335, nicht für den nachfolgenden Berufsfix.
+
+**Erste reale App-Abnahme:** Der echte HTTP-Chat erzeugte einen dauerhaften
+PostgreSQL-Lernjob; ein weiterer Chat fand die erfundene Projekt-Berufsangabe und
+beantwortete sie korrekt. Die ausdrückliche Änderung wurde als Job abgeschlossen,
+aber das lokale Modell erzeugte keine Kandidaten oder Erinnerungen. Ergebnis:
+`correction_lifecycle_failed`. Eigene Testobjekte bleiben zunächst zur Diagnose
+erhalten; die temporäre Anmeldung ist entfernt. Bestehende Benutzerdaten,
+Integrationregeln, Konfiguration und ursprüngliche Agentenaufträge blieben gleich.
+Keine blinde Wiederholung dieses Abnahmeauftrags.
+
+Die neue Korrektur erkennt ausschließlich vollständige direkte Aussagen wie
+„Ich arbeite jetzt als Architekt.“ vor dem optionalen Modell. Sie übernimmt den
+wörtlichen Beleg mit den bestehenden Quellen-, Sensibilitäts-, Prüf- und
+Konfliktregeln. Unmarkierte Konflikte bleiben prüfpflichtig; mehrdeutige Aussagen
+bleiben modellabhängig. Berufs- und Familienparser sind keine nachträgliche
+Erhöhung einer Modellkonfidenz. Gezielte Tests prüfen Lernen, Abruf in einem neuen
+Chat und Ablösung des alten Fakts ohne Modellaufruf.
 
 Die frühere gezielte Backend-/API-/Kontextsuite mit 149 bestandenen Tests und
 einem damals übersprungenen PostgreSQL-Fall war ein engerer Vorläufer. Sie deckte
@@ -122,17 +142,14 @@ Name des Kindes, Alter und Reitfähigkeit werden deshalb vor dem Modell determin
 geprüft, einschließlich Reitdauer mit Ziffern und deutschen Zahlwörtern eins bis
 zwölf. Dieser getrennte, wörtlich gebundene Parser überschreibt keine
 Modellkonfidenz. Für übrige Aussagen bleibt das lokale Modell konfigurierbar;
-Review, Quellrevisionen und Datenschutz bleiben verbindlich. Die Korrektur
-bestand 182 gezielte Tests sowie Ruff und mypy; sie benötigt weiterhin ihren
-eigenen vollständigen Prüf- und CI-Nachweis.
+Review, Quellrevisionen und Datenschutz bleiben verbindlich. Der Familienparser ist im geprüften Zwischenrelease enthalten. Der neue
+Berufsparser benötigt weiterhin seinen eigenen vollständigen Prüf- und CI-Nachweis.
 
-**Noch offen:** Die vollständigen Checks des finalen Korrekturstands, dessen exakte
-GitHub-CI, öffentliche Showcase-Synchronisierung, zielgebundene Sicherung und
-VM-Ausrollung mit Schema 0046 sowie der echte HTTP-Chat-Lernablauf im laufenden
-Appbetrieb. Der optionale reale Embeddingserver ist nicht konfiguriert und seine
-Live-Abnahme steht aus. Langzeitqualität und beliebige Familien-/Sprachvarianten
-sind nicht abgenommen. Vorhandene erfolgreiche Integrationsabnahmen weiter unten
-gelten für ihren jeweiligen Release. Das persönliche Gedächtnis wird weder als
+**Noch offen:** Gesamtprüfung und exakte CI des nachfolgenden Berufsfixes,
+gesicherter App-Patch bei erhaltenem Schema 0046, neue getrennte HTTP-/Workerabnahme
+und öffentliche Showcase-Synchronisierung. Der optionale reale Embeddingserver
+ist nicht konfiguriert und nicht live geprüft. Langzeitqualität und beliebige
+Formulierungen sind nicht abgenommen. Das persönliche Gedächtnis wird weder als
 unbegrenzt noch als vollständig fertig abgenommen bezeichnet.
 
 ## Private Integrationsfolgefragen — reale Mail- und Archivabnahme erfolgreich

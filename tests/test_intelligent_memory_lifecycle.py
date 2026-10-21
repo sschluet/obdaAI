@@ -272,7 +272,7 @@ def test_executor_local_only_once_and_fixed_telemetry(factory):
                 {
                     "facts": [
                         {
-                            "quote": "Ich arbeite als Ingenieur.",
+                            "quote": "Ich arbeite bei einer Firma.",
                             "predicate": "profession",
                             "confidence": 0.99,
                         }
@@ -281,7 +281,7 @@ def test_executor_local_only_once_and_fixed_telemetry(factory):
             )
 
     with factory() as db:
-        _, run = source(db)
+        _, run = source(db, "Ich arbeite bei einer Firma.")
         identifier = reserve_learning(db, Settings(), run.id)
         db.commit()
     fake = Fake()
@@ -294,7 +294,7 @@ def test_executor_local_only_once_and_fixed_telemetry(factory):
 
 def test_missing_local_provider_degrades_without_fake_fact(factory):
     with factory() as db:
-        _, run = source(db)
+        _, run = source(db, "Ich arbeite bei einer Firma.")
         identifier = reserve_learning(db, Settings(), run.id)
         db.commit()
     asyncio.run(execute_learning(factory, Settings(), identifier))
@@ -398,7 +398,7 @@ def test_background_post_dispatch_revocation_keeps_no_facts(factory):
                 {
                     "facts": [
                         {
-                            "quote": "Ich arbeite als Ingenieur.",
+                            "quote": "Ich arbeite bei einer Firma.",
                             "predicate": "profession",
                             "confidence": 0.99,
                         }
@@ -407,7 +407,7 @@ def test_background_post_dispatch_revocation_keeps_no_facts(factory):
             )
 
     with factory() as db:
-        _, run = source(db)
+        _, run = source(db, "Ich arbeite bei einer Firma.")
         identifier = reserve_learning(db, Settings(), run.id)
         db.commit()
     asyncio.run(execute_learning(factory, Settings(), identifier, RevokingProvider()))
@@ -525,7 +525,7 @@ def test_identity_cached_settings_revocation_is_reloaded(factory):
 
 def test_missing_result_collection_is_failure_not_silent_success(factory):
     with factory() as db:
-        _, run = source(db)
+        _, run = source(db, "Ich arbeite bei einer Firma.")
         job_id = reserve_learning(db, Settings(), run.id)
         db.commit()
 

@@ -106,11 +106,12 @@ def test_learning_final_source_check_after_local_slot_wait(monkeypatch, revoke):
         run = Run(conversation_id=chat.id, status="succeeded")
         db.add(run)
         db.flush()
+        # Exercise the optional model path, outside exact literal-role parsing.
         message = Message(
             conversation_id=chat.id,
             run_id=run.id,
             role="user",
-            content="Ich arbeite als Ingenieur.",
+            content="Ich arbeite bei einer Firma.",
         )
         db.add(message)
         db.add(
