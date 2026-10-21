@@ -521,10 +521,15 @@ def ready_read_schema(
             raise ValueError("Concrete read must use a bound interface")
         kind, rules = bound[decision.integration_id]
         args, effect = validate_tool(kind, rules, decision.tool or "", decision.arguments)
-        if effect or decision.tool != "mcp.call" or args["name"] not in {
+        mailbox = decision.tool == "mcp.call" and args["name"] in {
             "read_email", "get_thread", "list_folders", "list_emails", "search_emails",
-        }:
-            raise ValueError("Expected a concrete mailbox read")
+        }
+        archive = (
+            kind == "paperless" and decision.tool == "paperless.read"
+            and args["operation"] == "document"
+        )
+        if effect or not (mailbox or archive):
+            raise ValueError("Expected a concrete authorized private read")
         branch = constant({
             "kind": "tool", "integration_id": decision.integration_id,
             "tool": decision.tool, "arguments": args,

@@ -572,6 +572,19 @@ def mail_read_plan(
     }
 
 
+def paperless_read_plan(
+    db: Any, job: AgentJob, profiles: dict[str, Any], history: list[AgentStep]
+) -> dict[str, Any]:
+    """Known document reads precede completion; identity comes from current receipts."""
+    from hub.agent_paperless_progress import ready_reads
+
+    ready = ready_reads(db, job, profiles, history)
+    return {
+        "ready": ready,
+        "allow_finish": paperless_queried(history) and not ready.get("decisions"),
+    }
+
+
 def preferred_mail_folder(folder: dict[str, Any]) -> bool:
     return folder["name"].casefold() == "inbox" or bool(
         {flag.casefold() for flag in folder.get("flags", [])} & {"\\all", "\\inbox"}
@@ -2034,17 +2047,20 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         )
                         if private_mail_read and sequence is None else {}
                     )
-                    mail_plan = mail_read_plan(db, job, profiles, history, contracts) if (
-                        private_mail_read and sequence is None
-                    ) else {}
-                    if mail_plan.get("compact_planning") and not has_read_data:
+                    read_plan = (
+                        mail_read_plan(db, job, profiles, history, contracts)
+                        if private_mail_read and sequence is None
+                        else paperless_read_plan(db, job, profiles, history)
+                        if private_archive_read and sequence is None else {}
+                    )
+                    if read_plan.get("compact_planning") and not has_read_data:
                         # Concrete verified-cohort Sent choices already carry exact
                         # arguments; retain every schema and grant without catalog prose.
                         contracts = mail_read_contracts(
                             profiles, history, include_descriptions=False
                         )
-                    allow_finish = mail_plan.get("allow_finish", has_read_data)
-                    ready = mail_plan.get("ready", {})
+                    allow_finish = read_plan.get("allow_finish", has_read_data)
+                    ready = read_plan.get("ready", {})
                     choices = ready.get("decisions", [])
                     allow_stop = private_read and not choices
                     data = {
@@ -2116,7 +2132,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 "mail_read_contracts": contracts,
                                 "mail_read_progress": {
                                     **mail_progress(history, profiles, clock, job.goal),
-                                    **({"reply_evidence": mail_plan.get("reply_evidence", {})}
+                                    **({"reply_evidence": read_plan.get("reply_evidence", {})}
                                        if re.search(r"antwort|repl(?:y|ied)", job.goal.casefold())
                                        else {}),
                                 },
@@ -2213,10 +2229,14 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     # Recompute current choices after generation, never trust the
                     # model snapshot as authority for identities or availability.
                     current_history = steps(db, job_id)
-                    current_plan = mail_read_plan(
-                        db, job, profiles, current_history,
-                        mail_read_contracts(profiles, current_history),
-                    ) if private_mail_read else {}
+                    current_plan = (
+                        mail_read_plan(
+                            db, job, profiles, current_history,
+                            mail_read_contracts(profiles, current_history),
+                        ) if private_mail_read
+                        else paperless_read_plan(db, job, profiles, current_history)
+                        if private_archive_read else {}
+                    )
                     current_choices = current_plan.get("ready", {}).get("decisions", [])
                     if current_choices and not any(
                         decision.kind == "tool" and all(
@@ -2260,12 +2280,13 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             if private_archive_read else True
                         )
                         if private_read and decision.kind == "finish" and (
-                            not queried or private_mail_read and not current_plan["allow_finish"]
+                            not queried or not current_plan.get("allow_finish", True)
                         ):
                             format_feedback(db, cfg, job, {"kind": "finish"}, [{
                                 "type": "private_data_not_queried",
-                                "next_action": "Use authorized message/Sent reads; "
-                                "catalog and reply flags alone do not establish sent replies",
+                                "next_action": "Use the concrete authorized private read; "
+                                "a catalog or search list alone does not prove message replies "
+                                "or document content",
                             }])
                             db.commit()
                             continue

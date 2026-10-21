@@ -479,3 +479,31 @@ def test_concrete_read_grammar_accepts_only_current_source_bound_arguments():
     revoked = [{**interfaces[0], "rules": Rules(enabled=False).model_dump()}]
     with pytest.raises(PermissionError):
         ready_read_schema([candidate], revoked)
+
+
+def test_concrete_archive_grammar_preserves_current_document_and_read_permission():
+    rules = Rules(enabled=True, http_methods=["GET"], http_prefixes=["/api/documents/42/"])
+    candidate = decision("paperless.read", {
+        "operation": "document", "query": "", "document_id": 42, "page": 1, "limit": 10,
+    })
+    interfaces = [{"integration_id": TARGET, "kind": "paperless", "rules": rules.model_dump()}]
+    schema = ready_read_schema([candidate], interfaces)
+    validator = Draft202012Validator(schema)
+    assert validator.is_valid(candidate)
+    for kind in ("ask", "stop", "finish"):
+        assert not validator.is_valid({"kind": kind, "message": "Skip known document"})
+    changed = copy.deepcopy(candidate)
+    changed["arguments"]["document_id"] = 43
+    assert not validator.is_valid(changed)
+    with pytest.raises(PermissionError):
+        ready_read_schema([changed], interfaces)
+    with pytest.raises(PermissionError):
+        ready_read_schema([candidate], [{
+            **interfaces[0], "rules": Rules(enabled=True, http_methods=["PATCH"]).model_dump(),
+        }])
+    with pytest.raises(ValueError):
+        ready_read_schema([decision("paperless.read", {"operation": "search"})], [{
+            **interfaces[0], "rules": Rules(
+                enabled=True, http_methods=["GET"], http_prefixes=["/api/"]
+            ).model_dump(),
+        }])

@@ -16,6 +16,7 @@ bestätigen lassen. Keine Zugangsdaten erfragen, keine Endpunkte erfinden.
 search: query ist Paperless-Suche, leer listet Dokumente; page/limit begrenzen.
 document: document_id aus tatsächlich beobachteten Treffern, Kontext oder expliziter
 Nutzerangabe. Folgefragen verwenden belegte Dokument-IDs und bisherigen Kontext.
+ready_reads enthält konkrete belegte Abrufe; vorhandene Auswahl unverändert verwenden.
 Nutze konkrete passende Suchwörter aus dem Auftrag; Fragen nach Inhalten brauchen
 document mit OCR, bloße Trefferlisten belegen keinen Dokumentinhalt.
 Vor Antwort tatsächlich suchen/lesen. Bei nicht ausreichendem Ausschnitt gezielt
