@@ -55,16 +55,45 @@ Server-/Schlüsselabnahme ist getrennt in [STATUS](../STATUS.md) dokumentiert.
 
 ## Dokumentfragen im gemeinsamen Agentenweg
 
-Private Archivfragen verwenden im neuen Entwicklungsstand `paperless.read` mit
-begrenzter Suche und konkretem Dokumentabruf. Inhaltsfragen benötigen OCR-Belege;
-eine Trefferliste genügt dafür nicht. Folgefragen beziehen sich auf weiterhin
-berechtigte Abrufe desselben Gesprächs. Der Modellkontext bleibt begrenzt, Kürzungen
-und fehlende Belege werden ausgewiesen. Bestehende GET-Freigaben werden am Versand
-geprüft; dieser Leseweg eröffnet keine Schreib- oder Downloadrechte und nutzt weder
-öffentliche Recherche noch Cloud. Release 43f6af3 ist mit tatsächlicher Suche und anschließender Dokument-/OCR-Folgefrage samt belegter Zusammenfassung erfolgreich abgenommen. Keine Rückfrage oder öffentliche Recherche war nötig; Modellkontexte blieben unter 14.000 UTF-8-Bytes. Auch der frühere individuelle Archivauftrag wurde anschließend mit einer echten Dokumentabfrage und belegter Antwort erfolgreich geprüft.
+Private Archivfragen verwenden `paperless.read` mit begrenzter Suche und konkretem
+Dokumentabruf. Inhaltsfragen benötigen tatsächliche OCR-Belege; eine Trefferliste
+genügt dafür nicht. Folgefragen beziehen sich auf weiterhin berechtigte Abrufe
+desselben Gesprächs. Dokumentkennungen und Quellenbezüge bleiben vollständig;
+gekürzte Ansichten und fehlende Belege werden ausdrücklich ausgewiesen. Eine bekannte
+Dokument-ID oder eindeutige Position im letzten gebundenen Suchergebnis ergibt eine
+konkrete typisierte Leseentscheidung mit unveränderten Quellenhashes und Konto.
+Die tatsächliche Reihenfolge der vollständigen Treffer zählt; freie Assistentenprosa
+oder eine gekürzte Vorschau legt keine Kennung fest. Bei verfügbarem gültigem Kandidaten
+verhindern native Grammatik und Ausführungsprüfung einen vorzeitigen STOP, eine Rückfrage
+oder einen Abschluss vor dem Dokumentabruf. Der bestehende Dispatch prüft aktuelle
+Rechte und den konkreten GET-Pfad erneut. Unbekannte oder kontenübergreifend mehrdeutige
+Auswahl bleibt im normalen Planungsweg; ungewisse/fehlgeschlagene Versuche werden nicht
+automatisch wiederholt. Es entstehen keine Schreib-, Download- oder Cloudrechte.
 
-Die erneute echte Abnahme auf dbab2a7 bestätigt Suche und zusätzliche Dokument-/OCR-
-Folgefrage erneut, ohne Rückfrage, Cloud oder öffentliche Recherche. Die Antwort
-verwendet die weiterhin berechtigte Quelle desselben Gesprächs; bestehende Aufträge
-und Belege bleiben unverändert. Das belegt diese beiden Leseabläufe, keine vollständige
-Archivauswertung oder allgemeine Administration.
+Release d5940db ist mit echter Dokumentensuche und anschließendem OCR-Abruf des
+ersten beobachteten Dokuments samt belegter Zusammenfassung auf der Test-VM
+abgenommen. Keine Rückfrage, öffentliche Recherche, Cloud, Schreib- oder Download-
+operation war nötig. Der Modellkontext bleibt innerhalb von 14.000 UTF-8-Bytes;
+Anbietergrenzen und vorhandene GET-Freigaben bleiben erhalten. Ein zusätzlicher Prüflauf mit dem früheren Archivauftrag ist ebenfalls erfolgreich; sein Wortlaut und seine Ergebnisse bleiben auf der VM.
+
+Auch dbab2a7 ist mit tatsächlicher Suche und Dokument-/OCR-Folgefrage erfolgreich
+abgenommen. Diese getrennte Archivabnahme war trotz der damaligen Mailstörung erfolgreich.
+
+Bereits der frühere Stand 43f6af3 ist mit tatsächlicher Suche, anschließendem
+Dokument-/OCR-Abruf samt belegter Zusammenfassung sowie dem früheren individuellen
+Archivauftrag erfolgreich abgenommen. Das bleibt ein getrennter historischer Beleg.
+
+Diese Abnahme belegt die geprüften Leseabläufe, keine vollständige Archivauswertung
+oder allgemeine Administration. Konkrete Änderungen wie Umbenennen bleiben an den
+separaten bestehenden Verwaltungsweg mit aktuellen Rechten gebunden.
+
+Jede erfolgreiche Antwort in diesem Leseweg erhält den getrennten Bereich
+„Quellen und Suchumfang (Paperless)“ aus aktuellen erfolgreichen typisierten Abrufen: tatsächliche Quelle,
+Suchfilter und Seitenangaben, Gesamttreffer genau dieser Suchantwort, zurückgegebene
+Dokument-IDs und belegte OCR-Kürzung. Verschiedene Suchen werden nicht addiert;
+Ausgabegrenzen, ausgelassene Titel und Belege werden ausdrücklich genannt.
+Die Modellantwort wird nicht umgeschrieben und durch den Quellenblock nicht pauschal
+als richtig erklärt. Fehlgeschlagene oder nicht mehr gültige relevante Belege
+verhindern die Ausgabe als frische Quellenangabe. Das ist lokale Schlussformatierung
+ohne weitere Modell-, Werkzeug- oder Netzwerkaufrufe. Eine leere
+Suche gilt ausschließlich für den angefragten Suchumfang.

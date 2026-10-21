@@ -281,63 +281,79 @@ nicht automatisch wiederholt.
 
 ## Folgefragen und Antwortmerkmale
 
-Der neue Entwicklungsstand erhält kontogebundene Nachrichtenreferenzen aus echten
-Abrufen für Folgefragen. Ein Katalogabruf allein erlaubt keinen erfolgreichen
-Abschluss. Der geprüfte Metadatenpatch ergänzt vom Server gelieferte Antwortflags
-sowie In-Reply-To und References. Ein Antwortflag bedeutet „als beantwortet
-markiert“. Eine Antwortbeziehung benötigt passende Nachrichtenkennungen und einen
-beobachteten Gesendet-Ordner desselben Kontos; ähnliche Betreffzeilen genügen nicht.
-Ohne hinreichende Belege bleibt der Antwortstatus unbekannt. Versand und tatsächliche
-Zustellung werden damit nicht bewiesen. Der Metadatenpatch ist installiert und
-bewahrt die vorhandenen Lesefreigaben. Die reale Antwortstatus-Folgefrage auf
-43f6af3 blieb trotz vorhandener Nachrichtenbezüge in einer Bestätigungsfrage stehen.
-678d07e sperrt diesen Rückfragezweig, beendete die echte Folgefrage aber ebenfalls
-ohne Nachrichtenabruf. Beide Folgeabnahmen sind ausdrücklich fehlgeschlagen.
+Release d5940db bindet Folgefragen an erfolgreiche echte Abrufe desselben
+Gesprächs und Kontos. Quellenrevisionen, Beleg- und Konfigurationshashes sowie
+aktuelle Profil-/Policyrechte werden erneut geprüft. Ein Katalog allein erlaubt
+keinen erfolgreichen Abschluss. Große Nachrichtenergebnisse bleiben als Originale
+erhalten. Konkrete Folgeabrufe verwenden deren vollständige tatsächlich beobachtete
+Kennungen und Ordner sowie das aktuelle freigegebene Schema, unabhängig davon,
+welche Nachrichten in eine gekürzte Modellsicht passen. Vor dem ersten neuen
+Nachrichtenabruf stehen bei vorhandenen gültigen Kandidaten ausschließlich diese
+konkreten Leseentscheidungen bereit. Das Modell führt sie über den gemeinsamen
+dauerhaften und erneut berechtigungsgeprüften Werkzeugweg aus. Umfang, ausgelassene
+Zeilen und unbekannte Antwortmerkmale bleiben sichtbar; eine neue Suche wird nicht
+als dieselbe frühere Nachrichtenmenge ausgegeben. Die Kandidatensicht bietet
+pro Modellschritt höchstens zwei nächste Abrufe. Die Antwortflag-Auswertung umfasst
+dagegen alle tatsächlich zuvor angezeigten, höchstens 20 Nachrichten. Ihre Auswahl
+bleibt an ursprünglichen Zeitraum, Dublettenbereinigung, Sortierung und Originalbelege
+gebunden. Alle positiven Einträge und der Umfang müssen in der Antwort erscheinen;
+fehlende Antwortflags bleiben unbekannt. Ein Teilabruf allein genügt der Abnahme nicht.
 
-Der nächste Entwicklungsstand bildet konkrete Leseschritte aus validierten
-Originalbelegen und aktuellen Werkzeugschemas. Vor dem ersten Nachrichtenabruf
-begrenzt er die Modellauswahl auf vorhandene belegte Leseschritte; keine Bestätigung,
-erfundene Kennung oder erneute Katalogschleife. Ohne sichere Kennung bleibt ein
-qualifizierter Abbruch möglich. Die neue reale Folgeabnahme steht noch aus.
+Nach einem Abruf entfallen doppelte Werkzeugbeschreibungen, während die vollständigen
+Schemas, Namen und Hashes erhalten bleiben. Ältere Quellbelege bekommen eine kleinere
+Modellsicht mit unveränderten Kennungen und sichtbaren Auslassungen. Aktuelle Detail-
+und Antwortbelege behalten eigene Budgets. Der zusätzliche synthetische Grenztest
+deckt diese anschließende Antwortplanung ab; er ersetzt keine reale Abnahme.
 
-Nach einem Nachrichtenabruf entfällt die doppelte Werkzeugbeschreibung; die acht
-beobachteten Eingabeschemas, Namen und Hashes bleiben vollständig erhalten.
-Ältere Quellbelege erhalten dann eine kleinere Modellsicht mit unveränderten
-Quellenkennungen und expliziten Auslassungen. Aktuelle Detail- und Antwortbelege
-behalten ihre eigenen Budgets. Ein zusätzlicher synthetischer Grenztest prüft auch
-die anschließende Antwortplanung innerhalb der bestehenden Kontextgrenze.
+Die bereits auf dem Stand 43f6af3 installierte und weiterhin gepinnt geprüfte
+Metadatenergänzung ergänzt vom Server gelieferte Antwortflags,
+In-Reply-To und References. Ein Antwortflag bedeutet „als beantwortet markiert“. Nach tatsächlicher Beobachtung
+des auswählbaren Gesendet-Ordners folgt je betroffenem Konto eine echte begrenzte
+Suche oder Auflistung in genau diesem Ordner, mit höchstens 20 Treffern. Ein leerer
+Abruf ist nur ein geprüfter Suchausschnitt und kein Beweis für eine fehlende Antwort.
+Ein Threadabruf kann aus „Alle Nachrichten“ stammen und ersetzt diesen Gesendet-
+Versuch nicht. Ein Abschluss ohne tatsächlichen Gesendet-Versuch bleibt gesperrt,
+solange konkrete freigegebene Leseschritte verfügbar sind. Fehlende Fähigkeiten
+werden als unverifizierte Grenze ausgegeben; neue Freigaben werden nicht erfunden.
+Eine belegte Antwortbeziehung benötigt passende Nachrichtenkennungen und einen
+beobachteten Gesendet-Ordner desselben Kontos. Ähnliche Betreffzeilen genügen nicht;
+fehlende Belege bedeuten unbekannt. Tatsächliche Zustellung und eine vollständige
+Auswertung aller gesendeten Antworten werden nicht bewiesen. Die bekannte reine
+Antwortstatus-Folgefrage wird nach aktueller Rechte-, Quellen- und Abbruchprüfung
+sowie tatsächlichem Gesendet-Abruf aus typisierten Belegen nativ ausgegeben.
+Die Ausgabe nennt jeden ursprünglichen Eintrag und trennt Flag, Aktualität und
+belegte Antwortbeziehung. Ein freier abschließender Modelltext kann diese Fakten
+nicht in unbelegte Negativaussagen umdeuten. Zusätzliche Filter, Inhalte und andere
+zusammengesetzte Aufträge bleiben im normalen Planungsweg; das ist keine allgemeine
+Postfachverwaltung und keine neue Zusage vollständiger Mailinhalte.
 
+Die Mailübersicht und die anschließende Antwortstatusfrage sind mit neuen tatsächlichen
+Abrufen, gültigen Vorbelegen und qualifizierter Antwort auf der Test-VM abgenommen,
+für genau die gesamte zuvor angezeigte Auswahl: bekannte Flags aller angezeigten
+Nachrichten, alle positiven Einträge und qualifizierte Grenzen der Gesendet-Beziehungen.
+Keine Rückfrage, Nutzereingabe oder öffentliche Recherche war nötig. Originale und private
+Mailwerte bleiben auf der VM; vorhandene Lesefreigaben sind unverändert. Versand,
+Postfachänderungen und Anhangdownloads bleiben gesperrt. Weitergehende Abdeckung,
+Anhänge sowie Mail-Aufgaben-/Projekt- und persönliche Gmail-Abnahme bleiben offen.
 
-Auf dbab2a7 gelang die konkrete lokale Leseentscheidung ohne Bestätigung; der
-Leseschritt scheiterte jedoch vor einem im MCP-Audit sichtbaren Nachrichtenabruf.
-Statische Wiederholungen der reinen Schema-Prüfung zeigten ein zu enges Startlimit:
-Schon der Bibliotheksimport überschritt drei Sekunden. Der nächste Stand trennt
-zehn Sekunden begrenzten vertrauenswürdigen Start von weiterhin drei Sekunden
-Validierung fremder Eingaben. CPU-, Speicher- und Referenzgrenzen bleiben erhalten.
-Feste Fehlerkategorien enthalten keine Servertexte, Mailwerte oder Zugangsdaten.
-Die echte Antwortstatus-Folgeabnahme bleibt bis zu einem erfolgreichen neuen
-Lauf offen; bestehende fehlgeschlagene Aufträge werden nicht wiederholt.
+Der Bibliotheksstart wird vor Übergabe fremder Schemas und Argumente separat auf
+zehn Sekunden begrenzt. Danach gelten weiterhin drei Sekunden Validierungszeit,
+eine Sekunde CPU, 512 MiB und gesperrte externe Referenzen. Modell- und RPC-Grenzen
+bleiben erhalten; feste technische Fehlerkategorien enthalten keine privaten Fehlertexte.
 
+Vollständige [CI39538475631](https://github.com/sschluet/obdaAI/actions/runs/39538475631): 2429 bestanden, 6 übersprungen;
+lokal 2435 Tests erfolgreich. Frühere Abschnitte dokumentieren getrennte
+historische Abnahmen; sie sind kein erneuter Test dieses Folgeablaufs.
 
-Die weitere Korrektur erhält die gesamte ursprüngliche Übersicht als gebundene
-Menge. Zeitraum, Dubletten, Reihenfolge und maximal 20 Einträge entsprechen der
-früheren sichtbaren Antwort. Die begrenzte Modellsicht enthält für jeden Eintrag
-dessen Antwortflag und den Status belegter Beziehungen; Ordinalzahlen beziehen
-sich auf diese frühere Reihenfolge. Betreffbeispiele sind ausdrücklich ein Auszug.
-Vorhandene Flags aus der Übersicht bleiben von aktuellen zusätzlichen Abrufen
-unterscheidbar. Die neue reale Prüfung verlangt eine Antwort über den gesamten
-angezeigten Umfang; ein einzelner Teilabruf genügt nicht. Dieser Stand ist noch
-nicht real abgenommen. 35a0ec6 blieb als lokal geprüfter, nicht ausgerollter
-Zwischenstand mit abgebrochener vollständiger CI erhalten.
-
-
-Für die Frage nach tatsächlichen Antworten wird zusätzlich der reale Gesendet-
-Ordner ermittelt und über die vorhandene Lesefreigabe begrenzt abgefragt. Der
-Abschluss bleibt bis zu diesem Konto-bezogenen Abfragebeleg gesperrt. Die nächsten
-Aufrufe stammen aus aktuellen belegten Ordnermerkmalen und vollständig geprüften
-Schemas; sie sind keine geratenen Ordnernamen. Eine erfolgreiche leere Abfrage
-beweist keinen fehlenden Antwortversand. `get_thread` kann All Mail verwenden und
-beweist deshalb allein keine Gesendet-Mitgliedschaft. Die Abfragegrenze beträgt
-20 Kopfzeilen; ungeprüfte weitere Nachrichten bleiben unbekannt. 1f8e9a9 blieb
-vor dieser Ergänzung als nicht ausgerollter Zwischenstand mit abgebrochener CI und
-fehlgeschlagener vollständiger lokaler Prüfung erhalten.
+Auf dem vorherigen Stand 43f6af3 war die Mailübersicht erfolgreich; die anschließende
+Antwortstatusfrage blieb trotz gültiger Nachrichtenbezüge und Rechte bei einer
+Bestätigungsfrage stehen. Es erfolgte kein zusätzlicher Nachrichtenabruf. Diese
+frühere Folgeabnahme war nicht erfolgreich und bleibt als Fehlerbeleg erhalten.
+Auf dem nachfolgenden Stand 678d07e verhinderte der Entscheidungsvertrag die
+Bestätigungsfrage; das Modell beendete die Folgefrage jedoch ohne neuen Abruf als
+unverifiziert. Auch diese getrennte reale Abnahme war nicht erfolgreich. Auf dbab2a7 gelang die Auswahl des konkreten Leseschritts; dessen Ausführung schlug
+jedoch fehl und blieb `uncertain`. Drei getrennte statische Reproduktionen trafen
+das bisherige Gesamtlaufzeitlimit schon beim Bibliotheksstart. Die ursprüngliche
+generische Ausnahme ist rückwirkend nicht eindeutig klassifizierbar. Dieser
+fehlgeschlagene Livebeleg und alle älteren Fehler bleiben erhalten.
+Frühere Fehler werden durch die neue Abnahme nicht nachträglich zu Erfolgen.

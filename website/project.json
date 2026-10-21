@@ -1,9 +1,9 @@
 {
   "updated": "2026-10-21",
-  "applicationCommit": "dbab2a7",
+  "applicationCommit": "d5940db",
   "schema": "0045",
-  "tests": 2136,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39515384094",
+  "tests": 2429,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39538475631",
   "screenshots": [
     {
       "id": "integration-selection",
@@ -473,7 +473,7 @@
         },
         {
           "title": "Paperless-Dokumente als privater KI-Kontext",
-          "description": "Suche, Seitennavigation, Metadaten/OCR, Originaldownload und private OCR-Projektquellen. Der gemeinsame lokale Agentenweg ist mit echter Dokumentensuche und anschließender Folgefrage samt zusätzlichem OCR-Abruf und belegter Zusammenfassung auf 43f6af3 und erneut auf dbab2a7 geprüft, ohne Rückfrage oder öffentliche Recherche. Aktuelle Kontorechte und Quellenbezüge bleiben gebunden; Kürzungen sind sichtbar. Dieser Leseweg eröffnet keine Schreib- oder Downloadrechte und belegt keine vollständige Archivauswertung.",
+          "description": "Suche, Seitennavigation, OCR, Originaldownload und private Projektquellen. Im Chat sind echte Suche, zusätzlicher Dokumentabruf mit Inhaltszusammenfassung und der ursprüngliche Archivauftrag geprüft. Quellen und Suchumfang werden aus aktuellen Abrufbelegen ergänzt, ohne Rückfrage oder Cloud. Allgemeine Archivauswertung und Verwaltungsänderungen bleiben gesonderte Fälle.",
           "status": "live"
         }
       ]
@@ -630,12 +630,12 @@
         },
         {
           "title": "MCP-Verbindungen",
-          "description": "Aktivierte Integrationen stehen neuen Chats automatisch zur Verfügung. Bekannte System- und Postfachbegriffe wählen passende konkret freigegebene Werkzeuge; bewusste Auswahl und Ausschlüsse bleiben erhalten. Die Zuordnung ist lexikalisch. Eine frische Proton-Wochenübersicht ist mit echter Nachrichtensuche und belegter Antwort abgenommen, ohne manuelle Fortsetzung. Für unterstützte einfache Heute-/Wochenfragen ohne bisherigen Kontext erzeugt die App einen schema- und kalendergebundenen Leseplan über denselben freigegebenen Ausführungsweg. Höchstens 20 Kopfzeilen, Konto-/Ordnerumfang, Datumsunsicherheit und Grenzen bleiben sichtbar. Dieser Weg benötigt kein Modell; komplexe Fragen bleiben beim lokalen Planer mit geschützter Nachrichtensicht und vollständigen Schemas. Weitere reale Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme stehen gesondert aus. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist weder auf 43f6af3 (unnötige Bestätigung) noch auf 678d07e (Abbruch ohne Nachrichtenabruf) abgenommen. Konkrete Leseschritte aus gültigen Originalbelegen und aktuellen Schemas befinden sich in Prüfung. Nach Detailabrufen werden doppelte Katalogbeschreibungen entfernt und ältere Belege kompakter angezeigt; vollständige Schemas und aktuelle Daten bleiben erhalten. Auf dbab2a7 gelang die Leseentscheidung ohne Rückfrage; der Leseschritt scheiterte jedoch vor einem sichtbaren Mailabruf. Eine statische Diagnose zeigt ein zu enges Startlimit der isolierten Schema-Prüfung. Ein getrennter begrenzter Start, bereinigte Fehlerkategorien und die vollständige Flag-Sicht auf alle zuvor angezeigten Einträge und ein verbindlicher begrenzter Gesendet-Abgleich sind in Korrektur; die echte Antwortstatus-Abnahme bleibt offen.",
+          "description": "Aktivierte Integrationen stehen neuen Chats automatisch zur Verfügung. Die Anfrage nutzt passende freigegebene Verbindungen; manuelle Auswahl und Ausschlüsse bleiben wirksam. Proton-Mailfolgefragen und Paperless-Suche mit Dokumentinhalt sind lokal real geprüft, ohne zusätzliche Bestätigung. Weitergehende Postfach- und Systemadministration bleibt teilweise offen.",
           "status": "implemented"
         },
         {
           "title": "Proton-Postfach über Bridge einrichten",
-          "description": "Proton Mail über Verbindung hinzufügen auswählen. Der Assistent führt durch Vorbereitung, vorhandene Bridge-Zugangsdaten und abschließende Prüfung; persönliche Anmeldung erfolgt direkt in Bridge. Authentifizierte HTTPS-Einrichtung und Lesefreigabe sind geprüft. Eine frische Wochenfrage nutzt das vorhandene Postfach automatisch und zeigt tatsächlich abgerufene Kopfzeilen mit sichtbarem Umfang, ohne Modellentscheid oder Rückfrage. Versand, Postfachänderungen und Anhangdownloads bleiben gesperrt. Weitere Nachrichtentext-/Thread-/Anhang- und Mail-Aufgaben-/Projektabnahme bleiben offen. Die genaue natürliche Tagesfrage „Was gab es heute für neue Mails?“ ist ebenfalls frisch mit einer echten Nachrichtensuche und belegter Antwort abgenommen, ohne Bestätigung, Rückfrage oder Modellaufruf. Explizite Filter und vorhandener Kontext bleiben erhalten; alte wartende Aufträge werden nicht automatisch fortgesetzt. Die Antwortstatus-Folgefrage ist weder auf 43f6af3 (unnötige Bestätigung) noch auf 678d07e (Abbruch ohne Nachrichtenabruf) abgenommen. Konkrete Leseschritte aus gültigen Originalbelegen und aktuellen Schemas befinden sich in Prüfung. Nach Detailabrufen werden doppelte Katalogbeschreibungen entfernt und ältere Belege kompakter angezeigt; vollständige Schemas und aktuelle Daten bleiben erhalten. Auf dbab2a7 gelang die Leseentscheidung ohne Rückfrage; der Leseschritt scheiterte jedoch vor einem sichtbaren Mailabruf. Eine statische Diagnose zeigt ein zu enges Startlimit der isolierten Schema-Prüfung. Ein getrennter begrenzter Start, bereinigte Fehlerkategorien und die vollständige Flag-Sicht auf alle zuvor angezeigten Einträge und ein verbindlicher begrenzter Gesendet-Abgleich sind in Korrektur; die echte Antwortstatus-Abnahme bleibt offen.",
+          "description": "Geführte Einrichtung unter „Verbindung hinzufügen“. Mailübersicht und die Folgefrage nach bereits beantworteten Mails sind mit echten lokalen Abrufen geprüft. Antwortmarkierungen, belegte Gesendet-Beziehungen und unbekannte Fälle bleiben getrennt. Die Auswertung gilt für die angezeigte Auswahl und begrenzte Gesendet-Abfragen. Versand, Postfachänderungen und Anhangdownloads bleiben gesperrt; vollständige Postfachabdeckung und Aufgaben-/Projektläufe sind noch offen.",
           "status": "implemented"
         },
         {
@@ -800,15 +800,15 @@
     "schema": "0045",
     "browserChecks": 39,
     "serverDeployment": true,
-    "commit": "678d07e",
-    "ciTests": 2109,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39507370909",
-    "deployedCommit": "678d07e",
+    "commit": "d5940db",
+    "ciTests": 2429,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39538475631",
+    "deployedCommit": "d5940db",
     "deployedSchema": "0045",
-    "liveScope": "Release 678d07e / Schema 0045 gesund auf dem Testsystem. Vollständige CI: 2109 bestanden, sechs übersprungen; Browser- und Runner-Prüfungen erfolgreich. Lokal 2115 Tests bestanden. Auf dem vorherigen Stand 43f6af3 sind echte Paperless-Suche, OCR-Folgefrage und der frühere individuelle Archivauftrag mit belegten Antworten erfolgreich geprüft. Die Mailübersicht funktioniert; die Antwortstatus-Folgefrage bleibt nach unnötiger Bestätigung auf 43f6af3 und Abbruch ohne neuen Nachrichtenabruf auf 678d07e ausdrücklich nicht abgenommen. Die aktuelle Korrektur begrenzt den ersten Folgeschritt auf konkrete aktuelle schema- und quellengebundene Nachrichtenabrufe. Deren reale Folgeabnahme steht aus. Der getrennte MCP-Metadatenpatch und bestehende Leserechte bleiben erhalten. Fehlende Antwortbelege bedeuten unbekannt; keine Zustellungs- oder Vollständigkeitsbehauptung. Mail-/Archivwerte und Kennungen bleiben lokal. Weitere Postfach-/Threadabdeckung, Anhänge, Aufgaben-/Projektläufe, Gmail und umfassende Administration bleiben offen. V1 bleibt partiell. Der nicht ausgerollte Zwischenstand 1870d24 wurde nach einem synthetisch erkannten Kontextüberlauf überholt; die neue begrenzte Post-Read-Darstellung wird vollständig neu geprüft.",
+    "liveScope": "Release d5940db / Schema 0045 läuft gesund auf allen neun Anwendungskomponenten der Test-VM. Vollständige CI: 2429 Tests bestanden, sechs übersprungen; Browser- und Runner-Prüfungen erfolgreich. Lokal bestanden 2435 Tests. Reale lokale Mailübersicht mit Antwortstatus-Folgefrage, Paperless-Suche mit zusätzlichem OCR-Dokumentabruf sowie der ursprüngliche Archivauftrag sind erfolgreich geprüft, ohne zusätzliche Bestätigung, öffentliche Recherche oder Änderungen. Private Inhalte bleiben lokal; bestehende Daten, Rechte, Einstellungen und frühere Aufträge bleiben erhalten. Mailmarkierungen, belegte Gesendet-Beziehungen und unbekannte Fälle bleiben getrennt. Paperless-Antworten nennen tatsächliche Quellen und Suchumfang. Vollständige Postfach-/Threadabdeckung, Anhänge, Mail-Aufgaben-/Projektläufe, persönliche Gmail-Anmeldung sowie umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "678d07e",
+    "lastSuccessfulCICommit": "d5940db",
     "lastSuccessfulCIUI": 39
   }
 }

@@ -1,130 +1,287 @@
 # obdaAI — Status 21.10.2026
 
-## Integrationsfolgefragen — Paperless live geprüft, Mailvertrag in Korrektur
+## Private Integrationsfolgefragen — reale Mail- und Archivabnahme erfolgreich
 
-Aktuell läuft **dbab2a7 / Schema 0045** gesund auf allen neun Diensten.
+Release **d5940db / Schema 0045** läuft gesund auf der autorisierten Test-VM.
+Alle neun Anwendungsimages entsprechen dem geprüften Stand; beide APIs sind gesund.
+Bestehende Daten, Rechte, Zugangsdaten, Compose-Overlays und unabhängige Netzregeln
+sowie frühere wartende Benutzeraufträge bleiben erhalten.
+
+Konkrete nächste Nachrichtenabrufe werden aus vollständig gespeicherten, aktuell
+validierten Originalbelegen und dem tatsächlich beobachteten freigegebenen Schema
+gebildet. Konto, Ordner und Nachrichtenkennungen bleiben unverändert gebunden;
+fehlende Identitäten werden nicht geraten. Vor dem ersten zusätzlichen Abruf
+begrenzen native Grammatik und Ausführungsprüfung die Modellauswahl auf diese
+konkreten lesenden Aufrufe, sofern sie vorhanden sind. Der gemeinsame dauerhafte
+Dispatch prüft Rechte und Schemas erneut. Frühere Suchen werden nicht blind
+wiederholt. Frühere fehlgeschlagene Aufträge
+bleiben erhalten; die getrennten ASK- und STOP-Befunde stehen weiter unten.
+Pro Modellschritt werden höchstens zwei konkrete nächste Abrufe angeboten. Diese
+Grenze begrenzt nicht die Antwortflag-Auswertung: Die gesamte tatsächlich angezeigte
+Auswahl mit höchstens 20 Nachrichten wird aus dem ursprünglichen Zeitraum, den
+Originalbelegen, der ursprünglichen Sortierung und Dublettenbereinigung rekonstruiert.
+Die neue Abnahme prüft bekannte Antwortflags für diese gesamte Auswahl, einen
+tatsächlichen begrenzten Gesendet-Abruf je betroffenem Konto, deren Umfang
+und jede positiv markierte Nachricht in der Antwort. Fehlende Flags bleiben ausdrücklich
+unbekannt und erfüllen diese vollständige Flag-Abnahme nicht. Eine neue Suche wird
+nicht als derselbe frühere Ausschnitt ausgegeben.
+
+Die frische Mailübersicht und die Folgefrage „Welche davon habe ich bereits
+beantwortet?“ sind im selben authentifizierten Chat tatsächlich geprüft. Gültige
+kontogebundene Vorbelege und neue Gesendet-Kopfzeilenbelege tragen die qualifizierte
+Antwort für die gesamte rekonstruierte angezeigte Auswahl. Die realen Qualitätsbelege
+prüfen exakt denselben Ausschnitt, bekannte Flags aller angezeigten Nachrichten,
+Umfang und alle positiven Einträge der Zusammenfassung. Ein Katalog allein erlaubt
+keinen Abschluss. Zusätzlich wird je betroffenem Konto der tatsächliche auswählbare Gesendet-Ordner
+neu beobachtet und dort eine echte lesende Abfrage über das aktuelle freigegebene
+Schema ausgeführt, auf höchstens 20 Treffer begrenzt. Für bekannte Antwortstatusfragen
+stehen diese Kopfzeilenabrufe vor vollständigen Nachrichtentexten. Ein zusätzlicher
+Volltext- oder Threadabruf ist für die begrenzte Antwortflag-/Headerauswertung keine
+Pflicht; neue tatsächliche Gesendet-Abfragen bleiben zwingend. Erst dieser erfolgreiche Versuch
+erlaubt den Abschluss der Antwortstatusfolgefrage; native Grammatik und die finale
+Ausführungsprüfung erzwingen vorhandene konkrete Leseschritte. Eine leere Antwort
+belegt nur den angefragten Ausschnitt und niemals „nicht beantwortet“. Ein Threadabruf
+aus „Alle Nachrichten“ ersetzt keine Gesendet-Abfrage. Fehlt die benötigte Fähigkeit,
+endet der Lauf qualifiziert unverifiziert statt mit einer Bestätigungsschleife.
+IMAP-Antwortflags bedeuten
+„als beantwortet markiert“; Beziehungen zu gesendeten Nachrichten benötigen
+passende Nachrichtenkennungen und einen beobachteten Gesendet-Ordner desselben
+Kontos. Die bekannte Antwortstatus-Folgefrage erhält nach frischer Rechte-, Quellen- und
+Abbruchprüfung sowie einer tatsächlichen aktuellen Gesendet-Abfrage eine native
+Ausgabe aus diesen typisierten Belegen. Alle ursprünglichen Einträge, ihre Flags
+und belegten Beziehungen werden getrennt wiedergegeben; ein abschließender freier
+Modelltext ist für diesen begrenzten Statusfall nicht nötig. Zusammengesetzte
+Filter-, Inhalts- und andere Aufträge bleiben im normalen Planungsweg und werden
+nicht als vollständig beantwortete Statusfragen ausgegeben. Fehlende Belege bleiben
+unbekannt. Versand und Zustellung werden dadurch
+nicht bewiesen; Vollständigkeit sämtlicher Antworten wird nicht behauptet.
+
+Paperless ist mit echter typisierter Dokumentensuche und einer Folgefrage zum
+Inhalt des ersten beobachteten Dokuments abgenommen. Der zusätzliche Dokumentabruf
+liefert den OCR-Beleg für eine quellengestützte Zusammenfassung. Konkrete bekannte
+Dokumentfolgefragen erhalten jetzt eine genaue Leseentscheidung aus vollständigen,
+aktuell gültigen Quellbelegen: beobachtete ID oder eindeutige Position im letzten
+Suchergebnis, dessen tatsächliche Reihenfolge und dasselbe freigegebene Konto.
+Gekürzter Modellkontext und Assistentenprosa liefern weder IDs noch Reihenfolge.
+Native Grammatik und Ausführungsgrenze erlauben bei vorhandenem konkretem Kandidaten
+keinen vorzeitigen STOP, keine Rückfrage und keinen Abschluss vor dem zusätzlichen
+Dokumentabruf. Der normale dauerhafte Dispatch prüft den kanonischen GET-Pfad erneut.
+Mehrdeutige Konten, neue Such-/Änderungsaufträge und unbekannte Auswahl bleiben im
+normalen Planungsweg. Fehlgeschlagene oder ungewisse Abrufe werden nicht blind wiederholt. Die Antwort erhält zusätzlich einen getrennten Bereich „Quellen und Suchumfang
+(Paperless)“. Er stammt aus tatsächlichen aktuellen erfolgreichen Abrufbelegen:
+freigegebene Quelle, Suchfilter, Seite, Seitengröße, Gesamttreffer laut genau dieser
+Suchantwort, tatsächlich zurückgegebene Treffer, weitere Seiten und deren Dokument-IDs.
+Dokumentabrufe nennen ID, Titel und den tatsächlich belegten OCR-Kürzungsstand.
+Verschiedene Suchen werden nicht addiert, Kürzungen und ausgelassene Belege werden
+gekennzeichnet. Titel, Abfragen und Quellnamen erscheinen als inerte Texte.
+Die Modellantwort bleibt erhalten; die zusätzlichen Quellenangaben ersetzen keine
+inhaltliche Prüfung ihrer Schlussfolgerungen. Die reine lokale Schlussformatierung
+benötigt keinen weiteren Modell- oder Netzwerkaufruf und erhöht kein Modellbudget.
+Ungültige, fehlgeschlagene, ungewisse oder nicht mehr freigegebene relevante Belege
+erzeugen keinen frischen Quellenblock. Die begrenzten
+Ansichten ersetzen keine vollständige Archiv- oder OCR-Auswertung. Ein zusätzlicher Prüflauf mit dem früheren Archivauftrag ist ebenfalls erfolgreich; sein Wortlaut und seine Ergebnisse bleiben auf der VM.
+
+Diese privaten Leseabläufe benötigen keine zusätzliche Bestätigung, Ordner- oder
+Zeitraumfreigabe. Sie bleiben lokal, ohne öffentliche Recherche, Cloud, Schreiben
+oder Downloads. Folgebelege verlieren bei geänderten Quellnachrichten im Chat, Konten, Profilen
+oder Freigaben ihre Gültigkeit. Modellkontexte bleiben innerhalb von 14.000 UTF-8-
+Bytes; Modellzeitlimits, Serverrechte und Kostenbudgets wurden nicht erhöht.
+Nach einem Abruf entfallen doppelte Werkzeugbeschreibungen. Die Modellsicht älterer
+Belege ist dann kleiner; aktuelle Detail- und Antwortbelege sowie vollständige
+Schemas, Namen, Hashes, Quellenkennungen und Rechte bleiben erhalten.
+Eine konkrete Umbenennungsanweisung bleibt im bestehenden Verwaltungsweg; sie wird
+nicht als Archivfrage umgedeutet. Der zugehörige synthetische Browserablauf ist geprüft.
+
+Die isolierte Schemaprüfung trennt jetzt den Start vertrauenswürdiger Bibliotheken
+von der Verarbeitung fremder Schemas und Argumente. Vor dem Ready-Signal werden
+keine fremden Eingaben übergeben; für den Start stehen höchstens zehn Sekunden
+bereit. Anschließend bleiben drei Sekunden Validierungszeit, eine Sekunde CPU,
+die 512-MiB-Speichergrenze und gesperrte externe Referenzen erhalten. RPC-Größen-
+und Zeitgrenzen bleiben unverändert. Feste bereinigte Fehlerkategorien ermöglichen
+eine technische Unterscheidung, ohne Antworten, Zugangsdaten oder private Fehlertexte
+weiterzugeben. Diese Diagnosemerkmale ersetzen keinen erfolgreichen Abruf.
+
+Lokal **2435 Tests**, Ruff, mypy und Geheimnisprüfung erfolgreich; die isolierte
+Testdatenbank ist gestoppt. Vollständige [CI39538475631](https://github.com/sschluet/obdaAI/actions/runs/39538475631):
+**2429 bestanden, 6 übersprungen**, Pflichtjobs einschließlich Browser- und
+Runner-Prüfungen erfolgreich. Reale Integrationstests sind zusätzliche eigene
+Belege; Mail-/Archivwerte, Kennungen, Inhalte und Trefferzahlen bleiben auf der VM.
+
+Vor dem Update wurde der kritische Datenbank-/Konfigurationszustand einschließlich
+aller vier betroffenen MCP-Quelldateien verschlüsselt auf der VM gesichert.
+Geprüfte Chiffretext-/Quellenhashes ersetzen keinen Restoretest; der vorherige
+vollständige externe Sicherungsanker bleibt erhalten. Die bereits auf dem vorherigen Stand 43f6af3 installierte Metadatenergänzung
+bleibt als ausdrücklich geprüfte Abhängigkeit unverändert erhalten; sie bewahrt
+Werkzeugnamen, Eingabeschemas und Freigaben. Dieser Appcode-Rückweg auf den vorherigen Stand 8a1c70c
+behält den installierten Metadatenstand bei. Es wird keine neue Installation oder
+neue Metadatenabnahme unter dem aktuellen Apprelease behauptet.
+
+Die Abnahme gilt für diese tatsächlichen Lese- und Folgeabläufe. Vollständige
+Thread-/Postfachabdeckung, Anhänge, Mail-Aufgaben-/Projektläufe und persönliche
+Gmail-Abnahme bleiben getrennt offen. HA-Update/-Konfiguration und umfassende
+Fremdsystemadministration sind ebenfalls offen. V1 bleibt partiell. Die folgenden
+Abschnitte dokumentieren frühere getrennte Abnahmen.
+
+## Vorheriger Stand 8a1c70c — Mail und OCR erfolgreich, Originalantwort ohne Quellenzitat
+
+Release 8a1c70c / Schema 0045 wurde gesund auf allen neun Anwendungsdiensten
+installiert. Vollständige CI39534131006 bestand mit 2384 erfolgreichen und sechs
+übersprungenen Tests; lokal waren 2390 Tests und statische Prüfungen erfolgreich.
+Mailübersicht samt Antwortstatusfolgefrage sowie Paperless-Suche und anschließender
+OCR-Dokumentabruf waren vollständig erfolgreich abgenommen.
+
+Der ursprüngliche Archivauftrag blieb dagegen ausdrücklich ohne erfolgreiche
+Qualitätsabnahme: Ein tatsächlicher typisierter Abruf und zwei lokale Modellläufe
+mit höchstens 6486 UTF-8-Bytes waren erfolgreich; die Antwort nannte den Suchumfang,
+aber weder einen beobachteten Dokumenttitel noch eine Dokument-ID. Der Auftrag
+endete technisch als `observed`; das unveränderte Quellenkriterium war trotzdem
+nicht erfüllt. Eine reine Zählfrage oder ein Fehler der Testvorgabe wurde nicht
+verlässlich belegt. Die Qualitätsprüfung wird deshalb nicht abgeschwächt.
+Alle bestehenden Benutzeraufträge und Schritte blieben erhalten.
+
+## Vorheriger Stand 0611dc6 — Mail erfolgreich, Archiv-Folgeabruf vor dem Lesen beendet
+
+Release 0611dc6 / Schema 0045 lief gesund auf allen neun Anwendungsdiensten.
+Vollständige CI39529840272 und lokal 2329 Tests samt statischen Prüfungen waren
+erfolgreich. Die frische Mailübersicht und ihre Antwortstatusfolgefrage wurden
+vollständig erfolgreich abgenommen: tatsächliche aktuelle Gesendet-Abrufe, gültige
+Vorbelege, dieselbe ursprüngliche Auswahl, bekannte Flags aller angezeigten Mails
+und eine qualifizierte native Antwort. Zwei lokale Modellläufe blieben mit höchstens
+13660 UTF-8-Bytes innerhalb der Grenze. Diese Mailabnahme bleibt ein eigener Erfolg.
+
+Die Paperless-Suche war erfolgreich; auch der ursprüngliche individuelle Archivauftrag
+wurde separat tatsächlich erfolgreich geprüft. Die Folgefrage zum Inhalt des ersten
+gefundenen Dokuments scheiterte dagegen ausdrücklich: Das lokale Modell beendete
+sie vor jedem zusätzlichen Dokumentabruf als `unverified`. Gültige aktuelle Vorbelege
+und Quellenbindungen lagen vor; der Modelllauf blieb mit 7014 UTF-8-Bytes innerhalb
+der Grenze. Diese fehlgeschlagene OCR-Folgeabnahme wird nicht als Archivgesamterfolg
+beschrieben. Bestehende Benutzeraufträge und Schritte blieben erhalten.
+
+## Vorheriger Stand 292caec — Abrufe erfolgreich, Mailantwort inhaltlich nicht abgenommen
+
+Release 292caec / Schema 0045 lief gesund auf allen neun Anwendungsdiensten.
+Vollständige CI39525886795 und lokal 2245 Tests samt statischen Prüfungen waren
+erfolgreich. Die Mailübersicht und die anschließenden echten Gesendet-Abrufe
+funktionierten. Gültige Vorbelege, derselbe ursprüngliche Ausschnitt und bekannte
+Antwortflags sämtlicher angezeigter Mails lagen vor. Der Folgeauftrag endete
+technisch als `observed`, ist aber ausdrücklich nicht erfolgreich abgenommen:
+Die modellformulierte Antwort enthielt eine unbelegte negative Aussage und
+qualifizierte ihren Umfang nicht ausreichend. Drei Modellläufe mit höchstens
+13660 UTF-8-Bytes und zwei tatsächliche Werkzeugabrufe ersetzen keine richtige Antwort.
+
+Die typisierte Paperless-Suche, die OCR-Folgefrage und der ursprüngliche Archivauftrag
+waren dagegen tatsächlich erfolgreich. Alle bestehenden Benutzeraufträge und
+Schritte blieben erhalten. Dieser getrennte Qualitätsfehler bleibt einschließlich
+der erfolgreichen Abrufbelege erhalten; er wird nicht nachträglich als Erfolg gewertet.
+
+## Vorheriger Stand 795df68 — Mailabruf mit Zeitlimit, Paperless erfolgreich
+
+Release 795df68 / Schema 0045 wurde gesund auf allen neun Anwendungsdiensten
+installiert. Vollständige CI39522695794 war mit 2231 bestandenen und sechs
+übersprungenen Tests erfolgreich; lokal bestanden 2237 Tests und statische Prüfungen.
+Die Mailübersicht gelang. Die folgende Antwortstatusfrage scheiterte dagegen beim
+ersten Nachrichten-Detailabruf mit der bereinigten technischen Kategorie `timeout`;
+der Auftrag blieb `uncertain`, ohne erfolgreichen neuen Mailabruf oder Gesendet-Abfrage.
+Gültige ursprüngliche Auswahl, aktuelle Rechte und Modellkontext innerhalb der Grenze
+lagen vor. Dieser Fehler bleibt ein echter negativer Livebeleg.
+
+Die typisierte Paperless-Suche, der OCR-Abruf des ersten gefundenen Dokuments und
+der frühere individuelle Archivauftrag wurden getrennt tatsächlich erfolgreich
+geprüft, ohne Rückfrage, Recherche, Cloud oder Änderungen. Bestehende Benutzeraufträge
+und Schritte blieben erhalten. Die neue Mailkorrektur erweitert keine Zeitlimits,
+sondern liest bei bekannten Antwortstatusfragen zuerst die benötigten
+Gesendet-Kopfzeilen statt eines für diesen Zweck unnötigen vollständigen Mailtexts.
+
+## Nicht ausgerollter Zwischenstand 1f8e9a9 — Gesendet-Abfrage fehlte
+
+Dieser Stand wurde nicht ausgerollt. Der vollständige lokale Lauf endete mit
+2205 erfolgreichen und zwei fehlgeschlagenen Prüfungen der kompakten Promptverträge;
+der spätere Quellstand korrigiert diese Verträge und muss erneut vollständig geprüft werden.
+Der überholte CI-Lauf 39521364664 wurde abgebrochen und ist kein erfolgreicher Gesamtbeleg.
+Inaktive Images bleiben erhalten; für diesen Stand wurde keine neue Sicherung oder
+reale Integrationstest-Abnahme hergestellt. Die Prüfung der ursprünglichen Auswahl
+allein genügte der Frage nach tatsächlichen Antworten noch nicht: Zusätzlich ist
+ein realer begrenzter Abruf aus dem beobachteten Gesendet-Ordner erforderlich.
+
+## Nicht ausgerollter Zwischenstand 35a0ec6 — vollständige Auswahlabnahme fehlte
+
+Lokal waren 2182 Tests sowie statische Prüfungen erfolgreich. Die isolierte
+Bibliotheksstart-Korrektur war statisch geprüft; Build und verschlüsselte Sicherung
+bleiben als inaktive Vorbereitungen erhalten. Vor dem Rollout zeigte die Prüfung,
+dass ein einzelner Detailabruf noch keine Antwort über die gesamte angezeigte
+Mailauswahl belegt. Dieser Stand wurde nicht ausgerollt. Der überholte vollständige
+CI-Lauf 39519479108 wurde abgebrochen und zählt nicht als erfolgreiche Gesamtprüfung.
+Die neue Auswahlprüfung und ihre reale Abnahme sind davon getrennte Belege.
+
+## Vorheriger Stand dbab2a7 — Leseschritt fehlgeschlagen, Paperless erfolgreich
+
+Release **dbab2a7 / Schema 0045** lief gesund auf allen neun Anwendungsdiensten.
 Vollständige [CI39515384094](https://github.com/sschluet/obdaAI/actions/runs/39515384094):
-2136 Tests bestanden, sechs übersprungen; lokal 2142 Tests bestanden. Die erneute
-reale Paperless-Suche und Dokument-/OCR-Folgefrage sind erfolgreich abgenommen,
-ohne Rückfrage, Cloud, öffentliche Recherche oder Änderungen. Belege und bestehende
-Benutzeraufträge blieben erhalten; Modellkontexte höchstens 9851 UTF-8-Bytes.
+2136 Tests bestanden, sechs übersprungen; lokal 2142 Tests und statische Prüfungen
+erfolgreich. Paperless-Suche und Dokument-/OCR-Folgefrage waren tatsächlich
+erfolgreich abgenommen, ohne Rückfrage, Cloud, Recherche oder Änderungen.
 
-Die Mailübersicht ist erfolgreich. Die Antwortstatus-Folgefrage ist weiterhin
-**nicht abgenommen**: Die lokale Modellentscheidung gelang ohne Rückfrage mit
-12872 UTF-8-Bytes; der anschließende Leseschritt scheiterte. Das vorhandene
-MCP-Audit enthält in diesem Zeitraum keinen Nachrichtenabruf. Eine gezielte
-statische Diagnose reproduzierte bei identischen Schema-/Argumentbelegen dreimal
-das Drei-Sekunden-Limit der isolierten Prüfung. Bereits der vertrauenswürdige
-Bibliotheksimport benötigte länger. Die ursprüngliche Ausnahme wurde nur generisch
-gespeichert; ihre genaue Kategorie ist rückwirkend nicht beweisbar.
+Die Mailübersicht war erfolgreich, die Antwortstatus-Folgefrage dagegen ausdrücklich
+nicht abgenommen: Die lokale Modellentscheidung gelang mit gültigen aktuellen
+Vorbelegen ohne Rückfrage bei 12872 UTF-8-Bytes. Der anschließende Leseschritt scheiterte,
+der Auftrag endete als `uncertain`. Für dieses Zeitfenster enthält das MCP-Audit
+keinen Nachrichtenabruf. Der generische frühere Fehlerbeleg beweist rückwirkend
+keine bestimmte ursprüngliche Ausnahmekategorie.
 
-In Korrektur: begrenzter Start-Handshake vor Übergabe fremder Schemas und Argumente;
-danach bleiben drei Sekunden Validierungszeit, eine Sekunde CPU, Speichergrenze
-und gesperrte externe Referenzen erhalten. Feste bereinigte Fehlerkategorien machen
-technische Abrufprobleme unterscheidbar. Fehlgeschlagene Absichten werden nicht
-automatisch wiederholt. Vollständige Prüfungen, CI und erneute Live-Abnahme dieser
-Korrektur stehen noch aus. Unsichere bestehende Läufe bleiben unverändert erhalten.
+Eine getrennte statische Diagnose mit denselben Schema-/Argumentbelegen erreichte
+dreimal das Drei-Sekunden-Limit; bereits der Bibliotheksimport benötigte mehr
+als drei Sekunden. Diese Reproduktion ohne Modell-/Werkzeugaufruf ist ein eigener
+Diagnosebeleg. Sie wurde nicht als erfolgreiche reale Mailabnahme umgedeutet.
+Alle früheren Benutzeraufträge und fehlgeschlagenen Absichten bleiben erhalten;
+es erfolgt keine automatische Wiederholung.
 
-Zusätzlich wird die Antwortstatus-Sicht auf die gesamte vorher angezeigte Mailmenge
-gebunden. Die ursprüngliche Übersichtsauswahl wird aus gültigen Originalbelegen,
-ihrem eingefrorenen Zeitraum, Dubletten und Reihenfolge rekonstruiert. Alle bis zu
-20 sichtbaren Einträge behalten Antwortflags oder einen ausdrücklichen unbekannten
-Status; zusätzliche Beispiele dürfen diese Abdeckung nicht ersetzen. Falsche Flags
-beweisen keine unbeantwortete Mail. Vorfiltertreffer außerhalb der Übersicht dürfen
-nicht versehentlich Kandidaten für „davon“ werden. Die verschärfte reale Abnahme
-verlangt vollständige dargestellte Flag-Abdeckung und eine entsprechend qualifizierte
-Antwort; sie steht noch aus.
+## Nicht ausgerollter Zwischenstand 1870d24 — Post-Read-Grenztest
 
-Der Zwischenstand **35a0ec6** wurde vor dem Rollout überholt: Die Validator-Korrektur
-bestand lokal 2182 Tests und eine einmalige statische VM-Prüfung. Die zusätzliche
-Prüfung zeigte jedoch die oben beschriebene Umfangslücke. Der vollständige CI-Lauf
-39519479108 wurde abgebrochen und ist kein erfolgreicher Gesamtprüfungsnachweis.
-Vorbereitete inaktive Images und die verschlüsselte Sicherung bleiben erhalten;
-es gab keinen App-Rollout und keine reale Mailabnahme dieses Zwischenstands.
+Lokal waren 2140 Tests erfolgreich. Ein zusätzlicher rein statischer Test mit den
+aktuellen Werkzeugverträgen und einem synthetischen Detailergebnis zeigte vor dem
+Rollout einen möglichen Kontextüberlauf nach dem Abruf. Dieser Stand wurde nicht
+aktiviert; der überholte CI-Lauf 39512771525 wurde abgebrochen und zählt ausdrücklich
+nicht als erfolgreiche Gesamtprüfung. Inaktive Images und Sicherungsnachweise
+bleiben erhalten. Die spätere Korrektur passt im gesättigten synthetischen Test mit
+13557 UTF-8-Bytes in die unveränderte Grenze. Dieser Grenztest ist getrennt von
+der tatsächlichen Mailabnahme des neuen Release zu bewerten.
 
-Die eigentliche Antwortbeziehungsprüfung verlangt außerdem nach dem Detailabruf
-Ordnerermittlung und eine echte begrenzte Kopfzeilenabfrage im beobachteten
-Gesendet-Ordner jedes betroffenen Kontos. Konkrete nächste Leseentscheidungen sind
-an aktuelle Schemas, Rechte und Belege gebunden. Eine Antwort ist davor nicht
-freigegeben; fehlende Fähigkeiten erlauben einen ausdrücklich unverifizierten
-Abschluss. Leere Ergebnisse belegen nur den Abfrageversuch. Antwortbeziehungen
-benötigen weiterhin exakte In-Reply-To-/References-Kanten im richtigen Konto und
-Ordner; All-Mail-Threads gelten nicht als Gesendet-Nachweis. Abfragen liefern
-höchstens 20 Kopfzeilen und behaupten keine vollständige Gesendet-Abdeckung.
+## Vorheriger Stand 678d07e — Mailfolgefrage ohne neuen Abruf beendet
 
-Auch **1f8e9a9** wurde vor dem Rollout überholt. Seine vollständige CI39521364664
-wurde abgebrochen. Die lokale Gesamtprüfung meldete 2205 bestandene und zwei
-fehlgeschlagene Prüfungen des kompakten Planerhinweises; diese Verträge wurden
-anschließend korrigiert. Die zusätzlich erkannte fehlende verbindliche
-Gesendet-Abfrage wird in derselben Lieferung behoben. Die gezielte Regression
-besteht; die neue vollständige Prüfung und echte Folgeabnahme stehen noch aus.
-Inaktive Images bleiben erhalten; es gab keinen App-Rollout dieses Zwischenstands.
+Release **678d07e / Schema 0045** lief gesund auf allen neun Anwendungsdiensten.
+Vollständige [CI39507370909](https://github.com/sschluet/obdaAI/actions/runs/39507370909):
+**2109 bestanden, 6 übersprungen**; lokal **2115 Tests** sowie statische Prüfungen
+bestanden. Die frische Mailübersicht war erfolgreich. Die anschließende
+Antwortstatusfrage ist ausdrücklich **nicht erfolgreich abgenommen**: Das lokale
+Modell beendete sie nach dem Katalog ohne neuen Nachrichtenabruf als `unverified`.
+Gültige aktuelle Vorbelege und Rechte lagen vor; es gab keine Rückfrage.
+Der erfolgreiche Modelllauf umfasste **13380 UTF-8-Bytes**. Technische Prüfungen
+und gültige Belege allein erfüllten diese reale Folgefrage somit nicht.
+Bestehende Nutzeraufträge und frühere Belege blieben erhalten. Dieser STOP-Fehler
+bleibt vom früheren ASK-Fehler und von der neuen Abnahme getrennt dokumentiert.
 
-### Frühere Zwischenschritte
+## Vorheriger Stand 43f6af3 — Paperless erfolgreich, Mail-Folgefrage fehlgeschlagen
 
-Der frühere Zwischenstand **678d07e / Schema 0045** wurde gesund auf allen
-neun Anwendungsdiensten geprüft. Vollständige
-[CI39507370909](https://github.com/sschluet/obdaAI/actions/runs/39507370909):
-2109 Tests bestanden, sechs übersprungen; lokal 2115 Tests und statische Prüfungen
-erfolgreich. Die reale Mailfolgefrage ist weiterhin **nicht abgenommen**: Das Modell
-beendete sie nach der Katalogprüfung ohne neuen Nachrichtenabruf. Rechte und gültige
-Nachrichtenbezüge waren vorhanden; der lokale Modellkontext umfasste 13380 UTF-8-Bytes.
-Bestehende Benutzeraufträge und Belege blieben unverändert. Dieser Versuch ist
-ein fehlgeschlagener Funktionsnachweis trotz erfolgreicher technischer Tests.
+Release **43f6af3 / Schema 0045** wurde auf allen neun Anwendungsdiensten gesund
+installiert. Vollständige [CI39502206203](https://github.com/sschluet/obdaAI/actions/runs/39502206203):
+**2091 bestanden, 6 übersprungen**; lokal **2097 Tests** sowie Ruff, mypy und
+Geheimnisprüfung erfolgreich. Die damaligen Daten-, Rechte-, Konfigurations- und
+Sicherungsbelege bleiben erhalten.
 
-In Entwicklung: konkrete nächste Nachrichtenabrufe aus aktuell validierten
-Originalbelegen und dem beobachteten Werkzeugschema. Solange ein solcher Abruf
-vorliegt und noch keine Nachricht gelesen wurde, begrenzen native Grammatik und
-Ausführungsprüfung die Auswahl auf diese Abrufe. Fehlende Identitäten werden nicht
-erfunden. Nach dem Lesen bleiben Umfang und unbekannte Antwortbeziehungen sichtbar.
-Die neue reale Folgeabnahme steht noch aus.
+Paperless-Suche, die anschließende Dokument-/OCR-Folgefrage und ein zusätzlicher
+Lauf mit dem früheren individuellen Archivauftrag wurden auf diesem Stand tatsächlich
+erfolgreich abgenommen. Sie endeten beobachtet, ohne Rückfrage, öffentliche Recherche,
+Cloud, Änderungen oder Downloads. Wortlaut und Archivdaten bleiben ausschließlich
+auf der VM. Die damalige erfolgreiche Archivabnahme bleibt ein eigener Beleg.
 
-Der Zwischenstand **1870d24** wurde ausdrücklich nicht ausgerollt. Sein zusätzlicher
-statischer Grenztest mit den aktuellen acht Werkzeugverträgen zeigte nach einem
-synthetischen Detailabruf einen möglichen Kontextüberlauf. Der dadurch überholte
-CI-Lauf wurde abgebrochen; lokal waren 2140 Tests erfolgreich.
-Die anschließende Korrektur entfernt nach dem Abruf doppelte Katalogbeschreibungen
-und verkleinert nur die Modellsicht älterer Belege. Vollständige Schemas, Namen,
-Hashes, aktuelle Detailbelege und Rechte bleiben erhalten. Der entsprechende
-statische Grenztest passt einschließlich gesättigter Belegbudgets mit 13557 UTF-8-
-Bytes in die bestehende 14000-Byte-Grenze. Die synthetische Prüfung ersetzt keine
-reale Detailabnahme; neue vollständige Tests und CI bleiben erforderlich.
-
-### Getrennte Nachweise des vorherigen Stands
-
-Release **43f6af3 / Schema 0045** war auf allen neun Anwendungsdiensten gesund geprüft.
-Vollständige [CI39502206203](https://github.com/sschluet/obdaAI/actions/runs/39502206203):
-2091 Tests bestanden, sechs übersprungen; alle Pflichtjobs einschließlich Browser-
-und Runner-Prüfungen erfolgreich. Lokal 2097 Tests, Ruff, mypy und Geheimnisprüfung
-bestanden; die isolierte Testdatenbank ist gestoppt. Bestehende Daten, Rechte,
-Zugangsdaten, Overlays, Netzregeln und wartende Benutzeraufträge sind erhalten.
-Vor dem Update wurde der kritische Datenbank-/Konfigurationsstand verschlüsselt
-auf der VM gesichert. Das ersetzt keinen Restoretest; der externe Sicherungsanker
-bleibt erhalten. Der getrennte MCP-Metadatenpatch bewahrt Schemas und Lesefreigaben.
-
-Paperless ist mit echter Dokumentensuche und anschließendem zusätzlichen OCR-Abruf
-des ersten gefundenen Dokuments samt quellengestützter Zusammenfassung abgenommen.
-Beide Aufträge endeten beobachtet, ohne Rückfrage, öffentliche Recherche, Cloud,
-Änderungen oder Downloads. Modellkontexte: höchstens 9640 UTF-8-Bytes. Diese Abnahme
-belegt die geprüfte Lese- und Folgefrage, keine vollständige Archivauswertung.
-Auch der zusätzliche Test des früheren individuellen Archivauftrags ist erfolgreich
-mit einer echten Dokumentabfrage und belegter Antwort abgeschlossen worden.
-
-Die neue Mailübersicht funktioniert. Die Antwortstatus-Folgefrage auf 43f6af3 ist
-jedoch ausdrücklich **nicht abgenommen**: Trotz gültiger aktueller Vorbelege mit
-Nachrichtenkennung, UID, Ordner und Konto wählte das lokale Modell nach dem Katalog
-eine Bestätigungsfrage, ohne einen neuen Nachrichtenabruf. Kontext und Rechte waren
-vorhanden; der Modelllauf blieb mit 13493 UTF-8-Bytes innerhalb der Grenze.
-
-Der nächste Entwicklungsstand sperrt Rückfragen strukturell für bereits freigegebene
-private Leseabläufe, einschließlich nativer Grammatik und Ausführungsprüfung.
-Echte fehlende Möglichkeiten können ohne Erfolgsbehauptung beendet werden; sie
-öffnen keine Bestätigungsschleife. Verwaltungsaufträge behalten ihre notwendigen
-Rückfragen. Vollständige Prüfung, neue CI und reale Mail-Folgeabnahme dieses nächsten
-Stands stehen noch aus. Mail-/Archivwerte und Kennungen bleiben ausschließlich auf
-der VM. Weitere Postfach-/Threadabdeckung, Anhänge, Aufgaben-/Projektläufe, Gmail
-und vollständige Fremdsystemadministration bleiben getrennt offen; V1 bleibt partiell.
-Die folgenden Abschnitte dokumentieren frühere getrennte Abnahmen.
+Die Mailübersicht war ebenfalls erfolgreich. Die Antwortstatus-Folgefrage auf
+43f6af3 ist dagegen ausdrücklich **nicht erfolgreich abgenommen**: Das lokale Modell
+wählte nach dem Katalog eine Bestätigungsfrage und führte keinen zusätzlichen
+Nachrichtenabruf aus. Aktuelle gültige Vorbelege mit UID, Nachrichtenkennung, Ordner
+und Konto sowie Werkzeuge und Rechte lagen vor. Der erfolgreiche lokale Modelllauf
+blieb mit **13493 UTF-8-Bytes** innerhalb der Grenze. Dieser Fehler wird durch eine
+spätere erfolgreiche Abnahme weder gelöscht noch nachträglich als Erfolg gewertet.
+Die ursprünglichen wartenden Aufträge werden nicht automatisch fortgesetzt.
 
 ## Natürliche Mailfrage ohne Bestätigungsschleife — echte Tagesabnahme erfolgreich
 
