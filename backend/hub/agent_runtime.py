@@ -2300,6 +2300,19 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             )
                             if summary is not None:
                                 decision.message = summary
+                        if private_archive_read and decision.kind == "finish":
+                            from hub.agent_paperless_evidence import paperless_evidence
+
+                            evidence = paperless_evidence(job, profiles, current_history)
+                            if evidence is None:
+                                complete(
+                                    db, job, "unverified",
+                                    "Die aktuellen Paperless-Abrufbelege konnten nicht "
+                                    "verifiziert werden. Keine Anfrage automatisch wiederholt.",
+                                )
+                                db.commit()
+                                return
+                            decision.message += "\n\n" + evidence
                         observed = any(
                             s.kind in {"read", "effect"} and s.status == "succeeded"
                             for s in steps(db, job_id)
