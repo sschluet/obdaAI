@@ -4,7 +4,9 @@ import asyncio
 import json
 import re
 import time
+import uuid
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import Field
@@ -215,6 +217,8 @@ def reserve_learning(db: Session, cfg: Settings, run_id: str) -> str | None:
         return None
     if not learnable_source(message.content, project=bool(chat.project_id)):
         return None
+    if _stored_explicit_vault_memory(db, cfg, message, chat):
+        return None  # The canonical explicit write already remembers this exact source.
     existing = db.scalar(
         select(MemoryLearningJob).where(
             MemoryLearningJob.source_message_id == message.id,
@@ -244,6 +248,43 @@ def reserve_learning(db: Session, cfg: Settings, run_id: str) -> str | None:
     db.add(job)
     db.flush()
     return job.id
+
+
+def _stored_explicit_vault_memory(
+    db: Session, cfg: Settings, message: Message, chat: Conversation
+) -> bool:
+    """Suppress only a verified server-origin write, never arbitrary Vault matches."""
+    request = re.fullmatch(r"(?is)merke dir\s*[:：]?\s+(.+)", message.content)
+    if not request or not cfg.vault_dir:
+        return False
+    identifier = str(uuid.uuid5(uuid.NAMESPACE_URL, f"hub-memory:{message.id}:{message.revision}"))
+    row = db.get(Memory, identifier, populate_existing=True)
+    expected = "# Explizites Chat-Memory\n\n" + request[1].strip()
+    if (
+        not row
+        or row.storage != "vault"
+        or row.owner_id != "owner"
+        or row.origin != f"chat:{message.id}:{message.revision}"
+        or row.path != f"AI/Memory/{identifier}.md"
+        or row.project_id != chat.project_id
+        or row.deleted
+        or row.status != "active"
+        or row.conflict
+        or not row.writable
+        or row.content != expected
+        or row.base_content != expected
+        or row.sha256 != digest(expected)
+    ):
+        return False
+    from hub.memory import decode, read_note, validate_mount
+
+    try:
+        root = Path(cfg.vault_dir)
+        validate_mount(root, cfg.vault_fs_type)
+        identity, content = decode(read_note(root, row.path))
+        return identity == identifier and content == expected
+    except (ValueError, OSError, UnicodeError):
+        return False  # A stale/unavailable canonical copy cannot suppress new learning.
 
 
 def _pointer(job: MemoryLearningJob) -> SourcePointer:

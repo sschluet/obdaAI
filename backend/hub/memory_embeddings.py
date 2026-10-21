@@ -8,7 +8,7 @@ import time
 from typing import Any
 
 import httpx
-from sqlalchemy import Float, ForeignKey, Integer, String, Text, delete, select
+from sqlalchemy import Float, ForeignKey, Integer, String, Text, delete, or_, select
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from hub.config import Settings, read_secret
@@ -118,6 +118,7 @@ def save_embedding(
         row.status != "active"
         or row.conflict
         or row.owner_id != "owner"
+        or (row.valid_from is not None and row.valid_from > time.time())
         or (row.valid_until is not None and row.valid_until <= time.time())
         or row.sha256 != hashlib.sha256(row.content.encode()).hexdigest()
     ):
@@ -168,9 +169,16 @@ async def refresh_embeddings(
             return result
         revision = settings["revision"]
         candidates = []
+        now = time.time()
         for row in db.scalars(
             select(Memory)
-            .where(Memory.deleted.is_(False), Memory.status == "active", Memory.owner_id == "owner")
+            .where(
+                Memory.deleted.is_(False),
+                Memory.status == "active",
+                Memory.owner_id == "owner",
+                or_(Memory.valid_from.is_(None), Memory.valid_from <= now),
+                or_(Memory.valid_until.is_(None), Memory.valid_until > now),
+            )
             .order_by(Memory.updated.desc())
             .limit(2000)
         ):
@@ -203,6 +211,14 @@ async def refresh_embeddings(
                 or current_memory.status != "active"
                 or current_memory.revision != source_revision
                 or current_memory.sha256 != sha256
+                or (
+                    current_memory.valid_from is not None
+                    and current_memory.valid_from > time.time()
+                )
+                or (
+                    current_memory.valid_until is not None
+                    and current_memory.valid_until <= time.time()
+                )
             ):
                 result["stale"] += 1
                 continue
