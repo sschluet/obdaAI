@@ -27,7 +27,7 @@ from hub.config import Settings
 from hub.db import Artifact, ArtifactRevision, Source, SourceChunk
 from hub.knowledge_clients import Document
 from hub.mcp_client import schema_digest
-from hub.policy import CloudGrant, ContextPart
+from hub.policy import CloudGrant, ContextPart, check_egress
 from hub.routing import Route
 
 folder = Path(os.getenv("HUB_BROWSER_FIXTURE_DIR", ".local/browser"))
@@ -437,6 +437,13 @@ class SyntheticProvider:
             assert not external and not grants
             yield "SYNTHETIC_TASK_REPLY: eine lokale Aufgabenanalyse."
             return
+        if any(p.content.startswith((
+            "MEMORY [", "Unvollständige wörtliche Gesprächsauszüge"
+        )) for p in parts):
+            check_egress(parts, external=external,
+                         provider_id="openrouter" if external else "local", grants=grants)
+            yield "SYNTHETIC_BROWSER_REPLY: **Antwort** mit lokalem Gedächtniskontext."
+            return
         if not any(p.content.startswith(("Projekt:", "VAULT ", "WEBQUELLE ")) for p in parts):
             raise RuntimeError("Simple synthetic fixture must not make a second model call")
         yield "SYNTHETIC_SOURCE_REPLY: project-only evidence."
@@ -638,3 +645,38 @@ async def synthetic_public_page(cfg, url, approved, *, user_selected=False):
 
 fixture_knowledge_connections.documents = synthetic_knowledge_documents
 fixture_web_pages.fetch_page = synthetic_public_page
+
+# Opt-in, synthetic UI data only. The production app has no seed endpoint.
+if os.getenv("HUB_MEMORY_UI_FIXTURE") == "1":
+    import hashlib
+
+    from hub.db import Conversation, Message
+    from hub.memory_models import MemoryCandidate
+
+    with app.state.sessions() as memory_db:
+        memory_chat = Conversation(id="adf682c9-0e0e-4080-924e-fbe61f2920b5",
+                                   title="Synthetic memory source")
+        quote = "Synthetic sensitive preference: I prefer quiet mornings."
+        stale_quote = "Synthetic obsolete statement."
+        if memory_db.get(Conversation, memory_chat.id) is None:
+            memory_db.add(memory_chat)
+            memory_db.flush()
+            for number, text in enumerate((quote, stale_quote)):
+                source = Message(id=f"0f31a0a4-37ef-4e09-bc52-71025a2ca90{number}",
+                                 conversation_id=memory_chat.id, role="user", content=text,
+                                 revision=1, label="LOCAL_ONLY")
+                memory_db.add(source)
+                memory_db.flush()
+                memory_db.add(MemoryCandidate(
+                    id=f"2f31a0a4-37ef-4e09-bc52-71025a2ca90{number}",
+                    source_message_id=source.id, source_message_revision=1,
+                    source_conversation_id=memory_chat.id,
+                    source_sha256=hashlib.sha256(text.encode()).hexdigest(),
+                    quote_start=0, quote_end=len(text), category="preference",
+                    fact_type="fact", predicate="other", confidence=1.0,
+                    sensitivity="sensitive", status="pending",
+                ))
+                if number:
+                    source.revision = 2
+                    source.content = "Synthetic edited statement."
+            memory_db.commit()

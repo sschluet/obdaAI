@@ -6,6 +6,12 @@
   "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39538475631",
   "screenshots": [
     {
+      "id": "memory",
+      "title": "Dein Gedächtnis. Unter deiner Kontrolle.",
+      "description": "Persönliche Erinnerungen im bestehenden Wissensbereich prüfen, bearbeiten und nur lokal verwenden. Das Lernmodell lässt sich unabhängig vom Antwortmodell wählen. Ausschließlich synthetische Einträge und Quellen; UI-Prüfung mit Test-API, keine echte Modell- oder Betriebsabnahme.",
+      "image": "assets/memory.png"
+    },
+    {
       "id": "integration-selection",
       "title": "Deine Verbindungen. Einfach verfügbar.",
       "description": "Neue Gespräche stellen alle aktivierten Integrationen automatisch bereit. Passende System- und Mailfragen nutzen freigegebene lokale Werkzeuge; eine manuelle Auswahl oder Keine bleibt möglich. Ausschließlich synthetische Verbindungen und eine ungesendete Mailfrage, kein echtes Postfach.",
@@ -449,11 +455,31 @@
       "id": "knowledge",
       "name": "Wissen & Memory",
       "symbol": "◎",
-      "intro": "Bestehendes Wissen verwenden und gezielt ergänzen.",
+      "intro": "Quellenbezogenes Wissen und ein eigenes, modellunabhängiges Gedächtnis.",
       "features": [
         {
+          "title": "Modellunabhängiges persönliches Gedächtnis",
+          "status": "local",
+          "description": "Persönliches, Projekt-, Gesprächs- und Vorliebenwissen in der vorhandenen App-Datenbank speichern. Neue Einträge benötigen keinen Vault. Verwaltung, Quellenbezug, Bearbeitung und Ablaufstatus sind mit synthetischen API- und Browserfällen geprüft. Die neue Erweiterung ist noch nicht auf der Test-VM abgenommen."
+        },
+        {
+          "title": "Aus eigenen Gesprächen lernen",
+          "status": "local",
+          "description": "Eigene Aussagen mit gebundener Nachrichtenrevision lokal auswerten. Lernmodell und automatische Übernahme sind einstellbar; sensible Vorschläge benötigen Prüfung anhand der aktuellen Quelle. Mail- und Dokumentinhalte werden nicht automatisch zu persönlichen Fakten. Synthetisch geprüft; echte lokale Modell- und Dauerbetriebsabnahme stehen aus."
+        },
+        {
+          "title": "Erinnerungen suchen, prüfen und entfernen",
+          "status": "local",
+          "description": "Im bestehenden Wissensbereich nach Typ und Zustand filtern, Herkunft öffnen und Cloudfreigaben je Anbieter ausdrücklich setzen. Konflikte erhalten den Entwurf. Entfernen löscht die gespeicherten App-Gedächtnisinhalte und ihre Fassungen; ursprüngliche Chats bleiben erhalten. Mit echten synthetischen API-Aufrufen und mobiler Oberfläche geprüft."
+        },
+        {
+          "title": "Passenden Gedächtniskontext auswählen",
+          "status": "limited",
+          "description": "Begrenzte relevante Erinnerungen mit Scope-, Quellen-, Gültigkeits- und Anbieterprüfungen in Antworten einbinden. Lokale semantische Suche kann die Textsuche ergänzen; bei fehlendem Embeddingdienst bleibt Textsuche möglich. Modell- und Relevanzqualität unter realen Bedingungen sind noch nicht abgenommen."
+        },
+        {
           "title": "Obsidian und kanonisches Memory",
-          "description": "Allgemeiner Vault-Zugriff ist lesend; Schreiben bleibt auf einen ausdrücklich freigegebenen Memory-Bereich begrenzt. Versionen und Konflikte sind nachvollziehbar.",
+          "description": "Das bestehende Vault-Memory bleibt erhalten: allgemeiner Zugriff lesend, Schreiben nur im freigegebenen Bereich. Versionen und Konflikte sind nachvollziehbar. Das neue App-Gedächtnis ergänzt diese vorhandene Basis, ohne eine zweite Datenbank einzuführen.",
           "status": "live"
         },
         {
@@ -770,6 +796,10 @@
     }
   ],
   "roadmap": [
+    {
+      "title": "Gedächtnis im echten Alltag abnehmen",
+      "text": "Die neue Memory-Erweiterung mit realem lokalem Lernmodell, relevanter Kontextauswahl, Modellwechseln und Langzeitbetrieb auf der Test-VM prüfen. Synthetische API- und Browserfälle ersetzen diese Abnahme nicht."
+    },
     {
       "title": "Den integrierten Arbeitsraum erweitern",
       "text": "Weitere Auftrags-/Modelloptionen, Versionsvergleich und objektübergreifende Suche. Vertiefte Bedienoptimierung auf der Test-VM installiert; breite Modell-/Geräteabnahme bleibt offen."

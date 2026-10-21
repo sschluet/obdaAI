@@ -241,6 +241,10 @@ await page.getByRole('button',{name:'← Aufgabenübersicht',exact:true}).click(
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 await page.getByRole('button',{name:'Wissen',exact:true}).click();
 await page.getByRole('tab',{name:'Persönliche Merkliste',exact:true}).click();
+// Wait for capability discovery before choosing the existing Vault write path.
+// A count() check races the settings request and can leave the app default selected.
+const memorySettingsCapability=await page.request.get(base+'/api/memory-settings');
+if(memorySettingsCapability.ok()){await page.getByLabel('Speicherort',{exact:true}).waitFor();await page.getByLabel('Speicherort',{exact:true}).selectOption('vault')}else if(memorySettingsCapability.status()!==404)throw Error('Memory capability discovery failed');
 await page.getByLabel('Titel',{exact:true}).fill(('Synthetic browser memory '+runSuffix));
 await page.getByLabel('Memory-Inhalt',{exact:true}).fill('Explicit synthetic durable fact');
 await page.getByRole('button',{name:'Im Vault speichern',exact:true}).click();
@@ -423,3 +427,6 @@ await page.getByRole('heading',{name:'Ein Ort für deine Ideen.',exact:true}).wa
 if(errors.length)throw Error(errors.join('\n'));
 }catch(error){await page.screenshot({path:output+'/legacy-failure-'+runSuffix+'.png',fullPage:true});console.error('Failure body:',await page.locator('body').innerText());throw error}finally{await browser.close()}
 console.log('Browser checks passed: login, SSE chat, durable reload, titles, edit/retry, provider tests, rename, dark, mobile, delete, projects, uploads, source citations, Decimal calculation, source chat, memory sync/versions, logout. Synthetic provider only.');
+
+// Keep memory checks isolated from the state modified by the preceding flows.
+await import('./memory-intelligence-check.mjs');

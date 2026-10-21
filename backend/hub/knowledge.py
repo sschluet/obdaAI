@@ -275,6 +275,7 @@ def context(
                 select(Memory)
                 .where(
                     Memory.project_id.is_(None),
+                    Memory.storage == "vault",
                     Memory.deleted.is_(False),
                     Memory.conflict == "",
                     or_(*(Memory.content.icontains(t, autoescape=True) for t in terms)),
@@ -374,7 +375,8 @@ def context(
     terms = query_terms(query)
     for memory in db.scalars(
         select(Memory)
-        .where(Memory.project_id == project_id, Memory.deleted.is_(False), Memory.conflict == "")
+        .where(Memory.project_id == project_id, Memory.storage == "vault",
+               Memory.deleted.is_(False), Memory.conflict == "")
         .limit(500)
     ):
         if terms and any(t in memory.content.casefold() for t in terms):

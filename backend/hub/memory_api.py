@@ -1,11 +1,12 @@
 """Explicit human memory writes; source text never invokes this API."""
 
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
@@ -32,9 +33,24 @@ class MemoryInput(BaseModel):
     project_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
     revision: int = Field(default=1, ge=1)
     resolve_vault_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    storage: Literal["vault", "app"] = "vault"
+    category: Literal["knowledge", "personal", "project", "conversation", "preference"] = "personal"
+    fact_type: Literal["fact", "plan", "hypothesis", "decision"] = "fact"
+    subject: str = Field(default="", max_length=120)
+    predicate: str = Field(default="", max_length=120)
+    sensitivity: Literal["public", "private", "sensitive"] = "private"
+    cloud_providers: list[Literal["openrouter", "openai", "anthropic"]] = Field(
+        default_factory=list
+    )
+    valid_from: float | None = None
+    valid_until: float | None = None
 
 
 def info(row: Memory) -> dict[str, Any]:
+    if row.storage == "app":
+        from hub.memory_service import memory_info
+
+        return memory_info(row)
     return {
         "id": row.id,
         "origin": row.origin,
@@ -48,6 +64,9 @@ def info(row: Memory) -> dict[str, Any]:
         "deleted": row.deleted,
         "writable": row.writable,
         "updated": row.updated,
+        "storage": row.storage,
+        "category": row.category,
+        "status": row.status,
     }
 
 
@@ -64,14 +83,28 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
 
     @app.get("/api/memories")
     def listing(
-        auth: Auth, project_id: str | None = None, q: str = "", deleted: bool = False
+        auth: Auth, project_id: str | None = None, q: str = "", deleted: bool = False,
+        category: str | None = None, status: str | None = None, all_projects: bool = False,
     ) -> list[dict[str, Any]]:
         if len(q) > 500:
             raise HTTPException(422, "Suchtext zu lang")
         with factory() as db:
-            statement = select(Memory).where(
-                Memory.project_id == project_id, Memory.deleted == deleted
-            )
+            statement = select(Memory).where(Memory.owner_id == "owner", Memory.deleted == deleted)
+            if not all_projects:
+                statement = statement.where(Memory.project_id == project_id)
+            if category:
+                statement = statement.where(Memory.category == category)
+            if status == "expired":
+                statement = statement.where(
+                    Memory.status == "active", Memory.valid_until <= time.time()
+                )
+            elif status == "active":
+                statement = statement.where(
+                    Memory.status == "active",
+                    or_(Memory.valid_until.is_(None), Memory.valid_until > time.time()),
+                )
+            elif status:
+                statement = statement.where(Memory.status == status)
             if q:
                 statement = statement.where(Memory.content.icontains(q, autoescape=True))
             return [
@@ -106,6 +139,23 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
 
     @app.post("/api/memories")
     def create(body: MemoryInput, auth: Auth) -> dict[str, Any]:
+        if body.storage == "app":
+            from hub.memory_service import create_app_memory
+
+            with factory() as db:
+                try:
+                    row = create_app_memory(
+                        db, identifier=body.id, content=body.content, title=body.title,
+                        category=body.category, fact_type=body.fact_type, subject=body.subject,
+                        predicate=body.predicate, sensitivity=body.sensitivity,
+                        cloud_providers=[str(p) for p in body.cloud_providers],
+                        project_id=body.project_id,
+                        valid_from=body.valid_from, valid_until=body.valid_until,
+                    )
+                    db.commit()
+                    return info(row)
+                except (ValueError, PermissionError) as error:
+                    raise HTTPException(409, str(error)) from None
         if not cfg.vault_writable:
             raise HTTPException(409, "Memory-Schreibbereich noch nicht freigegeben")
         target = root()
@@ -142,6 +192,29 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
 
     @app.patch("/api/memories/{memory_id}")
     def edit(memory_id: str, body: MemoryInput, auth: Auth) -> dict[str, Any]:
+        if body.storage == "app":
+            from hub.memory_service import edit_app_memory
+
+            if body.id != memory_id:
+                raise HTTPException(409, "Memory-ID ungültig")
+            with factory() as db:
+                row = db.get(Memory, memory_id)
+                if not row or row.storage != "app" or row.owner_id != "owner":
+                    raise HTTPException(404, "Erinnerung nicht gefunden")
+                try:
+                    edit_app_memory(
+                        db, row, expected_revision=body.revision, content=body.content,
+                        title=body.title, category=body.category, fact_type=body.fact_type,
+                        subject=body.subject, predicate=body.predicate,
+                        sensitivity=body.sensitivity,
+                        cloud_providers=[str(p) for p in body.cloud_providers],
+                        project_id=body.project_id, valid_from=body.valid_from,
+                        valid_until=body.valid_until,
+                    )
+                    db.commit()
+                    return info(row)
+                except (ValueError, PermissionError) as error:
+                    raise HTTPException(409, str(error)) from None
         if not cfg.vault_writable or body.id != memory_id:
             raise HTTPException(409, "Schreibfreigabe oder Memory-ID ungültig")
         with factory() as db:
@@ -195,6 +268,17 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
 
     @app.delete("/api/memories/{memory_id}")
     def remove(memory_id: str, auth: Auth, expected_revision: int) -> dict[str, bool]:
+        with factory() as db:
+            row = db.get(Memory, memory_id)
+            if row is not None and row.storage == "app":
+                from hub.memory_service import forget_memory
+
+                try:
+                    forget_memory(db, row, expected_revision=expected_revision)
+                    db.commit()
+                    return {"ok": True}
+                except (ValueError, PermissionError) as error:
+                    raise HTTPException(409, str(error)) from None
         if not cfg.vault_writable:
             raise HTTPException(409, "Memory-Schreibbereich nicht freigegeben")
         with factory() as db:

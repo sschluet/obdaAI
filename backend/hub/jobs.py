@@ -10,7 +10,7 @@ import procrastinate
 import psycopg
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
 from hub.db import Message, Run, RunEvent, session_factory
@@ -109,6 +109,17 @@ def enqueue_artifact(db: Session, cfg: Settings, artifact_id: str, revision: int
     )
 
 
+def enqueue_memory(db: Session, cfg: Settings, job_id: str) -> None:
+    queue = procrastinate.App(connector=procrastinate.SyncPsycopgConnector(conninfo=conninfo(cfg)))
+    raw = db.connection().connection.driver_connection
+    if not isinstance(raw, psycopg.Connection):
+        raise ValueError("Durable memory learning requires psycopg")
+    raw.execute("SET LOCAL search_path TO hub_queue, public")
+    queue.configure_task(name="hub.memory", queue="memory", priority=-30, connection=raw).defer(
+        job_id=job_id
+    )
+
+
 def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastinate.App:
     queue = procrastinate.App(
         connector=procrastinate.PsycopgConnector(
@@ -123,6 +134,31 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
 
     def maintenance_schedule(task: Any) -> Any:
         return queue.periodic(cron="* * * * *")(task) if include_maintenance else task
+
+    @queue.task(name="hub.memory", queue="memory", retry=False)
+    async def memory(job_id: str) -> None:
+        from hub.memory_learning import execute_learning
+        from hub.memory_models import MemoryLearningJob
+
+        with factory() as db:
+            job = db.get(MemoryLearningJob, job_id)
+            if job and job.status == "running":
+                # Ordinary duplicate deliveries cannot revoke a live inference.
+                # Only requeue_stalled may reconcile a proven lost worker.
+                return
+        await execute_learning(factory, cfg, job_id)
+
+    @maintenance_schedule
+    @queue.task(
+        name="hub.memory-index", queue="memory", priority=-40,
+        retry=False, queueing_lock="hub.memory-index",
+    )
+    async def memory_index(timestamp: int) -> None:
+        from hub.memory_embeddings import refresh_embeddings
+
+        # Bounded periodic backfill also covers manual edits and configuration
+        # changes, independent of whether the last chat yielded a learned fact.
+        await refresh_embeddings(factory, cfg, limit=20)
 
     @queue.task(name="hub.artifact", queue="artifacts", retry=False)
     async def artifact(artifact_id: str, revision: int) -> None:
@@ -232,12 +268,14 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
         retry=False,
     )
     async def reconcile(timestamp: int) -> None:
-        await requeue_stalled(queue)
+        await requeue_stalled(queue, factory)
 
     return queue
 
 
-async def requeue_stalled(queue: procrastinate.App) -> None:
+async def requeue_stalled(
+    queue: procrastinate.App, factory: sessionmaker[Session] | None = None,
+) -> None:
     # Only upstream heartbeats prove a worker stalled; never infer from job age.
     for task in (
         "hub.chat",
@@ -248,10 +286,24 @@ async def requeue_stalled(queue: procrastinate.App) -> None:
         "hub.knowledge-index",
         "hub.task-read",
         "hub.artifact",
+        "hub.memory",
+        "hub.memory-index",
     ):
         for job in await queue.job_manager.get_stalled_jobs(
             task_name=task, seconds_since_heartbeat=60
         ):
+            if task == "hub.memory" and factory is not None:
+                from hub.memory_models import MemoryLearningJob
+
+                identifier = job.task_kwargs.get("job_id")
+                if isinstance(identifier, str):
+                    with factory() as db:
+                        row = db.get(MemoryLearningJob, identifier)
+                        if row and row.status == "running":
+                            row.status, row.error, row.finished = (
+                                "failed", "worker_interrupted", time.time()
+                            )
+                            db.commit()
             await queue.job_manager.retry_job(job)
 
 
@@ -279,7 +331,7 @@ async def main() -> None:
         include_maintenance=not any(flag in sys.argv for flag in ("--artifacts", "--sources")),
     )
     async with queue.open_async():
-        await requeue_stalled(queue)
+        await requeue_stalled(queue, session_factory(cfg.database_url))
         # Single local inference slot. n8n remains the only schedule engine.
         await queue.run_worker_async(
             queues=["artifacts"]
@@ -288,7 +340,7 @@ async def main() -> None:
             if "--sources" in sys.argv
             else ["vault-maintenance"]
             if "--vault" in sys.argv
-            else ["chat", "tests", "tasks", "titles", "maintenance"],
+            else ["chat", "tests", "tasks", "titles", "maintenance", "memory"],
             concurrency=1,
             shutdown_graceful_timeout=95,
         )

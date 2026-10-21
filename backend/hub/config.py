@@ -65,6 +65,10 @@ class Settings:
     source_network_enabled: bool = False
     integration_targets_enabled: bool = False
     agent_timezone: str = "Europe/Berlin"
+    memory_embedding_base_url: str = ""
+    memory_embedding_model: str = ""
+    memory_embedding_key_file: str = ""
+    memory_embedding_allowed_ip: str = ""
 
     @field_validator("agent_timezone")
     @classmethod

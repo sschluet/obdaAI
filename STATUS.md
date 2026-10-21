@@ -1,5 +1,104 @@
 # obdaAI — Status 21.10.2026
 
+## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand
+
+Die neue Memory-Entwicklung erweitert vorhandene Bausteine. Der zuvor abgenommene
+Integrationsrelease **d5940db / Schema 0045** bleibt der zuletzt hier belegte
+VM-Stand; die nachfolgende Memory-Erweiterung ist damit noch nicht ausgerollt oder
+mit realem lokalen Lernmodell abgenommen. Persönliche Runtime-Inhalte wurden für
+die Gap-Analyse nicht ausgelesen oder als Testmaterial übernommen.
+
+| Statusklasse | Befund im tatsächlichen Quellcode und Konsequenz |
+| --- | --- |
+| Bereits vollständig implementiert | Manuell gepflegtes persönliches Profil mit Revision/CAS und feldweiser Cloudfreigabe; vorhandene Memory-/Versionsobjekte, kanonische Vault-Markdown-Dateien, begrenzte Schreibrechte und Dateikonfliktabgleich; persistente Chat-/Run-Historie, Providerabstraktion, Privacy-Gateway und PostgreSQL-Jobverarbeitung. Diese Bausteine werden erhalten und wiederverwendet. |
+| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Vollständige Suite, exakte CI und reale VM-/Modellabnahme bleiben eigene offene Schritte. |
+| Vorhanden, aber für das neue Ziel technisch unzureichend | Das bisherige Profil besteht aus acht manuellen Feldern mit konservativer Regex-Relevanz; bisherige Vault-Notizen allein sind kein automatisches persönliches Gedächtnis gewöhnlicher Chats. Der neue strukturierte/lexikalische Abruf mit optionalen lokalen Vektoren ergänzt diese Lücke. Er ist weiterhin begrenzt und keine vollständige semantische Suche in der gesamten Vergangenheit. |
+| Noch nicht implementiert bzw. nicht zugesagt | Vollständige automatische Interpretation beliebiger Aussagen und indirekter Persönlichkeitsmerkmale, unbegrenzte Rekonstruktion aller Gespräche sowie rückwirkendes systemweites Vergessen einschließlich alter Chatantworten, Run-Snapshots und externer Sicherungen. Eine neue Vektordatenbank, pgvector oder ein zweites Memory-System wird dafür nicht eingeführt. |
+
+### Implementierter Umfang
+
+- `Memory` und `MemoryRevision` bleiben der zentrale Vertrag in der vorhandenen
+  App-Datenbank. Native Erinnerungen (`storage="app"`) benötigen keinen Vault.
+  Bestehende Vault-Notizen (`storage="vault"`) behalten ihren Markdown-, Sync-,
+  Rechte- und Archivierungsvertrag. Der persönliche Profil-Singleton bleibt
+  unabhängig; gelernte Fakten überschreiben oder kopieren ihn nicht automatisch.
+- Kategorie, Faktentyp, aktive/ersetzte/vergessene Einträge und Gültigkeitszeitraum
+  sind unterscheidbar. Pläne und Hypothesen ersetzen keine bestätigten Fakten.
+  Eindeutige Korrekturen können frühere Werte ersetzen; mehrdeutige Widersprüche
+  benötigen Prüfung. Abweichende Freigaben eines Inhaltsduplikats werden nicht
+  still übernommen, sondern verlangen eine Bearbeitung der aktuellen Revision.
+- Lokales Lernen folgt nur direkt belegten eigenen Aussagen und sicheren
+  Projektaussagen. Ein billiger Filter erzeugt für gewöhnliche Fragen,
+  Begrüßungen, Assistentenaufträge oder hypothetische/zitierte Dokumente keinen
+  Lernjob. Der lokale Modellaufruf ist zusätzlich begrenzt und sein Ergebnis wird
+  gegen den wörtlichen Originalbeleg geprüft. Keine stillen Persönlichkeits-
+  annahmen aus Mails, Dokumenten oder Modellantworten.
+- Einstellungen und Lernmodell sind in API und Oberfläche konfigurierbar.
+  Ausschließlich aktivierte lokale Modelle stehen zum Lernen zur Verfügung;
+  Antwortmodell und Anbieter können unabhängig davon wechseln. Der vorhandene
+  Procrastinate-Worker übernimmt Lernjobs nachrangig mit dauerhafter Quellen- und
+  Settingsbindung, atomarem Claim und Abgleich unterbrochener Arbeit. Kein
+  Cloudfallback und keine erfundenen Fakten bei fehlender lokaler Inferenz.
+- Besonders sensible Vorschläge persistieren zunächst nur Quellenpointer,
+  Quote-Offsets und feste Metadaten. Vorschau und ausdrückliche Übernahme setzen
+  weiterhin dieselbe aktuelle Nutzernachricht voraus. Diese Prüfung lässt sich
+  nicht abschalten. Private Speicherung ist Standard; Cloudkontext benötigt eine
+  eigene Freigabe für den konkreten Provider und die aktuelle Memory-Revision.
+  Gewöhnliche Auto-Freigabe und öffentliche Websuche teilen das Gedächtnis nicht.
+- Die Auswahl kombiniert strukturierte Felder und lexikalische Relevanz mit
+  optionalen lokalen Embeddings im selben PostgreSQL-Schema. Höchstens 2.000
+  Kandidaten, Scope-, Herkunfts-, Gültigkeits- und Kontextbudgetprüfungen begrenzen
+  die Auswahl. Fehlende Embeddings behalten den strukturierten/lexikalischen
+  Abruf. Interne Indexpflege verarbeitet nachrangig höchstens 20 fehlende oder
+  veraltete Vektoren pro Minute, auch nach manuellen Änderungen. Kein pgvector,
+  keine zusätzliche Datenbank und kein zusätzlicher Dienst.
+- Gesprächsgedächtnis verwendet lokale extraktive Auszüge unabhängig davon, ob
+  ein Faktenlernjob entsteht. Bei mindestens zwölf aktiven Nachrichten betrachtet
+  es höchstens 100 Nachrichten und spart die neuesten acht aus. Die Auszüge
+  besitzen Quellrevisionen/Hashes und bleiben unvollständiger `LOCAL_ONLY`-Kontext,
+  keine bestätigten Fakten oder vollständige Gesprächsrekonstruktion.
+- Finale Providerprüfung verwirft nicht mehr gültige oder nicht freigegebene
+  Erinnerungen. Änderungen an Quellen, Einstellungen, Providerkonfiguration und
+  Abbruchrechten werden erneut geladen. Explizites Vergessen nativer Einträge
+  entfernt Memorytext, seine Versionstexte und Vektoren, invalidiert Auszüge und
+  sperrt erneutes Lernen aus der alten Quelle. Frühere Originalnachrichten,
+  Antworten, Run-Snapshots, Vault-Originale und externe Backups bleiben erhalten;
+  dafür wird kein vollständiger Datenpurge behauptet.
+
+### Schema, Sicherung und tatsächliche Nachweise
+
+Migration **0046** ergänzt Metadaten und fünf neue Zustands-/Derivattabellen in
+derselben Datenbank. Bestehende Vault-Inhalte, Profilangaben, Chats, Hashes,
+Revisionen und Labels werden nicht neu geschrieben. Altbestand erhält die
+Standardwerte `vault` / `owner` / `active`. Downgrade-Guards verweigern ein Entfernen
+bei nativen Erinnerungen oder vorhandenen neuen Zustandsdaten. Eine Sicherung vor
+Rollout bleibt erforderlich; bestandene Migrationstests oder ein Backup ersetzen
+keine geprüfte Wiederherstellung.
+
+**Bisher bestanden:** Die gezielte synthetische Backend-/API-/Kontextsuite umfasst
+149 erfolgreiche Tests bei einem mangels freigegebener Test-DB übersprungenen
+PostgreSQL-Fall. Darin enthalten sind Quellbindung, sensible Pointer-Vorschläge,
+CAS, Konflikte/Faktentypen, Providerfreigaben, Vergessen, Fehlerdegradierung und der
+HTTP-Chatweg über einen lokalen Fake-Extraktor bis zur späteren Kontextauswahl.
+Die SQLite-Migrationsprüfung führt tatsächlich 0045 → 0046 mit bestehendem
+synthetischen Altbestand aus, prüft native Persistenz nach Datenbank-Neuöffnung
+und die Verlustschutz-Guards. Der separate PostgreSQL-Migrationstest verwendet
+ausschließlich ein isoliertes Schema einer ausdrücklich freigegebenen
+Loopback-Testdatenbank; er wurde hier noch nicht ausgeführt.
+
+Synthetische Browserabnahme über echte lokale HTTP-APIs sowie Frontend-Typprüfung
+und Build bestanden: manuelle Bearbeitung/CAS, frische und veraltete
+Vorschlagsquellen, Einstellungen, ausschließlich lokale Lernmodellauswahl und
+Filter abgelaufener Einträge. Diese Abnahme verwendet isolierte Testdaten und
+beweist keinen echten Lernmodell- oder Cloudprovideraufruf.
+
+**Noch offen:** Vollständiger aktueller App-Testlauf, vollständige exakte GitHub-CI,
+öffentliche Showcase-Synchronisierung, zielgebundene Sicherung/VM-Ausrollung mit
+Schema 0046 sowie reale lokale Extraktions- und optionale Embedding-Abnahme.
+Vorhandene erfolgreiche Integrationsabnahmen weiter unten gelten für ihren
+jeweiligen Release und sind keine Memory-Liveabnahme. Das gesamte persönliche
+Gedächtnis wird nicht als vollständig fertig abgenommen bezeichnet.
+
 ## Private Integrationsfolgefragen — reale Mail- und Archivabnahme erfolgreich
 
 Release **d5940db / Schema 0045** läuft gesund auf der autorisierten Test-VM.

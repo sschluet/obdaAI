@@ -306,6 +306,27 @@ class ArtifactRevision(Base):
 
 class Memory(Base):
     __tablename__ = "memories"
+    storage: Mapped[str] = mapped_column(String(16), default="vault", server_default="vault")
+    owner_id: Mapped[str] = mapped_column(String(36), default="owner", server_default="owner")
+    category: Mapped[str] = mapped_column(
+        String(24), default="knowledge", server_default="knowledge"
+    )
+    fact_type: Mapped[str] = mapped_column(String(16), default="fact", server_default="fact")
+    status: Mapped[str] = mapped_column(String(16), default="active", server_default="active")
+    subject: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    predicate: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    confidence: Mapped[float] = mapped_column(Float, default=1.0, server_default="1")
+    sensitivity: Mapped[str] = mapped_column(
+        String(16), default="private", server_default="private"
+    )
+    cloud_providers: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
+    valid_from: Mapped[float | None] = mapped_column(Float, nullable=True)
+    valid_until: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_message_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    source_message_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    source_sha256: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    supersedes_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     origin: Mapped[str] = mapped_column(String(100), default="vault")
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     path: Mapped[str] = mapped_column(String(600), unique=True)

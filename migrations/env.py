@@ -2,6 +2,9 @@ from alembic import context
 from hub.config import Settings
 from hub.db import Base
 from hub.gmail_setup import GmailOAuthAttempt  # noqa: F401
+from hub.memory_embeddings import MemoryEmbedding  # noqa: F401
+from hub.memory_models import MemoryCandidate, MemoryLearningJob, MemorySettings  # noqa: F401
+from hub.memory_summary import ConversationSummary  # noqa: F401
 from sqlalchemy import create_engine
 
 config = context.config

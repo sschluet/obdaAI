@@ -73,6 +73,38 @@ activation, always/keyword/explicit-invocation modes and a chat picker. Private
 profile fields and skill revisions need their own explicit cloud sharing. See
 [personal profile](docs/personal-profile.md) and STATUS for acceptance evidence.
 
+### Intelligent memory — development delivery
+
+The memory extension reuses the existing application database, personal profile,
+revisioned Vault notes and provider boundary. New app-native memories also work
+without an Obsidian mount; existing Vault notes remain canonical Markdown and keep
+their original write/sync rules. Changing the chat model or provider does not move
+or delete memories.
+
+Under **Knowledge → Personal memory**, you can inspect, correct and forget memories,
+review suggestions and choose an enabled local model for learning. Background
+learning admits conservative direct user assertions, not ordinary questions,
+pasted documents or mailbox contents. Sensitive suggestions retain source pointers
+until explicit review. Facts, plans, hypotheses and decisions remain distinct;
+conflicting facts require review or an explicit correction. The existing
+**Settings → About me** profile remains independently editable and is never silently
+overwritten by learned facts.
+
+Memories are private by default. Cloud use requires an explicit grant for the
+particular provider and current memory revision; ordinary Auto permission does
+not share private memories. Retrieval combines structured/lexical selection with
+optional local embeddings stored in the same database. Local extractive summaries
+help preserve older conversation context within a bounded window. Both remain
+limited selections, not a complete record of everything ever discussed.
+
+Migration **0046** adds metadata and derived-state tables without rewriting existing
+notes, profiles or conversations. Forgetting removes app-memory text, its memory
+versions and derived vectors, but does **not** erase original conversations,
+historical run snapshots or external backups. The architecture and current
+acceptance gaps are recorded in [Architecture](docs/architecture.md) and
+[STATUS](STATUS.md). Full-suite, CI and real-model/VM acceptance for this development
+delivery must be reported separately from synthetic tests.
+
 Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.
 Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen Anbieter-Dialog; Unterschiede und Freigabegrenzen stehen in [docs/model-modes.md](docs/model-modes.md).
 Projekte erhalten unter **Projekt bearbeiten** ein konfigurierbares Logo aus 32 frei verwendbaren Lucide-Symbolen; Suche, Vorschau, lokale Darstellung und Lizenzhinweise siehe [docs/project-icons.md](docs/project-icons.md).
