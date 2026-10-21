@@ -306,3 +306,14 @@ beobachteten Eingabeschemas, Namen und Hashes bleiben vollständig erhalten.
 Quellenkennungen und expliziten Auslassungen. Aktuelle Detail- und Antwortbelege
 behalten ihre eigenen Budgets. Ein zusätzlicher synthetischer Grenztest prüft auch
 die anschließende Antwortplanung innerhalb der bestehenden Kontextgrenze.
+
+
+Auf dbab2a7 gelang die konkrete lokale Leseentscheidung ohne Bestätigung; der
+Leseschritt scheiterte jedoch vor einem im MCP-Audit sichtbaren Nachrichtenabruf.
+Statische Wiederholungen der reinen Schema-Prüfung zeigten ein zu enges Startlimit:
+Schon der Bibliotheksimport überschritt drei Sekunden. Der nächste Stand trennt
+zehn Sekunden begrenzten vertrauenswürdigen Start von weiterhin drei Sekunden
+Validierung fremder Eingaben. CPU-, Speicher- und Referenzgrenzen bleiben erhalten.
+Feste Fehlerkategorien enthalten keine Servertexte, Mailwerte oder Zugangsdaten.
+Die echte Antwortstatus-Folgeabnahme bleibt bis zu einem erfolgreichen neuen
+Lauf offen; bestehende fehlgeschlagene Aufträge werden nicht wiederholt.

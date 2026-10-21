@@ -6,7 +6,7 @@ import json
 import re
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import httpx
@@ -16,8 +16,40 @@ from hub.config import Settings
 VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18")
 
 
-class MCPTransientHTTPError(ValueError):
-    """A proxy reports temporary unavailability; this client never retries requests."""
+MCPFailureReason = Literal[
+    "timeout", "remote_tool_error", "response_limit", "schema_changed", "protocol_error"
+]
+
+
+class MCPFailure(ValueError):
+    """Safe fixed diagnostic category, without response, URL, argument or secret text."""
+
+    def __init__(self, reason: MCPFailureReason):
+        if reason not in {
+            "timeout",
+            "remote_tool_error",
+            "response_limit",
+            "schema_changed",
+            "protocol_error",
+        }:
+            raise ValueError("Unknown MCP failure category")
+        self.reason = reason
+        super().__init__(reason)
+
+
+class MCPConnectionError(httpx.ConnectError, MCPFailure):
+    """Safe connection marker retaining the existing setup ConnectError contract."""
+
+    def __init__(self) -> None:
+        super().__init__("protocol_error")
+
+
+class MCPTransientHTTPError(MCPFailure):
+    """Keep the setup-only temporary-HTTP marker; this client never retries requests."""
+
+    def __init__(self, message: str = ""):
+        # Existing setup callers may supply a message. Never retain that text.
+        super().__init__("protocol_error")
 
 
 def endpoint(value: str) -> str:
@@ -128,7 +160,7 @@ def discover(
     deadline = time.monotonic() + 20
     sequence = 0
 
-    def rpc(method: str, params: dict[str, Any], *, notify: bool = False) -> dict[str, Any]:
+    def _rpc(method: str, params: dict[str, Any], *, notify: bool = False) -> dict[str, Any]:
         nonlocal sequence
         if before_connect:
             before_connect(urlsplit(pinned).hostname or "")
@@ -147,7 +179,7 @@ def discover(
             body["id"] = sequence
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise ValueError("MCP response deadline")
+            raise MCPFailure("timeout")
         with client.stream(
             "POST",
             pinned,
@@ -158,21 +190,21 @@ def discover(
             timeout=min(8, remaining),
         ) as r:
             if r.status_code in (502, 503):
-                raise MCPTransientHTTPError("MCP service temporarily unavailable")
+                raise MCPTransientHTTPError()
             if notify:
                 if r.status_code not in (200, 202, 204):
-                    raise ValueError("MCP notification rejected")
+                    raise MCPFailure("protocol_error")
                 return {}
             if r.status_code != 200:
-                raise ValueError("MCP authentication, version or HTTP failure")
+                raise MCPFailure("protocol_error")
             if r.headers.get("Content-Encoding", "identity").lower() != "identity":
-                raise ValueError("Compressed MCP responses unsupported")
+                raise MCPFailure("protocol_error")
             session = r.headers.get("Mcp-Session-Id")
             if session and version != "2026-07-28":
                 if not re.fullmatch(r"[\x21-\x7e]{1,200}", session):
-                    raise ValueError("Invalid MCP session")
+                    raise MCPFailure("protocol_error")
                 if "Mcp-Session-Id" in headers and headers["Mcp-Session-Id"] != session:
-                    raise ValueError("MCP session changed")
+                    raise MCPFailure("protocol_error")
                 headers["Mcp-Session-Id"] = session
             payload = bytearray()
             total_bytes = 0
@@ -180,8 +212,10 @@ def discover(
             for chunk in r.iter_bytes():
                 payload.extend(chunk)
                 total_bytes += len(chunk)
-                if total_bytes > 1_000_000 or time.monotonic() > deadline:
-                    raise ValueError("MCP response limit")
+                if total_bytes > 1_000_000:
+                    raise MCPFailure("response_limit")
+                if time.monotonic() > deadline:
+                    raise MCPFailure("timeout")
                 if content_type == "text/event-stream":
                     normalized = bytes(payload).replace(b"\r\n", b"\n")
                     while b"\n\n" in normalized:
@@ -195,27 +229,38 @@ def discover(
                             continue
                         message = json.loads(b"\n".join(values))
                         if not isinstance(message, dict) or "method" in message:
-                            raise ValueError("Server-initiated MCP messages unsupported")
+                            raise MCPFailure("protocol_error")
                         if message.get("id") == sequence:
-                            return result(message)
+                            return result(message, call=method == "tools/call")
                     payload = bytearray(normalized)
             if content_type != "application/json":
-                raise ValueError("Unsupported MCP response framing")
-            return result(json.loads(payload))
+                raise MCPFailure("protocol_error")
+            return result(json.loads(payload), call=method == "tools/call")
 
-    def result(message: Any) -> dict[str, Any]:
+    def rpc(method: str, params: dict[str, Any], *, notify: bool = False) -> dict[str, Any]:
+        try:
+            return _rpc(method, params, notify=notify)
+        except httpx.TimeoutException:
+            raise MCPFailure("timeout") from None
+        except httpx.ConnectError:
+            raise MCPConnectionError() from None
+        except (httpx.RequestError, json.JSONDecodeError, UnicodeDecodeError):
+            raise MCPFailure("protocol_error") from None
+
+    def result(message: Any, *, call: bool = False) -> dict[str, Any]:
         if (
             not isinstance(message, dict)
             or message.get("jsonrpc") != "2.0"
             or type(message.get("id")) is not int
             or message["id"] != sequence
-            or "error" in message
-            or not isinstance(message.get("result"), dict)
+            or ("error" not in message and not isinstance(message.get("result"), dict))
         ):
-            raise ValueError("Invalid MCP result")
+            raise MCPFailure("protocol_error")
+        if "error" in message:
+            raise MCPFailure("remote_tool_error" if call else "protocol_error")
         data: dict[str, Any] = message["result"]
         if version == "2026-07-28" and data.get("resultType") != "complete":
-            raise ValueError("Interactive or incomplete MCP result unsupported")
+            raise MCPFailure("protocol_error")
         return data
 
     if version != "2026-07-28":
@@ -232,7 +277,7 @@ def discover(
             or not isinstance(initialized.get("capabilities"), dict)
             or "tools" not in initialized["capabilities"]
         ):
-            raise ValueError("MCP protocol/capabilities mismatch")
+            raise MCPFailure("protocol_error")
         rpc("notifications/initialized", {}, notify=True)
     tools: list[dict[str, Any]] = []
     cursor = None
@@ -241,20 +286,20 @@ def discover(
         page = rpc("tools/list", {"cursor": cursor} if cursor else {})
         rows = page.get("tools")
         if not isinstance(rows, list):
-            raise ValueError("Invalid MCP catalog")
+            raise MCPFailure("protocol_error")
         for item in rows:
             if (
                 not isinstance(item, dict)
                 or not isinstance(item.get("name"), str)
                 or not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", item["name"])
             ):
-                raise ValueError("Invalid MCP tool identity")
+                raise MCPFailure("protocol_error")
             schema = item.get("inputSchema")
             if not isinstance(schema, dict) or schema.get("type") != "object":
-                raise ValueError("Invalid MCP tool schema")
+                raise MCPFailure("protocol_error")
             description = item.get("description", "")
             if not isinstance(description, str) or len(description) > 4000:
-                raise ValueError("Invalid MCP description")
+                raise MCPFailure("protocol_error")
             tools.append(
                 {
                     "name": item["name"],
@@ -264,33 +309,39 @@ def discover(
                 }
             )
             if len(tools) > 128:
-                raise ValueError("MCP catalog limit")
+                raise MCPFailure("response_limit")
         cursor = page.get("nextCursor")
         if not cursor:
             break
         if not isinstance(cursor, str) or len(cursor) > 512 or cursor in cursors:
-            raise ValueError("Invalid MCP pagination")
+            raise MCPFailure("protocol_error")
         cursors.add(cursor)
     else:
-        raise ValueError("MCP pagination limit")
+        raise MCPFailure("response_limit")
     if len({t["name"] for t in tools}) != len(tools):
-        raise ValueError("Duplicate MCP tool identity")
+        raise MCPFailure("protocol_error")
     if granted_tool is not None:
         tool = next((t for t in tools if t["name"] == granted_tool), None)
         if not tool or schema_digest(tool["input_schema"]) != expected_schema:
-            raise ValueError("MCP granted schema changed")
+            raise MCPFailure("schema_changed")
+        from hub.agent_schema import SchemaValidationFailure
         from hub.integration_write_adapters import validate_mcp_value
 
-        (argument_validator or validate_mcp_value)(tool["input_schema"], granted_arguments)
+        try:
+            (argument_validator or validate_mcp_value)(tool["input_schema"], granted_arguments)
+        except (MCPFailure, SchemaValidationFailure):
+            raise
+        except ValueError:
+            raise MCPFailure("protocol_error") from None
         if before_call:
             before_call()
         result_data = rpc("tools/call", {"name": granted_tool, "arguments": granted_arguments})
         if result_data.get("isError", False) is not False:
-            raise ValueError("MCP call failed")
+            raise MCPFailure("remote_tool_error")
         if granted_read:
             content = result_data.get("content")
             if not isinstance(content, list) or not 1 <= len(content) <= 16:
-                raise ValueError("MCP read content limit")
+                raise MCPFailure("response_limit")
             output = []
             total = 0
             for item in content:
@@ -299,10 +350,10 @@ def discover(
                     or item.get("type") != "text"
                     or not isinstance(item.get("text"), str)
                 ):
-                    raise ValueError("Only plain MCP text results are supported")
+                    raise MCPFailure("protocol_error")
                 total += len(item["text"])
                 if total > 64000:
-                    raise ValueError("MCP text size limit")
+                    raise MCPFailure("response_limit")
                 output.append(item["text"])
             return {
                 "tool_name": granted_tool,
@@ -321,7 +372,7 @@ def discover(
     if read_tool is not None:
         tool = next((t for t in tools if t["name"] == read_tool), None)
         if not tool or schema_digest(tool["input_schema"]) != expected_schema:
-            raise ValueError("MCP tool/schema drift")
+            raise MCPFailure("schema_changed")
         schema = tool["input_schema"]
         if (
             set(schema)
@@ -333,10 +384,10 @@ def discover(
             raise ValueError("Only reviewed empty-argument read tools are supported")
         result_data = rpc("tools/call", {"name": read_tool, "arguments": {}})
         if result_data.get("isError", False) is not False:
-            raise ValueError("MCP tool reported failure")
+            raise MCPFailure("remote_tool_error")
         content = result_data.get("content")
         if not isinstance(content, list) or not 1 <= len(content) <= 16:
-            raise ValueError("MCP read content limit")
+            raise MCPFailure("response_limit")
         output = []
         total = 0
         for item in content:
@@ -345,10 +396,10 @@ def discover(
                 or item.get("type") != "text"
                 or not isinstance(item.get("text"), str)
             ):
-                raise ValueError("Only plain MCP text results are supported")
+                raise MCPFailure("protocol_error")
             total += len(item["text"])
             if total > 64000:
-                raise ValueError("MCP text size limit")
+                raise MCPFailure("response_limit")
             output.append(item["text"])
         return {
             "tool_name": read_tool,

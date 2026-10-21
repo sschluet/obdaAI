@@ -62,3 +62,9 @@ berechtigte Abrufe desselben Gesprächs. Der Modellkontext bleibt begrenzt, Kür
 und fehlende Belege werden ausgewiesen. Bestehende GET-Freigaben werden am Versand
 geprüft; dieser Leseweg eröffnet keine Schreib- oder Downloadrechte und nutzt weder
 öffentliche Recherche noch Cloud. Release 43f6af3 ist mit tatsächlicher Suche und anschließender Dokument-/OCR-Folgefrage samt belegter Zusammenfassung erfolgreich abgenommen. Keine Rückfrage oder öffentliche Recherche war nötig; Modellkontexte blieben unter 14.000 UTF-8-Bytes. Auch der frühere individuelle Archivauftrag wurde anschließend mit einer echten Dokumentabfrage und belegter Antwort erfolgreich geprüft.
+
+Die erneute echte Abnahme auf dbab2a7 bestätigt Suche und zusätzliche Dokument-/OCR-
+Folgefrage erneut, ohne Rückfrage, Cloud oder öffentliche Recherche. Die Antwort
+verwendet die weiterhin berechtigte Quelle desselben Gesprächs; bestehende Aufträge
+und Belege bleiben unverändert. Das belegt diese beiden Leseabläufe, keine vollständige
+Archivauswertung oder allgemeine Administration.

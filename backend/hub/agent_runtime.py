@@ -1644,7 +1644,7 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
         job = db.get(AgentJob, job_id)
         step = db.get(AgentStep, (job_id, sequence))
         assert job and step
-        if step.status in {"dispatching", "uncertain", "succeeded"}:
+        if step.status in {"dispatching", "uncertain", "succeeded", "failed"}:
             return
         document = json.loads(step.document)
         if digest(encode(document)) != step.sha256:
@@ -1782,13 +1782,28 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
                         causation_verified=False,
                     )
                     reference.result = encode(receipt)
-        except Exception:
+        except Exception as error:
+            from hub.agent_schema import SchemaValidationFailure
+            from hub.mcp_client import MCPFailure
+
+            failure_info: dict[str, str] = (
+                {"failure_category": error.reason}
+                if isinstance(error, MCPFailure)
+                else {
+                    "failure_category": "timeout" if error.reason.endswith("_timeout")
+                    else "protocol_error",
+                    "failure_phase": "schema_" + error.reason,
+                }
+                if isinstance(error, SchemaValidationFailure)
+                else {}
+            )
             step.status = "uncertain" if effect else "failed"
             step.result = encode(
                 {
                     "message": "Keine eindeutige Ausführungsbestätigung",
                     "automatic_retry": False,
                     "effect_verified": False,
+                    **failure_info,
                 }
             )
         db.commit()

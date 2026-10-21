@@ -327,6 +327,53 @@ def test_failed_mail_read_is_terminal_and_never_replayed(overview, monkeypatch):
 
 
 @pinned_case
+@pytest.mark.parametrize(
+    "reason", [
+        "timeout", "remote_tool_error", "response_limit", "schema_changed", "protocol_error",
+        "schema_startup_timeout", "schema_validation_timeout", "schema_invalid_schema",
+        "schema_resource_limit",
+    ]
+)
+def test_mail_read_failure_keeps_safe_category_without_replaying_intent(
+    overview, monkeypatch, reason
+):
+    from hub.agent_schema import SchemaValidationFailure
+    from hub.mcp_client import MCPFailure
+
+    original = runtime.invoke
+    attempts = []
+
+    def invoke(cfg, config, secret, tool, args, rules, before_send):
+        if tool == "mcp.call":
+            before_send()
+            attempts.append(tool)
+            error = (
+                SchemaValidationFailure(reason.removeprefix("schema_"))
+                if reason.startswith("schema_") and reason != "schema_changed"
+                else MCPFailure(reason)
+            )
+            raise error from ValueError("private.example/secret-mail-body")
+        return original(cfg, config, secret, tool, args, rules, before_send)
+
+    monkeypatch.setattr(runtime, "invoke", invoke)
+    status, history = execute(overview)
+    assert status == "uncertain" and attempts == ["mcp.call"]
+    failed = next(s for s in history if s.kind == "read" and s.status == "failed")
+    receipt = json.loads(failed.result)
+    expected = reason
+    if reason.startswith("schema_") and reason != "schema_changed":
+        expected = "timeout" if reason.endswith("_timeout") else "protocol_error"
+        assert receipt["failure_phase"] == reason
+    assert receipt["failure_category"] == expected and receipt["automatic_retry"] is False
+    app, client, _, cfg, _, job_id, _ = overview
+    assert "private.example" not in client.get("/api/agent-runs/" + job_id).text
+    # Direct reentry is blocked too, independently of the terminal job loop.
+    runtime.dispatch(app.state.sessions, cfg, job_id, failed.sequence)
+    execute(overview)
+    assert attempts == ["mcp.call"]
+
+
+@pinned_case
 @pytest.mark.parametrize("unsupported", ["analysis", "wrong_pin", "native", "multiple", "context"])
 def test_other_goals_accounts_and_native_mail_remain_outside_automatic_preparation(
     overview, unsupported

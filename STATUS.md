@@ -2,8 +2,33 @@
 
 ## Integrationsfolgefragen — Paperless live geprüft, Mailvertrag in Korrektur
 
-Der nachfolgende Zwischenstand **678d07e / Schema 0045** läuft gesund auf allen
-neun Anwendungsdiensten. Vollständige
+Aktuell läuft **dbab2a7 / Schema 0045** gesund auf allen neun Diensten.
+Vollständige [CI39515384094](https://github.com/sschluet/obdaAI/actions/runs/39515384094):
+2136 Tests bestanden, sechs übersprungen; lokal 2142 Tests bestanden. Die erneute
+reale Paperless-Suche und Dokument-/OCR-Folgefrage sind erfolgreich abgenommen,
+ohne Rückfrage, Cloud, öffentliche Recherche oder Änderungen. Belege und bestehende
+Benutzeraufträge blieben erhalten; Modellkontexte höchstens 9851 UTF-8-Bytes.
+
+Die Mailübersicht ist erfolgreich. Die Antwortstatus-Folgefrage ist weiterhin
+**nicht abgenommen**: Die lokale Modellentscheidung gelang ohne Rückfrage mit
+12872 UTF-8-Bytes; der anschließende Leseschritt scheiterte. Das vorhandene
+MCP-Audit enthält in diesem Zeitraum keinen Nachrichtenabruf. Eine gezielte
+statische Diagnose reproduzierte bei identischen Schema-/Argumentbelegen dreimal
+das Drei-Sekunden-Limit der isolierten Prüfung. Bereits der vertrauenswürdige
+Bibliotheksimport benötigte länger. Die ursprüngliche Ausnahme wurde nur generisch
+gespeichert; ihre genaue Kategorie ist rückwirkend nicht beweisbar.
+
+In Korrektur: begrenzter Start-Handshake vor Übergabe fremder Schemas und Argumente;
+danach bleiben drei Sekunden Validierungszeit, eine Sekunde CPU, Speichergrenze
+und gesperrte externe Referenzen erhalten. Feste bereinigte Fehlerkategorien machen
+technische Abrufprobleme unterscheidbar. Fehlgeschlagene Absichten werden nicht
+automatisch wiederholt. Vollständige Prüfungen, CI und erneute Live-Abnahme dieser
+Korrektur stehen noch aus. Unsichere bestehende Läufe bleiben unverändert erhalten.
+
+### Frühere Zwischenschritte
+
+Der frühere Zwischenstand **678d07e / Schema 0045** wurde gesund auf allen
+neun Anwendungsdiensten geprüft. Vollständige
 [CI39507370909](https://github.com/sschluet/obdaAI/actions/runs/39507370909):
 2109 Tests bestanden, sechs übersprungen; lokal 2115 Tests und statische Prüfungen
 erfolgreich. Die reale Mailfolgefrage ist weiterhin **nicht abgenommen**: Das Modell
