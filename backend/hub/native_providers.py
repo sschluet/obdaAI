@@ -6,7 +6,7 @@ reviewed pricing are required even for this independent transport boundary.
 
 import json
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Literal
@@ -99,6 +99,7 @@ class NativeProvider:
         self.estimated_cost: Decimal | None = None
         self.usage: dict[str, int] | None = None
         self.cost_basis = "unknown"
+        self.before_send: Callable[[], None] | None = None
 
     async def stream(
         self, parts: list[ContextPart], roles: list[str], *, grants: list[CloudGrant]
@@ -151,6 +152,8 @@ class NativeProvider:
         async with httpx.AsyncClient(
             timeout=cfg.timeout, trust_env=False, follow_redirects=False
         ) as client:
+            if self.before_send:
+                self.before_send()
             async with client.stream(
                 "POST", target, headers=headers, extensions=extensions, json=body
             ) as response:

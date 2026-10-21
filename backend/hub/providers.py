@@ -4,7 +4,7 @@ import asyncio
 import ipaddress
 import json
 import socket
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -153,6 +153,7 @@ class Providers:
         self.measured_cost: float | None = None
         self.route_calls = 0
         self.local_json_schema: dict[str, Any] | None = None
+        self.before_send: Callable[[], None] | None = None
 
     def _target(self, external: bool) -> tuple[str, dict[str, str], dict[str, str], str]:
         s = self.settings
@@ -374,6 +375,8 @@ class Providers:
     ) -> AsyncIterator[str]:
         # This constructs all content that leaves the server; no raw unlabelled
         # model context or hidden history is appended after this check.
+        if self.before_send:
+            self.before_send()
         check_egress(
             parts,
             external=external,
@@ -397,6 +400,7 @@ class Providers:
                 ),
                 self.keys.get(self.external_kind, ""),
             )
+            native.before_send = self.before_send
             try:
                 async for value in native.stream(parts, roles, grants=grants):
                     yield value
@@ -447,6 +451,8 @@ class Providers:
                 follow_redirects=False,
             ) as client,
         ):
+            if self.before_send:
+                self.before_send()
             async with client.stream(
                 "POST", target, headers=headers, extensions=extensions, json=body
             ) as response:

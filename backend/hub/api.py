@@ -55,6 +55,9 @@ from hub.knowledge_api import install_knowledge_api
 from hub.knowledge_connections import install_knowledge_connections
 from hub.memory import validate_mount
 from hub.memory_api import install_memory_api
+from hub.memory_embeddings import MemoryEmbedding  # noqa: F401
+from hub.memory_models import MemoryCandidate, MemoryLearningJob, MemorySettings  # noqa: F401
+from hub.memory_summary import ConversationSummary  # noqa: F401
 from hub.paperless_api import install_paperless_api
 from hub.paperless_import_api import install_paperless_import_api
 from hub.personal_profile import freeze_profile, install_personal_profile_api
@@ -168,6 +171,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_artifact_api(app, cfg, factory)
     install_artifact_drafts(app, cfg, factory)
     install_memory_api(app, cfg, factory)
+    from hub.memory_settings import install_memory_settings_api
+
+    install_memory_settings_api(app, cfg, factory)
     install_web_api(app, cfg, factory)
     install_web_settings_api(app, cfg, factory)
     install_routing_settings_api(app, cfg, factory)
@@ -764,6 +770,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "model_cloud_only": model_cloud_only,
                 **history_context,
             }
+            from hub.memory_context import freeze_memory
+
+            memory_snapshot = freeze_memory(db, cfg, c, messages[-1].content)
+            snapshot["memory"] = memory_snapshot
+            snapshot["memory_source"] = {
+                "id": messages[-1].id, "revision": messages[-1].revision,
+                "sha256": hashlib.sha256(messages[-1].content.encode()).hexdigest(),
+            }
+            if memory_snapshot.get("used_bytes") and not c.project_id:
+                snapshot.update(recent_context(
+                    messages, local_only=local_only,
+                    byte_budget=max(1024, 15700 - memory_snapshot["used_bytes"]),
+                ))
             if c.project_id:
                 from hub.personal_profile import (
                     PERSONAL_RELEVANCE_INSTRUCTION,

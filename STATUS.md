@@ -1,5 +1,189 @@
 # obdaAI — Status 21.10.2026
 
+## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand
+
+Die Memory-Erweiterung **aa4a5ae / Schema 0046** läuft auf der autorisierten
+Test-VM. Der App-Patch erhielt das schon mit 2c85335 eingeführte Schema samt
+nativem Memory und allen bestehenden Zuständen. Die neue getrennte synthetische
+HTTP-/Workerabnahme bestand initiale Berufsangabe, späteren Abruf und Korrektur:
+Die Berufsfakten stammen hier aus einem engen deterministischen Direktparser;
+ein echtes lokales Antwortmodell beantwortete die Chatfragen. Dies ist kein
+Nachweis einer erfolgreichen LLM-Extraktion der Korrektur. Die erste Abnahme
+unter 2c85335 scheiterte genau daran und bleibt unverändert dokumentiert.
+Persönliche Laufzeitdaten dienen nicht als Testmaterial; allgemeine Sprach- und
+Langzeitqualität sowie reale optionale Embeddings bleiben offen.
+
+| Statusklasse | Befund im tatsächlichen Quellcode und Konsequenz |
+| --- | --- |
+| Bereits vollständig implementiert | Manuell gepflegtes persönliches Profil mit Revision/CAS und feldweiser Cloudfreigabe; vorhandene Memory-/Versionsobjekte, kanonische Vault-Markdown-Dateien, begrenzte Schreibrechte und Dateikonfliktabgleich; persistente Chat-/Run-Historie, Providerabstraktion, Privacy-Gateway und PostgreSQL-Jobverarbeitung. Diese Bausteine werden erhalten und wiederverwendet. |
+| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Release 2c85335 bestand Gesamtprüfungen und Installation; Lernen und späterer Abruf bestanden im VM-Chat, die Berufskorrektur scheiterte am leeren Modellergebnis. Der enge Berufsparser bestand nun Gesamtprüfungen und eine getrennte synthetische VM-Abnahme; beliebige Formulierungen bleiben modellabhängig. |
+| Vorhanden, aber für das neue Ziel technisch unzureichend | Das bisherige Profil besteht aus acht manuellen Feldern mit konservativer Regex-Relevanz; bisherige Vault-Notizen allein sind kein automatisches persönliches Gedächtnis gewöhnlicher Chats. Der neue strukturierte/lexikalische Abruf mit optionalen lokalen Vektoren ergänzt diese Lücke. Er ist weiterhin begrenzt und keine vollständige semantische Suche in der gesamten Vergangenheit. |
+| Noch nicht implementiert bzw. nicht zugesagt | Vollständige automatische Interpretation beliebiger Aussagen und indirekter Persönlichkeitsmerkmale, unbegrenzte Rekonstruktion aller Gespräche sowie rückwirkendes systemweites Vergessen einschließlich alter Chatantworten, Run-Snapshots und externer Sicherungen. Eine neue Vektordatenbank, pgvector oder ein zweites Memory-System wird dafür nicht eingeführt. |
+
+### Implementierter Umfang
+
+- `Memory` und `MemoryRevision` bleiben der zentrale Vertrag in der vorhandenen
+  App-Datenbank. Native Erinnerungen (`storage="app"`) benötigen keinen Vault.
+  Bestehende Vault-Notizen (`storage="vault"`) behalten ihren Markdown-, Sync-,
+  Rechte- und Archivierungsvertrag. Der persönliche Profil-Singleton bleibt
+  unabhängig; gelernte Fakten überschreiben oder kopieren ihn nicht automatisch.
+  Auch manuell konfigurierte Antwortpräferenzen behalten ihre Autorität.
+- Kategorie, Faktentyp, aktive/ersetzte/vergessene Einträge und Gültigkeitszeitraum
+  sind unterscheidbar. Pläne und Hypothesen ersetzen keine bestätigten Fakten.
+  Eindeutige Korrekturen können frühere Werte ersetzen; mehrdeutige Widersprüche
+  benötigen Prüfung. Abweichende Freigaben eines Inhaltsduplikats werden nicht
+  still übernommen, sondern verlangen eine Bearbeitung der aktuellen Revision.
+- Lokales Lernen folgt nur direkt belegten eigenen Aussagen und sicheren
+  Projektaussagen. Ein billiger Filter erzeugt für gewöhnliche Fragen,
+  Begrüßungen, Assistentenaufträge oder hypothetische/zitierte Dokumente keinen
+  Lernjob. Der lokale Modellaufruf ist zusätzlich begrenzt und sein Ergebnis wird
+  gegen den wörtlichen Originalbeleg geprüft. Eine geschlossene Grammatik prüft
+  davor ausschließlich vollständige direkte Familienaussagen über Name, Alter und
+  Reitfähigkeit. Reitdauer unterstützt Ziffern und deutsche Zahlwörter eins bis
+  zwölf; andere Formulierungen werden nicht geraten. Diese eigene strukturelle
+  Aufnahme ersetzt keine Modellkonfidenz durch einen höheren Wert. Alle übrigen
+  zugelassenen Aussagen bleiben beim konfigurierten lokalen Modell. Keine stillen Persönlichkeits-
+  annahmen aus Mails, Dokumenten oder Modellantworten.
+- Einstellungen und Lernmodell sind in API und Oberfläche konfigurierbar.
+  Ausschließlich aktivierte lokale Modelle stehen zum Lernen zur Verfügung;
+  Antwortmodell und Anbieter können unabhängig davon wechseln. Der vorhandene
+  Procrastinate-Worker übernimmt Lernjobs nachrangig mit dauerhafter Quellen- und
+  Settingsbindung, atomarem Claim und Abgleich unterbrochener Arbeit. Kein
+  Cloudfallback und keine erfundenen Fakten bei fehlender lokaler Inferenz.
+- Besonders sensible Vorschläge persistieren zunächst nur Quellenpointer,
+  Quote-Offsets und feste Metadaten. Vorschau und ausdrückliche Übernahme setzen
+  weiterhin dieselbe aktuelle Nutzernachricht voraus. Diese Prüfung lässt sich
+  nicht abschalten. Private Speicherung ist Standard; Cloudkontext benötigt eine
+  eigene Freigabe für den konkreten Provider und die aktuelle Memory-Revision.
+  Gewöhnliche Auto-Freigabe und öffentliche Websuche teilen das Gedächtnis nicht.
+  Relevantes privates Memory hält Auto lokal; explizites Cloud lässt nicht
+  freigegebenes Memory aus.
+- Die Auswahl kombiniert strukturierte Felder und lexikalische Relevanz mit
+  optionalen lokalen Embeddings im selben PostgreSQL-Schema. Höchstens 2.000
+  Kandidaten, Scope-, Herkunfts-, Gültigkeits- und Kontextbudgetprüfungen begrenzen
+  die Auswahl. Fehlende Embeddings behalten den strukturierten/lexikalischen
+  Abruf. Interne Indexpflege verarbeitet nachrangig höchstens 20 fehlende oder
+  veraltete Vektoren pro Minute, auch nach manuellen Änderungen. Kein pgvector,
+  keine zusätzliche Datenbank und kein zusätzlicher Dienst.
+- Gesprächsgedächtnis verwendet lokale extraktive Auszüge unabhängig davon, ob
+  ein Faktenlernjob entsteht. Bei mindestens zwölf aktiven Nachrichten betrachtet
+  es höchstens 100 Nachrichten und spart die neuesten acht aus. Die Auszüge
+  besitzen Quellrevisionen/Hashes und bleiben unvollständiger `LOCAL_ONLY`-Kontext,
+  keine bestätigten Fakten oder vollständige Gesprächsrekonstruktion.
+- Finale Providerprüfung verwirft nicht mehr gültige oder nicht freigegebene
+  Erinnerungen. Änderungen an Quellen, Einstellungen, Providerkonfiguration und
+  Abbruchrechten werden erneut geladen. Explizites Vergessen nativer Einträge
+  entfernt Memorytext, seine Versionstexte und Vektoren, invalidiert Auszüge und
+  sperrt erneutes Lernen aus der alten Quelle. Frühere Originalnachrichten,
+  Antworten, Run-Snapshots, Vault-Originale und externe Backups bleiben erhalten;
+  dafür wird kein vollständiger Datenpurge behauptet.
+
+### Schema, Sicherung und tatsächliche Nachweise
+
+Migration **0046** ergänzt Metadaten und fünf neue Zustands-/Derivattabellen in
+derselben Datenbank. Bestehende Vault-Inhalte, Profilangaben, Chats, Hashes,
+Revisionen und Labels werden nicht neu geschrieben. Altbestand erhält die
+Standardwerte `vault` / `owner` / `active`. Downgrade-Guards verweigern ein Entfernen
+bei nativen Erinnerungen oder vorhandenen neuen Zustandsdaten. Eine Sicherung vor
+Rollout bleibt erforderlich; bestandene Migrationstests oder ein Backup ersetzen
+keine geprüfte Wiederherstellung.
+
+**Finaler exakter Release-Nachweis:** **aa4a5ae / Schema 0046** bestand
+**2707 lokale Tests**, Ruff, mypy (131 Quelldateien),
+Secret-Scan (687 Dateien), Frontend-Build und
+synthetische Browserprüfungen. Die isolierte Testdatenbank ist gestoppt.
+[GitHub-CI 39647243916](https://github.com/sschluet/obdaAI/actions/runs/39647243916) bestand **2701 Tests**, **6 übersprungen**.
+Diese Zahlen stammen aus dem tatsächlichen gesicherten Python-Joblog. Alle sechs
+vollständigen CI-Jobs und der passende App-Fingerprint sind bestätigt.
+
+**Getrennter App-Patch und neue Abnahme:** Die erste additive Migration d5940db →
+2c85335 / 0046 bleibt ihr eigener Nachweis. Der Patch 2c85335 → aa4a5ae
+behielt Schema 0046 ohne erneute Migration oder Downgrade. Sämtliche vorhandenen
+Memoryspalten/Revisionen sowie Settings, Kandidaten, Lernjobs, Vektoren, Auszüge
+und frühere QA-Zustände blieben erhalten; ebenso Profile, Benutzeraufträge,
+Integrationregeln, Netzwerkeinstellungen und Compose-Overlays. Ein frisches
+verschlüsseltes kritisches Backup liegt auf der VM, der vorhandene externe
+Vollbackupanker bleibt erhalten. Für dieses neue Backup wird weder Entschlüsselung
+noch Restore behauptet.
+
+Die neue synthetische HTTP-Abnahme erzeugte Lernjobs im bestehenden PostgreSQL-
+Worker, rief eine Berufsangabe aus einem neuen Chat ab und prüfte die explizite
+Korrektur einschließlich ersetztem Alt-Fakt und aktivem neuen Fakt. Die genau
+geprüften vollständigen Berufsangaben wurden **deterministisch vor einem optionalen
+Extraktionsmodell** übernommen. Ein echtes lokales **Antwortmodell** verarbeitete
+die Chatfragen. Dies belegt HTTP-/Worker-/Parserintegration und Antwortabruf,
+**keine erfolgreiche LLM-Extraktion dieser Berufskorrektur**. Alle neuen QA-Läufe
+blieben lokal, ohne Cloud oder öffentliche Websuche. Nur neue eigene QA-Erinnerungen
+wurden vergessen und QA-Chats/Projekt archiviert; temporäre Anmeldung entfernt.
+
+Die alten fehlgeschlagenen QA-Objekte wurden erst nach dem neuen Live-PASS in einem eigenen Cleanup-Intent geprüft: nur eigene Erinnerungen vergessen und Chats/Projekt archiviert; Originalnachrichten, Jobs und beide QA-Belegketten blieben unverändert.
+
+**Geprüfter Zwischenrelease:** **2c85335** bestand **2.679 lokale Tests**,
+Ruff, mypy (131 Quelldateien) und Secret-Scan (686 Dateien). Die vollständige
+[GitHub-CI 39640566187](https://github.com/sschluet/obdaAI/actions/runs/39640566187)
+bestand **2.673 Tests**, sechs übersprungen, sowie Frontend und die vollständige
+synthetische Browsersuite. Die isolierte PostgreSQL-Testdatenbank ist gestoppt.
+Diese Zahlen gelten für 2c85335, nicht für den nachfolgenden Berufsfix.
+
+**Erste reale App-Abnahme:** Der echte HTTP-Chat erzeugte einen dauerhaften
+PostgreSQL-Lernjob; ein weiterer Chat fand die erfundene Projekt-Berufsangabe und
+beantwortete sie korrekt. Die ausdrückliche Änderung wurde als Job abgeschlossen,
+aber das lokale Modell erzeugte keine Kandidaten oder Erinnerungen. Ergebnis:
+`correction_lifecycle_failed`. Eigene Testobjekte bleiben zunächst zur Diagnose
+erhalten; die temporäre Anmeldung ist entfernt. Bestehende Benutzerdaten,
+Integrationregeln, Konfiguration und ursprüngliche Agentenaufträge blieben gleich.
+Keine blinde Wiederholung dieses Abnahmeauftrags.
+
+Die neue Korrektur erkennt ausschließlich vollständige direkte Aussagen wie
+„Ich arbeite jetzt als Architekt.“ vor dem optionalen Modell. Sie übernimmt den
+wörtlichen Beleg mit den bestehenden Quellen-, Sensibilitäts-, Prüf- und
+Konfliktregeln. Unmarkierte Konflikte bleiben prüfpflichtig; mehrdeutige Aussagen
+bleiben modellabhängig. Berufs- und Familienparser sind keine nachträgliche
+Erhöhung einer Modellkonfidenz. Gezielte Tests prüfen Lernen, Abruf in einem neuen
+Chat und Ablösung des alten Fakts ohne Modellaufruf.
+
+Die frühere gezielte Backend-/API-/Kontextsuite mit 149 bestandenen Tests und
+einem damals übersprungenen PostgreSQL-Fall war ein engerer Vorläufer. Sie deckte
+Quellbindung, sensible Pointer, CAS, Konflikte/Faktentypen, Providerfreigaben,
+Vergessen, Fehlerdegradierung und den HTTP-Chatweg mit lokalem Fake-Extraktor ab.
+Migrationstests prüfen tatsächlich 0045 → 0046 mit synthetischem Altbestand,
+native Persistenz nach Datenbank-Neuöffnung und Verlustschutz-Guards. PostgreSQL
+wird ausschließlich in einer freigegebenen isolierten Loopback-Testumgebung
+geprüft; vorhandene produktive Daten werden nicht als Testmaterial verwendet.
+
+Synthetische Browserabnahme über echte lokale HTTP-APIs bestanden: manuelle
+Bearbeitung/CAS, frische und veraltete Vorschlagsquellen, Einstellungen,
+ausschließlich lokale Lernmodellauswahl und Filter abgelaufener Einträge. Der
+Memory-Check startet eine eigene frische isolierte Fixture aus dem bestehenden
+Browsercheck; fremde Suitezustände werden nicht wiederverwendet. Diese Prüfung
+belegt keinen echten Lernmodell- oder Cloudprovideraufruf.
+
+**Isolierte Prüfung mit realem lokalem Modell:** Der lokale Inferenzdienst der VM
+bestand synthetische Berufsangabe, ausdrückliche Korrektur und sensible
+Pointer-Vorschläge. Ein isolierter Datenbank-Neustart erhielt den geprüften Abruf;
+Vergessen unterband den alten und aktuellen Eintrag. Der ignorierte lokale Beleg
+`memory-real-model-acceptance-proof.json` hält nur feste Prüfergebnisse fest.
+Der Test schrieb keine App-Laufzeitdaten und nutzte keine persönlichen Inhalte.
+
+**Festgestellte Modellgrenze und Qualitätskorrektur:** Bei einer direkten
+Familien-Reitaussage lieferte das kleine lokale Modell unzuverlässig eine leere
+Faktenliste beziehungsweise Konfidenz null. Diese Versuche werden nicht als
+bestandene Extraktion umgedeutet. Eng bekannte vollständige Direktangaben zu
+Name des Kindes, Alter und Reitfähigkeit werden deshalb vor dem Modell deterministisch
+geprüft, einschließlich Reitdauer mit Ziffern und deutschen Zahlwörtern eins bis
+zwölf. Dieser getrennte, wörtlich gebundene Parser überschreibt keine
+Modellkonfidenz. Für übrige Aussagen bleibt das lokale Modell konfigurierbar;
+Review, Quellrevisionen und Datenschutz bleiben verbindlich. Der Familienparser ist im geprüften Zwischenrelease enthalten. Der neue
+Berufsparser besitzt den oben ausgewiesenen eigenen Prüf- und CI-Nachweis; dies erweitert keine allgemeinen Modellfähigkeiten.
+
+**Noch offen:** Allgemeine Sprach- und Berufskorrekturen außerhalb des engen
+Parsers, Langzeitqualität, vollständige semantische Suche und ein realer optionaler
+Embeddingserver sind nicht abgenommen. Manuelles Profil und Antwortpräferenzen
+bleiben maßgeblich; Memory-Vergessen löscht keine ursprünglichen Chats oder
+historischen Antworten. Die öffentliche Website erfordert weiterhin ihre eigene
+passende CI-, Publisher- und HTTP-Hashprüfung. Kein unbegrenztes oder vollständig
+fertiges Gedächtnis wird zugesagt.
+
 ## Private Integrationsfolgefragen — reale Mail- und Archivabnahme erfolgreich
 
 Release **d5940db / Schema 0045** läuft gesund auf der autorisierten Test-VM.

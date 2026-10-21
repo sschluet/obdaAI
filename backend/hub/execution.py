@@ -23,6 +23,7 @@ from hub.config import Settings
 from hub.db import Conversation, Memory, Message, ProviderConfig, Research, Run, RunEvent
 from hub.memory import digest, serialize, validate_mount
 from hub.memory import write as write_memory
+from hub.memory_context import MemoryChanged
 from hub.policy import CloudGrant, ContextPart, Privacy, check_egress
 from hub.provider_settings import fresh_cloud_prices, runtime_provider
 from hub.providers import AnswerLimitReached, Providers
@@ -30,6 +31,8 @@ from hub.routing import Capability, Route, conversational_research
 from hub.routing_settings import decision
 from hub.routing_settings import read_options as read_routing_options
 from hub.titles import execute_title, reserve_title
+
+_MEMORY_TASKS: set[asyncio.Task[None]] = set()
 
 
 class MemoryCompleted(Exception):
@@ -333,6 +336,12 @@ async def execute_run(
         )
         try:
             latest_request = next((m for m in reversed(messages) if m.role == "user"), None)
+            if latest_request and not workflow_generation and "memory" in snapshot:
+                from hub.memory_context import prepare_memory
+
+                snapshot["memory"] = await prepare_memory(
+                    factory, cfg, c, latest_request.content, snapshot["memory"]
+                )
             confirmed_file_goal = False
             if (
                 latest_request
@@ -917,6 +926,25 @@ async def execute_run(
                     update(routing_trace=json.dumps(trace, ensure_ascii=False))
                     yield ("status", {"message": "Datenschutzregel hält diese Antwort lokal"})
                 provider = c.cloud_provider if external else "local"
+                if external and snapshot.get("memory") and not snapshot.get("model_cloud_only"):
+                    from hub.memory_context import projection
+
+                    local_memory, _, _ = projection(
+                        factory, snapshot["memory"], external=False, provider_id="local"
+                    )
+                    allowed_memory, _, _ = projection(
+                        factory, snapshot["memory"], external=True, provider_id=provider
+                    )
+                    if {p.source_id for p in local_memory} - {
+                        p.source_id for p in allowed_memory
+                    }:
+                        external, provider = False, "local"
+                        trace["effective_model_class"] = "local"
+                        trace["memory_privacy"] = "relevant_private_context"
+                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                        yield ("status", {
+                            "message": "Passende Erinnerungen werden lokal verarbeitet"
+                        })
                 # Personal background never enters routing, titles or public queries.
                 # Select the explicitly shared subset only after the final route.
                 from hub.personal_profile import (
@@ -945,6 +973,35 @@ async def execute_run(
                     builtin_answer = False
                     if sum(len(p.content) for p in parts) > cfg.context_limit:
                         raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
+                memory_parts: list[ContextPart] = []
+                memory_budget = min(2400, max(0, cfg.context_limit - sum(
+                    len(p.content.encode()) + 64 for p in parts
+                ) - 1024))
+                if not workflow_generation and snapshot.get("memory"):
+                    from hub.memory_context import projection
+
+                    memory_parts, memory_grants, memory_audit = projection(
+                        factory, snapshot["memory"], external=external,
+                        provider_id=provider, byte_budget=memory_budget,
+                    )
+                    trace["memory"] = memory_audit
+                    parts.extend(memory_parts)
+                    roles.extend("user" for _ in memory_parts)
+                    grants.extend(memory_grants)
+                    if memory_parts:
+                        label = Privacy.LOCAL_ONLY if any(
+                            p.label == Privacy.LOCAL_ONLY for p in parts
+                        ) else Privacy.CLOUD_ALLOWED
+                        route.answer, builtin_answer = None, False
+                    snapshot["memory_used"] = memory_audit
+                    with factory() as db:
+                        saved_run = db.get(Run, run_id)
+                        assert saved_run is not None
+                        saved_snapshot = json.loads(saved_run.context_snapshot)
+                        saved_snapshot["memory"] = snapshot["memory"]
+                        saved_snapshot["memory_used"] = memory_audit
+                        saved_run.context_snapshot = json.dumps(saved_snapshot, ensure_ascii=False)
+                        db.commit()
                 # Previous assistant messages may contain unsolicited personal advice.
                 # Keep that history and its privacy labels intact, but make the current
                 # response scope explicit. This static instruction contains no user facts.
@@ -1086,6 +1143,17 @@ async def execute_run(
                     check_integration_context()
                     while True:
                         try:
+                            if memory_parts:
+                                from hub.memory_context import boundary_guard
+
+                                guard = boundary_guard(
+                                    factory, snapshot["memory"], memory_parts,
+                                    external=external, provider_id=provider,
+                                    byte_budget=memory_budget,
+                                )
+                                guard()
+                                if isinstance(providers, Providers):
+                                    providers.before_send = guard
                             async for chunk in providers.stream(
                                 parts, roles, external=external, grants=grants
                             ):
@@ -1107,6 +1175,21 @@ async def execute_run(
                                 output += chunk
                                 yield ("delta", {"text": chunk})
                             break
+                        except MemoryChanged:
+                            if output:
+                                raise
+                            ids = {p.source_id for p in memory_parts}
+                            retained = [(p, r) for p, r in zip(parts, roles, strict=True)
+                                        if p.source_id not in ids]
+                            parts[:] = [p for p, _ in retained]
+                            roles[:] = [r for _, r in retained]
+                            grants[:] = [g for g in grants if g.source_id not in ids]
+                            memory_parts = []
+                            if isinstance(providers, Providers):
+                                providers.before_send = None
+                            trace["memory"] = {"included": [], "degraded": True}
+                            update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                            continue
                         except (httpx.TransportError, httpx.HTTPStatusError) as error:
                             retryable = not isinstance(error, httpx.HTTPStatusError) or (
                                 error.response.status_code == 429
@@ -1321,6 +1404,28 @@ async def execute_run(
                         current.cost_basis = providers.cost_basis
                 if status == "succeeded" and not workflow_generation:
                     reserve_title(db, cfg, chat_id)
+                    try:
+                        with db.begin_nested():
+                            from hub.db_locks import ownership_lock
+                            from hub.memory_learning import reserve_learning
+                            from hub.memory_settings import get_settings
+                            from hub.memory_summary import summarize_conversation
+
+                            ownership_lock(db)
+                            options = get_settings(db)
+                            if options["enabled"] and options["config"]["summary_enabled"]:
+                                summarize_conversation(db, chat_id, byte_budget=1200)
+                    except Exception:
+                        pass  # Summaries and learning degrade independently.
+                    try:
+                        with db.begin_nested():
+                            memory_job = reserve_learning(db, cfg, run_id)
+                            if memory_job and not cfg.database_url.startswith("sqlite"):
+                                from hub.jobs import enqueue_memory
+
+                                enqueue_memory(db, cfg, memory_job)
+                    except Exception:
+                        pass  # Optional learning must never block the completed answer.
                 db.commit()
         yield ("done", {"status": status})
 
@@ -1348,6 +1453,17 @@ async def execute_run(
         await task
         if cfg.database_url.startswith("sqlite") and not workflow_generation:
             await execute_title(factory, providers, chat_id)
+            from hub.memory_learning import execute_learning
+            from hub.memory_models import MemoryLearningJob
+
+            with factory() as db:
+                learning = db.scalar(select(MemoryLearningJob).where(
+                    MemoryLearningJob.run_id == run_id, MemoryLearningJob.status == "queued"
+                ))
+            if learning:
+                task = asyncio.create_task(execute_learning(factory, cfg, learning.id))
+                _MEMORY_TASKS.add(task)
+                task.add_done_callback(_MEMORY_TASKS.discard)
     except asyncio.CancelledError:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)

@@ -73,6 +73,54 @@ activation, always/keyword/explicit-invocation modes and a chat picker. Private
 profile fields and skill revisions need their own explicit cloud sharing. See
 [personal profile](docs/personal-profile.md) and STATUS for acceptance evidence.
 
+### Intelligent memory — verified limited delivery
+
+The memory extension reuses the existing application database, personal profile,
+revisioned Vault notes and provider boundary. New app-native memories also work
+without an Obsidian mount; existing Vault notes remain canonical Markdown and keep
+their original write/sync rules. Changing the chat model or provider does not move
+or delete memories.
+
+Under **Knowledge → Personal memory**, you can inspect, correct and forget memories,
+review suggestions and choose an enabled local model for learning. Background
+learning admits conservative direct user assertions, not ordinary questions,
+pasted documents or mailbox contents. A small closed parser handles complete direct
+statements about a daughter or son's name, age and riding ability before model
+extraction. Riding duration accepts digits and German number words from one to
+twelve; unsupported or ambiguous wording is not guessed. Other admitted assertions
+use the configured local model, without increasing its confidence after the fact.
+Sensitive suggestions retain source pointers
+until explicit review. Facts, plans, hypotheses and decisions remain distinct;
+conflicting facts require review or an explicit correction. The existing
+**Settings → About me** profile remains independently editable and is never silently
+overwritten by learned facts. Manually selected response preferences also retain
+their authority over learned style preferences.
+
+Memories are private by default. Cloud use requires an explicit grant for the
+particular provider and current memory revision; ordinary Auto permission does
+not share private memories. Auto keeps relevant private memory local; explicit
+Cloud omits unshared memory rather than silently sending it. Retrieval combines
+structured/lexical selection with
+optional local embeddings stored in the same database. Local extractive summaries
+help preserve older conversation context within a bounded window. Both remain
+limited selections, not a complete record of everything ever discussed.
+
+Migration **0046** adds metadata and derived-state tables without rewriting existing
+notes, profiles or conversations. Forgetting removes app-memory text, its memory
+versions and derived vectors, but does **not** erase original conversations,
+historical run snapshots or external backups. The architecture and current
+acceptance gaps are recorded in [Architecture](docs/architecture.md) and
+[STATUS](STATUS.md). Release **aa4a5ae / schema 0046** passed 2707 local tests and
+[exact full CI](https://github.com/sschluet/obdaAI/actions/runs/39647243916) (2701 passed, 6 skipped). Its app-only patch
+preserved schema 0046 and existing native memories. A new synthetic real HTTP-chat
+and PostgreSQL-worker acceptance passed profession recall and explicit correction:
+these exact statements use a narrow deterministic parser; a real local answer
+model responds. This does not prove LLM extraction of the correction. The first
+2c85335 attempt learned/recalled the initial fact but failed the correction and
+remains recorded separately. Optional real embeddings and general language or
+long-term learning quality remain unverified. See STATUS for precise evidence,
+original-history retention and backup/rollback limits.
+
 Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.
 Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen Anbieter-Dialog; Unterschiede und Freigabegrenzen stehen in [docs/model-modes.md](docs/model-modes.md).
 Projekte erhalten unter **Projekt bearbeiten** ein konfigurierbares Logo aus 32 frei verwendbaren Lucide-Symbolen; Suche, Vorschau, lokale Darstellung und Lizenzhinweise siehe [docs/project-icons.md](docs/project-icons.md).

@@ -244,13 +244,18 @@ def _reconcile(
                 identity, body = decode(text)
                 by_path = db.scalar(select(Memory).where(Memory.path == relative))
                 row = db.get(Memory, identity) if identity else by_path
+                if row is not None and row.storage != "vault":
+                    errors.append(relative)
+                    continue  # Vault markers cannot take ownership of app-native memories.
                 if row is not None and row.id in found:
                     row.conflict = "Doppelte Memory-ID im Vault; Dateien manuell vergleichen"
                     continue
                 if row is None:
                     # Filename/hash matching supports a rename of ordinary read-only notes.
                     candidates = list(
-                        db.scalars(select(Memory).where(Memory.sha256 == digest(body)))
+                        db.scalars(select(Memory).where(
+                            Memory.storage == "vault", Memory.sha256 == digest(body)
+                        ))
                     )
                     moved = [
                         m
@@ -318,7 +323,7 @@ def _reconcile(
                 row.deleted = False
                 revision(db, row)
     # Never delete a note whose current path could not be read.
-    for row in db.scalars(select(Memory)):
+    for row in db.scalars(select(Memory).where(Memory.storage == "vault")):
         if row.id not in found and row.path not in errors:
             if (
                 row.conflict.startswith("pending:")

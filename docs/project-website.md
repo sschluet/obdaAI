@@ -41,6 +41,25 @@ node capture-showcase.mjs
 The capture script is restricted to the dedicated loopback origin. Stop only the
 fixture process started for this task after capture. Inspect every public image.
 
+### Memory screenshot
+
+The Memory illustration uses a separate fresh fixture with pointer-only synthetic
+review proposals. It must never run against an existing QA database or deployment:
+
+```sh
+HUB_BROWSER_FIXTURE_DIR=.local/website-memory-fixture \
+HUB_BROWSER_ORIGIN=http://127.0.0.1:18769 \
+HUB_MEMORY_UI_FIXTURE=1 \
+uv run uvicorn scripts.browser_fixture:app --host 127.0.0.1 --port 18769
+```
+
+In another terminal, run `cd frontend && node capture-memory.mjs`. This captures
+`website/assets/memory.png` from the actual UI using a deliberately synthetic
+preference and source messages. Inspect the image before publishing, and stop only
+this fixture process afterwards. The screenshot demonstrates controls, not real
+model learning or live deployment acceptance. `project.json` includes the image
+in the existing public-file allowlist; no fixture database or logs are published.
+
 ## Validate and preview
 
 ```sh

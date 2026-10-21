@@ -1,10 +1,16 @@
 {
   "updated": "2026-10-21",
-  "applicationCommit": "d5940db",
-  "schema": "0045",
-  "tests": 2429,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39538475631",
+  "applicationCommit": "aa4a5ae",
+  "schema": "0046",
+  "tests": 2701,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
   "screenshots": [
+    {
+      "id": "memory",
+      "title": "Dein Gedächtnis. Unter deiner Kontrolle.",
+      "description": "Persönliche Erinnerungen im bestehenden Wissensbereich prüfen, bearbeiten und nur lokal verwenden. Das Lernmodell lässt sich unabhängig vom Antwortmodell wählen. Ausschließlich synthetische Einträge und Quellen; UI-Prüfung mit Test-API, keine echte Modell- oder Betriebsabnahme.",
+      "image": "assets/memory.png"
+    },
     {
       "id": "integration-selection",
       "title": "Deine Verbindungen. Einfach verfügbar.",
@@ -449,11 +455,31 @@
       "id": "knowledge",
       "name": "Wissen & Memory",
       "symbol": "◎",
-      "intro": "Bestehendes Wissen verwenden und gezielt ergänzen.",
+      "intro": "Quellenbezogenes Wissen und ein eigenes, modellunabhängiges Gedächtnis.",
       "features": [
         {
+          "title": "Modellunabhängiges persönliches Gedächtnis",
+          "status": "live",
+          "description": "Persönliche, Projekt-, Gesprächs- und Vorlieben-Erinnerungen in derselben App-Datenbank. Native Einträge benötigen keinen Vault; Profil bleibt manuell. Schema 0046 und vorhandene native Zustände beim App-Patch erhalten. Begrenzte neue synthetische HTTP-/Workerabnahme bestanden; keine allgemeine NLP- oder Langzeitzusage."
+        },
+        {
+          "title": "Aus eigenen Gesprächen lernen",
+          "status": "live",
+          "description": "Enge vollständige Berufsfakten und Korrekturen im echten HTTP-/Workerweg mit synthetischen Angaben geprüft: ein deterministischer Parser liefert die Fakten, ein reales lokales Antwortmodell beantwortet Fragen. Die erste 2c85335-Korrektur mit leerer LLM-Extraktion bleibt dokumentierter Fehler. Übrige Aussagen bleiben modellabhängig; sensibles Wissen benötigt Prüfung."
+        },
+        {
+          "title": "Erinnerungen suchen, prüfen und entfernen",
+          "status": "live",
+          "description": "Typ, Herkunft, Gültigkeit und Anbieterfreigaben verwalten. Synthetische Browserfälle prüfen Bearbeitung, CAS-Konflikte und sensible Vorschläge; die neue VM-Abnahme prüft späteren Abruf und eigenes QA-Vergessen. Ursprüngliche Chats und historische Antworten bleiben erhalten. Kein systemweiter rückwirkender Datenpurge."
+        },
+        {
+          "title": "Passenden Gedächtniskontext auswählen",
+          "status": "limited",
+          "description": "Begrenzte Auswahl mit Scope-, Quellen-, Gültigkeits- und Anbieterprüfung. Privates Memory hält Auto lokal; explizites Cloud lässt ungeteilte Inhalte aus. Neue synthetische Berufsangaben im VM-Chat abgerufen. Allgemeine Relevanzqualität und reale optionale Embeddings bleiben offen."
+        },
+        {
           "title": "Obsidian und kanonisches Memory",
-          "description": "Allgemeiner Vault-Zugriff ist lesend; Schreiben bleibt auf einen ausdrücklich freigegebenen Memory-Bereich begrenzt. Versionen und Konflikte sind nachvollziehbar.",
+          "description": "Das bestehende Vault-Memory bleibt erhalten: allgemeiner Zugriff lesend, Schreiben nur im freigegebenen Bereich. Versionen und Konflikte sind nachvollziehbar. Das neue App-Gedächtnis ergänzt diese vorhandene Basis, ohne eine zweite Datenbank einzuführen.",
           "status": "live"
         },
         {
@@ -771,6 +797,10 @@
   ],
   "roadmap": [
     {
+      "title": "Gedächtnis im echten Alltag abnehmen",
+      "text": "Breitere Sprach-, Widerspruchs- und Kontextfälle außerhalb der engen Parser sowie Langzeitbetrieb und einen realen optionalen Embeddingdienst abnehmen. Gezielte synthetische HTTP-/Workerfälle ersetzen diese offene Qualitätsprüfung nicht."
+    },
+    {
       "title": "Den integrierten Arbeitsraum erweitern",
       "text": "Weitere Auftrags-/Modelloptionen, Versionsvergleich und objektübergreifende Suche. Vertiefte Bedienoptimierung auf der Test-VM installiert; breite Modell-/Geräteabnahme bleibt offen."
     },
@@ -797,18 +827,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0045",
-    "browserChecks": 39,
+    "schema": "0046",
+    "browserChecks": 40,
     "serverDeployment": true,
-    "commit": "d5940db",
-    "ciTests": 2429,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39538475631",
-    "deployedCommit": "d5940db",
-    "deployedSchema": "0045",
-    "liveScope": "Release d5940db / Schema 0045 läuft gesund auf allen neun Anwendungskomponenten der Test-VM. Vollständige CI: 2429 Tests bestanden, sechs übersprungen; Browser- und Runner-Prüfungen erfolgreich. Lokal bestanden 2435 Tests. Reale lokale Mailübersicht mit Antwortstatus-Folgefrage, Paperless-Suche mit zusätzlichem OCR-Dokumentabruf sowie der ursprüngliche Archivauftrag sind erfolgreich geprüft, ohne zusätzliche Bestätigung, öffentliche Recherche oder Änderungen. Private Inhalte bleiben lokal; bestehende Daten, Rechte, Einstellungen und frühere Aufträge bleiben erhalten. Mailmarkierungen, belegte Gesendet-Beziehungen und unbekannte Fälle bleiben getrennt. Paperless-Antworten nennen tatsächliche Quellen und Suchumfang. Vollständige Postfach-/Threadabdeckung, Anhänge, Mail-Aufgaben-/Projektläufe, persönliche Gmail-Anmeldung sowie umfassende Fremdsystemadministration bleiben offen. V1 bleibt partiell.",
+    "commit": "aa4a5ae",
+    "ciTests": 2701,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
+    "deployedCommit": "aa4a5ae",
+    "deployedSchema": "0046",
+    "liveScope": "Release aa4a5ae / Schema 0046: vollständige lokale/exakte CI-Prüfung und getrennte synthetische HTTP-/Workerabnahme für enge deterministische Berufsfakten, Korrektur und späteren Abruf mit echtem lokalem Antwortmodell. Keine LLM-Extraktionszusage für diese Korrektur. Patch erhielt Schema/native Zustände; erste 2c85335-Korrekturabnahme blieb fehlgeschlagen und dokumentiert. Frühere d5940db-Mail-/Paperless-Abnahmen sind historische separate Belege. Allgemeine Sprach-/Langzeitqualität und optionale reale Embeddings bleiben offen; V1 partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "d5940db",
-    "lastSuccessfulCIUI": 39
+    "lastSuccessfulCICommit": "aa4a5ae",
+    "lastSuccessfulCIUI": 40
   }
 }

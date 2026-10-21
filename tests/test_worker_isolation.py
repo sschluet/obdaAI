@@ -32,7 +32,7 @@ async def test_worker_queue_selection(monkeypatch, flag, expected):
         async def run_worker_async(self, **kwargs):
             assert kwargs["queues"] == expected
 
-    async def reconcile(queue):
+    async def reconcile(queue, factory=None):
         pass
 
     monkeypatch.setattr(jobs.sys, "argv", ["hub.jobs", flag])
