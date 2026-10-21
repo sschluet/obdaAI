@@ -84,15 +84,23 @@ or delete memories.
 Under **Knowledge → Personal memory**, you can inspect, correct and forget memories,
 review suggestions and choose an enabled local model for learning. Background
 learning admits conservative direct user assertions, not ordinary questions,
-pasted documents or mailbox contents. Sensitive suggestions retain source pointers
+pasted documents or mailbox contents. A small closed parser handles complete direct
+statements about a daughter or son's name, age and riding ability before model
+extraction. Riding duration accepts digits and German number words from one to
+twelve; unsupported or ambiguous wording is not guessed. Other admitted assertions
+use the configured local model, without increasing its confidence after the fact.
+Sensitive suggestions retain source pointers
 until explicit review. Facts, plans, hypotheses and decisions remain distinct;
 conflicting facts require review or an explicit correction. The existing
 **Settings → About me** profile remains independently editable and is never silently
-overwritten by learned facts.
+overwritten by learned facts. Manually selected response preferences also retain
+their authority over learned style preferences.
 
 Memories are private by default. Cloud use requires an explicit grant for the
 particular provider and current memory revision; ordinary Auto permission does
-not share private memories. Retrieval combines structured/lexical selection with
+not share private memories. Auto keeps relevant private memory local; explicit
+Cloud omits unshared memory rather than silently sending it. Retrieval combines
+structured/lexical selection with
 optional local embeddings stored in the same database. Local extractive summaries
 help preserve older conversation context within a bounded window. Both remain
 limited selections, not a complete record of everything ever discussed.
@@ -102,8 +110,14 @@ notes, profiles or conversations. Forgetting removes app-memory text, its memory
 versions and derived vectors, but does **not** erase original conversations,
 historical run snapshots or external backups. The architecture and current
 acceptance gaps are recorded in [Architecture](docs/architecture.md) and
-[STATUS](STATUS.md). Full-suite, CI and real-model/VM acceptance for this development
-delivery must be reported separately from synthetic tests.
+[STATUS](STATUS.md). The intermediate commit **b8189bb** passed 2,640 local tests,
+including PostgreSQL checks, plus Ruff, mypy and a scan of 684 source files. Its
+exact CI run is still pending; subsequent quality corrections need their own
+matching checks. An isolated test using the VM's real local model passed synthetic
+profession, correction and sensitive-pointer cases, database reopening, retrieval
+and forgetting. This is not a schema-0046 rollout or acceptance of production HTTP
+chat learning. A real optional embedding service and long-term learning quality
+remain unverified.
 
 Endgültiges Entfernen von Projekten und Gesprächen ist in [docs/deletion.md](docs/deletion.md) beschrieben; die Oberfläche zeigt vorab Umfang und erhaltene unabhängige Inhalte.
 Die Modellwahl bietet **Auto**, **Nur lokal** und **Cloud** ohne zusätzlichen Anbieter-Dialog; Unterschiede und Freigabegrenzen stehen in [docs/model-modes.md](docs/model-modes.md).

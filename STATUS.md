@@ -4,14 +4,15 @@
 
 Die neue Memory-Entwicklung erweitert vorhandene Bausteine. Der zuvor abgenommene
 Integrationsrelease **d5940db / Schema 0045** bleibt der zuletzt hier belegte
-VM-Stand; die nachfolgende Memory-Erweiterung ist damit noch nicht ausgerollt oder
-mit realem lokalen Lernmodell abgenommen. Persönliche Runtime-Inhalte wurden für
+VM-Stand; die nachfolgende Memory-Erweiterung ist noch nicht als Schema 0046
+ausgerollt. Eine separate isolierte Prüfung gegen das reale lokale VM-Modell ist
+unten ausgewiesen und ersetzt keinen echten HTTP-Chat-Lernablauf. Persönliche Runtime-Inhalte wurden für
 die Gap-Analyse nicht ausgelesen oder als Testmaterial übernommen.
 
 | Statusklasse | Befund im tatsächlichen Quellcode und Konsequenz |
 | --- | --- |
 | Bereits vollständig implementiert | Manuell gepflegtes persönliches Profil mit Revision/CAS und feldweiser Cloudfreigabe; vorhandene Memory-/Versionsobjekte, kanonische Vault-Markdown-Dateien, begrenzte Schreibrechte und Dateikonfliktabgleich; persistente Chat-/Run-Historie, Providerabstraktion, Privacy-Gateway und PostgreSQL-Jobverarbeitung. Diese Bausteine werden erhalten und wiederverwendet. |
-| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Vollständige Suite, exakte CI und reale VM-/Modellabnahme bleiben eigene offene Schritte. |
+| Teilweise implementiert | Der neue native Memory-Lebenszyklus, Quellenprüfung, lokale Hintergrundextraktion, automatische begrenzte Kontextauswahl, Gesprächsauszüge und die Oberfläche sind im Entwicklungsbaum implementiert und gezielt synthetisch geprüft. Der Zwischenstand b8189bb bestand die lokale Gesamtsuite; eine isolierte reale lokale Modellprüfung bestand ausgewählte synthetische Fälle. Die anschließende Qualitätskorrektur, exakte CI sowie echte App-/VM-Abnahme bleiben getrennte Schritte. |
 | Vorhanden, aber für das neue Ziel technisch unzureichend | Das bisherige Profil besteht aus acht manuellen Feldern mit konservativer Regex-Relevanz; bisherige Vault-Notizen allein sind kein automatisches persönliches Gedächtnis gewöhnlicher Chats. Der neue strukturierte/lexikalische Abruf mit optionalen lokalen Vektoren ergänzt diese Lücke. Er ist weiterhin begrenzt und keine vollständige semantische Suche in der gesamten Vergangenheit. |
 | Noch nicht implementiert bzw. nicht zugesagt | Vollständige automatische Interpretation beliebiger Aussagen und indirekter Persönlichkeitsmerkmale, unbegrenzte Rekonstruktion aller Gespräche sowie rückwirkendes systemweites Vergessen einschließlich alter Chatantworten, Run-Snapshots und externer Sicherungen. Eine neue Vektordatenbank, pgvector oder ein zweites Memory-System wird dafür nicht eingeführt. |
 
@@ -22,6 +23,7 @@ die Gap-Analyse nicht ausgelesen oder als Testmaterial übernommen.
   Bestehende Vault-Notizen (`storage="vault"`) behalten ihren Markdown-, Sync-,
   Rechte- und Archivierungsvertrag. Der persönliche Profil-Singleton bleibt
   unabhängig; gelernte Fakten überschreiben oder kopieren ihn nicht automatisch.
+  Auch manuell konfigurierte Antwortpräferenzen behalten ihre Autorität.
 - Kategorie, Faktentyp, aktive/ersetzte/vergessene Einträge und Gültigkeitszeitraum
   sind unterscheidbar. Pläne und Hypothesen ersetzen keine bestätigten Fakten.
   Eindeutige Korrekturen können frühere Werte ersetzen; mehrdeutige Widersprüche
@@ -31,7 +33,12 @@ die Gap-Analyse nicht ausgelesen oder als Testmaterial übernommen.
   Projektaussagen. Ein billiger Filter erzeugt für gewöhnliche Fragen,
   Begrüßungen, Assistentenaufträge oder hypothetische/zitierte Dokumente keinen
   Lernjob. Der lokale Modellaufruf ist zusätzlich begrenzt und sein Ergebnis wird
-  gegen den wörtlichen Originalbeleg geprüft. Keine stillen Persönlichkeits-
+  gegen den wörtlichen Originalbeleg geprüft. Eine geschlossene Grammatik prüft
+  davor ausschließlich vollständige direkte Familienaussagen über Name, Alter und
+  Reitfähigkeit. Reitdauer unterstützt Ziffern und deutsche Zahlwörter eins bis
+  zwölf; andere Formulierungen werden nicht geraten. Diese eigene strukturelle
+  Aufnahme ersetzt keine Modellkonfidenz durch einen höheren Wert. Alle übrigen
+  zugelassenen Aussagen bleiben beim konfigurierten lokalen Modell. Keine stillen Persönlichkeits-
   annahmen aus Mails, Dokumenten oder Modellantworten.
 - Einstellungen und Lernmodell sind in API und Oberfläche konfigurierbar.
   Ausschließlich aktivierte lokale Modelle stehen zum Lernen zur Verfügung;
@@ -45,6 +52,8 @@ die Gap-Analyse nicht ausgelesen oder als Testmaterial übernommen.
   nicht abschalten. Private Speicherung ist Standard; Cloudkontext benötigt eine
   eigene Freigabe für den konkreten Provider und die aktuelle Memory-Revision.
   Gewöhnliche Auto-Freigabe und öffentliche Websuche teilen das Gedächtnis nicht.
+  Relevantes privates Memory hält Auto lokal; explizites Cloud lässt nicht
+  freigegebenes Memory aus.
 - Die Auswahl kombiniert strukturierte Felder und lexikalische Relevanz mit
   optionalen lokalen Embeddings im selben PostgreSQL-Schema. Höchstens 2.000
   Kandidaten, Scope-, Herkunfts-, Gültigkeits- und Kontextbudgetprüfungen begrenzen
@@ -75,29 +84,56 @@ bei nativen Erinnerungen oder vorhandenen neuen Zustandsdaten. Eine Sicherung vo
 Rollout bleibt erforderlich; bestandene Migrationstests oder ein Backup ersetzen
 keine geprüfte Wiederherstellung.
 
-**Bisher bestanden:** Die gezielte synthetische Backend-/API-/Kontextsuite umfasst
-149 erfolgreiche Tests bei einem mangels freigegebener Test-DB übersprungenen
-PostgreSQL-Fall. Darin enthalten sind Quellbindung, sensible Pointer-Vorschläge,
-CAS, Konflikte/Faktentypen, Providerfreigaben, Vergessen, Fehlerdegradierung und der
-HTTP-Chatweg über einen lokalen Fake-Extraktor bis zur späteren Kontextauswahl.
-Die SQLite-Migrationsprüfung führt tatsächlich 0045 → 0046 mit bestehendem
-synthetischen Altbestand aus, prüft native Persistenz nach Datenbank-Neuöffnung
-und die Verlustschutz-Guards. Der separate PostgreSQL-Migrationstest verwendet
-ausschließlich ein isoliertes Schema einer ausdrücklich freigegebenen
-Loopback-Testdatenbank; er wurde hier noch nicht ausgeführt.
+**Lokale Prüfungen:** Der Zwischenstand **b8189bb** bestand die vollständige
+lokale Suite mit **2.640 Tests einschließlich PostgreSQL-Prüfungen**, Ruff, mypy,
+Frontend-Typprüfung/Build und Secret-Scan über 684 Quelldateien. Das ist ein
+konkreter Zwischenstand und kein Beleg für die nachfolgende Qualitätskorrektur.
+Seine exakte GitHub-CI [39636036848](https://github.com/sschluet/obdaAI/actions/runs/39636036848)
+ist derzeit noch ausstehend; ein grünes Ergebnis wird nicht vorweggenommen.
 
-Synthetische Browserabnahme über echte lokale HTTP-APIs sowie Frontend-Typprüfung
-und Build bestanden: manuelle Bearbeitung/CAS, frische und veraltete
-Vorschlagsquellen, Einstellungen, ausschließlich lokale Lernmodellauswahl und
-Filter abgelaufener Einträge. Diese Abnahme verwendet isolierte Testdaten und
-beweist keinen echten Lernmodell- oder Cloudprovideraufruf.
+Die frühere gezielte Backend-/API-/Kontextsuite mit 149 bestandenen Tests und
+einem damals übersprungenen PostgreSQL-Fall war ein engerer Vorläufer. Sie deckte
+Quellbindung, sensible Pointer, CAS, Konflikte/Faktentypen, Providerfreigaben,
+Vergessen, Fehlerdegradierung und den HTTP-Chatweg mit lokalem Fake-Extraktor ab.
+Migrationstests prüfen tatsächlich 0045 → 0046 mit synthetischem Altbestand,
+native Persistenz nach Datenbank-Neuöffnung und Verlustschutz-Guards. PostgreSQL
+wird ausschließlich in einer freigegebenen isolierten Loopback-Testumgebung
+geprüft; vorhandene produktive Daten werden nicht als Testmaterial verwendet.
 
-**Noch offen:** Vollständiger aktueller App-Testlauf, vollständige exakte GitHub-CI,
-öffentliche Showcase-Synchronisierung, zielgebundene Sicherung/VM-Ausrollung mit
-Schema 0046 sowie reale lokale Extraktions- und optionale Embedding-Abnahme.
-Vorhandene erfolgreiche Integrationsabnahmen weiter unten gelten für ihren
-jeweiligen Release und sind keine Memory-Liveabnahme. Das gesamte persönliche
-Gedächtnis wird nicht als vollständig fertig abgenommen bezeichnet.
+Synthetische Browserabnahme über echte lokale HTTP-APIs bestanden: manuelle
+Bearbeitung/CAS, frische und veraltete Vorschlagsquellen, Einstellungen,
+ausschließlich lokale Lernmodellauswahl und Filter abgelaufener Einträge. Der
+Memory-Check startet eine eigene frische isolierte Fixture aus dem bestehenden
+Browsercheck; fremde Suitezustände werden nicht wiederverwendet. Diese Prüfung
+belegt keinen echten Lernmodell- oder Cloudprovideraufruf.
+
+**Isolierte Prüfung mit realem lokalem Modell:** Der lokale Inferenzdienst der VM
+bestand synthetische Berufsangabe, ausdrückliche Korrektur und sensible
+Pointer-Vorschläge. Ein isolierter Datenbank-Neustart erhielt den geprüften Abruf;
+Vergessen unterband den alten und aktuellen Eintrag. Der ignorierte lokale Beleg
+`memory-real-model-acceptance-proof.json` hält nur feste Prüfergebnisse fest.
+Der Test schrieb keine App-Laufzeitdaten und nutzte keine persönlichen Inhalte.
+
+**Festgestellte Modellgrenze und Qualitätskorrektur:** Bei einer direkten
+Familien-Reitaussage lieferte das kleine lokale Modell unzuverlässig eine leere
+Faktenliste beziehungsweise Konfidenz null. Diese Versuche werden nicht als
+bestandene Extraktion umgedeutet. Eng bekannte vollständige Direktangaben zu
+Name des Kindes, Alter und Reitfähigkeit werden deshalb vor dem Modell deterministisch
+geprüft, einschließlich Reitdauer mit Ziffern und deutschen Zahlwörtern eins bis
+zwölf. Dieser getrennte, wörtlich gebundene Parser überschreibt keine
+Modellkonfidenz. Für übrige Aussagen bleibt das lokale Modell konfigurierbar;
+Review, Quellrevisionen und Datenschutz bleiben verbindlich. Die Korrektur
+bestand 182 gezielte Tests sowie Ruff und mypy; sie benötigt weiterhin ihren
+eigenen vollständigen Prüf- und CI-Nachweis.
+
+**Noch offen:** Die vollständigen Checks des finalen Korrekturstands, dessen exakte
+GitHub-CI, öffentliche Showcase-Synchronisierung, zielgebundene Sicherung und
+VM-Ausrollung mit Schema 0046 sowie der echte HTTP-Chat-Lernablauf im laufenden
+Appbetrieb. Der optionale reale Embeddingserver ist nicht konfiguriert und seine
+Live-Abnahme steht aus. Langzeitqualität und beliebige Familien-/Sprachvarianten
+sind nicht abgenommen. Vorhandene erfolgreiche Integrationsabnahmen weiter unten
+gelten für ihren jeweiligen Release. Das persönliche Gedächtnis wird weder als
+unbegrenzt noch als vollständig fertig abgenommen bezeichnet.
 
 ## Private Integrationsfolgefragen — reale Mail- und Archivabnahme erfolgreich
 

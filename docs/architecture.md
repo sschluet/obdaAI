@@ -57,7 +57,9 @@ erweitert, keine zweite Memory-Datenbank eingeführt. `storage="vault"` bezeichn
 unveränderte kanonische Markdown-Notizen im bestehenden Obsidian-Vault.
 `storage="app"` bezeichnet native Einträge ohne Vault-Abhängigkeit. Der vorhandene
 Profil-Singleton bleibt ein eigener, manuell gepflegter Kontext mit feldweiser
-Cloudfreigabe. Automatisches Lernen kopiert oder überschreibt ihn nicht.
+Cloudfreigabe. Automatisches Lernen kopiert oder überschreibt ihn nicht. Auch
+manuell gewählte typisierte Antwortpräferenzen behalten ihre Autorität; eine
+gelernte Stilvorliebe wird nicht zur gleichrangigen Systemvorgabe.
 
 ### Lebenszyklus, Herkunft und Berechtigungen
 
@@ -84,7 +86,9 @@ ausgewählten Provider und die aktuelle Revision gebunden. Der normale Auto-Modu
 erteilt diese Freigabe nicht. Die finale Kontextprojektion prüft Eigentümer,
 Scope, Quelle, Gültigkeit, Settings und Revision erneut am Providerübergang;
 Änderungen während der Verarbeitung werden berücksichtigt. Gesprächsauszüge bleiben
-`LOCAL_ONLY`. Memorytexte fließen nicht implizit in öffentliche Suchanfragen ein.
+`LOCAL_ONLY`. Relevantes privates Gedächtnis hält eine Auto-Antwort lokal;
+explizites Cloud lässt nicht freigegebene Erinnerungen aus. Memorytexte fließen
+nicht implizit in öffentliche Suchanfragen ein.
 
 Explizites Vergessen nativer Einträge entfernt deren Text, Memory-Versionstexte
 und Embeddingderivate. Zusammenfassungen werden invalidiert; Quellenpointer und
@@ -105,8 +109,17 @@ vor einer Inferenz ab. Der konservative direkte Aussagefilter ist keine allgemei
 semantische Extraktion beliebiger Gesprächsinhalte. E-Mail-/Archivbelege und
 Modellantworten werden nicht automatisch zu persönlichen Fakten.
 
-`memory_learning.py` verwendet einen begrenzten lokalen JSON-Schema-Aufruf und
-prüft jedes Ergebnis zusätzlich gegen den unveränderten Originaltext. Der
+`memory_learning.py` prüft vor dem Modellaufruf eine kleine geschlossene Grammatik
+vollständiger eigener Familienaussagen: Name, Alter und Reitfähigkeit einer Tochter
+oder eines Sohns. Reitdauer unterstützt Ziffern und deutsche Zahlwörter von eins
+bis zwölf. Nur exakt passende vollständige Aussagen werden deterministisch als
+wörtlich belegte Fakten verarbeitet; Fragen, unsichere Formulierungen und fremde
+Quellen erhalten dadurch keine Sonderfreigabe. Diese strukturelle Prüfung ist
+ein eigener Aufnahmeweg und keine nachträgliche Erhöhung einer Modellkonfidenz.
+Andere zugelassene Aussagen verwenden den konfigurierten begrenzten lokalen
+JSON-Schema-Aufruf; jedes Ergebnis wird zusätzlich gegen den unveränderten
+Originaltext geprüft. Sensible Prüfung, Quellenbindung und Privacy gelten für
+beide Wege unverändert. Der
 bestehende Procrastinate-Worker verarbeitet die Jobs nachrangig; der Chat wartet
 nicht auf diesen separaten Modellaufruf. Durable Jobs besitzen einen Queued-only-
 Claim, Einstellungen-/Quellenbindung und keine blinden Wiederholungen nach
@@ -147,6 +160,14 @@ Erinnerungen oder vorhandenen neuen Zustandsdaten. Vor einem Rollout bleiben
 aktuelle Sicherung und Prüfung des konkreten Zielstands erforderlich; eine
 erfolgreiche additive Migration oder Sicherung ist kein Wiederherstellungsnachweis.
 
-Die gezielten synthetischen Unit-, API- und Migrationsprüfungen belegen einzelne
-Verträge. Vollständige Suite, genaue CI, Browserabnahme und reale lokale Modell-/
-Embedding-Abnahme sind getrennte Nachweise; den aktuellen Stand führt `STATUS.md`.
+Gezielte synthetische Unit-, API-, Browser- und Migrationsprüfungen belegen die
+einzelnen Verträge. Der Zwischenstand `b8189bb` bestand die lokale Gesamtsuite
+mit 2.640 Tests einschließlich PostgreSQL; seine exakte GitHub-CI ist noch offen.
+Eine isolierte Prüfung gegen das reale lokale Modell der VM belegt synthetische
+Berufsangabe, Korrektur und sensible Pointer sowie Persistenz nach Neuöffnung,
+Abruf und Vergessen. Eine Familien-Reitaussage wurde vom kleinen Modell dagegen
+nicht zuverlässig extrahiert; daraus folgt der enge deterministische Aufnahmeweg,
+keine allgemeine Qualitätszusage. Die nachfolgende Korrektur benötigt neue passende
+Checks. Schema-0046-Rollout, echter HTTP-Chat-Lernablauf der Anwendung und ein
+reales optionales Embeddingmodell sind weiterhin getrennte offene Nachweise.
+Den verbindlichen aktuellen Stand führt `STATUS.md`.

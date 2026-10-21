@@ -460,22 +460,22 @@
         {
           "title": "Modellunabhängiges persönliches Gedächtnis",
           "status": "local",
-          "description": "Persönliches, Projekt-, Gesprächs- und Vorliebenwissen in der vorhandenen App-Datenbank speichern. Neue Einträge benötigen keinen Vault. Verwaltung, Quellenbezug, Bearbeitung und Ablaufstatus sind mit synthetischen API- und Browserfällen geprüft. Die neue Erweiterung ist noch nicht auf der Test-VM abgenommen."
+          "description": "Persönliches, Projekt-, Gesprächs- und Vorliebenwissen in der vorhandenen App-Datenbank. Native Einträge benötigen keinen Vault; das manuell gepflegte Profil bleibt unabhängig. Synthetische API- und Browserfälle geprüft. Schema-0046-Ausrollung und echter App-Lernablauf stehen aus."
         },
         {
           "title": "Aus eigenen Gesprächen lernen",
           "status": "local",
-          "description": "Eigene Aussagen mit gebundener Nachrichtenrevision lokal auswerten. Lernmodell und automatische Übernahme sind einstellbar; sensible Vorschläge benötigen Prüfung anhand der aktuellen Quelle. Mail- und Dokumentinhalte werden nicht automatisch zu persönlichen Fakten. Synthetisch geprüft; echte lokale Modell- und Dauerbetriebsabnahme stehen aus."
+          "description": "Eigene Aussagen lokal und mit aktueller Quelle auswerten. Ausgewählte Berufs-, Korrektur- und sensible Pointer-Fälle mit echtem lokalen Modell und synthetischen Daten geprüft. Enge vollständige Familienangaben werden separat strukturell erkannt; beliebige Formulierungen sind nicht zugesagt. Lernmodell konfigurierbar, sensible Übernahme bleibt prüfpflichtig."
         },
         {
           "title": "Erinnerungen suchen, prüfen und entfernen",
           "status": "local",
-          "description": "Im bestehenden Wissensbereich nach Typ und Zustand filtern, Herkunft öffnen und Cloudfreigaben je Anbieter ausdrücklich setzen. Konflikte erhalten den Entwurf. Entfernen löscht die gespeicherten App-Gedächtnisinhalte und ihre Fassungen; ursprüngliche Chats bleiben erhalten. Mit echten synthetischen API-Aufrufen und mobiler Oberfläche geprüft."
+          "description": "Typ, Herkunft, Gültigkeit und einzelne Anbieterfreigaben verwalten; Konflikte erhalten den Entwurf. Entfernen löscht App-Memory und seine Fassungen, ursprüngliche Chats bleiben erhalten. Synthetische API-/Browserfälle und isoliertes Vergessen mit Datenbank-Neuöffnung geprüft. Kein rückwirkender systemweiter Datenpurge."
         },
         {
           "title": "Passenden Gedächtniskontext auswählen",
           "status": "limited",
-          "description": "Begrenzte relevante Erinnerungen mit Scope-, Quellen-, Gültigkeits- und Anbieterprüfungen in Antworten einbinden. Lokale semantische Suche kann die Textsuche ergänzen; bei fehlendem Embeddingdienst bleibt Textsuche möglich. Modell- und Relevanzqualität unter realen Bedingungen sind noch nicht abgenommen."
+          "description": "Begrenzter Abruf mit Scope-, Quellen-, Gültigkeits- und Anbieterprüfungen. Privates Memory hält Auto lokal; explizites Cloud lässt ungeteilte Inhalte aus. Isolierte Persistenz und Retrieval synthetisch geprüft. Optionaler realer Embeddingserver und Relevanzqualität im laufenden Appbetrieb sind noch nicht abgenommen."
         },
         {
           "title": "Obsidian und kanonisches Memory",
