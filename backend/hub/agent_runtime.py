@@ -59,7 +59,7 @@ calendar_prefilter_dates: Vortag vorfiltern, Zeitzone prüfen.
 Katalog genügt nicht: Nachrichten abrufen; Status/Ordner nicht wiederholen.
 mail_read_contracts: volle Schemas/schema_sha256; keine IMAP-Syntax.
 ready_reads zuerst; prior_read_results sind alte Kontobelege.
-Antwortfragen: nach Detailabruf list_folders, dann beobachteten Gesendet-Ordner
+Antwortfragen: list_folders, dann beobachteten Gesendet-Ordner
 abfragen. Nur exakte In-Reply-To/References belegen Antworten.
 Answered-Flag separat; fehlende Antwortbelege unbekannt.
 reply_evidence: ALLE früher angezeigten Einträge; Ordinal=deren Reihenfolge.
@@ -550,11 +550,11 @@ def mail_read_plan(
 
     has_data = mailbox_queried(history)
     reply = bool(re.search(r"antwort|repl(?:y|ied)", job.goal.casefold()))
-    facts = cohort_evidence(db, job, profiles, history) if has_data and reply else {}
+    facts = cohort_evidence(db, job, profiles, history) if reply else {}
     needs_sent = facts.get("cohort_known") is True and not facts.get("sent_query_observed")
     ready = (
-        ready_reads(db, job, profiles, contracts) if not has_data
-        else sent_ready_reads(db, job, profiles, history, contracts) if needs_sent else {}
+        sent_ready_reads(db, job, profiles, history, contracts) if needs_sent
+        else ready_reads(db, job, profiles, contracts) if not has_data else {}
     )
     # Concrete next reads need their exact source bindings, not a duplicate full
     # flag table. Keep the complete cohort view for the eventual answer turn.
@@ -564,6 +564,7 @@ def mail_read_plan(
     )
     return {
         "has_data": has_data, "allow_finish": has_data and not needs_sent,
+        "compact_planning": needs_sent and bool(ready.get("decisions")),
         "ready": ready,
         "reply_evidence": evidence if has_data else mail_reply_progress(history),
         "sent_query_observed": facts.get("sent_query_observed") is True,
@@ -2025,6 +2026,12 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     mail_plan = mail_read_plan(db, job, profiles, history, contracts) if (
                         private_mail_read and sequence is None
                     ) else {}
+                    if mail_plan.get("compact_planning") and not has_read_data:
+                        # Concrete verified-cohort Sent choices already carry exact
+                        # arguments; retain every schema and grant without catalog prose.
+                        contracts = mail_read_contracts(
+                            profiles, history, include_descriptions=False
+                        )
                     allow_finish = mail_plan.get("allow_finish", has_read_data)
                     ready = mail_plan.get("ready", {})
                     choices = ready.get("decisions", [])
