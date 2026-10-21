@@ -84,10 +84,12 @@ try{
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
  await page.reload();await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
- await page.waitForFunction(()=>document.querySelector('.agent-mode input')?.checked);
+ await page.getByRole('region',{name:'Systemsteuerung',exact:true}).getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).waitFor();
+ if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Restored agent job makes explicit system mode sticky');
  await composer.fill('Agentenabnahme');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});
  const approve=panel.getByRole('button',{name:'Diesen Schritt freigeben und fortsetzen',exact:true});await approve.waitFor();
+ let parallelMessages=0;const blockedPath='**/api/conversations/'+chat.id+'/messages';await page.route(blockedPath,route=>{parallelMessages++;return route.abort()});await composer.fill('Parallelfrage während einer ausstehenden Freigabe');if(await page.getByRole('button',{name:'Nachricht senden',exact:true}).isEnabled())throw Error('Active agent permits parallel normal-chat send');await composer.press('Enter');await page.getByRole('alert').filter({hasText:'Der aktuelle Integrationsauftrag läuft oder wartet auf deine Freigabe.'}).waitFor();if(parallelMessages)throw Error('Keyboard submission bypassed active agent guard');await page.unroute(blockedPath);
  let jobs=await call('/agent-runs?conversation_id='+chat.id);let job=await call('/agent-runs/'+jobs[0].id);
  if(job.status!=='awaiting_approval'||job.steps.some(s=>s.kind==='effect'&&s.status==='succeeded'))throw Error('Effect before exact approval');
  await approve.click();await panel.getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
@@ -119,7 +121,7 @@ try{
  const taskJobs=await call('/agent-runs?task_id='+task.id);
  if(taskJobs[0]?.status!=='succeeded')throw Error('Task did not use the verified shared loop');
  await page.getByRole('button',{name:'Chat',exact:true}).click();await page.goto(base+'/?chat='+chat.id);
- await page.getByLabel('Systeme steuern',{exact:true}).check();await composer.fill('Synthetischer Abnahmetest mit Antwortverlust.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+ await page.getByLabel('Systeme steuern',{exact:true}).check();await composer.fill('Benenne das synthetische Dokument um: Abnahmetest mit Antwortverlust.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await panel.getByText(/Wirkung unklar/).first().waitFor();
  jobs=await call('/agent-runs?conversation_id='+chat.id);job=await call('/agent-runs/'+jobs[0].id);
  if(job.status!=='uncertain'||job.steps.filter(s=>s.kind==='effect').length!==1)throw Error('Uncertain effect retried');

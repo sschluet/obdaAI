@@ -651,6 +651,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
             if not c or c.purpose != "chat" or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
+            from hub.agent_models import AgentJob
+            from hub.agent_runtime import ACTIVE as AGENT_ACTIVE
+
+            if db.scalar(
+                select(AgentJob.id)
+                .where(AgentJob.conversation_id == chat_id, AgentJob.status.in_(AGENT_ACTIVE))
+                .limit(1)
+            ):
+                raise HTTPException(
+                    409, "In diesem Gespräch wartet oder läuft bereits ein Agentenauftrag"
+                )
             if cloud_allowed and not (local_only or model_local_only):
                 provider = cloud_provider or c.cloud_provider
                 if not cfg.cloud_enabled or provider not in cfg.external_provider_kinds:
@@ -839,9 +850,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             snapshot["skills"] = skill_audit
             snapshot["integration_selection"] = freeze_bindings(db, "conversation", c.id)
             snapshot["integration_scope"] = {"scope": "conversation", "owner_id": c.id}
-            if model_cloud_only and any(
-                item.get("kind") == "paperless"
-                for item in snapshot["integration_selection"].get("bindings", [])
+            if (
+                model_cloud_only
+                and snapshot["integration_selection"].get("effective_mode") != "automatic"
+                and any(
+                    item.get("kind") == "paperless"
+                    for item in snapshot["integration_selection"].get("bindings", [])
+                )
             ):
                 raise HTTPException(
                     409, "Paperless-Archiv bleibt lokal; Auto oder Nur lokal wählen"

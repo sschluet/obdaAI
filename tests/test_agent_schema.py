@@ -6,7 +6,8 @@ import subprocess
 import sys
 
 import pytest
-from hub.agent_schema import validate
+from hub import agent_schema
+from hub.agent_schema import SchemaValidationFailure, validate
 
 
 def child(schema, arguments, *, startup=""):
@@ -15,9 +16,8 @@ def child(schema, arguments, *, startup=""):
         [sys.executable, "-I", "-c", program],
         input=json.dumps({"schema": schema, "arguments": arguments}).encode(),
         capture_output=True,
-        # These direct child checks exercise CPU limits independently of CI
-        # scheduling. The actual parent's unchanged three-second cap is tested
-        # separately below.
+        # Direct child checks exercise CPU limits independently of scheduling.
+        # The parent separately bounds startup and untrusted validation below.
         timeout=10,
     )
 
@@ -92,11 +92,56 @@ def test_invalid_schema_arguments_and_external_references_fail(schema, arguments
     assert not result.stdout and not result.stderr
 
 
-def test_parent_validation_remains_bounded_at_three_seconds(monkeypatch):
-    def timeout(*args, **kwargs):
-        assert kwargs["timeout"] == 3
-        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+def controlled_child(monkeypatch, program):
+    original = subprocess.Popen
 
-    monkeypatch.setattr("hub.agent_schema.subprocess.run", timeout)
-    with pytest.raises(ValueError, match="validation time limit"):
+    def start(*args, **kwargs):
+        assert args[0][-1] == "--ready"
+        return original([sys.executable, "-I", "-c", program], **kwargs)
+
+    monkeypatch.setattr(agent_schema.subprocess, "Popen", start)
+
+
+def test_trusted_startup_does_not_consume_untrusted_validation_budget(monkeypatch):
+    monkeypatch.setattr(agent_schema, "STARTUP_SECONDS", 3)
+    monkeypatch.setattr(agent_schema, "VALIDATION_SECONDS", 0.1)
+    controlled_child(monkeypatch, """
+import sys,time,json
+time.sleep(0.2)
+sys.stdout.buffer.write(b'READY\\n');sys.stdout.buffer.flush()
+assert json.loads(sys.stdin.buffer.read())['arguments']=={}
+""")
+    validate({"type": "object"}, {})
+
+
+@pytest.mark.parametrize("phase", ["startup", "validation"])
+def test_parent_kills_and_reaps_child_at_each_fixed_wall_limit(monkeypatch, phase):
+    monkeypatch.setattr(agent_schema, "STARTUP_SECONDS", 0.2 if phase == "startup" else 3)
+    monkeypatch.setattr(agent_schema, "VALIDATION_SECONDS", 0.2)
+    controlled_child(monkeypatch, """
+import sys,time
+""" + ("sys.stdout.buffer.write(b'READY\\n');sys.stdout.buffer.flush()\n"
+       if phase == "validation" else "") + "time.sleep(30)\n")
+    with pytest.raises(SchemaValidationFailure) as caught:
         validate({"type": "object"}, {})
+    assert caught.value.reason == phase + "_timeout"
+    assert agent_schema.VALIDATION_SECONDS == 0.2
+
+
+def test_parent_rejects_invalid_readiness_without_sending_private_arguments(monkeypatch):
+    controlled_child(monkeypatch, """
+import sys
+sys.stdout.buffer.write(b'WRONG\\n');sys.stdout.buffer.flush()
+# The parent must kill us rather than supplying arguments after a bad handshake.
+assert not sys.stdin.buffer.read()
+""")
+    with pytest.raises(SchemaValidationFailure, match="invalid_schema"):
+        validate({"type": "object"}, {"private": "never send before ready"})
+
+
+def test_parent_real_validation_preserves_schema_and_external_ref_checks():
+    assert agent_schema.STARTUP_SECONDS == 10 and agent_schema.VALIDATION_SECONDS == 3
+    validate({"type": "object", "required": ["ok"]}, {"ok": True})
+    for schema in ({"required": ["missing"]}, {"$ref": "https://example.test/no-network"}):
+        with pytest.raises(SchemaValidationFailure, match="invalid_schema"):
+            validate(schema, {})

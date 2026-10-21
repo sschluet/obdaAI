@@ -491,3 +491,66 @@ def test_mcp_exact_endpoint_slash_is_saved_and_not_a_credential_alias(registry):
         ),
     ).json()
     assert changed["secret_saved"] is False
+
+
+def test_unbound_scopes_dynamically_offer_all_enabled_profiles_without_eight_item_cap(registry):
+    c, factory, _ = registry
+    profile_ids = [create(c, name=f"Synthetic profile {index}")["id"] for index in range(11)]
+    with factory() as db:
+        project = Project(name="Synthetic automatic project")
+        conversation = Conversation()
+        task = Task()
+        db.add_all([project, conversation, task])
+        for profile_id in profile_ids[:10]:
+            db.get(Integration, profile_id).enabled = True
+        db.commit()
+        owners = [("project", project.id), ("conversation", conversation.id), ("task", task.id)]
+    for scope, owner in owners:
+        result = c.get(f"/api/integration-bindings/{scope}/{owner}").json()
+        assert result["selection_mode"] == "automatic" and result["revision"] == 0
+        assert result["integration_ids"] == []
+        assert result["effective_integration_ids"] == sorted(profile_ids[:10])
+    with factory() as db:
+        before = freeze_bindings(db, "conversation", owners[1][1])
+        db.get(Integration, profile_ids[10]).enabled = True
+        db.get(Integration, profile_ids[0]).enabled = False
+        db.commit()
+        after = freeze_bindings(db, "conversation", owners[1][1])
+    assert [row["id"] for row in after["bindings"]] == sorted(profile_ids[1:])
+    assert before != after  # Existing frozen jobs detect newly changed availability.
+    assert "config" not in json.dumps(after) and "secret" not in json.dumps(after)
+
+
+def test_automatic_ignores_stored_subset_but_manual_off_and_project_limits_remain(registry):
+    c, factory, _ = registry
+    profile_ids = [create(c, name=f"Synthetic boundary {index}")["id"] for index in range(2)]
+    with factory() as db:
+        project = Project(name="Synthetic constrained project")
+        db.add(project)
+        db.flush()
+        conversation = Conversation(project_id=project.id)
+        standalone = Conversation()
+        db.add_all([conversation, standalone])
+        for profile_id in profile_ids:
+            db.get(Integration, profile_id).enabled = True
+        db.commit()
+        pid, cid, sid = project.id, conversation.id, standalone.id
+    path = "/api/integration-bindings/project/" + pid
+    conversation_path = "/api/integration-bindings/conversation/" + cid
+    assert c.get(conversation_path).json()["effective_integration_ids"] == sorted(profile_ids)
+    body = {"expected_revision": 0, "integration_ids": profile_ids[:1], "selection_mode": "manual"}
+    assert c.put(path, json=body).status_code == 200
+    assert c.get(conversation_path).json()["effective_integration_ids"] == profile_ids[:1]
+    assert (
+        c.put(path, json={**body, "expected_revision": 1, "selection_mode": "off"}).status_code
+        == 200
+    )
+    assert c.get(conversation_path).json()["effective_integration_ids"] == []
+    changed = c.put(path, json={**body, "expected_revision": 2, "selection_mode": "automatic"})
+    assert changed.status_code == 200
+    assert changed.json()["effective_integration_ids"] == sorted(profile_ids)
+    assert c.get(conversation_path).json()["effective_integration_ids"] == sorted(profile_ids)
+    # A saved empty manual selection is an explicit limit, not the automatic default.
+    standalone_path = "/api/integration-bindings/conversation/" + sid
+    assert c.put(standalone_path, json={**body, "integration_ids": []}).status_code == 200
+    assert c.get(standalone_path).json()["effective_integration_ids"] == []

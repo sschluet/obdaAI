@@ -2,8 +2,9 @@ import json
 import os
 from pathlib import Path
 from typing import Annotated, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, TypeAdapter
+from pydantic import Field, TypeAdapter, field_validator
 from pydantic.dataclasses import dataclass
 
 
@@ -63,6 +64,16 @@ class Settings:
     static_dir: str = "frontend/dist"
     source_network_enabled: bool = False
     integration_targets_enabled: bool = False
+    agent_timezone: str = "Europe/Berlin"
+
+    @field_validator("agent_timezone")
+    @classmethod
+    def valid_agent_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Unknown agent IANA timezone") from None
+        return value
 
     @classmethod
     def from_env(cls) -> "Settings":

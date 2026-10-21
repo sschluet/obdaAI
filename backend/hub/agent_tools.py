@@ -162,6 +162,25 @@ class HTTPCall(Strict):
         return self
 
 
+class PaperlessCall(Strict):
+    operation: Literal["search", "document"] = "search"
+    query: str = Field(default="", max_length=500)
+    document_id: int | None = Field(default=None, ge=1)
+    page: int = Field(default=1, ge=1, le=10000)
+    limit: int = Field(default=10, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def operation_shape(self) -> "PaperlessCall":
+        if any(ord(c) < 32 for c in self.query):
+            raise ValueError("Invalid Paperless query")
+        if self.operation == "document":
+            if self.document_id is None or self.query or self.page != 1:
+                raise ValueError("Document reads require only a document ID")
+        elif self.document_id is not None:
+            raise ValueError("Search cannot select a document ID")
+        return self
+
+
 class ShellCall(Strict):
     script: str = Field(min_length=1, max_length=64000)
     verification_script: str = Field(min_length=1, max_length=16000)
@@ -241,7 +260,7 @@ class GmailCall(Strict):
 
 
 class Decision(Strict):
-    kind: Literal["tool", "finish", "ask"]
+    kind: Literal["tool", "finish", "ask", "stop"]
     message: str = Field(min_length=1, max_length=4000)
     integration_id: str | None = None
     tool: (
@@ -255,6 +274,7 @@ class Decision(Strict):
             "research",
             "mail.send",
             "gmail.read",
+            "paperless.read",
             "ha.websocket",
             "ssh.inspect",
             "http.upload",
@@ -290,7 +310,12 @@ def research_schema() -> dict[str, Any]:
 
 
 def decision_envelope_schema(
-    integration_ids: Sequence[str], tool_names: Sequence[str] | None = None
+    integration_ids: Sequence[str],
+    tool_names: Sequence[str] | None = None,
+    *,
+    allow_finish: bool = True,
+    allow_ask: bool = True,
+    allow_stop: bool = False,
 ) -> dict[str, Any]:
     """Compact prompt contract; full typed arguments live in tools and native grammar."""
     if not integration_ids:
@@ -315,17 +340,25 @@ def decision_envelope_schema(
                 "required": ["kind", "message", "integration_id", "tool", "arguments"],
             }
         )
-    branches.append(
-        {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {
-                "kind": {"type": "string", "enum": ["ask", "finish"]},
-                "message": message,
-            },
-            "required": ["kind", "message"],
-        }
+    terminal = (
+        (["ask"] if allow_ask else [])
+        + (["finish"] if allow_finish else [])
+        + (["stop"] if allow_stop else [])
     )
+    if terminal:
+        branches.append(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "kind": {"type": "string", "enum": terminal},
+                    "message": message,
+                },
+                "required": ["kind", "message"],
+            }
+        )
+    if not branches:
+        raise ValueError("Decision generation requires an allowed decision")
     return {"type": "object", "anyOf": branches}
 
 
@@ -372,6 +405,15 @@ def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
         return rules.file_upload and "POST" in rules.http_methods
     if tool == "ha.websocket":
         return kind == "home_assistant" and bool(rules.ha_websocket_prefixes)
+    if tool == "paperless.read":
+        return bool(
+            kind == "paperless"
+            and "GET" in rules.http_methods
+            and any(
+                prefix.startswith("/api/documents/") or "/api/documents/".startswith(prefix)
+                for prefix in rules.http_prefixes
+            )
+        )
     if tool == "gmail.read":
         return kind == "gmail" and rules.gmail_read
     if tool == "mail.send":
@@ -445,13 +487,73 @@ def _scoped_arguments(tool: str, schema: dict[str, Any], rules: Rules) -> dict[s
     return {"anyOf": retained} if tool == "http" else retained[0]
 
 
+def ready_read_schema(
+    decisions: Sequence[dict[str, Any]], interfaces: Sequence[dict[str, Any]]
+) -> dict[str, Any]:
+    """Narrow a planning turn to concrete reads; this never grants execution rights."""
+    if not 1 <= len(decisions) <= 4:
+        raise ValueError("Expected a bounded set of concrete reads")
+    bound = {identifier: (kind, rules) for identifier, kind, rules in _interface_rules(
+        [interface["integration_id"] for interface in interfaces], interfaces
+    )}
+
+    def constant(value: Any) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return {
+                "type": "object", "additionalProperties": False,
+                "properties": {key: constant(item) for key, item in value.items()},
+                "required": list(value),
+            }
+        if isinstance(value, list):
+            raise ValueError("Concrete read choices cannot contain arrays")
+        scalar_type = (
+            "null" if value is None else "boolean" if type(value) is bool
+            else "integer" if type(value) is int else "string" if isinstance(value, str) else None
+        )
+        if scalar_type is None:
+            raise ValueError("Unsupported concrete read value")
+        return {"type": scalar_type, "const": value}
+
+    branches = []
+    for candidate in decisions:
+        decision = Decision.model_validate(candidate)
+        if decision.kind != "tool" or decision.integration_id not in bound:
+            raise ValueError("Concrete read must use a bound interface")
+        kind, rules = bound[decision.integration_id]
+        args, effect = validate_tool(kind, rules, decision.tool or "", decision.arguments)
+        mailbox = decision.tool == "mcp.call" and args["name"] in {
+            "read_email", "get_thread", "list_folders", "list_emails", "search_emails",
+        }
+        archive = (
+            kind == "paperless" and decision.tool == "paperless.read"
+            and args["operation"] == "document"
+        )
+        if effect or not (mailbox or archive):
+            raise ValueError("Expected a concrete authorized private read")
+        branch = constant({
+            "kind": "tool", "integration_id": decision.integration_id,
+            "tool": decision.tool, "arguments": args,
+        })
+        branch["properties"]["message"] = Decision.model_json_schema()["properties"]["message"]
+        branch["required"].append("message")
+        branches.append(branch)
+    return {"type": "object", "anyOf": branches}
+
+
 def decision_schema(
     integration_ids: Sequence[str],
     tool_names: Sequence[str] | None = None,
     interfaces: Sequence[dict[str, Any]] | None = None,
+    *,
+    allow_finish: bool = True,
+    allow_ask: bool = True,
+    allow_stop: bool = False,
 ) -> dict[str, Any]:
     """Constrain generation to typed, available tools; runtime gates remain authoritative."""
-    envelope = decision_envelope_schema(integration_ids, tool_names)
+    envelope = decision_envelope_schema(
+        integration_ids, tool_names, allow_finish=allow_finish,
+        allow_ask=allow_ask, allow_stop=allow_stop,
+    )
     names = sorted(SCHEMAS if tool_names is None else set(tool_names))
     bound = _interface_rules(integration_ids, interfaces) if interfaces is not None else None
     definitions: dict[str, Any] = {}
@@ -519,7 +621,10 @@ def decision_schema(
         expected = definition.get("properties", {}).get("expected")
         if expected is not None:
             expected["additionalProperties"] = False
-    branches.append(envelope["anyOf"][-1])
+    branches.extend(
+        branch for branch in envelope["anyOf"]
+        if branch["properties"]["kind"].get("const") != "tool"
+    )
     return {"type": "object", "$defs": definitions, "anyOf": branches}
 
 
@@ -530,6 +635,7 @@ SCHEMAS: dict[str, type[Strict]] = {
     "ha.websocket": HACall,
     "mail.send": MailCall,
     "gmail.read": GmailCall,
+    "paperless.read": PaperlessCall,
     "research": ResearchCall,
     "http": HTTPCall,
     "http.verify": HTTPVerify,
@@ -583,6 +689,17 @@ def validate_tool(
     if tool == "gmail.read" and kind == "gmail" and rules.gmail_read:
         if data["query"] and not rules.private_data_to_target:
             raise PermissionError("Gmail search queries are not authorized")
+        return data, False
+    if tool == "paperless.read":
+        from hub.agent_paperless import request_path
+
+        path = request_path(data)
+        if (
+            kind != "paperless"
+            or "GET" not in rules.http_methods
+            or not any(path.startswith(prefix) for prefix in rules.http_prefixes)
+        ):
+            raise PermissionError("Paperless read is outside the approved rules")
         return data, False
     if tool == "research":
         return data, False
@@ -777,6 +894,11 @@ def invoke(
     def credential_boundary(address: str) -> None:
         private_boundary(address, rules)
         before_send()
+
+    if tool == "paperless.read":
+        from hub.agent_paperless import invoke as paperless_read
+
+        return paperless_read(cfg, config, secret, args, rules, before_send)
 
     if tool == "gmail.read":
         from hub.gmail_client import API_BASE, GmailClient

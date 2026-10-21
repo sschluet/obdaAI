@@ -11,9 +11,10 @@ const kindNames:Record<string,string>={input:'Deine Angabe',research:'Öffentlic
 const active = ['queued', 'running', 'awaiting_approval', 'awaiting_input'];
 const names: Record<string, string> = {queued: 'Eingeplant', running: 'In Arbeit', awaiting_approval: 'Freigabe erforderlich', awaiting_input: 'Rückfrage', succeeded: 'Ausführung und Prüfschritte abgeschlossen', observed: 'Nur lesende Schritte abgeschlossen', failed: 'Angehalten', uncertain: 'Wirkung unklar', unverified: 'Wirkung nicht vollständig belegt', cancelled: 'Abgebrochen'};
 
-export function AgentRunsPanel({api, conversationId, taskId, setup = false, onState, onChanged}: {
+export function AgentRunsPanel({api, conversationId, taskId, setup = false, onState, onChanged, onPrepareRetry, retryDisabled = false}: {
   api: IntegrationAPI; conversationId?: string; taskId?: string; setup?: boolean;
   onState?: (job: AgentJob | null) => void; onChanged?: () => void;
+  onPrepareRetry?: (goal: string) => void; retryDisabled?: boolean;
 }) {
   const [jobs, setJobs] = useState<AgentJob[]>([]), [error, setError] = useState('');
   const [rows, setRows] = useState<IntegrationRow[]>([]), [editing, setEditing] = useState<IntegrationRow | null>(null);
@@ -30,7 +31,7 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
         const next: AgentJob[] = await api('/agent-runs?' + filter);
         if (!alive) return;
         setJobs(next); setError('');
-        callbacks.current.onState?.(next[0] || null);
+        callbacks.current.onState?.(next.find(job => active.includes(job.status)) || next[0] || null);
         const value = JSON.stringify(next.map(j => [j.id, j.status, j.steps.map(s => [s.sequence, s.status]), j.cancel_requested]));
         if (signature.current && signature.current !== value) callbacks.current.onChanged?.();
         signature.current = value;
@@ -75,6 +76,7 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
     {jobs.slice(0, 5).map(job => <details key={job.id} open={active.includes(job.status)}>
       <summary>{names[job.status] || job.status} · {job.goal.slice(0, 100)}</summary>
       <p role="status">{job.summary || 'Der Agent ermittelt die nächsten Schritte.'}</p>
+      {job.status === 'failed' && onPrepareRetry && <button type="button" disabled={busy || retryDisabled || jobs.some(item => active.includes(item.status))} onClick={() => onPrepareRetry(job.goal)}>Frage erneut vorbereiten</button>}
       {job.cancel_requested && <p>Abbruch angefordert. Bereits gestartete entfernte Prozesse können weiterlaufen.</p>}
       {job.status === 'uncertain' && conversationId && <button type="button" disabled={busy} onClick={() => void perform('/conversations/' + conversationId + '/agent-runs', {
         request_id: crypto.randomUUID(), read_only: true, research_allowed: false, reconcile_job_id: job.id,

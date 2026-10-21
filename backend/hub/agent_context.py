@@ -5,6 +5,10 @@ import json
 from typing import Any
 
 
+class AgentContextLimitError(ValueError):
+    reason = "local_context_limit"
+
+
 def pointer(value: Any, path: str) -> Any:
     if path == "":
         return value
@@ -120,7 +124,9 @@ def _json_type(value: Any) -> str:
     return "number"
 
 
-def _observation(entry: dict[str, Any]) -> dict[str, Any]:
+def _observation(
+    entry: dict[str, Any], *, result_limit: int = 1500, metadata_limit: int = 2500
+) -> dict[str, Any]:
     observed = entry["result"]
     summary: dict[str, Any] = {}
     if isinstance(observed, dict):
@@ -150,20 +156,48 @@ def _observation(entry: dict[str, Any]) -> dict[str, Any]:
         summary["result_shape"] = _shape(observed, width=width)
         if isinstance(observed, dict) and "body" in observed:
             summary["body_shape"] = _shape(observed["body"], width=width)
-        if len(json.dumps(summary, ensure_ascii=False)) <= 2500:
+        if len(json.dumps(summary, ensure_ascii=False)) <= metadata_limit:
             break
     else:
-        raise ValueError("Observation metadata exceeds the model context limit")
+        raise AgentContextLimitError("Observation metadata exceeds the model context limit")
     encoded = json.dumps(observed, ensure_ascii=False, separators=(",", ":"))
     return {
         "sequence": entry.get("sequence"),
         "full_sha256": hashlib.sha256(encoded.encode()).hexdigest(),
         "summary": summary,
-        "result": view(observed, 1500),
+        "result": view(observed, result_limit),
     }
 
 
-def fit(data: dict[str, Any], instruction: str, context_limit: int) -> dict[str, Any]:
+def _projected_mail_observation(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """Typed mail evidence already has a protected semantic view; do not duplicate it."""
+    result = entry["result"]
+    if not isinstance(result, dict):
+        return None
+    projection = result.get("model_projection")
+    if result.get("catalog_checked") is True:
+        projection = "mail_catalog"
+    response = result.get("response")
+    content = response.get("content") if isinstance(response, dict) else None
+    if isinstance(content, list) and content and isinstance(content[0], dict):
+        projection = content[0].get("model_projection", projection)
+    if projection in {"paperless_query_receipt", "mail_read_metadata"}:
+        return {"sequence": entry.get("sequence"), "result": result}
+    if projection not in {"mail_catalog", "mail_query_receipt", "folder_catalog", "folder_status"}:
+        return None
+    return {
+        "sequence": entry.get("sequence"),
+        "full_sha256": hashlib.sha256(
+            json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode()
+        ).hexdigest(),
+        "model_projection": projection,
+        "evidence_source": "mail_read_progress",
+    }
+
+
+def fit(
+    data: dict[str, Any], instruction: str, context_limit: int, *, max_bytes: int | None = None
+) -> dict[str, Any]:
     """Reduce evidence views, never authority, targets, goal or tool contracts.
 
     The latest tool observation keeps an independent structural/verification summary
@@ -187,18 +221,59 @@ def fit(data: dict[str, Any], instruction: str, context_limit: int) -> dict[str,
     )
     if latest_input is not None:
         result["latest_input"] = latest_input
-    if latest is not None:
-        result["latest_observation"] = _observation(latest)
     for size in (6000, 3000, 1500, 600, 180):
+        if latest is not None:
+            protected = (
+                _projected_mail_observation(latest)
+                if "mail_read_progress" in data or "private_read_evidence" in data else None
+            )
+            result["latest_observation"] = protected or _observation(
+                latest,
+                result_limit=min(size, 1500) if max_bytes is not None else 1500,
+                metadata_limit=1000 if max_bytes is not None else 2500,
+            )
         result["private_context"] = view(data.get("private_context", []), size)
+
+        def history_result(entry: dict[str, Any], limit: int, budget: int = size) -> Any:
+            projected = (
+                _projected_mail_observation(entry)
+                if "mail_read_progress" in data or "private_read_evidence" in data else None
+            )
+            if projected is not None and budget <= 600:
+                return {
+                    "evidence_source": "mail_read_progress",
+                }
+            return view(entry["result"], limit)
+
+        def history_document(entry: dict[str, Any], budget: int = size) -> Any:
+            projected = (
+                _projected_mail_observation(entry)
+                if "mail_read_progress" in data or "private_read_evidence" in data else None
+            )
+            document = entry["document"]
+            if projected is not None and budget <= 600 and isinstance(document, dict):
+                return {
+                    key: document[key] for key in ("tool", "integration_id") if key in document
+                } | (
+                    {"arguments": {"name": document["arguments"]["name"]}}
+                    if isinstance(document.get("arguments"), dict)
+                    and "name" in document["arguments"]
+                    else {}
+                )
+            return view(document, budget)
+
         result["history"] = [
             {
                 **entry,
-                "document": view(entry["document"], size),
-                "result": view(entry["result"], size if i == len(original) - 1 else size // 2),
+                "document": history_document(entry),
+                "result": history_result(entry, size if i == len(original) - 1 else size // 2),
             }
             for i, entry in enumerate(original)
         ]
-        if len(instruction) + len(json.dumps(result, ensure_ascii=False)) <= context_limit - 200:
+        encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+        byte_length = len(instruction.encode()) + len(encoded.encode())
+        if len(instruction) + len(
+            json.dumps(result, ensure_ascii=False)
+        ) <= context_limit - 200 and (max_bytes is None or byte_length <= max_bytes):
             return result
-    raise ValueError("Goal, authority or evidence exceeds the model context limit")
+    raise AgentContextLimitError("Goal, authority or evidence exceeds the model context limit")

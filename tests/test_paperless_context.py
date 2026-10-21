@@ -229,3 +229,39 @@ def test_archive_context_marks_partial_excerpts(knowledge, monkeypatch):
     assert len(parts[0].content) <= 12000
     assert "Auszug gekürzt" in parts[0].content
     assert parts[0].label == "LOCAL_ONLY"
+
+
+def test_automatic_archive_availability_does_not_read_or_block_ordinary_cloud_chat(
+    setup, monkeypatch
+):
+    app, client, headers, provider = setup
+    chat = client.post("/api/conversations", json={"cloud_allowed": True}, headers=headers).json()
+    with app.state.sessions() as db:
+        db.add(
+            Integration(
+                name="Synthetic available archive",
+                kind="paperless",
+                enabled=True,
+                config=json.dumps({"url": "https://archive.example.test", "auth": "api_key"}),
+            )
+        )
+        db.commit()
+    monkeypatch.setattr(
+        "hub.paperless_api.collect_context",
+        lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError("Automatic availability must not read archive")
+        ),
+    )
+    response = client.post(
+        "/api/conversations/" + chat["id"] + "/messages",
+        json={"content": "Explain a public topic", "model_cloud_only": True},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    assert provider.stream_calls == [True]
+    with app.state.sessions() as db:
+        run = db.scalar(select(Run).where(Run.conversation_id == chat["id"]))
+        assert run.status == "succeeded"
+        snapshot = json.loads(run.context_snapshot)
+        assert snapshot["integration_selection"]["effective_mode"] == "automatic"
+        assert not snapshot["sources"]

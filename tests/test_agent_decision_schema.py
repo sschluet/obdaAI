@@ -6,7 +6,13 @@ import json
 import pytest
 from hub.agent_context import fit
 from hub.agent_runtime import INSTRUCTION
-from hub.agent_tools import SCHEMAS, Rules, decision_envelope_schema, decision_schema
+from hub.agent_tools import (
+    SCHEMAS,
+    Rules,
+    decision_envelope_schema,
+    decision_schema,
+    ready_read_schema,
+)
 from jsonschema import Draft202012Validator
 
 TARGET = "00000000-0000-0000-0000-000000000001"
@@ -35,6 +41,7 @@ VALID = {
     },
     "ha.websocket": {"type": "backup/info", "parameters": {}},
     "gmail.read": {"operation": "labels"},
+    "paperless.read": {"operation": "search", "query": "Synthetic invoice"},
     "mail.send": {"recipient": "owner@example.test", "subject": "Synthetic", "text": "Test"},
     "research": {"topic": "interfaces"},
     "shell": {"script": "printf test", "verification_script": "test 1 = 1"},
@@ -392,3 +399,111 @@ def test_scoped_ha_type_keeps_original_maximum_length():
     assert not validator.is_valid(
         {**decision("ha.websocket", {"type": allowed + "a"}), "integration_id": HA_TARGET}
     )
+
+
+@pytest.mark.parametrize("schema_factory", [decision_envelope_schema, decision_schema])
+def test_finish_requires_observed_evidence_but_questions_and_tools_stay_valid(schema_factory):
+    schema = schema_factory([TARGET], ["paperless.read"], allow_finish=False)
+    validator = Draft202012Validator(schema)
+    assert not validator.is_valid({"kind": "finish", "message": "Invented answer"})
+    assert validator.is_valid({"kind": "ask", "message": "Which actual missing account?"})
+    assert validator.is_valid(decision("paperless.read", VALID["paperless.read"]))
+    allowed = schema_factory([TARGET], ["paperless.read"], allow_finish=True)
+    assert Draft202012Validator(allowed).is_valid({"kind": "finish", "message": "Observed"})
+
+
+def test_evidence_gate_keeps_actual_interface_rules():
+    rules = Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET"])
+    schema = decision_schema(
+        [TARGET],
+        ["paperless.read", "shell", "http"],
+        [{"integration_id": TARGET, "kind": "paperless", "rules": rules.model_dump()}],
+        allow_finish=False,
+    )
+    validator = Draft202012Validator(schema)
+    assert validator.is_valid(decision("paperless.read", VALID["paperless.read"]))
+    assert not validator.is_valid(decision("shell", VALID["shell"]))
+    assert not validator.is_valid(
+        decision("http", {"method": "DELETE", "path": "/api/documents/7/"})
+    )
+
+
+@pytest.mark.parametrize("schema_factory", [decision_envelope_schema, decision_schema])
+@pytest.mark.parametrize("queried", [False, True])
+def test_private_read_grammar_never_asks_and_can_stop_without_inventing_parameters(
+    schema_factory, queried
+):
+    schema = schema_factory(
+        [TARGET],
+        ["paperless.read"],
+        allow_finish=queried,
+        allow_ask=False,
+        allow_stop=True,
+    )
+    validator = Draft202012Validator(schema)
+    assert not validator.is_valid({"kind": "ask", "message": "Confirm the authorized read?"})
+    assert validator.is_valid({"kind": "stop", "message": "Required identity is not available."})
+    assert validator.is_valid(decision("paperless.read", VALID["paperless.read"]))
+    assert validator.is_valid({"kind": "finish", "message": "Observed with limits"}) is queried
+
+
+@pytest.mark.parametrize("schema_factory", [decision_envelope_schema, decision_schema])
+def test_ordinary_administration_keeps_questions_and_does_not_offer_private_stop(schema_factory):
+    validator = Draft202012Validator(schema_factory([TARGET], ["http"]))
+    assert validator.is_valid({"kind": "ask", "message": "Which actual administrative target?"})
+    assert not validator.is_valid({"kind": "stop", "message": "Private terminal"})
+
+
+def test_concrete_read_grammar_accepts_only_current_source_bound_arguments():
+    rules = Rules(enabled=True, mcp_read_tools={"read_email": "a" * 64})
+    candidate = decision("mcp.call", {
+        "name": "read_email", "schema_sha256": "a" * 64,
+        "arguments": {"uid": 7, "folder": "INBOX"},
+    })
+    interfaces = [{"integration_id": TARGET, "kind": "mcp", "rules": rules.model_dump()}]
+    schema = ready_read_schema([candidate], interfaces)
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    validator.validate(candidate)
+    for mutation in (
+        {"kind": "stop", "message": "Select messages again"},
+        decision("mcp.call", {**candidate["arguments"], "name": "get_status"}),
+        decision("mcp.call", {**candidate["arguments"], "arguments": {
+            "uid": 999, "folder": "INBOX",
+        }}),
+        decision("mcp.call", {**candidate["arguments"], "arguments": {
+            "uid": 7, "folder": "other",
+        }}),
+    ):
+        assert not validator.is_valid(mutation)
+    revoked = [{**interfaces[0], "rules": Rules(enabled=False).model_dump()}]
+    with pytest.raises(PermissionError):
+        ready_read_schema([candidate], revoked)
+
+
+def test_concrete_archive_grammar_preserves_current_document_and_read_permission():
+    rules = Rules(enabled=True, http_methods=["GET"], http_prefixes=["/api/documents/42/"])
+    candidate = decision("paperless.read", {
+        "operation": "document", "query": "", "document_id": 42, "page": 1, "limit": 10,
+    })
+    interfaces = [{"integration_id": TARGET, "kind": "paperless", "rules": rules.model_dump()}]
+    schema = ready_read_schema([candidate], interfaces)
+    validator = Draft202012Validator(schema)
+    assert validator.is_valid(candidate)
+    for kind in ("ask", "stop", "finish"):
+        assert not validator.is_valid({"kind": kind, "message": "Skip known document"})
+    changed = copy.deepcopy(candidate)
+    changed["arguments"]["document_id"] = 43
+    assert not validator.is_valid(changed)
+    with pytest.raises(PermissionError):
+        ready_read_schema([changed], interfaces)
+    with pytest.raises(PermissionError):
+        ready_read_schema([candidate], [{
+            **interfaces[0], "rules": Rules(enabled=True, http_methods=["PATCH"]).model_dump(),
+        }])
+    with pytest.raises(ValueError):
+        ready_read_schema([decision("paperless.read", {"operation": "search"})], [{
+            **interfaces[0], "rules": Rules(
+                enabled=True, http_methods=["GET"], http_prefixes=["/api/"]
+            ).model_dump(),
+        }])
