@@ -96,13 +96,16 @@ def selected_receipt_rows(
     }
 
 
-def _current(
+def current_mail_observations(
     job: AgentJob, profiles: dict[str, Any], history: list[AgentStep]
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     folders: list[dict[str, Any]] = []
     hashes: list[str] = []
-    for step in history:
+    discovered: set[str] = set()
+    discovery_sequences: dict[str, int] = {}
+    queries: list[dict[str, Any]] = []
+    for step in sorted(history, key=lambda s: s.sequence):
         if step.job_id != job.id or step.kind != "read" or step.status != "succeeded":
             continue
         try:
@@ -129,6 +132,17 @@ def _current(
             payload = _payload(json.loads(step.result))
             name = args["name"]
             if name == "list_folders" and isinstance(payload, list):
+                if not all(
+                    isinstance(f, dict)
+                    and isinstance(f.get("name"), str)
+                    and isinstance(f.get("flags"), list)
+                    and type(f.get("selectable")) is bool
+                    for f in payload
+                ):
+                    continue
+                discovered.add(account)
+                discovery_sequences[account] = step.sequence
+                folders = [f for f in folders if f["account_id"] != account]
                 folders.extend({**r, "account_id": account} for r in payload if isinstance(r, dict))
             elif name in {
                 "read_email",
@@ -146,13 +160,40 @@ def _current(
                     if isinstance(payload, dict)
                     else []
                 )
+                if not isinstance(data, list):
+                    continue
                 rows.extend({**r, "account_id": account} for r in data if isinstance(r, dict))
+                requested = args["arguments"].get("folder")
+                if (
+                    name in {"list_emails", "search_emails"}
+                    and isinstance(payload, dict)
+                    and isinstance(payload.get("messages"), list)
+                    and isinstance(requested, str)
+                    and requested
+                    and payload.get("folder", requested) == requested
+                    and all(isinstance(r, dict) and r.get("folder") == requested for r in data)
+                ):
+                    queries.append(
+                        {
+                            "integration_id": account,
+                            "folder": requested,
+                            "sequence": step.sequence,
+                            "result_sha256": digest(step.result),
+                        }
+                    )
             else:
                 continue
             hashes.append(digest(step.result))
         except (KeyError, TypeError, ValueError, PermissionError):
             continue
-    return rows, folders, hashes
+    return {
+        "rows": rows,
+        "folders": folders,
+        "hashes": hashes,
+        "discovered_accounts": discovered,
+        "discovery_sequences": discovery_sequences,
+        "queries": queries,
+    }
 
 
 def cohort_evidence(
@@ -169,7 +210,8 @@ def cohort_evidence(
     if max_bytes < 1024:
         raise ValueError("Cohort evidence requires at least 1024 bytes")
     selected = selected_receipt_rows(db, job, profiles)
-    current, folders, hashes = _current(job, profiles, history)
+    observations = current_mail_observations(job, profiles, history)
+    current, folders, hashes = (observations[k] for k in ("rows", "folders", "hashes"))
     if not selected["cohort_known"]:
         fallback: dict[str, Any] = {
             "cohort_known": False,
@@ -218,8 +260,27 @@ def cohort_evidence(
             examples.append(
                 {"entry": ordinal, "subject": subject.encode()[:72].decode(errors="ignore")}
             )
+    accounts = {r["integration_id"] for r in selected["rows"]}
+    sent = {
+        (f["account_id"], f.get("name"))
+        for f in folders
+        if f.get("selectable") is True
+        and isinstance(f.get("flags"), list)
+        and "\\Sent" in f["flags"]
+        and isinstance(f.get("name"), str)
+    }
+    attempted = {
+        q["integration_id"]
+        for q in observations["queries"]
+        if (q["integration_id"], q["folder"]) in sent
+        and q["sequence"]
+        > observations["discovery_sequences"].get(q["integration_id"], q["sequence"])
+    }
     result: dict[str, Any] = {
         "cohort_known": True,
+        "sent_discovery_observed": bool(accounts)
+        and accounts <= observations["discovered_accounts"],
+        "sent_query_observed": bool(accounts) and accounts <= attempted,
         "cohort_sha256": selected["cohort_sha256"],
         "source_receipts": selected["source_receipts"],
         "displayed_count": len(output),

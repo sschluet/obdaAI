@@ -329,3 +329,15 @@ unterscheidbar. Die neue reale Prüfung verlangt eine Antwort über den gesamten
 angezeigten Umfang; ein einzelner Teilabruf genügt nicht. Dieser Stand ist noch
 nicht real abgenommen. 35a0ec6 blieb als lokal geprüfter, nicht ausgerollter
 Zwischenstand mit abgebrochener vollständiger CI erhalten.
+
+
+Für die Frage nach tatsächlichen Antworten wird zusätzlich der reale Gesendet-
+Ordner ermittelt und über die vorhandene Lesefreigabe begrenzt abgefragt. Der
+Abschluss bleibt bis zu diesem Konto-bezogenen Abfragebeleg gesperrt. Die nächsten
+Aufrufe stammen aus aktuellen belegten Ordnermerkmalen und vollständig geprüften
+Schemas; sie sind keine geratenen Ordnernamen. Eine erfolgreiche leere Abfrage
+beweist keinen fehlenden Antwortversand. `get_thread` kann All Mail verwenden und
+beweist deshalb allein keine Gesendet-Mitgliedschaft. Die Abfragegrenze beträgt
+20 Kopfzeilen; ungeprüfte weitere Nachrichten bleiben unbekannt. 1f8e9a9 blieb
+vor dieser Ergänzung als nicht ausgerollter Zwischenstand mit abgebrochener CI und
+fehlgeschlagener vollständiger lokaler Prüfung erhalten.

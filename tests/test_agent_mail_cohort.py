@@ -273,6 +273,34 @@ def test_real_two_account_binding_and_display_ordinals(context):
     assert result["cohort_known"] is True
     assert [r[1] for r in result["rows"]] == [True] * 10 + [False] * 10
     assert len(encode(result).encode()) <= 1400
+    discovery = current(
+        context, "list_folders", [{"name": "Sent", "flags": ["\\Sent"], "selectable": True}], 1
+    )
+    query = current(context, "read_email", {"folder": "Sent", "messages": []}, 2)
+    document = json.loads(query.document)
+    document["arguments"] = {
+        "name": "search_emails",
+        "schema_sha256": "a" * 64,
+        "arguments": {"folder": "Sent", "limit": 20},
+    }
+    query.document, query.sha256 = encode(document), digest(encode(document))
+    assert call(context, [discovery, query])["sent_query_observed"] is False
+    other_history = []
+    for ordinal, original in enumerate((discovery, query), 3):
+        document = json.loads(original.document)
+        document["integration_id"] = second.id
+        other_history.append(
+            AgentStep(
+                job_id=job.id,
+                sequence=ordinal,
+                kind="read",
+                status="succeeded",
+                document=encode(document),
+                sha256=digest(encode(document)),
+                result=original.result,
+            )
+        )
+    assert call(context, [discovery, query, *other_history])["sent_query_observed"] is True
 
 
 def test_same_uid_different_message_id_cannot_refresh(context):

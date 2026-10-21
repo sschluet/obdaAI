@@ -522,9 +522,9 @@ def ready_read_schema(
         kind, rules = bound[decision.integration_id]
         args, effect = validate_tool(kind, rules, decision.tool or "", decision.arguments)
         if effect or decision.tool != "mcp.call" or args["name"] not in {
-            "read_email", "get_thread",
+            "read_email", "get_thread", "list_folders", "list_emails", "search_emails",
         }:
-            raise ValueError("Expected a concrete message read")
+            raise ValueError("Expected a concrete mailbox read")
         branch = constant({
             "kind": "tool", "integration_id": decision.integration_id,
             "tool": decision.tool, "arguments": args,

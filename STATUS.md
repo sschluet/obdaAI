@@ -42,6 +42,24 @@ Prüfung zeigte jedoch die oben beschriebene Umfangslücke. Der vollständige CI
 Vorbereitete inaktive Images und die verschlüsselte Sicherung bleiben erhalten;
 es gab keinen App-Rollout und keine reale Mailabnahme dieses Zwischenstands.
 
+Die eigentliche Antwortbeziehungsprüfung verlangt außerdem nach dem Detailabruf
+Ordnerermittlung und eine echte begrenzte Kopfzeilenabfrage im beobachteten
+Gesendet-Ordner jedes betroffenen Kontos. Konkrete nächste Leseentscheidungen sind
+an aktuelle Schemas, Rechte und Belege gebunden. Eine Antwort ist davor nicht
+freigegeben; fehlende Fähigkeiten erlauben einen ausdrücklich unverifizierten
+Abschluss. Leere Ergebnisse belegen nur den Abfrageversuch. Antwortbeziehungen
+benötigen weiterhin exakte In-Reply-To-/References-Kanten im richtigen Konto und
+Ordner; All-Mail-Threads gelten nicht als Gesendet-Nachweis. Abfragen liefern
+höchstens 20 Kopfzeilen und behaupten keine vollständige Gesendet-Abdeckung.
+
+Auch **1f8e9a9** wurde vor dem Rollout überholt. Seine vollständige CI39521364664
+wurde abgebrochen. Die lokale Gesamtprüfung meldete 2205 bestandene und zwei
+fehlgeschlagene Prüfungen des kompakten Planerhinweises; diese Verträge wurden
+anschließend korrigiert. Die zusätzlich erkannte fehlende verbindliche
+Gesendet-Abfrage wird in derselben Lieferung behoben. Die gezielte Regression
+besteht; die neue vollständige Prüfung und echte Folgeabnahme stehen noch aus.
+Inaktive Images bleiben erhalten; es gab keinen App-Rollout dieses Zwischenstands.
+
 ### Frühere Zwischenschritte
 
 Der frühere Zwischenstand **678d07e / Schema 0045** wurde gesund auf allen
