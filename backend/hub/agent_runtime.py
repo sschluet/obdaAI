@@ -546,10 +546,11 @@ def mail_read_plan(
     """Inert next-read choices; Sent checks share the ordinary durable execution path."""
     from hub.agent_mail_cohort import cohort_evidence
     from hub.agent_mail_progress import ready_reads
+    from hub.agent_mail_reply_summary import reply_status_goal
     from hub.agent_mail_sent_progress import sent_ready_reads
 
     has_data = mailbox_queried(history)
-    reply = bool(re.search(r"antwort|repl(?:y|ied)", job.goal.casefold()))
+    reply = reply_status_goal(job.goal)
     facts = cohort_evidence(db, job, profiles, history) if reply else {}
     needs_sent = facts.get("cohort_known") is True and not facts.get("sent_query_observed")
     ready = (
@@ -1961,6 +1962,16 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         sequence = pending.sequence
                     else:
                         sequence = None
+                        if private_mail_read:
+                            from hub.agent_mail_reply_summary import mail_reply_summary
+
+                            summary = mail_reply_summary(db, job, profiles, history)
+                            if summary is not None:
+                                # The loop's fresh gate and receipt validation bind
+                                # this answer to the current account and source scope.
+                                complete(db, job, "observed", summary)
+                                db.commit()
+                                return
                     if (
                         sum(s.kind in {"read", "effect"} for s in history) >= job.max_steps
                         and not pending
