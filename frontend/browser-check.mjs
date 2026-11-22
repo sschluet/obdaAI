@@ -430,3 +430,5 @@ console.log('Browser checks passed: login, SSE chat, durable reload, titles, edi
 
 // Keep memory checks isolated from the state modified by the preceding flows.
 await import('./memory-intelligence-check.mjs');
+
+await import('./google-drive-check.mjs');

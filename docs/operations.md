@@ -37,6 +37,32 @@ PostgreSQL-Kopie geprüft, ohne den produktiven Mount zu unterbrechen. n8n-/HA-D
 sind noch keine Bestandteile dieser eigenen VM-Sicherung. Gemessene RTO/RPO und
 vollständige systemübergreifende Wiederherstellung bleiben M5-Abnahme.
 
+## Verifizierter Wiederanlauf und Sicherungsumfang, 22.11.2026
+
+Die autorisierte Test-VM wurde mit dem geprüften App-Release **ab2b861 / Schema
+0047** wiederhergestellt. Die ursprüngliche Netplan-Datei bleibt unverändert;
+eine überprüfte spätere Netplan-Datei setzt die bereits registrierte feste
+VM-Adresse, Route und DNS. Die Reparatur verwendet bestehende SSH-Pins und
+Identitäten. Ein echter Neustart bestätigte Netzwerk, Mounts, Relays, neun
+Release-Container und beide APIs. Interne Inventardaten bleiben unter `.local/`.
+
+Die laufende Sicherung wartet begrenzt auf den tatsächlich eingehängten Vault
+mit `AI/Memory`. Sie archiviert weiterhin App-/Vault-Daten und sämtliche
+Zugangskonfigurationen, zusätzlich Netplan, Backup-Unit/Timer/Drop-in/Waiter und
+die installierten MCP-Laufzeitpatches. Ausschließlich die identifizierten
+Proton-Bridge-Verzeichnisse `gluon`, `updates`, `logs` und `.cache` bleiben als
+wiederherstellbare Laufzeitdaten außerhalb der Sicherung; sie werden nicht
+entfernt. Die Ausschlüsse stehen im Sicherungsmanifest. Credential-Vault,
+Passwortspeicher und GPG-/SSH-Schlüssel sind nicht ausgenommen. Quota und
+Mindestreserve bleiben unverändert.
+
+Vor der additiven Migration und nach dem Neustart wurden neue verschlüsselte
+Snapshots mit Ciphertext-Prüfsummen und erfolgreichem Sicherungsdienst bestätigt.
+Diese Nachweise sind keine neue Entschlüsselungs- oder Wiederherstellungsprüfung.
+Die frühere isolierte Wiederherstellung bleibt ein separater historischer Beleg.
+Der echte Browser-/Worker-Smoke verwendete nur einen eigenen lokalen Testchat;
+er belegt keine echte Google-Anmeldung oder externe Modellabnahme.
+
 ## Messung
 Request-ID ohne Inhalt; Routerlatenz, TTFC, Dauer, Fehlerstatus, bekannte usage,
 Queuewait und Runner-RAM messen. Logs ohne Prompts/Secrets, Rotation und Retention.

@@ -155,6 +155,18 @@ remain required. Development subagents are explicitly authorized; coordinate
 shared contracts and file ownership and keep runtime/fixture data out of Git.
 
 
+## Test VM repair authorization, 22.11.2026
+
+The user explicitly authorized autonomous repair of the existing test VM and
+restoration of usability with the current reviewed release. This covers restoring
+its registered network identity, existing Vault/model/proxy connections, backup
+service and startup ordering, plus a controlled restart and verified rollout.
+Keep authority scoped to that VM and its existing pinned targets and credentials.
+Preserve original configuration and encrypted backups. Exclude only explicitly
+identified reconstructible Bridge cache from backups; retain it in place, keep
+credentials and application/Vault data covered, and preserve quota/reserve guards.
+Record real restart/backup evidence separately from decryption or restore tests.
+
 ## Test VM transport preference
 On 13.10.2026 the user explicitly requested LAN-first access to the authorized test
 VM, with Tailscale as fallback whenever the LAN address is unreachable, including

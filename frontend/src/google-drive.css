@@ -1,0 +1,15 @@
+.drive-usage-options {display:grid;gap:12px;margin:16px 0}
+.drive-usage-options small {display:block;line-height:1.5;margin-top:4px;color:var(--muted)}
+.drive-wizard h4 {display:flex;align-items:center;gap:8px;margin-top:0}
+.drive-purpose {margin:16px 0;padding:16px}
+.drive-folder-browser {border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}
+.drive-folder-browser nav {display:flex;gap:6px;flex-wrap:wrap}
+.drive-folder-browser ul {padding:0;list-style:none;max-height:190px;overflow:auto}
+.drive-folder-browser li button {display:flex;align-items:center;gap:8px;width:100%;text-align:left;overflow-wrap:anywhere}
+.drive-rights {padding-left:20px;line-height:1.6}
+.drive-export-dialog {width:min(560px,calc(100vw - 28px));max-height:calc(100dvh - 32px);overflow:auto}
+.drive-export-dialog dl {display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px}
+.drive-export-dialog dd {margin:0;overflow-wrap:anywhere}
+.drive-export-dialog .drive-transfer-choice {display:flex;gap:9px;align-items:flex-start;margin:18px 0}
+.drive-export-dialog .drive-transfer-choice input {width:auto;flex-shrink:0;margin-top:4px}
+@media(max-width:480px){.drive-export-dialog dl{grid-template-columns:1fr}.drive-export-dialog dt{font-weight:600}.drive-purpose{padding:12px}.drive-wizard .gmail-wizard-steps{font-size:11px}}

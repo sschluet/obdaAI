@@ -1,4 +1,99 @@
-# obdaAI — Status 21.10.2026
+# obdaAI — Status 22.11.2026
+
+## 22.11.2026 — Test-VM repariert; aktueller Release ausgerollt
+
+**ab2b861 / Schema 0047** läuft auf der Test-VM. Der Benutzer hat die autonome
+Reparatur einschließlich bestehender Netzwerk-, Mount- und Sicherungsdienste
+explizit freigegeben. Die per DHCP geänderte Adresse wurde nach Konfliktprüfung
+durch die bisher registrierte feste VM-Adresse ersetzt. Die ursprüngliche
+Netplan-Datei wurde erhalten; die Änderung war durch eine zeitgesteuerte
+automatische Rücknahme abgesichert. Vault und
+Modell-Relay verbinden sich wieder mit ihren vorhandenen gepinnten Schlüsseln.
+An anderen Rechnern wurden keine Berechtigungen geändert.
+
+Der Sicherungsfehler hatte zwei Ursachen: fehlender Vault-Mount und ein inzwischen
+großer Proton-Cache in der Größenkalkulation. Die korrigierte Routine behält
+10-GiB-Quota und 1-GiB-Reserve bei, nimmt ausschließlich die identifizierten
+Bridge-Cache-/Update-/Logverzeichnisse aus und erhält diese auf der VM. App-Daten,
+Vault, Zugangsdaten, Keyring, SSH-Identitäten, Netzwerkkonfiguration, Dienstdateien
+und Laufzeitpatches bleiben im verschlüsselten Sicherungsumfang. Eine begrenzte
+Startprüfung wartet auf den echten Vault-Mount; ein leeres Verzeichnis ersetzt ihn
+nicht. Vor dem Update und erneut nach dem Neustart wurden frische verschlüsselte
+Sicherungen mit geprüften Ciphertext-Hashes erstellt. Keine neue Entschlüsselungs-
+oder Wiederherstellungsprüfung wird daraus abgeleitet.
+
+Tatsächlich geprüfte Abnahme:
+
+- Additive Migration 0046 → 0047; neun exakte Release-Container laufen, beide APIs
+  sind gesund. Vorhandene Anwendungsdaten und statische Zugangskonfigurationen
+  wurden per Hashvergleich erhalten; nur der Scheduler-Zeitstempel und bekannte
+  Bridge-Laufzeitdateien werden entsprechend ihrer Funktion eingeordnet.
+- Echte authentifizierte native Drive-API: optionale, unkonfigurierte Einrichtung,
+  Authentifizierung und installierte Routen; keine automatische Google-Verbindung.
+- Echter VM-Browser: Drive-Dialog, leere Zugangsfelder, maskiertes Secret,
+  exakte Rückrufadresse, Desktop und 320 px ohne Überlauf. Die unabhängige automatische
+  Guthabenabfrage wurde im Prüfclient vor Dispatch unterdrückt; sie wurde nicht als
+  erfolgreich getestete Kontostandsabfrage ausgegeben.
+- Genau ein synthetischer strikt lokaler Chat antwortete mit **BEREIT**, mit echtem
+  PostgreSQL-Workerbeleg, ohne Web-/Cloud-/Integrationszugriff. Der eigene Testchat
+  bleibt archiviert; die temporären Prüfsitzungen wurden entfernt.
+- Kontrollierter echter VM-Neustart: neue Boot-ID, fester Netzwerkzugang, Vault,
+  Modell-, Such- und Quellen-Relays, Proton, nginx und Backup-Timer wieder aktiv.
+  Keine fehlgeschlagenen Systemdienste. LAN und privater Tailscale-HTTPS-Zugang
+  liefern mit eingeschalteter Zertifikatsprüfung HTTP 200.
+- Bestehende Bridge-Zugangsdaten mit TLS, LOGIN, NOOP und LOGOUT geprüft; keine
+  Nachrichten oder Ordner dafür gelesen. Keine alten Sicherungen, Releases oder
+  Mailcaches gelöscht. Nach abschließender Sicherung rund 4,36 GiB frei.
+
+Die ursprünglichen Build-/Sicherungsabbrüche und die zu strengen ersten
+Prüfversuche bleiben als private Belege erhalten. Die erfolgreichen Nachläufe
+unterscheiden gezielt normale Scheduler-/Bridge-Laufzeitänderungen und blockierte
+Guthaben-Refreshversuche von Änderungen persönlicher Daten. Der App-Code ist
+unverändert der mit [CI 45014790113](https://github.com/sschluet/obdaAI/actions/runs/45014790113)
+vollständig geprüfte Stand (2.811 bestanden, 6 Skips, 41 Browserprüfungen); diese
+Betriebsdokumentation verwendet dessen verifizierten App-Tree-Beleg weiter.
+Eine echte Google-Anmeldung sowie reale Drive-Downloads/Uploads bleiben offen;
+der Benutzer muss seinen eigenen OAuth-Client konfigurieren.
+
+## 22.11.2026 — Google-Drive-Quellcodeprüfung; zunächst blockierter Rollout
+
+Google Drive ist als eigener Einrichtungstyp unter Einstellungen → Integrationen
+implementiert. Quellen und Ablage erhalten getrennte ausdrückliche OAuth-Rechte.
+Die vorhandene Wissensindexierung wird wiederverwendet; Dateiablage schreibt nur
+neue, geprüfte Artefaktversionen in einen verifizierten app-eigenen Ordner, mit
+konkreter Übertragungsfreigabe und dauerhaftem Abgleich unklarer Ergebnisse.
+Anbieterfreigaben für KI-Modelle werden dadurch nicht erweitert.
+
+Die neue Migration 0047 ist additiv und besitzt Verlustschutz für Drive-Zustände.
+Ordner-/Kontowechsel nehmen alte Quellensnapshots aus dem aktiven Bereich, ohne
+Originale zu löschen. Auch wartende Parser und Retry-Aufrufe dürfen sie nicht
+reaktivieren. Quellenrechte werden am finalen Modellübergang erneut geprüft.
+
+Die vollständige lokale Backendprüfung bestand 2.817 Tests einschließlich der
+isolierten PostgreSQL-Prüfungen; Ruff, mypy (135 Module) und Secret-Scan bestanden.
+Die exakte vollständige CI für **ab2b861 / Schema 0047** ist erfolgreich:
+[45014790113](https://github.com/sschluet/obdaAI/actions/runs/45014790113) bestand 2.811 Tests,
+6 plattformbedingte Skips, alle 41 Browserprüfungen und alle sechs Pflichtjobs
+samt App-Tree-Beleg. Lokal liefen die Backendtests auf a1e10e2; danach änderte
+ab2b861 ausschließlich eine vorhandene UI-Beschriftung. TypeScript und Build
+bestanden erneut. Der lokale Browsernachweis ist zusammengesetzt: zuerst trat
+ein bestehendes asynchrones Listenproblem auf, der unveränderte Nachlauf bestand;
+der Designfall benötigte eine frische synthetische Fixture, weil alte Beispieldaten
+außerhalb der letzten 100 Chats lagen. Dies wird nicht als ein einziger lokal
+erfolgreicher Gesamtlauf ausgegeben; die exakte CI bestand unabhängig komplett.
+Kein echter Google-Account wurde verwendet. Anmeldung und reale Downloads/Uploads
+bleiben offen.
+
+Die Test-VM war am 22.11. zunächst unerreichbar, später über den vorgesehenen
+Tailscale-Fallback wieder lesend prüfbar. Damals liefen neun App-Dienste mit
+aa4a5ae / 0046. Zum Abschluss der Quellcodeprüfung war der Rollout zunächst
+blockiert, weil der konfigurierte Vault nicht eingehängt und keine vollständige
+Sicherung möglich war. Die registrierte LAN-Adresse fehlte, der Host-nginx
+meldete einen Bind-Fehler, und es waren rund 4,6 GiB frei. Bis zur darauffolgenden
+expliziten Reparaturfreigabe wurden keine Mount-, Netzwerk-, VM- oder
+Dienstkonfigurationen geändert. Die anschließende Reparatur und echte Ausrollung
+sind im jüngsten Abschnitt oben nachgewiesen.
+Einrichtung, Datenfluss und Grenzen: [Google Drive](docs/google-drive.md).
 
 ## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand
 

@@ -1,3 +1,4 @@
+import {GoogleDriveExportDialog} from './GoogleDriveExportDialog';
 import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {FileText,Presentation,Files,Image,Check,Sheet} from 'lucide-react';
@@ -64,6 +65,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
   const [format,setFormat] = useState('png'), [busy,setBusy] = useState(false), [error,setError] = useState('');
   const [chatSource,setChatSource] = useState<any|null>(null);
   const [goal,setGoal] = useState(''), [draftToken,setDraftToken] = useState<string|null>(null), [draftInfo,setDraftInfo] = useState<any|null>(null), [slideCount,setSlideCount] = useState(3);
+  const [driveExport,setDriveExport]=useState<Row|null>(null);
   const [preview,setPreview] = useState<Row|null>(null), [reviewed,setReviewed] = useState(false);
   const prefix = ownerPrefix+'/artifacts';
   const pdfs = sources.filter(s=>/\.pdf$/i.test(s.name));
@@ -220,6 +222,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
     catch(e){setError((e as Error).message)}finally{setBusy(false)}
   }
   return <section className={"setting-card artifacts-panel"+(embedded?" artifacts-embedded":"")}>
+    {driveExport&&<GoogleDriveExportDialog api={api} file={driveExport} onClose={()=>setDriveExport(null)}/>}
     <div className="artifact-panel-heading"><div><span className="artifact-eyebrow">Ergebnisse · Lokal</span><h2>Dateien erstellen und bearbeiten</h2></div><span className="artifact-count">{rows.length} Versionen</span></div>
     {contextLabel&&<p className="artifact-context">{project?'Projekt':'Gespräch'}: {contextLabel}</p>}
     {!embedded&&<p>Vom gewünschten Ergebnis zur bearbeitbaren Datei. Word, PowerPoint, Excel, PDF und Bilder mit erhaltenen Originalen und geprüfter Vorschau.</p>}
@@ -233,7 +236,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
       {highlighted===row.artifact_id+'-'+row.revision&&<small className="status-chip">Suchergebnis</small>}<b>{row.title} · Version {row.revision}</b>{row.chat&&<p className="hint">Aus Chatantwort · Revision {row.chat.revision} · lokal gespeichert</p>}{row.draft&&<details><summary>Modell und verwendete Quellen</summary><p>{row.draft.provider.model} · lokales Modell · {row.draft.user_edited?'Entwurf anschließend bearbeitet':'Entwurf übernommen'}</p>{row.draft.inherited_from&&<p>Ursprünglicher Modellentwurf: Version {row.draft.inherited_from.revision} · diese Folgeversion wurde manuell bearbeitet.</p>}{row.draft.skills?.map((s:any)=><p key={s.id}>Skill: {s.name} · Revision {s.revision} · {s.sha256.slice(0,10)}</p>)}{row.spec.template&&<p>Originalvorlage: {row.spec.template.asset_path} · {row.spec.template.style==='modern'?'moderne Gestaltung':'Basisgestaltung'}</p>}{row.draft.citations.map((c:any,i:number)=><p key={i}>{c.reference} · Revision {c.revision}</p>)}{row.draft.web_research&&<><p>Verwendete Websuchauszüge · lokal verarbeitet</p>{row.draft.web_research.citations.map((c:any,i:number)=><p key={'web-'+i}>{c.reference}</p>)}</>}<p className="hint">Quellenbelege zeigen verwendete Auszüge. Die sachliche Richtigkeit wurde nicht automatisch bestätigt.</p></details>}<p>{status[row.status]||row.status} · {row.kind==='image'?'Bild':row.kind.toUpperCase()} · Lokal</p>
       {row.error&&<p className="error">{row.error}</p>}
       {!!row.formula_warnings?.length&&<aside className="artifact-context" role="note" aria-label="Hinweis zur Formelprüfung"><b>Ältere Excel-Version · Formeln prüfen</b>{row.formula_warnings.map((warning,index)=><p key={index}>{warning}</p>)}<p>Diese bestehende Datei wurde nicht verändert. Prüfe die Berechnung und erstelle bei Bedarf eine korrigierte Version.</p></aside>}
-      {['needs_review','published'].includes(row.status)&&<button onClick={()=>{setError('');setReviewed(false);setPreview(row)}}>Vorschau öffnen</button>}
+      {['needs_review','published'].includes(row.status)&&<><button onClick={()=>{setError('');setReviewed(false);setPreview(row)}}>Vorschau öffnen</button><button onClick={()=>setDriveExport(row)}>In Google Drive speichern</button></>}
       {['needs_review','published'].includes(row.status)&&<><a href={'/api'+base(row)+'/download'} download>{row.output?.parts?.length?'Alle PDF-Teile als ZIP herunterladen':'Datei herunterladen'}</a>{row.output?.parts?.map((part:any,i:number)=><a key={part.filename} href={'/api'+base(row)+'/download?part='+(i+1)} download>PDF-Teil {i+1} herunterladen · {part.pages} Seiten</a>)}{row.output?.pdf_export&&<a href={'/api'+base(row)+'/download?pdf=true'} download>Zusätzliches PDF herunterladen</a>}</>}
       {configured&&!archived&&row.revision===Math.max(...rows.filter(r=>r.artifact_id===row.artifact_id).map(r=>r.revision))&&<button onClick={()=>start(row)}>Neue Version bearbeiten</button>}
       {['queued','rendering','needs_review','failed'].includes(row.status)&&<button disabled={busy} onClick={async()=>{setBusy(true);try{await api(base(row)+'/cancel','POST');setRows(await api(prefix))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Diese Version abbrechen</button>}

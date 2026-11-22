@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any, Literal
 from urllib.parse import quote
+from uuid import UUID
 
 import psycopg
 from psycopg import sql
@@ -25,8 +26,10 @@ from hub.extract import EXTENSIONS, MAX_BYTES
 
 class ConnectionInput(StrictInput):
     name: str = Field(min_length=1, max_length=160)
-    kind: Literal["smb", "nfs", "sql", "obsidian"]
+    kind: Literal["smb", "nfs", "sql", "obsidian", "google_drive"]
     server: str = Field(min_length=1, max_length=253)
+    integration_id: UUID | None = None
+    integration_revision: int | None = Field(default=None, ge=1)
     share: str = Field(default="", max_length=240)
     folder: str = Field(default="", max_length=800)
     port: int = Field(default=0, ge=0, le=65535)
@@ -67,6 +70,16 @@ class ConnectionInput(StrictInput):
 
     @model_validator(mode="after")
     def shape(self) -> "ConnectionInput":
+        if self.kind == "google_drive" and (
+            self.server != "www.googleapis.com"
+            or self.integration_id is None
+            or self.integration_revision is None
+            or not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", self.folder or "root")
+            or self.password
+            or self.username
+            or self.share
+        ):
+            raise ValueError("Google Drive benötigt eine aktuelle verbundene Integration")
         if self.kind in {"smb", "obsidian"} and (
             not self.share or any(c in self.share for c in "/\\\r\n")
         ):
@@ -89,7 +102,7 @@ class ConnectionInput(StrictInput):
         return self
 
     def public(self) -> dict[str, Any]:
-        return self.model_dump(exclude={"password", "revision"})
+        return self.model_dump(mode="json", exclude={"password", "revision"})
 
 
 def resolve_host(host: str, port: int) -> str:

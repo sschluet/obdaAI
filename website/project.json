@@ -1,10 +1,16 @@
 {
-  "updated": "2026-10-21",
-  "applicationCommit": "aa4a5ae",
-  "schema": "0046",
-  "tests": 2701,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
+  "updated": "2026-11-22",
+  "applicationCommit": "ab2b861",
+  "schema": "0047",
+  "tests": 2811,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
   "screenshots": [
+    {
+      "id": "google-drive",
+      "title": "Google Drive als Quelle und Ablage",
+      "description": "Optionale geführte Einrichtung, Ordnerauswahl und eigener Ablageordner. Ausschließlich synthetisches Konto und simulierte Google-Antworten; keine echte Anmeldung, kein realer Drive-Zugriff.",
+      "image": "assets/googledrive.png"
+    },
     {
       "id": "memory",
       "title": "Dein Gedächtnis. Unter deiner Kontrolle.",
@@ -645,6 +651,11 @@
       "intro": "Anleitungen und verbundene Funktionen passend einsetzen.",
       "features": [
         {
+          "title": "Google Drive als Wissensquelle und Dateiablage",
+          "status": "limited",
+          "description": "Optionale Google-OAuth-Einrichtung mit getrennten Quellen- und Ablagerechten auf der Test-VM installiert; native API und Dialog im echten Browser geprüft. Gewählte Ordner verwenden die bestehende lokale Quellenindexierung, geprüfte Dateiversionen die eigene Ablage. Echte Google-Anmeldung und reale Transfers bleiben bis zur Kontoeinrichtung ungeprüft."
+        },
+        {
           "title": "Versionierte Skills",
           "description": "Skill-Bibliothek mit Suche, Markdown-Editor und geprüften Revisionen. Einzelne SKILL.md-Dateien sowie ZIP-/Skill-Pakete mit Office-Vorlagen, Bildern und Referenzen importieren. Paketdateien, Abhängigkeiten und Importhinweise im Editor prüfen; Originale bleiben lokal und unverändert. Verwendung Immer, Bei Erwähnung oder Nach Stichwort; Cloudfreigabe je Anleitung. Skripte werden archiviert und nicht ausgeführt. Vorlagen für die Dateierstellung sind an die geprüfte Skillrevision gebunden. Paketimport, unveränderte Originalhashes, reale lokale Vorlagenausgaben und Dateidialog mit gemischten Markdown-/Paketbibliotheken auf der Test-VM geprüft.",
           "status": "live"
@@ -827,18 +838,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0046",
-    "browserChecks": 40,
+    "schema": "0047",
+    "browserChecks": 41,
     "serverDeployment": true,
-    "commit": "aa4a5ae",
-    "ciTests": 2701,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
-    "deployedCommit": "aa4a5ae",
-    "deployedSchema": "0046",
-    "liveScope": "Release aa4a5ae / Schema 0046: vollständige lokale/exakte CI-Prüfung und getrennte synthetische HTTP-/Workerabnahme für enge deterministische Berufsfakten, Korrektur und späteren Abruf mit echtem lokalem Antwortmodell. Keine LLM-Extraktionszusage für diese Korrektur. Patch erhielt Schema/native Zustände; erste 2c85335-Korrekturabnahme blieb fehlgeschlagen und dokumentiert. Frühere d5940db-Mail-/Paperless-Abnahmen sind historische separate Belege. Allgemeine Sprach-/Langzeitqualität und optionale reale Embeddings bleiben offen; V1 partiell.",
+    "commit": "ab2b861",
+    "ciTests": 2811,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
+    "deployedCommit": "ab2b861",
+    "deployedSchema": "0047",
+    "liveScope": "Release ab2b861 / Schema 0047 auf der reparierten Test-VM installiert. Native Drive-API und optionale Einrichtung im echten Browser (Desktop/320 px), ein strikt lokaler Chat mit Workerbeleg, echter Neustart und aktuelle verschlüsselte Sicherung bestanden. Netzwerk, Vault, Modell-/Suchzugang und Proton wieder verfügbar; vorhandene Daten und statische Zugangsdaten erhalten. Reale Google-Anmeldung, Drive-Downloads/Uploads und eine neue Wiederherstellungsprüfung bleiben offen; V1 partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "aa4a5ae",
-    "lastSuccessfulCIUI": 40
+    "lastSuccessfulCICommit": "ab2b861",
+    "lastSuccessfulCIUI": 41
   }
 }

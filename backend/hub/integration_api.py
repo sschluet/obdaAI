@@ -29,7 +29,7 @@ from hub.use_case_delivery import default_info
 
 IntegrationKind = Literal["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp"]
 Scope = Literal["project", "task", "conversation"]
-TYPES = ["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp", "gmail"]
+TYPES = ["home_assistant", "paperless", "mcp", "unifi", "ssh", "smtp", "gmail", "google_drive"]
 
 
 class IntegrationInput(StrictInput):
@@ -143,6 +143,14 @@ class BindingInput(StrictInput):
 
 def approved(cfg: Settings, row: Integration) -> bool:
     config = json.loads(row.config)
+    if row.kind == "google_drive":
+        from hub.google_drive_client import API_BASE
+
+        return bool(
+            cfg.integration_targets_enabled
+            and config.get("url") == API_BASE
+            and config.get("auth") == "oauth"
+        )
     if row.kind == "gmail":
         from hub.gmail_client import API_BASE
 
@@ -193,6 +201,19 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
         reason = (
             "ready" if gmail_ready else "credential_missing" if target_ok else "network_disabled"
         )
+    if row.kind == "google_drive":
+        from hub.google_drive_setup import ready
+
+        drive_ready = ready(cfg, row, capability="source") or ready(cfg, row, capability="storage")
+        reason = (
+            "disabled"
+            if not row.enabled
+            else "network_disabled"
+            if not target_ok
+            else "ready"
+            if drive_ready
+            else "credential_missing"
+        )
     return {
         "id": row.id,
         "name": row.name,
@@ -203,7 +224,7 @@ def integration_info(cfg: Settings, row: Integration) -> dict[str, Any]:
         "config": json.loads(row.config),
         "secret_saved": bool(row.encrypted_secret),
         "target_approved": target_ok,
-        "check_available": reason == "ready" and row.kind != "gmail",
+        "check_available": reason == "ready" and row.kind not in {"gmail", "google_drive"},
         "availability_reason": reason,
         "last_check": checked,
         "execution_available": row.kind in {"paperless", "smtp"}
@@ -371,6 +392,10 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                     raise HTTPException(409, "Integration geändert; neu laden")
                 if row.kind == "gmail":
                     raise HTTPException(422, "Gmail bitte über die Postfacheinrichtung bearbeiten")
+                if row.kind == "google_drive":
+                    raise HTTPException(
+                        422, "Google Drive bitte über die eigene Einrichtung bearbeiten"
+                    )
                 previous = json.loads(row.config)
                 # Canonical-equivalent URL edits must not erase a working key.
                 if body.kind not in {"ssh", "smtp"}:
@@ -423,12 +448,36 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
     @app.delete("/api/integrations/{integration_id}")
     def remove(integration_id: UUID, body: RevisionInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             row = db.get(Integration, str(integration_id))
             if not row:
                 raise HTTPException(404, "Integration nicht gefunden")
             if row.revision != body.expected_revision:
                 raise HTTPException(409, "Integration geändert; neu laden")
+            if row.kind == "google_drive":
+                from hub.db import KnowledgeConnection
+                from hub.google_drive_files import GoogleDriveTransfer
+
+                for connection in db.scalars(
+                    select(KnowledgeConnection).where(KnowledgeConnection.kind == "google_drive")
+                ):
+                    if json.loads(connection.config).get("integration_id") == row.id:
+                        raise HTTPException(
+                            409,
+                            "Google-Drive-Wissensquelle zuerst entfernen "
+                            "oder die Verbindung deaktivieren",
+                        )
+                if db.scalar(
+                    select(GoogleDriveTransfer.id)
+                    .where(GoogleDriveTransfer.integration_id == row.id)
+                    .limit(1)
+                ):
+                    raise HTTPException(
+                        409,
+                        "Übertragungsnachweise bleiben erhalten; "
+                        "Google-Drive-Verbindung stattdessen trennen",
+                    )
             if any(
                 str(integration_id) in json.loads(binding.integration_ids)
                 for binding in db.scalars(select(IntegrationBinding))
@@ -456,6 +505,7 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
     @app.patch("/api/integrations/{integration_id}/control")
     def control(integration_id: UUID, body: ControlInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            ownership_lock(db)
             lock(db)
             row = db.get(Integration, str(integration_id))
             if not row:
@@ -464,6 +514,11 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                 raise HTTPException(409, "Integration geändert; neu laden")
             row.enabled = body.enabled
             row.revision += 1
+            if row.kind == "google_drive":
+                from hub.google_drive_files import rebind_source_revision
+
+                db.flush()
+                rebind_source_revision(db, row.id, body.expected_revision, row.revision)
             db.commit()
             return integration_info(cfg, row)
 
@@ -476,6 +531,8 @@ def install_integration_api(app: FastAPI, cfg: Settings, factory: sessionmaker[S
                 raise HTTPException(404, "Integration nicht gefunden")
             if row.revision != body.expected_revision:
                 raise HTTPException(409, "Integration geändert; neu laden")
+            if row.kind == "google_drive":
+                raise HTTPException(422, "Google Drive über die eigene Einrichtung prüfen")
             revision, config = row.revision, json.loads(row.config)
             report: dict[str, Any] = {
                 "revision": revision,

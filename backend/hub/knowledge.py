@@ -57,7 +57,7 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
         ownership_lock(db)
         lock(db)
         source = db.get(Source, source_id)
-        if source is None or source.status == "ready":
+        if source is None or source.status in {"ready", "superseded", "deleted"}:
             return
         revision = source.revision
         source.status, source.error = "extracting", ""
@@ -111,7 +111,11 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
             ownership_lock(db)
             lock(db)
             source = db.get(Source, source_id)
-            if source is None or source.revision != revision:
+            if (
+                source is None
+                or source.revision != revision
+                or source.status in {"superseded", "deleted"}
+            ):
                 return
             # Reconciliation after interruption replaces only derived chunks.
             for old in db.scalars(select(SourceChunk).where(SourceChunk.source_id == source_id)):
@@ -133,7 +137,11 @@ async def extract_source(factory: sessionmaker[Session], cfg: Settings, source_i
             ownership_lock(db)
             lock(db)
             source = db.get(Source, source_id)
-            if source and source.revision == revision:
+            if (
+                source
+                and source.revision == revision
+                and source.status not in {"superseded", "deleted"}
+            ):
                 source.status = "failed"
                 source.error = str(diagnostic)
                 db.commit()

@@ -32,6 +32,7 @@ separately from local SQLite contract checks.
 - [Web research settings and connection check](docs/web-settings.md)
 - [Versions and sources](docs/dependencies.md)
 - [Gmail-Postfach und OAuth-Einrichtung](docs/gmail-mailbox.md)
+- [Google Drive als Quelle und Dateiablage](docs/google-drive.md)
 - [Paperless-Dokumente und Integrationsfreigaben](docs/paperless.md)
 - [KI Use Cases: Prompt, Eingabedateien, Dialog und Ausgabe](docs/ai-use-cases.md)
 - [Operator n8n connection check](docs/n8n-connection-check.md)
