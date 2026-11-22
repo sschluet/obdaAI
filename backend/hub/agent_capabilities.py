@@ -125,6 +125,8 @@ def describe(profile: "Integration", rules: "Rules") -> dict[str, Any]:
     elif profile.kind == "paperless":
         discovery = ["Use the existing native Paperless read planner and observed document IDs."]
     elif profile.kind == "gmail":
+        operations = {"native_reads": ["profile", "labels", "search", "message", "thread"]
+                      if rules.gmail_read else [], "reply_evidence": False, "send": False}
         discovery = [
             "Use native Gmail reads and observed IDs. Search returns IDs, not message content. "
             "Read observed IDs with message/thread before summarizing subjects, senders or text. "
@@ -139,7 +141,13 @@ def describe(profile: "Integration", rules: "Rules") -> dict[str, Any]:
         discovery = [
             "Use approved HTTP scopes and official API documentation; do not invent routes."
         ]
-    return {"inspection": inspection, "operations": operations, "discovery": discovery}
+    elif profile.kind == "google_drive":
+        discovery = ["Drive is a knowledge source and an explicitly approved artifact destination; "
+                     "no general Drive chat administration tool is installed."]
+    return {"inspection": inspection, "operations": operations, "discovery": discovery,
+            "readiness": {"policy_enabled": rules.enabled, "profile_enabled": profile.enabled,
+                          "live_access_verified": False,
+                          "requires_current_target_check": True}}
 
 
 def access_question(goal: str, profiles: Mapping[str, Any]) -> bool:
@@ -177,19 +185,35 @@ def access_question(goal: str, profiles: Mapping[str, Any]) -> bool:
 
 
 def ha_inventory_question(goal: str, profiles: list[Any]) -> bool:
-    """Lower authority for unambiguous HA inventory questions, never grant actions."""
+    """Use the shared typed intent; uncertain or mixed actions stay administrative."""
+    from hub.agent_intent import infer
+
     if not profiles or any(profile.kind != "home_assistant" for profile in profiles):
         return False
-    text = goal.casefold().strip()
-    text = re.sub(r"^(?:bitte|please)\s+", "", text)
-    if not re.match(r"^(?:welche\w*|was|wie viele|zeig\w*|liste\w*|which|what|show|list)\b", text):
-        return False
-    return not re.search(
-        r"\b(?:änder\w*|aender\w*|schalt(?:e|en|est|et)?|einschalt\w*|ausschalt\w*|"
-        r"aktualisier\w*|installier\w*|lösch\w*|loesch\w*|entfern\w*|"
-        r"erstell\w*|konfigurier\w*|starte\w*|neustart\w*|einspiel\w*|"
-        r"sicher\w*|backup\w*|setze\w*|ausführ\w*|ausfuehr\w*|"
-        r"switch\s+(?:them|it|the|all|on|off)|turn|set|change|install|update|upgrade|"
-        r"delete|remove|create|"
-        r"configure|restart|reboot|execute|run)\b", text,
-    )
+    intent = infer(goal, {str(index): profile for index, profile in enumerate(profiles)},
+                   implicit_target=True)
+    return bool(intent and intent.read_only)
+
+
+def request_intent(goal: str, profiles: Mapping[str, Any]) -> Any:
+    """Public shared shortcut; None requires the local semantic interpretation path."""
+    from hub.agent_intent import RequestIntent, Requirement, infer, light_answer_kind
+
+    targets = [identifier for identifier, values in profiles.items()
+               if access_question(goal, {identifier: values})]
+    if targets:
+        return RequestIntent(target_ids=targets, mode="observe", topic="connection",
+                             requirements=[Requirement(kind="connection", integration_id=i)
+                                           for i in targets])
+    intent = infer(goal, profiles)
+    if intent is None and len(profiles) == 1 and light_answer_kind(goal) == "light_on_cohort":
+        identifier, values = next(iter(profiles.items()))
+        row = values[0] if isinstance(values, (tuple, list)) else values
+        if row.kind == "home_assistant":
+            return RequestIntent(
+                target_ids=[identifier], mode="observe", topic="inventory", followup=True,
+                answer_kind="light_on_cohort", requirements=[Requirement(
+                    kind="entity_states", domain="light", integration_id=identifier,
+                )],
+            )
+    return intent

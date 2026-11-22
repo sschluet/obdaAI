@@ -12,7 +12,7 @@ from hub.action_api import StrictInput
 from hub.config import Settings
 from hub.db_locks import ownership_lock
 from hub.knowledge_api import Auth
-from hub.memory_models import MemoryCandidate, MemorySettings
+from hub.memory_models import MemoryCandidate, MemoryLearningJob, MemorySettings
 
 
 class MemoryOptions(StrictInput):
@@ -23,6 +23,7 @@ class MemoryOptions(StrictInput):
     learn_from_projects: bool = True
     sensitive_review_required: bool = True
     embedding_enabled: bool = False
+    semantic_scan_limit: int = Field(default=5000, ge=100, le=20000)
     summary_enabled: bool = True
     extractor_provider_id: str | None = Field(default=None, max_length=36)
 
@@ -37,6 +38,12 @@ class MemorySettingsInput(StrictInput):
 class CandidateReview(StrictInput):
     expected_revision: int = Field(ge=1)
     decision: Literal["approve", "reject"]
+    replacement_memory_id: str | None = Field(default=None, max_length=36)
+    replacement_revision: int | None = Field(default=None, ge=1)
+
+
+class LearningRetry(StrictInput):
+    expected_attempts: int = Field(ge=1, le=3)
 
 
 def get_settings(db: Session) -> dict[str, Any]:
@@ -76,12 +83,71 @@ def candidate_info(db: Session, row: MemoryCandidate) -> dict[str, Any]:
             "source_sha256",
         )
     }
-    return {**value, "preview": preview, "fresh": fresh}
+    from hub.db import Memory
+
+    replacements = []
+    if fresh:
+        from hub.db import Conversation
+        from hub.memory_service import candidate_source, fresh_source
+
+        chat = db.get(Conversation, fresh_source(db, candidate_source(row)).conversation_id)
+        project_id = chat.project_id if chat and row.category == "project" else None
+        choices = select(Memory).where(
+            Memory.storage == "app",
+            Memory.owner_id == "owner",
+            Memory.status == "active",
+            Memory.deleted.is_(False),
+            Memory.project_id == project_id,
+            Memory.category == row.category,
+            Memory.predicate == row.predicate,
+            Memory.fact_type == row.fact_type,
+        )
+        if row.predicate not in {"decision", "plan"}:
+            choices = choices.where(Memory.subject == row.subject)
+        replacements = [
+            {"id": item.id, "revision": item.revision, "content": item.content}
+            for item in db.scalars(choices.order_by(Memory.updated.desc()).limit(20))
+        ]
+    return {**value, "preview": preview, "fresh": fresh, "replacement_options": replacements}
 
 
 def install_memory_settings_api(
     app: FastAPI, cfg: Settings, factory: sessionmaker[Session]
 ) -> None:
+    @app.get("/api/memory-learning-jobs")
+    def learning_jobs(auth: Auth) -> list[dict[str, Any]]:
+        from hub.memory_learning import learning_job_info
+
+        with factory() as db:
+            return [
+                learning_job_info(db, row)
+                for row in db.scalars(
+                    select(MemoryLearningJob).order_by(MemoryLearningJob.created.desc()).limit(100)
+                )
+            ]
+
+    @app.post("/api/memory-learning-jobs/{job_id}/retry")
+    def retry_learning(job_id: str, body: LearningRetry, auth: Auth) -> dict[str, Any]:
+        from hub.memory_learning import learning_job_info, retry_learning_job
+
+        with factory() as db:
+            ownership_lock(db)
+            row = db.get(MemoryLearningJob, job_id)
+            if row is None:
+                raise HTTPException(404, "Lernauftrag nicht gefunden")
+            try:
+                retry_learning_job(db, row, expected_attempts=body.expected_attempts)
+                if not cfg.database_url.startswith("sqlite"):
+                    from hub.jobs import enqueue_memory
+
+                    enqueue_memory(db, cfg, row.id)
+                db.commit()
+                return learning_job_info(db, row)
+            except ValueError:
+                raise HTTPException(
+                    409, "Lernauftrag oder Quelle ist nicht erneut freigegeben"
+                ) from None
+
     @app.get("/api/memory-settings")
     def get(auth: Auth) -> dict[str, Any]:
         with factory() as db:
@@ -131,6 +197,8 @@ def install_memory_settings_api(
                     candidate_id,
                     approve=body.decision == "approve",
                     expected_revision=body.expected_revision,
+                    replacement_memory_id=body.replacement_memory_id,
+                    replacement_revision=body.replacement_revision,
                 )
                 db.commit()
                 return {

@@ -541,6 +541,55 @@ def ready_read_schema(
     return {"type": "object", "anyOf": branches}
 
 
+def effective_rules(rules: Rules, *, read_only: bool = False) -> Rules:
+    """A derived planning ceiling, never a persisted policy or additional authority."""
+    if not read_only:
+        return rules.model_copy(deep=True)
+    from hub.agent_capabilities import HA_WS_READS
+
+    known = HA_WS_READS | {"backup/info", "supervisor/api"}
+    websocket = [command for command in sorted(known) if any(
+        command.startswith(scope) if scope.endswith("/") else command == scope
+        for scope in rules.ha_websocket_prefixes
+    )]
+    return rules.model_copy(deep=True, update={
+        "http_methods": ["GET"] if "GET" in rules.http_methods else [],
+        "shell": False, "file_upload": False, "mail_recipients": [], "mcp": False,
+        # Existing shell authority already permits absolute file reads. Represent
+        # that read subset explicitly so removing shell does not remove file.read.
+        "file_read_roots": ["/"] if rules.shell else list(rules.file_read_roots),
+        "ha_websocket_prefixes": websocket, "max_effects": 0,
+    })
+
+
+def effective_tools(names: Sequence[str], *, read_only: bool = False) -> list[str]:
+    forbidden = {"shell", "mail.send", "http.upload", "http.verify"} if read_only else set()
+    return sorted(set(names) - forbidden)
+
+
+def effective_interfaces(
+    interfaces: Sequence[dict[str, Any]], *, read_only: bool = False
+) -> list[dict[str, Any]]:
+    if not isinstance(interfaces, (list, tuple)):
+        raise ValueError("Invalid bound administration interfaces")
+    result = []
+    for interface in interfaces:
+        if not isinstance(interface, dict) or not isinstance(interface.get("rules"), dict):
+            raise ValueError("Invalid bound administration interfaces")
+        if type(interface.get("read_only", False)) is not bool:
+            raise ValueError("Invalid per-target planning ceiling")
+        bounded = read_only or interface.get("read_only", False)
+        derived = {**interface, "rules": effective_rules(
+            Rules.model_validate(interface["rules"]), read_only=bounded
+        ).model_dump()}
+        if bounded:
+            derived["read_only"] = True
+            if "writes_enabled" in derived:
+                derived["writes_enabled"] = False
+        result.append(derived)
+    return result
+
+
 def decision_schema(
     integration_ids: Sequence[str],
     tool_names: Sequence[str] | None = None,
@@ -549,8 +598,14 @@ def decision_schema(
     allow_finish: bool = True,
     allow_ask: bool = True,
     allow_stop: bool = False,
+    read_only: bool = False,
 ) -> dict[str, Any]:
     """Constrain generation to typed, available tools; runtime gates remain authoritative."""
+    tool_names = effective_tools(
+        sorted(SCHEMAS) if tool_names is None else tool_names, read_only=read_only
+    )
+    if interfaces is not None:
+        interfaces = effective_interfaces(interfaces, read_only=read_only)
     envelope = decision_envelope_schema(
         integration_ids, tool_names, allow_finish=allow_finish,
         allow_ask=allow_ask, allow_stop=allow_stop,
@@ -579,7 +634,7 @@ def decision_schema(
                 },
                 "required": required,
             }
-            if model is HTTPVerify:
+            if model is HTTPVerify or read_only:
                 arguments = read
             else:
                 write = {
@@ -601,12 +656,49 @@ def decision_schema(
             ]
         )
         for index, (identifier, rules) in enumerate(targets):
+            target_read_only = read_only or bool(interfaces is not None and any(
+                interface.get("integration_id") == identifier and interface.get("read_only") is True
+                for interface in interfaces
+            ))
+            if target_read_only and name in {"shell", "mail.send", "http.upload", "http.verify"}:
+                continue
             definition_name = "Tool_" + name.replace(".", "_")
             if identifier is not None:
                 definition_name += "_" + str(index)
-            definitions[definition_name] = (
-                arguments if rules is None else _scoped_arguments(name, arguments, rules)
-            )
+            scoped = arguments if rules is None else _scoped_arguments(name, arguments, rules)
+            if target_read_only and name == "http" and bound is not None:
+                kind = next(kind for candidate, kind, _ in bound if candidate == identifier)
+                if kind == "home_assistant":
+                    from hub.agent_path_grammar import ha_read_path_pattern
+
+                    assert rules is not None
+                    pattern = ha_read_path_pattern(rules.http_prefixes)
+                    if pattern is None:
+                        continue
+                    for variant in scoped.get("anyOf", [scoped]):
+                        variant["properties"]["path"]["pattern"] = pattern
+            if target_read_only and name == "ha.websocket":
+                from hub.agent_capabilities import HA_WS_READS
+
+                commands = HA_WS_READS | {"backup/info", "supervisor/api"}
+                if rules is not None:
+                    commands &= set(rules.ha_websocket_prefixes)
+                scoped = {"anyOf": [{
+                    **scoped, "properties": {
+                        **scoped["properties"],
+                        "type": {"type": "string", "const": command},
+                        "parameters": ({"type": "object", "additionalProperties": False,
+                                        "properties": {"method": {"const": "get"},
+                                                       "endpoint": {"enum": [
+                                                           "/info", "/supervisor/info"]}},
+                                        "required": ["method", "endpoint"]}
+                                       if command == "supervisor/api" else
+                                       {"type": "object", "additionalProperties": False}),
+                        "verification": {"type": "null"},
+                    }, "required": list(dict.fromkeys([*scoped.get("required", []),
+                                                       "type", "parameters"])),
+                } for command in sorted(commands)]}
+            definitions[definition_name] = scoped
             branch = envelope["anyOf"][0]
             properties = {
                 **branch["properties"],

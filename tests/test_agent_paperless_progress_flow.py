@@ -7,9 +7,38 @@ from uuid import uuid4
 import pytest
 from hub import agent_runtime as runtime
 from hub.agent_models import AgentJob
-from test_agent_private_read_flow import archive, decision, execute  # noqa: F401
+from test_agent_private_read_flow import archive, decision, document_intent, execute  # noqa: F401
 
 pytest_plugins = ["test_agents", "test_agent_mail_read_flow"]
+
+
+def test_initial_authorized_empty_search_cannot_stop_to_request_confirmation(
+    archive, monkeypatch,  # noqa: F811
+):
+    case, start, scenario, calls = archive
+    identifier = case[4]
+    scenario["body"] = {"count": 0, "results": []}
+    turns = []
+
+    async def model(*args):
+        data = args[-1]
+        if data.get("intent_schema"):
+            return document_intent(data, identifier)
+        turns.append(data)
+        if len(turns) == 1:
+            assert not data["allow_stop"] and not data["allow_ask"]
+            return {"kind": "stop", "message": "Please confirm the already authorized BETA query"}
+        if len(turns) == 2:
+            assert not data["allow_stop"]
+            return decision(identifier, operation="search", query="BETA")
+        assert data["allow_finish"]
+        return {"kind": "finish", "message": "The actual BETA search returned no documents."}
+
+    monkeypatch.setattr(runtime, "generate", model)
+    result = execute(archive, start("Suche Dokumente zu BETA in Paperless."))
+    assert result["status"] == "observed" and len(calls) == 1 and len(turns) == 3
+    assert not any(step["kind"] in {"input", "effect"} for step in result["steps"])
+    assert sum(step["kind"] == "feedback" for step in result["steps"]) == 1
 
 
 @pytest.mark.parametrize("invalid_first", [None, "stop", "ask", "finish", "wrong_document"])
@@ -47,6 +76,8 @@ def test_known_archive_document_is_read_without_permission_or_premature_stop(
 
     async def followup(*args):
         instruction, data = args[-2:]
+        if data.get("intent_schema"):
+            return document_intent(data, identifier)
         assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
         assert data["allow_ask"] is False
         if not data["allow_finish"]:
@@ -80,4 +111,59 @@ def test_known_archive_document_is_read_without_permission_or_premature_stop(
         assert sum(s.kind == "feedback" for s in history) == bool(invalid_first)
         assert len([s for s in history if s.kind == "read" and s.status == "succeeded"]) == 1
     assert len(calls) == 2
+    assert calls[-1].url.path == "/api/documents/42/"
+
+
+@pytest.mark.parametrize("followup_hint", [False, True])
+def test_semantic_content_lookup_binds_the_single_displayed_document_without_phrase_selection(
+    archive, monkeypatch, followup_hint,  # noqa: F811
+):
+    from hub.agent_intent import RequestIntent, Requirement
+
+    case, start, scenario, calls = archive
+    app, client, headers, cfg, identifier, chat, *_ = case
+    first_id = start()
+    turns = []
+
+    async def search(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], identifier)
+        turns.append(True)
+        return (decision(identifier, operation="search", query="Synthetic contract")
+                if len(turns) == 1 else {"kind": "finish", "message": "Found contract 42."})
+
+    monkeypatch.setattr(runtime, "generate", search)
+    assert execute(archive, first_id)["status"] == "observed"
+    scenario["body"] = {"id": 42, "title": "Synthetic contract", "tags": [],
+                        "content": "Synthetic OCR cancellation period: 17 days."}
+    created = client.post(
+        f"/api/conversations/{chat}/agent-runs", headers=headers,
+        json={"request_id": str(uuid4()), "goal": "Was steht darin zur Kündigungsfrist?"},
+    )
+    assert created.status_code == 200, created.text
+    choices = []
+
+    async def content(*args):
+        data = args[-1]
+        if data.get("intent_schema"):
+            assert data["prior_displayed_target_ids"] == [identifier]
+            return RequestIntent(
+                target_ids=[identifier], mode="observe", topic="documents", followup=followup_hint,
+                origin="semantic", requirements=[Requirement(
+                    kind="document_content", integration_id=identifier,
+                )],
+            ).model_dump()
+        if data.get("ready_reads", {}).get("decisions"):
+            candidate = data["ready_reads"]["decisions"][0]
+            assert not data["allow_finish"] and candidate["arguments"]["document_id"] == 42
+            choices.append(candidate)
+            return candidate
+        assert data["allow_finish"] and "17 days" in runtime.encode(data["latest_observation"])
+        return {"kind": "finish", "message": "The actual contract states 17 days."}
+
+    monkeypatch.setattr(runtime, "generate", content)
+    asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, created.json()["id"]))
+    result = client.get("/api/agent-runs/" + created.json()["id"]).json()
+    assert result["status"] == "observed" and "17 days" in result["summary"]
+    assert len(choices) == 1 and len(calls) == 2
     assert calls[-1].url.path == "/api/documents/42/"

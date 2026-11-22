@@ -1,9 +1,11 @@
+import {useUnsavedChanges} from './NavigationGuard';
 import {useEffect,useRef,useState} from 'react';
 import {ArrowUp,LoaderCircle,Sparkles,Square} from 'lucide-react';
 import {pendingAI,type AISpec,type UseCaseAPI} from './use-case-ai';
 type Design={id:string;turn:number;status:string;model_mode:'local'|'auto'|'cloud';messages:{role:string;content:string}[];proposal:AISpec|null;validation_error?:string;error?:string;provider?:string;model?:string};
 export function UseCaseDesigner({api,onAccept,onCancel}:{api:UseCaseAPI;onAccept:(spec:AISpec)=>void;onCancel:()=>void}){
  const [text,setText]=useState(''),[mode,setMode]=useState<'local'|'auto'|'cloud'>('local'),[dialogue,setDialogue]=useState<Design|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');const lock=useRef(false),request=useRef<string|null>(null);const pending=Boolean(dialogue&&pendingAI(dialogue.status));const prefix='/use-case-designer/dialogues';const storageKey='hub-use-case-designer';
+ useUnsavedChanges(!!text.trim(),'Use-Case-Beschreibung',text);
  useEffect(()=>{const id=sessionStorage.getItem(storageKey);if(!id)return;let stopped=false;api(prefix+'/'+id).then(next=>{if(!stopped){setDialogue(next);setMode(next.model_mode)}}).catch(()=>sessionStorage.removeItem(storageKey));return()=>{stopped=true}},[api]);
  useEffect(()=>{if(!dialogue||!pending)return;let stopped=false;const timer=setInterval(()=>{void api(prefix+'/'+dialogue.id).then(next=>{if(!stopped)setDialogue(next)}).catch(e=>{if(!stopped)setError(e.message)})},1200);return()=>{stopped=true;clearInterval(timer)}},[api,dialogue?.id,pending]);
  async function finish(spec?:AISpec){if(busy||pending)return;setBusy(true);setError('');try{if(dialogue)await api(prefix+'/'+dialogue.id,'DELETE');sessionStorage.removeItem(storageKey);if(spec)onAccept({...spec,integration_inputs:[],integration_processing:[],output_integration_id:null});else onCancel()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}

@@ -2,9 +2,11 @@
 
 import asyncio
 import json
+import time
 from typing import Any
 from uuid import UUID
 
+import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import Field
 from sqlalchemy import select
@@ -97,6 +99,19 @@ def start_development_agent(app: FastAPI, cfg: Settings, factory: Any, job_id: s
 
 
 def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
+    intent_cache: dict[tuple[str, str], tuple[float, str, dict[str, Any]]] = {}
+
+    def profile_signature(profiles: dict[str, Any]) -> str:
+        return digest(encode({identifier: [p.revision, digest(p.config), r.model_dump()]
+                              for identifier, (p, r, _) in profiles.items()}))
+    def reference_signal(db: Any, conversation_id: str, profiles: dict[str, Any]
+                         ) -> tuple[list[str], str]:
+        from hub.agent_read_references import previous_references
+
+        references = previous_references(db, conversation_id, profiles)
+        ids = sorted({json.loads(part["content"])["integration_id"] for part in references})
+        return ids, digest(encode(references))
+
     def checked_gate(db: Any, job: AgentJob, effect: bool = False) -> None:
         try:
             gate(db, cfg, job, effect=effect)
@@ -192,15 +207,67 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             }
 
     @app.post("/api/conversations/{conversation_id}/integration-route")
-    def integration_route(
+    async def integration_route(
         conversation_id: UUID, body: IntegrationRouteInput, auth: Auth
     ) -> dict[str, Any]:
         from hub.integration_api import binding_owner
-        from hub.integration_routing import route_integrations
+        from hub.integration_routing import route_integrations, semantic_candidates
+        from hub.routing_settings import very_simple_request
 
         with factory() as db:
             binding_owner(db, "conversation", str(conversation_id))
-            return route_integrations(db, cfg, str(conversation_id), body.goal)
+            result = route_integrations(db, cfg, str(conversation_id), body.goal)
+            profiles = semantic_candidates(db, cfg, str(conversation_id))
+            prior_targets, reference_hash = reference_signal(db, str(conversation_id), profiles)
+        if not profiles or very_simple_request(body.goal):
+            return result
+        from hub.agent_capabilities import request_intent
+
+        intent = request_intent(body.goal, profiles)
+        if intent and intent.followup and any(
+            item.kind == "mail_reply" for item in intent.requirements
+        ):
+            if not set(intent.target_ids) <= set(prior_targets):
+                return {"route": "chat", "integration_ids": []}
+        signature = digest(encode([profile_signature(profiles), reference_hash]))
+        if intent is None:
+            from hub.request_interpretation import interpret
+
+            try:
+                intent = await interpret(factory, cfg, body.goal, profiles,
+                                         prior_target_ids=prior_targets,
+                                         conversation_id=str(conversation_id))
+            except (ValueError, TimeoutError, OSError, httpx.HTTPError):
+                app.state.intent_interpretation_degraded = True
+                raise HTTPException(
+                    503, "Die lokale Auftragseinordnung ist vorübergehend nicht verfügbar. "
+                    "Die Anfrage wurde nicht an Chat oder Werkzeuge weitergegeben. "
+                    "Bitte das lokale Modell prüfen und erneut versuchen."
+                ) from None
+        app.state.intent_interpretation_degraded = False
+        with factory() as db:
+            binding_owner(db, "conversation", str(conversation_id))
+            current = semantic_candidates(db, cfg, str(conversation_id))
+            _, current_reference_hash = reference_signal(db, str(conversation_id), current)
+        if digest(encode([profile_signature(current), current_reference_hash])) != signature:
+            raise HTTPException(409, "Verbindungen oder Gesprächsbezug haben sich während "
+                                "der Einordnung geändert. Bitte erneut versuchen.")
+        if intent.mode == "unknown" and (intent.target_ids or result.get("route") == "agent"):
+            raise HTTPException(
+                409, "Der Bezug zu deinen Systemen ist nicht eindeutig. "
+                "Bitte benenne die gewünschte Verbindung oder die gemeinten Daten. "
+                "Es wurde kein Chat- oder Werkzeugauftrag gestartet."
+            )
+        key = (str(conversation_id), digest(body.goal))
+        intent_cache[key] = (time.monotonic(), signature, intent.model_dump(mode="json"))
+        for old_key, value in list(intent_cache.items()):
+            if time.monotonic() - value[0] > 120:
+                intent_cache.pop(old_key, None)
+        if len(intent_cache) > 200:
+            intent_cache.pop(next(iter(intent_cache)))
+        if intent.mode in {"observe", "admin"} and intent.target_ids:
+            return {"route": "agent", "integration_ids": intent.target_ids}
+        return {"route": "chat", "integration_ids": []}
 
     @app.post("/api/conversations/{conversation_id}/agent-runs")
     async def start(conversation_id: UUID, body: StartInput, auth: Auth) -> dict[str, Any]:
@@ -266,6 +333,15 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                     for s in steps(db, previous.id)
                     if s.kind == "effect"
                 )
+            cached = intent_cache.get((owner.id, digest(body.goal)))
+            resolved_intent = None
+            if cached and time.monotonic() - cached[0] <= 120:
+                from hub.integration_routing import semantic_candidates
+
+                candidates = semantic_candidates(db, cfg, owner.id)
+                _, ref_hash = reference_signal(db, owner.id, candidates)
+                if cached[1] == digest(encode([profile_signature(candidates), ref_hash])):
+                    resolved_intent = cached[2]
             job = create_job(
                 db,
                 cfg,
@@ -280,6 +356,7 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 integration_ids=[str(item) for item in body.integration_ids]
                 if body.integration_ids is not None
                 else None,
+                resolved_intent=resolved_intent,
             )
             if not old:
                 from hub.agent_read_references import bind

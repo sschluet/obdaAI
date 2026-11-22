@@ -748,8 +748,13 @@ def test_catalog_batch_cannot_exceed_total_step_budget(read_mailbox, monkeypatch
     assert started.status_code == 200, started.text
     case = (*read_mailbox[:5], started.json()["id"], calls)
     status, history = execute(case)
-    assert status == "failed" and not calls
-    assert not any(step.kind in {"read", "effect"} for step in history)
+    assert status == "unverified"
+    assert sum(call.get("method") == "tools/list" for call in calls) == 2
+    assert not any(call.get("method") == "tools/call" for call in calls)
+    reads = [step for step in history if step.kind == "read"]
+    assert len(reads) == 2
+    assert len({json.loads(step.document)["integration_id"] for step in reads}) == 2
+    assert not any(step.kind == "effect" for step in history)
 
 
 def test_oversized_observed_contract_fails_closed_instead_of_clipping_schema():
@@ -774,6 +779,8 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
     phases = []
 
     async def generate(factory, cfg, providers, job_id, instruction, data):
+        if measurements:
+            return {"kind": "stop", "message": "Synthetic measurement only; no functional read."}
         sample = copy.deepcopy(data)
         profile_id = sample["interfaces"][0]["integration_id"]
         names = sorted(runtime.MAIL_READ_TOOLS)
@@ -938,4 +945,5 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
 
     monkeypatch.setattr(runtime, "generate", generate)
     status, trace = execute(read_mailbox)
-    assert status == "unverified" and len(measurements) == 1, (phases, trace[-1].document)
+    assert status == "failed" and len(measurements) == 1, (phases, trace[-1].document)
+    assert sum(step.kind == "feedback" for step in trace) == 2

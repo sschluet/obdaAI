@@ -78,7 +78,7 @@ try{
  const pause=await call('/action-policy');if(pause.paused)await call('/action-policy','PATCH',{expected_revision:pause.revision,paused:false});
  chat=await call('/conversations','POST',{});
  await call('/integration-bindings/conversation/'+chat.id,'PUT',{expected_revision:0,selection_mode:'manual',integration_ids:[profile.id]});
- await page.goto(base+'/?chat='+chat.id);await page.getByLabel('Systeme steuern',{exact:true}).check();
+ await page.goto(base+'/?chat='+chat.id);await page.getByLabel('Systeme steuern',{exact:true}).check();await page.locator('.composer-note').getByText('Systemauftrag · lokal, ohne Cloudmodell',{exact:true}).waitFor();
  const composer=page.locator('.composer textarea');
  await composer.fill('Ändere das synthetische Dokument. Frage zuerst nach dem gewünschten Titel.');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();

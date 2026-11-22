@@ -158,7 +158,7 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
 
         # Bounded periodic backfill also covers manual edits and configuration
         # changes, independent of whether the last chat yielded a learned fact.
-        await refresh_embeddings(factory, cfg, limit=20)
+        await refresh_embeddings(factory, cfg, limit=1, time_budget_seconds=2)
 
     @queue.task(name="hub.artifact", queue="artifacts", retry=False)
     async def artifact(artifact_id: str, revision: int) -> None:
@@ -207,9 +207,11 @@ def worker_app(cfg: Settings, *, include_maintenance: bool = True) -> procrastin
     @queue.task(name="hub.title", queue="titles", retry=False)
     async def title(chat_id: str) -> None:
         title_providers = providers
+        title_binding = None
         if isinstance(providers, AdapterClass):
-            _, title_providers, _ = runtime_provider(factory, cfg)
-        await execute_title(factory, title_providers, chat_id)
+            _, title_providers, selected = runtime_provider(factory, cfg, local_only=True)
+            title_binding = selected.get("local")
+        await execute_title(factory, title_providers, chat_id, provider_binding=title_binding)
 
     @queue.task(name="hub.extract", queue="sources", retry=False)
     async def extract(source_id: str) -> None:

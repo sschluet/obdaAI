@@ -5,110 +5,15 @@ still owns its fresh gate, native grammar, durable intent and final dispatch.
 """
 
 import json
-import re
 from typing import Any
 
 from hub.action_api import digest, encode
+from hub.agent_document_intent import bound_content_reference
+from hub.agent_document_intent import selection as _selection
 from hub.agent_models import AgentJob, AgentStep
 from hub.agent_read_references import _paperless, validated_receipts
 from hub.agent_tools import validate_tool
 from hub.db import Message
-
-_CONTENT = re.compile(
-    r"zusammenfass|\bfasse\b|\binhalt\b|\bocr\b|\blesen\b|\blies\b|"
-    r"\bzeige\b|\benthält\b|\bsteht\b|summari|\bread\b|\bcontent\b",
-    re.I,
-)
-_OTHER = re.compile(
-    r"\b(?:suche|such|finde|filtere|durchsuche|search|find|filter|"
-    r"lösche|lösch|entferne|ändere|änder|benenne|umbenennen|speichere|"
-    r"sende|verschicke|exportiere|download|herunterladen|hochladen|"
-    r"delete|remove|rename|update|write|send|export|upload)\b",
-    re.I,
-)
-_ORDINALS = {
-    "erst": 1,
-    "zweit": 2,
-    "dritt": 3,
-    "viert": 4,
-    "fünft": 5,
-    "sechst": 6,
-    "siebt": 7,
-    "acht": 8,
-    "neunt": 9,
-    "zehnt": 10,
-    "first": 1,
-    "second": 2,
-    "third": 3,
-    "fourth": 4,
-    "fifth": 5,
-}
-
-
-def _selection(goal: str) -> tuple[str, int] | None:
-    """Interpret resource references only; never decide that the goal is complete."""
-    # A bound prior-search noun phrase is a reference, not a request to search again.
-    action_goal = re.sub(
-        r"\b(?:aus|von|in)\s+(?:der|deiner|unserer|meiner|dieser)\s+"
-        r"(?:letzten|vorherigen|bisherigen)\s+(?:suche|abfrage)\b|"
-        r"\bfrom\s+(?:the|your|our|my)\s+(?:last|previous)\s+search\b",
-        "",
-        goal,
-        flags=re.I,
-    )
-    if not _CONTENT.search(goal) or _OTHER.search(action_goal):
-        return None
-    if re.search(
-        r"\b(?:nur|mindestens|höchstens|where|filtered)\b|"
-        r"\b(?:von|seit|vor|nach|mit|ohne)\s+\d",
-        goal,
-        re.I,
-    ):
-        return None
-    ids = re.findall(
-        r"\b(?:dokument|document)(?:[-\s]*(?:id|nr\.?|nummer|number))?"
-        r"\s*[:#]?\s*([1-9][0-9]*)\b",
-        goal,
-        re.I,
-    )
-    # Asking to *name* an ID is not an explicit ID selection.
-    if ids:
-        return ("id", int(ids[0])) if len(set(ids)) == 1 else None
-    if re.search(r"\bdokument[-\s]*(?:id|nummer)\s*[:#]?\s*0\b", goal, re.I):
-        return None
-    if re.search(
-        r"\bdie\s+(?:ersten|zweiten|dritten|vierten|fünften|sechsten|siebten|achten|neunten|zehnten)"
-        r"\s+(?:(?:gefunden|angezeigt)(?:en)?\s+)?treffer\b",
-        goal,
-        re.I,
-    ):
-        return None
-    ordinals = []
-    for stem, number in _ORDINALS.items():
-        pattern = (
-            rf"\b{stem}(?:e|en|er|es|em)?\s+"
-            r"(?:(?:gefunden|angezeigt|beobachtet|found|listed)(?:e|en|er|es|em)?\s+)?"
-            r"(?:dokument(?:s)?|document|treffer(?:s)?|result|hit)\b"
-        )
-        # A singular partitive points into the prior result set: "im ersten
-        # dieser Dokumente" still selects one document, unlike "die ersten".
-        partitive = (
-            rf"\b(?:im|vom|am|zum|des|dem|den|das)\s+{stem}(?:e|en|er|es|em)?\s+"
-            r"(?:dieser|der)\s+(?:(?:gefunden|angezeigt|beobachtet)en\s+)?"
-            r"(?:dokumente|treffer)\b"
-        )
-        if re.search(pattern, goal, re.I) or re.search(partitive, goal, re.I):
-            ordinals.append(number)
-    ordinals.extend(
-        int(n)
-        for n in re.findall(
-            r"\b([1-9][0-9]*)\.\s+(?:(?:gefunden|angezeigt|beobachtet)(?:e|en|er|es|em)?\s+)?"
-            r"(?:dokument(?:s)?|treffer(?:s)?)\b",
-            goal,
-            re.I,
-        )
-    )
-    return ("ordinal", ordinals[0]) if len(set(ordinals)) == 1 else None
 
 
 def _attempted(
@@ -191,20 +96,43 @@ def ready_reads(
         "untrusted": True,
     }
     selection = _selection(job.goal)
-    if selection is None:
+    intent = json.loads(job.bindings).get("intent") or {}
+    content_accounts = {
+        item["integration_id"] for item in intent.get("requirements", [])
+        if item.get("kind") == "document_content"
+    }
+    single_source = (selection is None and intent.get("mode") == "observe"
+                     and intent.get("confidence") == "certain"
+                     and bound_content_reference(job.goal,
+                                                 semantic_followup=intent.get("followup") is True)
+                     and bool(content_accounts))
+    if selection is None and not single_source:
         return result
-    searches = []
+    searches: list[tuple[float, dict[str, Any], dict[str, Any]]] = []
     for receipt in receipts:
         if receipt["tool"] != "paperless.read":
             continue
         normalized = _paperless(receipt["document"], receipt["result"])
-        if normalized["operation"] != "search":
+        if single_source and receipt["reference"]["integration_id"] not in content_accounts:
             continue
         message = db.get(Message, receipt["reference"]["message_id"])
         if message is not None:
-            searches.append((message.created, receipt, normalized["data"]))
+            data = normalized["data"] if normalized["operation"] == "search" else {
+                "results": [normalized["data"]], "has_next": False, "document_receipt": True,
+            }
+            searches.append((message.created, receipt, data))
     if not searches:
         return result
+    if single_source:
+        latest = max(item[0] for item in searches)
+        searches = [item for item in searches if item[0] == latest]
+        identities = {(receipt["reference"]["integration_id"], row["id"])
+                      for _, receipt, data in searches for row in data["results"]}
+        if len(identities) != 1:
+            return result  # No guessing a document/account from a multi-document cohort.
+        _, identifier = identities.pop()
+        selection = ("id", identifier)
+    assert selection is not None
     if selection[0] == "id":
         matches = [
             (created, receipt, data, index, row)
@@ -269,8 +197,12 @@ def ready_reads(
             "message": "Dokument anhand des gespeicherten Belegs lesen",
         }
     ]
-    prefix = "/body/results/" if receipt["document"]["tool"] == "http" else "/data/results/"
-    result["decision_sources"] = [{"source_index": 0, "pointer": prefix + str(index)}]
+    if data.get("document_receipt"):
+        pointer = "/body" if receipt["document"]["tool"] == "http" else "/data"
+    else:
+        prefix = "/body/results/" if receipt["document"]["tool"] == "http" else "/data/results/"
+        pointer = prefix + str(index)
+    result["decision_sources"] = [{"source_index": 0, "pointer": pointer}]
     if len(encode(result).encode()) > max_bytes:
         raise ValueError("Archive source identity exceeds ready evidence budget")
     return result

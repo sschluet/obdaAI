@@ -120,6 +120,8 @@ def select_memory(
         "token_estimate": 0,
         "omitted": 0,
         "summary": None,
+        "summary_query": question,
+        "context_budget": budget,
         "coverage_complete": False,
         "candidate_limit": 2000,
     }
@@ -161,41 +163,85 @@ def select_memory(
         .order_by(Memory.updated.desc(), Memory.id)
         .limit(2000)
     )
+    semantic_scope = candidates.whereclause
+    assert semantic_scope is not None
     embedding_fingerprint = None
     if query_vector and config.get("embedding_enabled", False):
         try:
             _, _, embedding_fingerprint = configuration(cfg)
         except ValueError:
             pass
-    if not embedding_fingerprint:
-        conditions = [Memory.content.icontains(term, autoescape=True) for term in terms]
-        conditions += [Memory.subject.icontains(term, autoescape=True) for term in terms]
-        if predicates:
-            conditions.append(Memory.predicate.in_(predicates))
-        style_condition = and_(
-            Memory.subject == "response_style",
-            Memory.category == "preference",
-            Memory.fact_type == "fact",
+    conditions = [Memory.content.icontains(term, autoescape=True) for term in terms]
+    conditions += [Memory.subject.icontains(term, autoescape=True) for term in terms]
+    if predicates:
+        conditions.append(Memory.predicate.in_(predicates))
+    style_condition = and_(
+        Memory.subject == "response_style",
+        Memory.category == "preference",
+        Memory.fact_type == "fact",
+    )
+    conditions.append(style_condition)
+    if conditions:
+        rank: ColumnElement[Any] = sum(
+            (case((Memory.content.icontains(t, autoescape=True), 3), else_=0) for t in terms),
+            literal(0),
         )
-        conditions.append(style_condition)
-        if conditions:
-            rank: ColumnElement[Any] = sum(
-                (case((Memory.content.icontains(t, autoescape=True), 3), else_=0) for t in terms),
-                literal(0),
-            )
-            rank += sum(
-                (case((Memory.subject.icontains(t, autoescape=True), 2), else_=0) for t in terms),
-                literal(0),
-            )
-            if predicates:
-                rank += case((Memory.predicate.in_(predicates), 4), else_=0)
-            rank += case((style_condition, 3), else_=0)
-            candidates = (
-                candidates.where(or_(*conditions))
-                .order_by(None)
-                .order_by(rank.desc(), Memory.updated.desc(), Memory.id)
-            )
-    for row in db.scalars(candidates):
+        rank += sum(
+            (case((Memory.subject.icontains(t, autoescape=True), 2), else_=0) for t in terms),
+            literal(0),
+        )
+        if predicates:
+            rank += case((Memory.predicate.in_(predicates), 4), else_=0)
+        rank += case((style_condition, 3), else_=0)
+        candidates = (
+            candidates.where(or_(*conditions))
+            .order_by(None)
+            .order_by(rank.desc(), Memory.updated.desc(), Memory.id)
+        )
+    rows = {row.id: row for row in db.scalars(candidates)}
+    semantic_scores: dict[str, float] = {}
+    if embedding_fingerprint and query_vector:
+        # Stream the authorized corpus, not the newest prefix. Existing vectors
+        # stay in the same DB; a hard scan bound is visible instead of claiming
+        # complete semantic coverage. Lexical recall never depends on this bound.
+        limit = int(config.get("semantic_scan_limit", 5000))
+        # Remove lexical predicates from the semantic scope: they are added below
+        # the original eligibility query, so use the separately frozen base scope.
+        statement = (
+            select(Memory, MemoryEmbedding)
+            .join(MemoryEmbedding, MemoryEmbedding.memory_id == Memory.id)
+            .where(semantic_scope)
+            .order_by(Memory.id)
+            .limit(limit + 1)
+        )
+        best: list[tuple[float, Memory]] = []
+        scanned = 0
+        for row, vector in db.execute(statement).yield_per(128):
+            scanned += 1
+            if scanned > limit:
+                snapshot["semantic_scan_truncated"] = True
+                break
+            if (
+                vector.config_sha256 != embedding_fingerprint
+                or vector.revision != row.revision
+                or vector.sha256 != row.sha256
+            ):
+                continue
+            try:
+                score = max(0.0, similarity(query_vector, json.loads(vector.vector)))
+            except (ValueError, TypeError):
+                continue
+            if score >= 0.55:
+                best.append((score, row))
+                if len(best) > 400:
+                    best.sort(key=lambda pair: (-pair[0], pair[1].id))
+                    del best[200:]
+        snapshot["semantic_vectors_scanned"] = min(scanned, limit)
+        snapshot.setdefault("semantic_scan_truncated", False)
+        best.sort(key=lambda pair: (-pair[0], pair[1].id))
+        for score, row in best[:200]:
+            rows[row.id], semantic_scores[row.id] = row, score
+    for row in rows.values():
         if not _eligible(
             row, owner_id=owner_id, project_ids=projects, conversation=conversation, now=now
         ):
@@ -214,19 +260,7 @@ def select_memory(
             + 2 * int(row.predicate in predicates)
             + sum(term in (row.subject + " " + row.predicate).casefold() for term in terms)
         )
-        semantic = 0.0
-        if embedding_fingerprint and query_vector:
-            vector = db.get(MemoryEmbedding, row.id)
-            if (
-                vector
-                and vector.config_sha256 == embedding_fingerprint
-                and vector.revision == row.revision
-                and vector.sha256 == row.sha256
-            ):
-                try:
-                    semantic = max(0.0, similarity(query_vector, json.loads(vector.vector)))
-                except (ValueError, TypeError):
-                    pass
+        semantic = semantic_scores.get(row.id, 0.0)
         if not matches and not structured and semantic < 0.55:
             continue
         recency = 1 / (1 + max(0, now - row.updated) / 86400 / 30)
@@ -257,7 +291,13 @@ def select_memory(
         snapshot["items"].append(item)
         snapshot["used_bytes"] += cost
     if config.get("summary_enabled", True):
-        summary = fresh_summary(db, conversation.id, owner_id=owner_id)
+        summary = fresh_summary(
+            db,
+            conversation.id,
+            owner_id=owner_id,
+            question=question,
+            byte_budget=max(0, budget - snapshot["used_bytes"] - 256),
+        )
         if summary:
             summary_item = {
                 "id": "summary:" + conversation.id,
@@ -332,7 +372,15 @@ def refresh_memory(
     result["used_bytes"] = sum(len(_part(item).content.encode()) + 64 for item in result["items"])
     previous_summary = snapshot.get("summary")
     if previous_summary:
-        summary = fresh_summary(db, conversation.id, owner_id=owner_id)
+        summary = fresh_summary(
+            db,
+            conversation.id,
+            owner_id=owner_id,
+            question=str(snapshot.get("summary_query", "")),
+            byte_budget=max(
+                0, int(snapshot.get("context_budget", 2400)) - result["used_bytes"] - 256
+            ),
+        )
         if (
             summary
             and summary.revision == previous_summary["revision"]

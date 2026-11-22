@@ -337,6 +337,7 @@ if(await page.getByLabel('Art der Aufgabe',{exact:true}).inputValue()!=='ha.main
 if(await page.getByLabel('Uhrzeit',{exact:true}).inputValue()!=='02:00')throw Error('Explicit draft time lost');
 if(!await page.getByLabel('Samstag',{exact:true}).isChecked())throw Error('Explicit draft weekday lost');
 await page.getByRole('button',{name:'Schließen',exact:true}).click();
+await page.getByRole('dialog',{name:'Ungespeicherte Änderungen',exact:true}).getByRole('button',{name:'Ohne Speichern weiter',exact:true}).click();
 await page.getByRole('button',{name:'Navigation öffnen',exact:true}).click();
 // Task-bound write authority through normal dialogs, using only new synthetic projects.
 await page.getByRole('button',{name:'Aufgaben',exact:true}).click();
@@ -436,3 +437,7 @@ await import('./google-drive-check.mjs');
 await import('./ha-access-check.mjs');
 
 await import('./ha-read-recovery-check.mjs');
+
+await import('./ux-navigation-check.mjs');
+
+await import('./chat-scope-check.mjs');

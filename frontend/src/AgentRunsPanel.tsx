@@ -21,15 +21,16 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
   const [pause, setPause] = useState<any>(null), [busy, setBusy] = useState(false);
   const [receipts, setReceipts] = useState<Record<string, unknown>>({});
   const callbacks = useRef({onState, onChanged}); callbacks.current = {onState, onChanged};
-  const signature = useRef('');
+  const signature = useRef(''), mounted = useRef(false), generation = useRef(0);
   const filter = taskId ? 'task_id=' + taskId : 'conversation_id=' + conversationId;
   useEffect(() => {
     if (!conversationId && !taskId) return;
+    const version=++generation.current;mounted.current=true;signature.current='';setJobs([]);setReceipts({});setBusy(false);setError('');
     let alive = true, timer: ReturnType<typeof setTimeout>;
     async function load() {
       try {
         const next: AgentJob[] = await api('/agent-runs?' + filter);
-        if (!alive) return;
+        if (!alive||generation.current!==version) return;
         setJobs(next); setError('');
         callbacks.current.onState?.(next.find(job => active.includes(job.status)) || next[0] || null);
         const value = JSON.stringify(next.map(j => [j.id, j.status, j.steps.map(s => [s.sequence, s.status]), j.cancel_requested]));
@@ -39,7 +40,7 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
       if (alive) timer = setTimeout(() => void load(), 2000);
     }
     void load();
-    return () => {alive = false; clearTimeout(timer); callbacks.current.onState?.(null);};
+    return () => {alive = false;mounted.current=false;generation.current++;clearTimeout(timer);callbacks.current.onState?.(null);};
   }, [api, filter, conversationId, taskId]);
   useEffect(() => {
     if (!setup) return;
@@ -51,12 +52,15 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
   }, [api, setup]);
   async function perform(path: string, body = {}) {
     if (busy) return;
+    const version=generation.current,current=()=>mounted.current&&generation.current===version;
     setBusy(true); setError('');
     try {
       const job = await api(path, 'POST', body);
+      // The accepted command still belongs to its original owner; never relabel it as a new chat's job.
+      if(!current())return;
       setJobs(previous => previous.some(item => item.id === job.id) ? previous.map(item => item.id === job.id ? job : item) : [job, ...previous]);
       callbacks.current.onState?.(job); callbacks.current.onChanged?.();
-    } catch (e) {setError((e as Error).message);} finally {setBusy(false);}
+    } catch (e) {if(current())setError((e as Error).message);} finally {if(current())setBusy(false);}
   }
   if (!setup && !jobs.length && !error) return null;
   return <section className="agent-runs" aria-label="Systemsteuerung">
@@ -76,7 +80,8 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
     {jobs.slice(0, 5).map(job => <details key={job.id} open={active.includes(job.status)}>
       <summary>{names[job.status] || job.status} · {job.goal.slice(0, 100)}</summary>
       <p role="status">{job.summary || 'Der Agent ermittelt die nächsten Schritte.'}</p>
-      {job.status === 'failed' && onPrepareRetry && <button type="button" disabled={busy || retryDisabled || jobs.some(item => active.includes(item.status))} onClick={() => onPrepareRetry(job.goal)}>Frage erneut vorbereiten</button>}
+      {['failed','unverified'].includes(job.status) && !job.steps.some(step=>step.kind==='effect') && onPrepareRetry && <button type="button" disabled={busy || retryDisabled || jobs.some(item => active.includes(item.status))} onClick={() => onPrepareRetry(job.goal)}>Frage erneut vorbereiten</button>}
+      {job.status==='unverified'&&<p className="hint">Der Auftrag hat kein vollständig belegtes Ergebnis. Prüfe die Schritte; Änderungen nicht ungeprüft wiederholen.</p>}
       {job.cancel_requested && <p>Abbruch angefordert. Bereits gestartete entfernte Prozesse können weiterlaufen.</p>}
       {job.status === 'uncertain' && conversationId && <button type="button" disabled={busy} onClick={() => void perform('/conversations/' + conversationId + '/agent-runs', {
         request_id: crypto.randomUUID(), read_only: true, research_allowed: false, reconcile_job_id: job.id,

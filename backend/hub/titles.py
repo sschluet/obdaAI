@@ -1,13 +1,15 @@
 """Asynchronous local derivatives with atomic claiming and manual-title precedence."""
 
 import asyncio
-from typing import Protocol
+import hashlib
+from collections.abc import Sequence
+from typing import Any, Protocol, cast
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
-from hub.db import Conversation, Message
+from hub.db import Conversation, Message, ProviderConfig
 from hub.policy import ContextPart, Privacy
 
 
@@ -35,7 +37,8 @@ def reserve_title(db: Session, cfg: Settings, chat_id: str) -> None:
 
 
 async def execute_title(
-    factory: sessionmaker[Session], providers: TitleProvider, chat_id: str
+    factory: sessionmaker[Session], providers: TitleProvider, chat_id: str,
+    *, provider_binding: ProviderConfig | None = None,
 ) -> None:
     with factory() as db:
         # A redispatched interrupted attempt is reconciled, never silently repeated.
@@ -77,10 +80,43 @@ async def execute_title(
             for m in messages
         ]
         roles = [m.role for m in messages]
+    def message_state(items: Sequence[Message]) -> list[tuple[str, int, str, str, str]]:
+        return [(m.id, m.revision, m.role, m.label, hashlib.sha256(m.content.encode()).hexdigest())
+                for m in items]
+
+    expected_messages = message_state(messages)
+    previous_boundary = getattr(providers, "before_send", None)
+
+    def boundary() -> None:
+        if previous_boundary:
+            previous_boundary()
+        with factory() as current_db:
+            chat = current_db.get(Conversation, chat_id)
+            if not chat or chat.archived or chat.manual_title or chat.title_status != "running":
+                raise PermissionError("Title source conversation changed while waiting")
+            actual_messages = current_db.scalars(
+                select(Message)
+                .where(Message.conversation_id == chat_id, Message.active.is_(True))
+                .order_by(Message.created, Message.id).limit(2)
+            ).all()
+            if message_state(actual_messages) != expected_messages:
+                raise PermissionError("Title source messages changed while waiting")
+            if provider_binding:
+                actual_provider = current_db.get(ProviderConfig, provider_binding.id)
+                if (not actual_provider or not actual_provider.enabled
+                        or actual_provider.revision != provider_binding.revision):
+                    raise PermissionError("Title provider changed while waiting")
+
+    has_boundary_hook = hasattr(providers, "before_send")
+    hook_provider = cast(Any, providers)
     values: dict[str, object] = {"title_status": "failed"}
     try:
+        boundary()
+        if has_boundary_hook:
+            hook_provider.before_send = boundary
         async with asyncio.timeout(35):
             title = await providers.title(parts, roles)
+        boundary()
         if not title.strip() or len(title) > 80 or any(ord(c) < 32 for c in title):
             raise ValueError("Invalid title")
         values = {"title": title.strip(), "title_status": "generated"}
@@ -90,6 +126,8 @@ async def execute_title(
     except Exception:
         pass  # Keep the original title and chat answer; never persist provider error content.
     finally:
+        if has_boundary_hook:
+            hook_provider.before_send = previous_boundary
         with factory() as db:
             db.execute(
                 update(Conversation)

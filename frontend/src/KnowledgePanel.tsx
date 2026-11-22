@@ -1,3 +1,4 @@
+import {useEditorDraft} from './NavigationGuard';
 import {useEffect,useRef,useState,lazy,Suspense} from 'react';
 import type {FormEvent} from 'react';
 import {createPortal} from 'react-dom';
@@ -25,6 +26,7 @@ export function KnowledgePanel({api,csrf,onChat,seed,initialProject,initialTab='
  const [name,setName]=useState(''),[description,setDescription]=useState(''),[instructions,setInstructions]=useState(''),[url,setUrl]=useState(''),[requestId,setRequestId]=useState(crypto.randomUUID());
  const [icon,setIcon]=useState('folder');
  const editor=useRef<HTMLFormElement>(null),editorBusy=useRef(false);
+ useEditorDraft(creating,[name,description,instructions,icon],'Projekt');
  const [deleting,setDeleting]=useState<DeleteTarget|null>(null);
  const [deletingSource,setDeletingSource]=useState<SourceDeleteTarget|null>(null);
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');editorBusy.current=busy;
@@ -34,7 +36,7 @@ export function KnowledgePanel({api,csrf,onChat,seed,initialProject,initialTab='
  function chooseTab(value:string){selection.current.version+=1;setTab(value);onSelection?.(selected?.id||null,value)}
  async function refresh(){setProjects(await api('/projects'));if(selected){setSources(await api('/projects/'+selected.id+'/sources'));setChats(await api('/conversations?project_id='+selected.id))}}
  useEffect(()=>{let cancelled=false;const version=selection.current.version;api('/projects').then(list=>{if(cancelled)return;setProjects(list);const id=seed?.project_id||initialProject;if(id&&selection.current.id!==id&&selection.current.version===version){const p=list.find((p:Project)=>p.id===id);if(p)choose(p)}}).catch(e=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[initialProject,seed?.project_id]);
- useEffect(()=>{if(!selected)return;let stop=false;const id=selected.id;async function load(){const [s,c]=await Promise.all([api('/projects/'+id+'/sources'),api('/conversations?project_id='+id)]);if(!stop){setSources(s);setChats(c)}}load().catch(e=>{if(!stop)setError(e.message)});const timer=setInterval(()=>load().catch(()=>{}),3000);return()=>{stop=true;clearInterval(timer)}},[selected?.id]);
+ useEffect(()=>{if(!selected)return;let stop=false;const id=selected.id;async function load(){const [s,c]=await Promise.all([api('/projects/'+id+'/sources'),api('/conversations?project_id='+id)]);if(!stop){setSources(s);setChats(c)}}load().catch(e=>{if(!stop)setError(e.message)});const timer=setInterval(()=>load().catch(()=>setError('Die Übersicht konnte nicht aktualisiert werden. Angezeigt wird der letzte geladene Stand.')),3000);return()=>{stop=true;clearInterval(timer)}},[selected?.id]);
  useEffect(()=>{if(tab!=='sources'||!initialSourceId||focusedSource.current===initialSourceId||!sources.some(s=>s.id===initialSourceId))return;focusedSource.current=initialSourceId;sourceTarget.current?.scrollIntoView({block:'center'});sourceTarget.current?.focus({preventScroll:true})},[tab,sources,initialSourceId]);
  async function action(fn:()=>Promise<void>){if(busy)return;setBusy(true);setError('');try{await fn()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  async function save(e:FormEvent){e.preventDefault();await action(async()=>{const p=await api(selected?'/projects/'+selected.id:'/projects',selected?'PATCH':'POST',{name,description,instructions,icon,...(selected?{revision:selected.revision,archived:selected.archived}:{})});choose(p);setProjects(await api('/projects'));setCreating(false);setNotice('Projektraum gespeichert. Füge Quellen hinzu oder beginne ein Gespräch.')})}

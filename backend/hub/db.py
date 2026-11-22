@@ -139,6 +139,7 @@ class ProviderConfig(Base):
 
 class ProviderTest(Base):
     __tablename__ = "provider_tests"
+    mode: Mapped[str] = mapped_column(String(20), default="model", server_default="model")
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     provider_id: Mapped[str] = mapped_column(String(36))
     revision: Mapped[int] = mapped_column(Integer)

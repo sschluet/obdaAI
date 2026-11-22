@@ -143,3 +143,6 @@ Längere Konzepte, klare Teilantworten und manuelle Fortsetzung: [Antwort-, Kont
 - [Use Cases: Integrationsphasen, KI-Erstellungsdialog und Mailversand](docs/use-case-integrations.md)
 
 Kontrollierte Integrationsänderungen mit eigener Profilfreigabe, lokaler KI-Vorbereitung, Vorschau, Ausführungsbeleg und lesendem Fehlerabgleich: [Schreibadapter und Grenzen](docs/integration-writes.md). Noch keine vollständige administrative Fremdsystemabnahme.
+
+Die gemeinsame Stabilisierung von Anfrageplanung, Inferenz, Gedächtnis und Bedienung
+ist in [Assistant-Stabilisierung](docs/assistant-stabilization.md) dokumentiert.

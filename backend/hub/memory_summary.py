@@ -2,12 +2,12 @@
 
 import hashlib
 import json
-import re
 import time
 from typing import Any
 
-from sqlalchemy import Float, ForeignKey, Integer, String, Text, delete, select
+from sqlalchemy import Float, ForeignKey, Integer, String, Text, case, delete, func, or_, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.sql.elements import ColumnElement
 
 from hub.db import Base, Conversation, Memory, Message
 from hub.memory_service import SENSITIVE
@@ -24,6 +24,22 @@ class ConversationSummary(Base):
     content: Mapped[str] = mapped_column(Text)
     label: Mapped[str] = mapped_column(String(20), default="LOCAL_ONLY")
     sha256: Mapped[str] = mapped_column(String(64))
+    updated: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class ConversationSummarySegment(Base):
+    """Bounded source excerpts, retained across rolling summary projections."""
+
+    __tablename__ = "conversation_summary_segments"
+    message_id: Mapped[str] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), primary_key=True
+    )
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    source_revision: Mapped[int] = mapped_column(Integer)
+    source_sha256: Mapped[str] = mapped_column(String(64))
+    excerpt: Mapped[str] = mapped_column(Text)
     updated: Mapped[float] = mapped_column(Float, default=time.time)
 
 
@@ -50,46 +66,133 @@ def _forgotten(db: Session, conversation_id: str) -> tuple[set[str], set[str]]:
     )
 
 
+def digest_message(message: Message) -> str:
+    return hashlib.sha256(message.content.encode()).hexdigest()
+
+
+def _segment_messages(
+    db: Session,
+    conversation_id: str,
+    recent: list[str],
+    question: str,
+) -> list[Message]:
+    from hub.knowledge import query_terms
+
+    terms = query_terms(question)
+    score: ColumnElement[Any] = sum(
+        (
+            case((ConversationSummarySegment.excerpt.icontains(term, autoescape=True), 3), else_=0)
+            for term in terms
+        ),
+        start=case((Message.id == "", 0), else_=0),
+    )
+    for cue in ("entscheidung", "entschieden", "beschlossen", "decision", "ziel", "plan"):
+        score += case(
+            (ConversationSummarySegment.excerpt.icontains(cue, autoescape=True), 1), else_=0
+        )
+    rows = db.execute(
+        select(Message, ConversationSummarySegment.source_sha256)
+        .join(
+            ConversationSummarySegment,
+            ConversationSummarySegment.message_id == Message.id,
+        )
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.active.is_(True),
+            Message.role.in_(["user", "assistant"]),
+            Message.id.not_in(recent),
+            ConversationSummarySegment.excerpt != "",
+            ConversationSummarySegment.source_revision == Message.revision,
+        )
+        .order_by(score.desc(), Message.created.desc(), Message.id)
+        .limit(100)
+    )
+    return [message for message, source_sha in rows if digest_message(message) == source_sha]
+
+
 def summarize_conversation(
-    db: Session, conversation_id: str, *, owner_id: str = "owner", byte_budget: int = 3000
+    db: Session,
+    conversation_id: str,
+    *,
+    owner_id: str = "owner",
+    byte_budget: int = 3000,
+    question: str = "",
+    persist: bool = True,
 ) -> ConversationSummary | None:
     conversation = db.get(Conversation, conversation_id)
     if not conversation or conversation.archived or byte_budget < 128:
         return None
-    messages = list(
+    total = (
+        db.scalar(
+            select(func.count())
+            .select_from(Message)
+            .where(
+                Message.conversation_id == conversation_id,
+                Message.active.is_(True),
+                Message.role.in_(["user", "assistant"]),
+            )
+        )
+        or 0
+    )
+    if total < 12:
+        return None
+    recent = list(
         db.scalars(
-            select(Message)
+            select(Message.id)
             .where(
                 Message.conversation_id == conversation_id,
                 Message.active.is_(True),
                 Message.role.in_(["user", "assistant"]),
             )
             .order_by(Message.created.desc(), Message.id.desc())
-            .limit(100)
+            .limit(8)
         )
     )
-    if len(messages) < 12:
-        return None
-    # Pointers include omitted sources: a private omitted message cannot create a public summary.
-    older = messages[8:]
+    forgotten_ids, forgotten_hashes = _forgotten(db, conversation_id)
+    # Backfill a short resumable slice on each completed conversation. Segments
+    # already created remain searchable even after their source falls beyond 100.
+    pending = db.scalars(
+        select(Message)
+        .outerjoin(
+            ConversationSummarySegment,
+            ConversationSummarySegment.message_id == Message.id,
+        )
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.active.is_(True),
+            Message.role.in_(["user", "assistant"]),
+            Message.id.not_in(recent),
+            or_(
+                ConversationSummarySegment.message_id.is_(None),
+                ConversationSummarySegment.source_revision != Message.revision,
+            ),
+        )
+        .order_by(Message.created, Message.id)
+        .limit(200)
+    )
+    for message in pending if persist else []:
+        segment = db.get(ConversationSummarySegment, message.id)
+        if segment is None:
+            segment = ConversationSummarySegment(
+                message_id=message.id, conversation_id=conversation_id
+            )
+            db.add(segment)
+        blocked = (
+            message.id in forgotten_ids
+            or digest_message(message) in forgotten_hashes
+            or bool(SENSITIVE.search(message.content))
+        )
+        segment.source_revision, segment.source_sha256 = message.revision, digest_message(message)
+        segment.excerpt = (
+            "" if blocked else message.content.encode()[:1000].decode("utf-8", errors="ignore")
+        )
+        segment.updated = time.time()
+    db.flush()
+    messages = _segment_messages(db, conversation_id, recent, question)
+    older = messages
     pointers = [message_pointer(message) for message in reversed(older)]
     pieces, used = [], 0
-    selected = sorted(
-        older,
-        key=lambda message: (
-            -int(
-                bool(
-                    re.search(
-                        r"\b(entschieden|entscheidung|beschlossen|decision|vereinbart|ziel|plan)\b",
-                        message.content,
-                        re.I,
-                    )
-                )
-            ),
-            -message.created,
-            message.id,
-        ),
-    )
+    selected = older  # SQL has ranked the complete retained segment corpus for this query.
     included = []
     forgotten_ids, forgotten_hashes = _forgotten(db, conversation_id)
     for message in selected:
@@ -116,13 +219,37 @@ def summarize_conversation(
         {
             "sources": pointers,
             "included": included,
-            "omitted": len(older) - len(pieces),
+            "omitted": max(0, total - 8 - len(pieces)),
             "recent_excluded": 8,
             "window_limit": 100,
+            "segmented": True,
+            "backfill_pending": max(
+                0,
+                total
+                - 8
+                - (
+                    db.scalar(
+                        select(func.count())
+                        .select_from(ConversationSummarySegment)
+                        .where(ConversationSummarySegment.conversation_id == conversation_id)
+                    )
+                    or 0
+                ),
+            ),
         },
         sort_keys=True,
     )
     digest = hashlib.sha256(content.encode()).hexdigest()
+    if not persist:
+        return ConversationSummary(
+            conversation_id=conversation_id,
+            owner_id=owner_id,
+            revision=int(hashlib.sha256((snapshot + digest).encode()).hexdigest()[:7], 16) + 1,
+            source_snapshot=snapshot,
+            content=content,
+            sha256=digest,
+            label="LOCAL_ONLY",
+        )
     row = db.get(ConversationSummary, conversation_id)
     if row and row.owner_id != owner_id:
         return None
@@ -140,7 +267,12 @@ def summarize_conversation(
 
 
 def fresh_summary(
-    db: Session, conversation_id: str, *, owner_id: str = "owner"
+    db: Session,
+    conversation_id: str,
+    *,
+    owner_id: str = "owner",
+    question: str = "",
+    byte_budget: int = 3000,
 ) -> ConversationSummary | None:
     conversation = db.get(Conversation, conversation_id, populate_existing=True)
     row = db.get(ConversationSummary, conversation_id, populate_existing=True)
@@ -165,12 +297,26 @@ def fresh_summary(
                 return None
         if row.sha256 != hashlib.sha256(row.content.encode()).hexdigest():
             return None
+        if question:
+            return summarize_conversation(
+                db,
+                conversation_id,
+                owner_id=owner_id,
+                question=question,
+                persist=False,
+                byte_budget=byte_budget,
+            )
         return row
     except (ValueError, TypeError):
         return None
 
 
 def invalidate_summary(db: Session, conversation_id: str) -> None:
+    db.execute(
+        delete(ConversationSummarySegment).where(
+            ConversationSummarySegment.conversation_id == conversation_id
+        )
+    )
     db.execute(
         delete(ConversationSummary).where(ConversationSummary.conversation_id == conversation_id)
     )

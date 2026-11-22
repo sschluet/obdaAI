@@ -1,3 +1,4 @@
+import {useUnsavedChanges} from './NavigationGuard';
 import {useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {LockKeyhole,ShieldCheck} from 'lucide-react';
@@ -6,6 +7,7 @@ import './password.css';
 type API=(path:string,method?:string,body?:unknown)=>Promise<any>;
 export function PasswordPanel({api,onPasswordChanged}:{api:API;onPasswordChanged?:()=>void}){
  const [current,setCurrent]=useState(''),[next,setNext]=useState(''),[confirmation,setConfirmation]=useState('');
+ useUnsavedChanges(!!(current||next||confirmation),'Passwortänderung',JSON.stringify([current,next,confirmation]));
  const [review,setReview]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[changed,setChanged]=useState(false);
  const confirmButton=useRef<HTMLButtonElement>(null),reviewButton=useRef<HTMLButtonElement>(null);
  const valid=!!current&&next.length>=12&&next.length<=256&&next===confirmation&&next!==current;

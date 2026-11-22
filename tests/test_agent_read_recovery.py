@@ -10,6 +10,7 @@ import httpx
 import pytest
 from hub import agent_runtime as runtime
 from hub.agent_context import project
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentJob
 from hub.agent_tools import validate_tool
 from test_actions import gateway, set_pause  # noqa: F401
@@ -40,7 +41,27 @@ def start(ha):
 
 
 def execute(ha, identifier):
-    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, identifier))
+    planner = runtime.generate
+    intent_turns = []
+
+    async def semantic_then_planner(*args):
+        data = args[-1]
+        if data.get("intent_schema"):
+            intent_turns.append(data)
+            assert len(intent_turns) == 1 and data["goal"] == GOAL
+            return RequestIntent(
+                target_ids=[ha[4]], mode="observe", topic="inventory", origin="semantic",
+                requirements=[Requirement(kind="entity_states", domain="light",
+                                          integration_id=ha[4])],
+            ).model_dump()
+        return await planner(*args)
+
+    runtime.generate = semantic_then_planner
+    try:
+        asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, identifier))
+    finally:
+        runtime.generate = planner
+    assert len(intent_turns) == 1
     response = ha[1].get("/api/agent-runs/" + identifier)
     assert response.status_code == 200, response.text
     return response.json()
@@ -263,7 +284,7 @@ def test_read_recovery_cannot_exceed_the_remaining_operation_budget(ha, monkeypa
         job.max_steps = 2  # Tighten this request below its profile's standing maximum.
         db.commit()
     result = execute(ha, job_id)
-    assert result["status"] == "failed"
+    assert result["status"] == "unverified"
     assert [args["path"] for tool, args in calls] == ["/api/", "/api/light"]
     assert len([s for s in result["steps"] if s["kind"] in {"read", "effect"}]) <= 2
 

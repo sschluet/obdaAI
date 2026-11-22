@@ -8,6 +8,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -21,6 +22,8 @@ from hub.budgets import ExecutionLimitError, reserve_answer, settle
 from hub.chat_artifacts import ambiguous_file_revision
 from hub.config import Settings
 from hub.db import Conversation, Memory, Message, ProviderConfig, Research, Run, RunEvent
+from hub.inference_capacity import InferenceWaitTimeout
+from hub.inference_progress import stream_with_progress
 from hub.memory import digest, serialize, validate_mount
 from hub.memory import write as write_memory
 from hub.memory_context import MemoryChanged
@@ -501,6 +504,27 @@ async def execute_run(
             if c.memory_scope and not cfg.vault_dir:
                 raise ExecutionLimitError("Keine Vault-Recherche: Zugang noch nicht angebunden")
             selected: dict[str, ProviderConfig] = {}
+
+            def model_boundary(expected: ProviderConfig | None) -> None:
+                with factory() as current_db:
+                    active = current_db.get(Run, run_id)
+                    owner = current_db.get(Conversation, chat_id)
+                    if active and active.cancel_requested:
+                        raise asyncio.CancelledError
+                    if (
+                        not active or active.status not in {"routing", "streaming"}
+                        or not owner or owner.archived
+                    ):
+                        raise PermissionError("Run changed before model dispatch")
+                    if expected:
+                        actual = current_db.get(ProviderConfig, expected.id)
+                        if (
+                            not actual or not actual.enabled
+                            or actual.revision != expected.revision
+                        ):
+                            raise PermissionError("Provider changed before model dispatch")
+                check_integration_context()
+
             if isinstance(providers, Providers):
                 cfg, providers, selected = runtime_provider(
                     factory,
@@ -508,10 +532,19 @@ async def execute_run(
                     external_kind=c.cloud_provider,
                     cloud_only=bool(snapshot.get("model_cloud_only")),
                 )
+                if snapshot.get("agent_generation", {}).get("intent_schema"):
+                    cfg = replace(cfg, local_max_tokens=min(cfg.local_max_tokens, 768),
+                                  local_disable_thinking=True)
+                    providers.settings = replace(
+                        providers.settings, local_max_tokens=cfg.local_max_tokens,
+                        local_disable_thinking=True,
+                    )
                 if snapshot.get("agent_generation"):
                     from hub.agent_tools import decision_schema, ready_read_schema, research_schema
 
                     providers.local_json_schema = (
+                        snapshot["agent_generation"]["intent_schema"]
+                        if snapshot["agent_generation"].get("intent_schema") else
                         ready_read_schema(
                             snapshot["agent_generation"]["ready_reads"],
                             snapshot["agent_generation"].get("interfaces", []),
@@ -523,6 +556,7 @@ async def execute_run(
                             allow_finish=snapshot["agent_generation"].get("allow_finish", True),
                             allow_ask=snapshot["agent_generation"].get("allow_ask", True),
                             allow_stop=snapshot["agent_generation"].get("allow_stop", False),
+                            read_only=snapshot["agent_generation"].get("read_only", False),
                         )
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()
@@ -588,6 +622,8 @@ async def execute_run(
                         if requests_public_research(latest.content):
                             route.capabilities.append(Capability.WEB)
                 else:
+                    if isinstance(providers, Providers):
+                        providers.before_send = lambda: model_boundary(selected.get("local"))
                     route = await providers.route(parts, roles)
                 preparation_step = "Antwortvorbereitung"
                 classifier = None if snapshot.get("model_cloud_only") else route.model_class
@@ -1147,10 +1183,8 @@ async def execute_run(
                     check_integration_context()
                     while True:
                         try:
-                            if snapshot.get("google_drive_source") and isinstance(
-                                providers, Providers
-                            ):
-                                providers.before_send = check_integration_context
+                            if isinstance(providers, Providers):
+                                providers.before_send = partial(model_boundary, selected_provider)
                             if memory_parts:
                                 from hub.memory_context import boundary_guard
 
@@ -1160,21 +1194,45 @@ async def execute_run(
                                     byte_budget=memory_budget,
                                 )
 
-                                def guard(memory_check: Callable[[], None] = memory_guard) -> None:
-                                    if snapshot.get("google_drive_source"):
-                                        check_integration_context()
+                                def guard(
+                                    memory_check: Callable[[], None] = memory_guard,
+                                    expected: ProviderConfig | None = selected_provider,
+                                ) -> None:
+                                    model_boundary(expected)
                                     memory_check()
 
                                 guard()
                                 if isinstance(providers, Providers):
                                     providers.before_send = guard
-                            async for chunk in providers.stream(
-                                parts, roles, external=external, grants=grants
+                            inference_started = time.monotonic()
+                            model_ready_at: float | None = None
+                            async for kind, chunk in stream_with_progress(
+                                providers, parts, roles, external=external, grants=grants
                             ):
+                                if kind == "progress":
+                                    if chunk == "model_ready":
+                                        model_ready_at = time.monotonic()
+                                        trace["inference_phases"] = {
+                                            "queue_seconds": round(
+                                                model_ready_at - inference_started, 3
+                                            )
+                                        }
+                                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                                    yield ("status", {"phase": chunk, "message": (
+                                        "Das lokale Modell bearbeitet noch einen anderen Auftrag"
+                                        if chunk == "waiting_for_model" else
+                                        "Das lokale Modell bereitet die Antwort vor"
+                                    )})
+                                    continue
                                 if cancelled():
                                     raise asyncio.CancelledError
                                 check_integration_context()
                                 if not output:
+                                    if model_ready_at is not None:
+                                        trace["inference_phases"]["prefill_seconds"] = round(
+                                            time.monotonic() - model_ready_at, 3
+                                        )
+                                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
                                     update(first_content_seconds=time.monotonic() - started)
                                 if len(output) + len(chunk) > 96000:
                                     remaining = chunk[: 96000 - len(output)]
@@ -1200,7 +1258,7 @@ async def execute_run(
                             grants[:] = [g for g in grants if g.source_id not in ids]
                             memory_parts = []
                             if isinstance(providers, Providers):
-                                providers.before_send = None
+                                providers.before_send = partial(model_boundary, selected_provider)
                             trace["memory"] = {"included": [], "degraded": True}
                             update(routing_trace=json.dumps(trace, ensure_ascii=False))
                             continue
@@ -1358,7 +1416,15 @@ async def execute_run(
             update(error=message[:240])
             yield ("error", {"message": message})
         except (TimeoutError, httpx.TimeoutException) as error:
-            if isinstance(error, httpx.TimeoutException):
+            if isinstance(error, InferenceWaitTimeout):
+                message = "Provider hat zu lange keine Daten geliefert. " + {
+                    "queue": "Das lokale Modell war zu lange durch andere Aufträge belegt.",
+                    "first_content": "Das lokale Modell hat noch keine Antwort begonnen.",
+                    "idle": "Die begonnene lokale Antwort ist stehen geblieben.",
+                }[error.phase] + " Vorhandene Ergebnisse bleiben erhalten."
+                trace["inference_timeout_phase"] = error.phase
+                update(routing_trace=json.dumps(trace, ensure_ascii=False))
+            elif isinstance(error, httpx.TimeoutException):
                 message = (
                     "Provider hat zu lange keine Daten geliefert. "
                     "Der bisherige Text bleibt erhalten; bitte erneut versuchen."
@@ -1397,7 +1463,7 @@ async def execute_run(
                 },
             )
         finally:
-            if snapshot.get("google_drive_source") and isinstance(providers, Providers):
+            if isinstance(providers, Providers):
                 # A run-bound authority callback must not affect another conversation.
                 providers.before_send = None
             with factory() as db:
@@ -1469,7 +1535,12 @@ async def execute_run(
                 task.cancel()
         await task
         if cfg.database_url.startswith("sqlite") and not workflow_generation:
-            await execute_title(factory, providers, chat_id)
+            title_providers = providers
+            title_binding = None
+            if isinstance(providers, Providers):
+                _, title_providers, title_selected = runtime_provider(factory, cfg, local_only=True)
+                title_binding = title_selected.get("local")
+            await execute_title(factory, title_providers, chat_id, provider_binding=title_binding)
             from hub.memory_learning import execute_learning
             from hub.memory_models import MemoryLearningJob
 

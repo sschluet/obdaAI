@@ -1,3 +1,4 @@
+import {useEditorDraft} from './NavigationGuard';
 import {GoogleDriveExportDialog} from './GoogleDriveExportDialog';
 import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
@@ -67,6 +68,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
   const [goal,setGoal] = useState(''), [draftToken,setDraftToken] = useState<string|null>(null), [draftInfo,setDraftInfo] = useState<any|null>(null), [slideCount,setSlideCount] = useState(3);
   const [driveExport,setDriveExport]=useState<Row|null>(null);
   const [preview,setPreview] = useState<Row|null>(null), [reviewed,setReviewed] = useState(false);
+  useEditorDraft(editing,[kind,title,sections,slides,pages,tiles,goal,letter,sheets,boundIds,skillIds,mode],'Datei');
   const prefix = ownerPrefix+'/artifacts';
   const pdfs = sources.filter(s=>/\.pdf$/i.test(s.name));
   const images = sources.filter(s=>/\.(png|jpe?g|webp)$/i.test(s.name));
@@ -241,7 +243,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
       {configured&&!archived&&row.revision===Math.max(...rows.filter(r=>r.artifact_id===row.artifact_id).map(r=>r.revision))&&<button onClick={()=>start(row)}>Neue Version bearbeiten</button>}
       {['queued','rendering','needs_review','failed'].includes(row.status)&&<button disabled={busy} onClick={async()=>{setBusy(true);try{await api(base(row)+'/cancel','POST');setRows(await api(prefix))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}>Diese Version abbrechen</button>}
     </article>)}
-    {editing&&<div className="modal"><div className="artifact-editor" role="dialog" aria-modal="true" aria-label="Datei erstellen">
+    {editing&&<div className="modal"><div className="artifact-editor" data-dialog-inline={embedded||undefined} role="dialog" aria-modal={!embedded} aria-label="Datei erstellen">
       <h2>{original?'Neue Dateiversion':'Neue Datei'}</h2>
       <p>1. Inhalt entwerfen · 2. Datei erstellen · 3. Herunterladen · optional Vorschau prüfen und freigeben</p>
       <div className="artifact-mode" role="group" aria-label="Arbeitsweise"><button type="button" aria-pressed={mode==='model'} disabled={busy} onClick={()=>setMode('model')}>Mit KI entwerfen</button><button type="button" aria-pressed={mode==='manual'} disabled={busy} onClick={()=>{setMode('manual');setContentOpen(true)}}>Inhalt selbst eingeben</button></div>
@@ -315,7 +317,7 @@ export function ArtifactsPanel({api, project, conversation, sources, seed, embed
         {mode==='model'&&!draftInfo&&!original&&!chatSource&&<p className="hint">Erstelle zuerst einen lokalen Entwurf oder wähle „Inhalt selbst eingeben“.</p>}
       </form><button disabled={busy} onClick={()=>setEditing(false)}>Abbrechen</button>
     </div></div>}
-    {preview&&<div className="modal"><div role="dialog" aria-modal="true" aria-label="Dateivorschau">
+    {preview&&<div className="modal"><div data-dialog-inline={embedded||undefined} role="dialog" aria-modal={!embedded} aria-label="Dateivorschau">
       <h2>{preview.title} · Version {preview.revision}</h2>
       {!!preview.formula_warnings?.length&&<aside className="artifact-context" role="note" aria-label="Hinweis zur Formelprüfung"><b>Ältere Excel-Version · Formeln prüfen</b>{preview.formula_warnings.map((warning,index)=><p key={index}>{warning}</p>)}<p>Diese bestehende Datei wurde nicht verändert. Prüfe die Berechnung und erstelle bei Bedarf eine korrigierte Version.</p></aside>}
       {error&&<p className="error" role="alert">{error}</p>}

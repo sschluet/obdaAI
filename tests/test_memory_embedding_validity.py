@@ -81,8 +81,8 @@ def test_next_candidate_becomes_ineligible_before_http_and_is_not_dispatched(
 ):
     factory, cfg = indexing
     with factory() as db:
-        first = add(db, "first", updated=2)
-        second = add(db, "second", updated=1)
+        first = add(db, "first", updated=1)
+        second = add(db, "second", updated=2)
         db.commit()
     calls = []
 

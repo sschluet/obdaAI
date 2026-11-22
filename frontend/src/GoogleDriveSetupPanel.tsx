@@ -1,3 +1,4 @@
+import {useUnsavedChanges,guardNavigation} from './NavigationGuard';
 import {checkGoogleDriveTransfers} from './google-drive-transfers';
 import {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
@@ -28,6 +29,7 @@ export function GoogleDriveSetupPanel({api,openRequest,onClose,onConfigured}:{
   const lock=useRef(false),dialog=useRef<HTMLDivElement>(null),closeRef=useRef(()=>{});
   const refreshCallback=useRef(onConfigured);refreshCallback.current=onConfigured;
   const open=!!openRequest;
+  useUnsavedChanges(open&&!!setup&&(name!==(setup.name||'Google Drive')||clientId!==setup.client_id||!!secret||source!==setup.enable_source||storage!==setup.enable_storage),'Google-Drive-Verbindung',JSON.stringify([name,clientId,secret,source,storage]));
   function populate(view:GoogleDriveSetupView){setSetup(view);setName(view.name||'Google Drive');setClientId(view.client_id||'');setSecret('');setSource(view.enable_source);setStorage(view.enable_storage);setFolder(view.source_folder_id||'root');}
   useEffect(()=>{
     if(!openRequest){setSecret('');return;}
@@ -36,7 +38,7 @@ export function GoogleDriveSetupPanel({api,openRequest,onClose,onConfigured}:{
     return()=>{alive=false;};
   },[api,openRequest?.key]);
   function close(){if(lock.current)return;setSecret('');setError('');onClose();}
-  closeRef.current=close;
+  closeRef.current=()=>guardNavigation(close);
   useEffect(()=>{
     if(!open)return;
     const previous=document.activeElement as HTMLElement|null;

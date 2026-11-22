@@ -1,4 +1,47 @@
-# obdaAI — Status 22.11.2026
+# obdaAI — Status 23.11.2026
+
+## Aktuelle Lieferung — gemeinsame Stabilisierung (in Prüfung)
+
+Ausgangspunkt: getesteter und ausgelieferter Anwendungsstand 7d3916e / Schema 0047.
+Der Entwicklungszweig `codex/assistant-stabilization` ergänzt gemeinsame
+Anfrageinterpretation, auftragsgebundene Toolgrammatik und Abschlussbelege,
+Inferenzkapazität/-zeitgrenzen, Memory-Faktidentität, dauerhafte Summarysegmente,
+Aufgaben-Kontext, Entwurfsschutz und eine getrennte Betriebsdiagnose.
+Siehe [Architektur und Abdeckung](docs/assistant-stabilization.md).
+
+Die vollständige lokale PostgreSQL-Prüfung des Zwischenstands bestand 3.438 Tests,
+Ruff, mypy und Secret-Scan. Die anschließend ergänzte letzte Routinggrenze verhindert,
+dass ein unaufgelöster privater Systembezug still im normalen Chat landet;
+48 gezielte Routing-/Interpretationsprüfungen sowie Ruff und mypy bestanden danach.
+Eine exakte vollständige CI des endgültigen Commits steht noch aus. Die volle lokale
+synthetische Browsersuite bestand; spätere Gesprächswechsel-/Streamkorrekturen
+wurden zusätzlich mit echten isolierten API-/SSE-Abläufen geprüft.
+
+Der erste reale lokale Interpretationsbenchmark scheiterte in allen 23 Fällen am
+Interpretationsvertrag, trotz erfolgreicher Inferenz. Nach Vertragskorrekturen
+bestand der unveränderte zweite Korpus auf einem Zwischenstand 20 von 23 Fällen
+(darunter acht von acht zurückgehaltenen Fällen). Das ist ein Interpretationsnachweis und keine
+Erfolgsquote vollständiger Aufgaben. Die drei Entwicklungsfehler und alle älteren
+Fehlerbelege bleiben erhalten. Das 98-Prozent-Ziel ist noch nicht erreicht.
+
+Die vollständige Laufzeitprüfung mit echtem lokalen Modell und synthetischen
+Zielsystemen deckte zusätzliche Fehler auf: eine vom Modellserver abgelehnte
+HA-Pfadgrammatik, unzureichende Domäneneingrenzung und eine Dokumentfolgefrage
+ohne tatsächlichen Inhaltsabruf. Die nachgebesserte vierte Abnahme bestand alle
+vier unveränderten Fälle in rund 208 Sekunden: reine Sensorliste, tatsächliche
+Vertragssuche, quellgebundener Inhaltsabruf mit korrekter Kündigungsfrist und
+belegte leere Suche. Alle neun Modellaufrufe und fünf Werkzeuglesezugriffe
+einschließlich der HA-Zugriffsprüfung blieben lokal und ohne Zieländerung.
+Es waren keine Rückfragen oder Einzelfreigaben nötig. Die früheren Fehlversuche
+bleiben als getrennte Belege erhalten. Vier bestandene Abläufe sind kein
+98-Prozent-Nachweis für beliebige Prompts oder eine allgemeine Integrationsabnahme.
+Keine echte Zieländerung, Cloudübertragung oder produktive Datenbankmutation
+wurde für diese synthetischen Modellprüfungen ausgeführt.
+
+Es gibt noch keinen neuen Freigabe- oder Rolloutnachweis für diese Lieferung.
+Die Test-VM bleibt auf dem nachfolgend belegten Stand 7d3916e / Schema 0047.
+Frühere Abnahmen bleiben unverändert gültig.
+
 
 ## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
 

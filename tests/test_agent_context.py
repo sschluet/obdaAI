@@ -185,3 +185,19 @@ def test_verification_or_research_entry_is_latest_observation(kind):
     fitted = fit(original, "", 6000)
     assert fitted["latest_observation"]["sequence"] == 3
     assert fitted["latest_observation"]["summary"]["verification_passed"] is False
+
+
+def test_large_inventory_keeps_typed_values_and_observed_counts_without_false_completeness():
+    rows = [{"entity_id": f"sensor.fixture_{i}", "state": "17",
+             "attributes": {"friendly_name": "Synthetic sensor", "large": "x" * 10000}}
+            for i in range(200)]
+    original = payload({"http_status": 200, "body": rows})
+    fitted = fit(original, "Read data only; truncated samples are incomplete", 12000)
+    typed = fitted["latest_observation"]["summary"]["semantic_view"]
+    assert typed["observed_count"] == 200
+    assert typed["observed_domain_counts"] == {"sensor": 200}
+    assert typed["truncated"] is True and 0 < typed["returned"] < 200
+    assert typed["items"][0]["entity_id"] == "sensor.fixture_0"
+    assert typed["items"][0]["state"] == "17"
+    assert "large" not in typed["items"][0]["attributes"]
+    assert original["history"][-1]["result"]["body"] == rows

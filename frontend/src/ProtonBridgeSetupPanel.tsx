@@ -1,3 +1,4 @@
+import {useUnsavedChanges,guardNavigation} from './NavigationGuard';
 import {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {Check, Mail, X} from 'lucide-react';
@@ -22,6 +23,7 @@ export function ProtonBridgeSetupPanel({api, onSaved, onStateChange, onClose, op
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  useUnsavedChanges(open&&!!setup&&(name!==(setup.name||'Proton Mail · Postfach')||username!==setup.username||!!password||reads!==(setup.username?(setup.enable_reads??false):true)),'Proton-Verbindung',JSON.stringify([name,username,password,reads]));
   const lock = useRef(false), isOpen = useRef(false), currentSetup = useRef(setup);
   const dialog = useRef<HTMLDivElement>(null), credentials = useRef<HTMLFormElement>(null);
   const closeRef = useRef(() => {});
@@ -53,7 +55,7 @@ export function ProtonBridgeSetupPanel({api, onSaved, onStateChange, onClose, op
     if (lock.current) return;
     setOpen(false); setPassword(''); setError(''); setNotice(''); onClose?.();
   }
-  closeRef.current = close;
+  closeRef.current = ()=>guardNavigation(close);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;

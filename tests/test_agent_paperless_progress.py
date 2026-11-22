@@ -383,3 +383,43 @@ def test_partitive_first_document_without_bound_receipt_has_no_choice(receipt):
     receipt[1].context = encode([])
     receipt[0].flush()
     assert call(receipt)["decisions"] == []
+
+
+@pytest.mark.parametrize("count", [0, 1, 2])
+def test_semantic_content_followup_uses_only_a_single_current_bound_document(receipt, count):
+    from hub.agent_intent import RequestIntent, Requirement
+
+    prepare(receipt, rows=[{"id": 73 + i, "title": "Synthetic", "tags": []} for i in range(count)])
+    db, job, _, _, _, profile, _, _ = receipt
+    job.goal = "An unfamiliar wording for an already classified content lookup"
+    bindings = json.loads(job.bindings)
+    bindings["intent"] = RequestIntent(
+        target_ids=[profile.id], mode="observe", topic="documents", followup=True,
+        requirements=[Requirement(kind="document_content", integration_id=profile.id)],
+    ).model_dump()
+    job.bindings = encode(bindings)
+    db.flush()
+    result = call(receipt)
+    assert len(result["decisions"]) == (1 if count == 1 else 0)
+    if count == 1:
+        assert result["decisions"][0]["arguments"]["document_id"] == 73
+        assert result["source_receipts"][0]["result_sha256"] == digest(receipt[4].result)
+        assert result["decision_sources"][0]["pointer"] == "/data/results/0"
+        assert not call(receipt, [attempted(receipt, status="uncertain")])["decisions"]
+
+
+@pytest.mark.parametrize("hint", [False, True])
+def test_new_search_never_uses_the_previous_document_as_an_implicit_content_target(receipt, hint):
+    from hub.agent_intent import RequestIntent, Requirement
+
+    prepare(receipt)
+    db, job, _, _, _, profile, _, _ = receipt
+    job.goal = "Suche Dokumente zu BETA in Paperless und lies den Inhalt."
+    binding = json.loads(job.bindings)
+    binding["intent"] = RequestIntent(
+        target_ids=[profile.id], mode="observe", topic="documents", followup=hint,
+        requirements=[Requirement(kind="document_content", integration_id=profile.id)],
+    ).model_dump()
+    job.bindings = encode(binding)
+    db.flush()
+    assert call(receipt)["decisions"] == []

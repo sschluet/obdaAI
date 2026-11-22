@@ -149,14 +149,19 @@ def invalidate_memory(db: Session, memory_id: str) -> None:
 
 
 async def refresh_embeddings(
-    factory: sessionmaker[Session], cfg: Settings, *, limit: int = 20
+    factory: sessionmaker[Session],
+    cfg: Settings,
+    *,
+    limit: int = 1,
+    time_budget_seconds: float = 2.0,
 ) -> dict[str, int]:
     """Bounded existing-worker backfill; settings/revisions checked again after every call."""
     from hub.memory_settings import get_settings
 
     result = {"indexed": 0, "unavailable": 0, "stale": 0}
-    if limit <= 0:
+    if limit <= 0 or not math.isfinite(time_budget_seconds) or time_budget_seconds <= 0:
         return result
+    started = time.monotonic()
     try:
         _, _, fingerprint = configuration(cfg)
     except ValueError:
@@ -172,15 +177,22 @@ async def refresh_embeddings(
         now = time.time()
         for row in db.scalars(
             select(Memory)
+            .outerjoin(MemoryEmbedding, MemoryEmbedding.memory_id == Memory.id)
             .where(
+                or_(
+                    MemoryEmbedding.memory_id.is_(None),
+                    MemoryEmbedding.config_sha256 != fingerprint,
+                    MemoryEmbedding.revision != Memory.revision,
+                    MemoryEmbedding.sha256 != Memory.sha256,
+                ),
                 Memory.deleted.is_(False),
                 Memory.status == "active",
                 Memory.owner_id == "owner",
                 or_(Memory.valid_from.is_(None), Memory.valid_from <= now),
                 or_(Memory.valid_until.is_(None), Memory.valid_until > now),
             )
-            .order_by(Memory.updated.desc())
-            .limit(2000)
+            .order_by(Memory.updated, Memory.id)
+            .limit(100)
         ):
             cached = db.get(MemoryEmbedding, row.id)
             if (
@@ -195,7 +207,9 @@ async def refresh_embeddings(
             candidates.append((row.id, row.revision, row.sha256, row.content))
             if len(candidates) >= min(50, max(0, limit)):
                 break
-    for memory_id, source_revision, sha256, content in candidates:
+    for index, (memory_id, source_revision, sha256, content) in enumerate(candidates):
+        if index and time.monotonic() - started >= time_budget_seconds:
+            break  # Unindexed revisions remain discoverable on the next short turn.
         with factory() as db:
             current = get_settings(db)
             if (

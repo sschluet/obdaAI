@@ -1,3 +1,4 @@
+import {useUnsavedChanges,guardNavigation} from './NavigationGuard';
 import {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {Check, Mail, X} from 'lucide-react';
@@ -24,6 +25,7 @@ export function GmailSetupPanel({api, openRequest, onClose, onConfigured}: {
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const lock = useRef(false), dialog = useRef<HTMLDivElement>(null);
+  useUnsavedChanges(open&&!!setup&&(name!==(setup.name||'Gmail')||clientId!==setup.client_id||!!clientSecret||reads!==(setup.integration_id?setup.enable_reads:true)),'Gmail-Verbindung',JSON.stringify([name,clientId,clientSecret,reads]));
   const closeRef = useRef(() => {});
   const configuredCallback = useRef(onConfigured); configuredCallback.current = onConfigured;
   function populate(view: GmailSetupView) {
@@ -47,7 +49,7 @@ export function GmailSetupPanel({api, openRequest, onClose, onConfigured}: {
     if (lock.current) return;
     setOpen(false); setClientSecret(''); setError(''); setNotice(''); onClose();
   }
-  closeRef.current = close;
+  closeRef.current = ()=>guardNavigation(close);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;

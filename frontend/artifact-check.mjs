@@ -8,6 +8,8 @@ const output='../.local/browser';await mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
+async function cancelEditor(editor,requireConfirmation=false){await editor.getByRole('button',{name:'Abbrechen',exact:true}).click();const confirmation=page.getByRole('dialog',{name:'Ungespeicherte Änderungen',exact:true});if(requireConfirmation)await confirmation.waitFor();else await page.waitForFunction(()=>!document.querySelector('.artifact-editor')||!!document.querySelector('.navigation-confirm'));if(await confirmation.isVisible())await confirmation.getByRole('button',{name:'Ohne Speichern weiter',exact:true}).click();await editor.waitFor({state:'hidden'})}
+
 try{
  await page.goto(base);
  await loginFixture(page);
@@ -71,7 +73,7 @@ try{
  await dialog.getByLabel('synthetic-artifact.png',{exact:true}).check();
  await dialog.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();
  await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).fill('Synthetic persistent goal');
- await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await cancelEditor(dialog,true);
  await page.getByRole('button',{name:'Entwurf fortsetzen',exact:true}).waitFor();
  await page.evaluate(()=>{
    const key=Object.keys(sessionStorage).find(key=>key.startsWith('hub-ui-draft:artifact:'));
@@ -92,7 +94,7 @@ try{
  if(!await dialog.getByRole('button',{name:'Datei und Vorschau erstellen',exact:true}).isDisabled())throw Error('Stale draft allowed save without replan or explicit copy');
  await dialog.getByRole('button',{name:'Mit KI entwerfen',exact:true}).click();
  if(await dialog.getByLabel('Gewünschtes Ergebnis',{exact:true}).inputValue()!=='Synthetic persistent goal')throw Error('Reload lost goal');
- await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+ await cancelEditor(dialog);
  await page.getByRole('button',{name:'Entwurf verwerfen',exact:true}).click();
  for(const kind of ['pptx','pdf','image']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();
@@ -134,7 +136,7 @@ try{
    await card.getByRole('button',{name:'Neue Version bearbeiten',exact:true}).click();
    const edit=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
    if(!await edit.getByLabel('Nach Ausgabeseite 1 einen neuen PDF-Teil beginnen',{exact:true}).isChecked())throw Error('Partition lost after reload');
-   await edit.getByRole('button',{name:'Abbrechen',exact:true}).click();
+   await cancelEditor(edit);
   }
  }
  for(const kind of ['docx','pdf']){
@@ -161,7 +163,7 @@ try{
   dialog=page.getByRole('dialog',{name:'Datei erstellen',exact:true});
  await dialog.getByRole('button',{name:'Inhalt selbst eingeben',exact:true}).click();
   if(await dialog.getByLabel('Bildunterschrift',{exact:true}).inputValue()!=='Synthetic blue image')throw Error('Bound image/caption lost in version editor');
-  await dialog.getByRole('button',{name:'Abbrechen',exact:true}).click();
+  await cancelEditor(dialog);
  }
  for(const kind of ['pdf','image']){
   await page.getByRole('button',{name:'Neue Datei erstellen',exact:true}).click();

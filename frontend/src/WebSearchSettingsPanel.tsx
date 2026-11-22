@@ -1,3 +1,4 @@
+import {useUnsavedChanges} from './NavigationGuard';
 import {useEffect,useId,useRef,useState} from 'react';
 import './web-search-settings.css';
 type API=(path:string,method?:string,body?:unknown)=>Promise<any>;
@@ -8,6 +9,7 @@ export function WebSearchSettingsPanel({api,webAllowed,onWebAllowed,onSaved}:{ap
  const [data,setData]=useState<State|null>(null),[draft,setDraft]=useState<Draft|null>(null),[busy,setBusy]=useState(false),[testing,setTesting]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[testNotice,setTestNotice]=useState('');const group=useId(),apiRef=useRef(api);apiRef.current=api;
  useEffect(()=>{let current=true;apiRef.current('/web-settings').then((value:State)=>{if(current){setData(value);setDraft(draftFor(value))}}).catch(()=>{if(current)setError('Webrecherche-Einstellungen konnten nicht geladen werden.')});return()=>{current=false}},[]);
  const dirty=!!data&&!!draft&&JSON.stringify(draft)!==JSON.stringify(draftFor(data));
+ useUnsavedChanges(dirty,'Webrecherche-Einstellungen',JSON.stringify(draft));
  const valid=!!draft&&/^\d+$/.test(draft.max_results)&&Number(draft.max_results)>=1&&Number(draft.max_results)<=8&&/^\d+$/.test(draft.timeout)&&Number(draft.timeout)>=5&&Number(draft.timeout)<=30;
  function change(values:Partial<Draft>){setDraft(previous=>previous?{...previous,...values}:previous);setNotice('');setTestNotice('')}
  async function reload(){if(busy||testing)return;setBusy(true);setError('');try{const value:State=await api('/web-settings');setData(value);setDraft(draftFor(value));setNotice('Aktuelle Servereinstellungen geladen.')}catch{setError('Neu laden fehlgeschlagen. Deine Auswahl bleibt erhalten.')}finally{setBusy(false)}}

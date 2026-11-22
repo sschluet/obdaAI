@@ -42,6 +42,7 @@ try{
  await file.getByLabel('Dateititel',{exact:true}).fill('Synthetisches Ergebnis');
  const selectedText=await file.getByLabel('Dokumenttext',{exact:true}).inputValue();
  if(!selectedText.includes('SYNTHETIC_SOURCE_REPLY'))throw Error('Wrong selected answer');
+ await page.getByRole('button',{name:'Arbeitsbereich öffnen',exact:true}).click();const unsaved=page.getByRole('dialog',{name:'Ungespeicherte Änderungen',exact:true});await unsaved.getByRole('button',{name:'Weiter bearbeiten',exact:true}).click();if(await file.getByLabel('Dateititel',{exact:true}).inputValue()!=='Synthetisches Ergebnis')throw Error('Header close lost file draft');
  await bench.getByRole('tab',{name:'Quellen',exact:true}).click();
  await bench.getByRole('tab',{name:'Dateien',exact:true}).click();
  if(await file.getByLabel('Dateititel',{exact:true}).inputValue()!=='Synthetisches Ergebnis')throw Error('Tab switch lost file draft');

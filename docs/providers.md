@@ -64,8 +64,11 @@ Loginversuche sind datenbankgestützt begrenzt und gelten gemeinsam für beide A
 
 Das synthetische Router-Dataset `tests/fixtures/router-cases.json` deckt einfache deutsche
 und englische Fragen, kombinierte Fähigkeiten, Werkzeuge, Wissen, Artefakte, Termine und
-Prompt-Injection und Anschlussfragen ab. Einfache Fragen müssen genau einen Router-HTTP-Aufruf nutzen. `scripts/evaluate_router.py` prüft ausschließlich den lokalen Router;
-Modell-/Antwortkosten und externe Werkzeuge werden damit nicht ausgelöst.
+Prompt-Injection und Anschlussfragen ab. Der Router klassifiziert ausschließlich;
+eine Antwort gehört in den anschließenden Generierungslauf. Die Prüfung erlaubt
+einen Klassifikationsaufruf sowie höchstens einen Schema-Reparaturversuch.
+`scripts/evaluate_router.py` misst lokale Klassifikation, keine Antwortqualität.
+Es entstehen lokale Inferenzaufrufe, aber keine Cloud- oder externen Werkzeugaufrufe.
 
 Die optionale Ausgangsfreigabe `deploy/egress.sh` gilt nur auf der eigenen obdaAI-VM.
 Ohne Operator-Marker ist die App-UID lokal begrenzt. Mit Marker erlaubt sie DNS zum

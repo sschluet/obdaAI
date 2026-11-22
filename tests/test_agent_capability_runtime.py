@@ -8,6 +8,7 @@ import httpx
 import pytest
 from hub import agent_reconcile
 from hub import agent_runtime as runtime
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentJob, AgentPolicy
 from hub.agent_tools import Rules, validate_tool
 from hub.integrations import Integration
@@ -53,7 +54,27 @@ def start(ha, goal="Kannst Du auf Home Assistant zugreifen?", *, research_allowe
 
 def execute(ha, job_id):
     app, client, headers, cfg, *_ = ha
-    asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, job_id))
+    planner = runtime.generate
+
+    async def semantic_then_planner(*args):
+        data = args[-1]
+        if data.get("intent_schema"):
+            with app.state.sessions() as db:
+                job = db.get(AgentJob, job_id)
+                administrative = "Entitätsregistrierung" in job.goal
+            return RequestIntent(
+                target_ids=[ha[4]], mode="admin" if administrative else "observe",
+                topic="system", origin="semantic",
+                requirements=[Requirement(kind="effect_postcondition" if administrative
+                                          else "system", integration_id=ha[4])],
+            ).model_dump()
+        return await planner(*args)
+
+    runtime.generate = semantic_then_planner
+    try:
+        asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, job_id))
+    finally:
+        runtime.generate = planner
     response = client.get("/api/agent-runs/" + job_id)
     assert response.status_code == 200, response.text
     return response.json()
@@ -162,7 +183,7 @@ def test_general_administration_inspects_before_model_and_exposes_verified_capab
         capabilities = data["interfaces"][0]["capabilities"]
         assert capabilities["inspection"]["arguments"]["path"] == "/api/"
         assert "config/verify_connection" not in capabilities["operations"]["websocket_types"]
-        assert capabilities["operations"]["http_methods"] == ["GET", "POST", "PATCH"]
+        assert capabilities["operations"]["http_methods"] == ["GET"]
         assert data["history"][0]["document"]["capability_inspection"] is True
         assert "research" in data["tools"]
         if len(model_data) == 1:
@@ -343,7 +364,7 @@ def single_step_policy(ha, identifier, expected_revision):
     assert response.status_code == 200, response.text
 
 
-def test_multiple_access_profiles_cannot_dispatch_beyond_single_step_budget(ha, monkeypatch):
+def test_multiple_access_profiles_respect_each_targets_single_step_budget(ha, monkeypatch):
     no_planning(monkeypatch)
     single_step_policy(ha, ha[4], 2)
     with ha[0].state.sessions() as db:
@@ -368,9 +389,10 @@ def test_multiple_access_profiles_cannot_dispatch_beyond_single_step_budget(ha, 
     calls = transport(monkeypatch)
     job_id = start(ha)
     result = execute(ha, job_id)
-    assert result["status"] == "failed" and "Schrittlimit" in result["summary"]
-    assert not calls and not ha[-1]
-    assert not any(step["status"] in {"dispatching", "succeeded"} for step in result["steps"])
+    assert result["status"] == "observed" and len(calls) == 2 and not ha[-1]
+    operations = [step for step in result["steps"] if step["kind"] == "read"]
+    assert len(operations) == 2
+    assert {step["document"]["integration_id"] for step in operations} == {ha[4], identifier}
 
 
 def test_single_step_administration_reserves_budget_for_the_requested_operation(ha, monkeypatch):
@@ -380,6 +402,9 @@ def test_single_step_administration_reserves_budget_for_the_requested_operation(
 
     async def model(*args):
         turns.append(args)
+        if args[-1].get("summarize_only"):
+            assert calls and args[-1]["tools"] == {}
+            return {"kind": "finish", "message": "Dienste erfolgreich gelesen."}
         assert not calls  # No automatic /api/ bootstrap consumed the one permitted operation.
         return {"kind": "tool", "message": "Dienste lesen", "integration_id": ha[4],
                 "tool": "http", "arguments": {"method": "GET", "path": "/api/services"}}
@@ -388,7 +413,7 @@ def test_single_step_administration_reserves_budget_for_the_requested_operation(
     result = execute(ha, start(ha, "Lies die verfügbaren Home-Assistant-Dienste.",
                               research_allowed=False))
     assert [args["path"] for tool, args in calls] == ["/api/services"]
-    assert len(turns) == 1
+    assert len(turns) == 2 and result["status"] == "observed"
     operation_steps = [step for step in result["steps"] if step["kind"] in {"read", "effect"}]
     assert len(operation_steps) == 1 and operation_steps[0]["kind"] == "read"
     assert not operation_steps[0]["document"].get("capability_inspection")

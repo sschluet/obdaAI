@@ -1,3 +1,4 @@
+import {useUnsavedChanges} from './NavigationGuard';
 import {useEffect, useState} from 'react';
 import type {IntegrationAPI, IntegrationRow} from './IntegrationRegistryPanel';
 
@@ -20,6 +21,7 @@ export function AgentPolicyEditor({api, integration, onClose}: {
     }).catch(e => {if (alive) setError(e.message);});
     return () => {alive = false;};
   }, [api, integration.id]);
+  useUnsavedChanges(!!rules&&!!policy&&(JSON.stringify(rules)!==JSON.stringify(policy.rules)||writes!==policy.writes_enabled),'KI-Zugriffsregeln',JSON.stringify([rules,writes]));
   const change = (key: string, value: unknown) => setRules({...rules, [key]: value});
   const readCandidates: MCPReadCandidate[] = policy?.mcp_read_candidates ?? [];
   const readTools: Record<string, string> = rules?.mcp_read_tools ?? {};
@@ -127,7 +129,7 @@ export function AgentPolicyEditor({api, integration, onClose}: {
       <label>Laufzeit in Sekunden<input type="number" min={30} max={3600} value={rules.timeout_seconds} onChange={e => change('timeout_seconds', Number(e.target.value))}/></label>
       <label>Zeitgrenze je SSH-Befehl in Sekunden<input type="number" min={1} max={600} value={rules.command_timeout_seconds} onChange={e => change('command_timeout_seconds', Number(e.target.value))}/></label>
       </details>
-      <div className="dialog-actions"><button type="button" onClick={onClose}>Schließen</button><button type="button" className="primary" onClick={() => void save()}>Zugriff speichern</button></div>
+      <div className="dialog-actions"><button data-navigation="true" type="button" onClick={onClose}>Schließen</button><button type="button" className="primary" onClick={() => void save()}>Zugriff speichern</button></div>
     </fieldset>}
   </section>;
 }

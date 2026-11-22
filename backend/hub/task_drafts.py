@@ -83,8 +83,20 @@ async def preview(factory: Any, cfg: Any, goal: str, provider: Any = None) -> di
         "context_tokens", 32768
     ):
         raise ValueError("Draft context limit")
+
+    def provider_boundary() -> None:
+        if row:
+            with factory() as db:
+                actual = db.get(ProviderConfig, row.id)
+                if not actual or not actual.enabled or actual.revision != row.revision:
+                    raise ValueError("Draft provider drift")
+
+    provider_boundary()
+    if isinstance(provider, Providers):
+        provider.before_send = provider_boundary
     answer = ""
-    async with asyncio.timeout(min(30, cfg.local_timeout)):
+    # Inactivity is enforced by Providers, separately from model preparation.
+    async with asyncio.timeout(min(120, cfg.generation_timeout)):
         from contextlib import aclosing
 
         async with aclosing(

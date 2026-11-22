@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from hub import agent_runtime as runtime
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentPolicy
 from hub.agent_tools import Rules
 from hub.gmail_client import API_BASE
@@ -54,6 +55,11 @@ def test_native_gmail_reply_gap_is_explicit_before_unproven_model_finish(
         raise AssertionError("No Gmail request can prove a missing implemented reply contract")
 
     async def no_model(*args, **kwargs):
+        if args[-1].get("intent_schema"):
+            return RequestIntent(
+                target_ids=[identifier], mode="observe", topic="mail", origin="semantic",
+                requirements=[Requirement(kind="mail_reply", integration_id=identifier)],
+            ).model_dump()
         raise AssertionError("An ID search or model claim cannot establish reply evidence")
 
     monkeypatch.setattr(runtime, "invoke", no_target)

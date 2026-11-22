@@ -1,13 +1,16 @@
 """One bounded alternative after an acknowledged missing HTTP read interface."""
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from hub.agent_failures import read_result_failure
 
 
-def context(history: Sequence[Any], *, private_read: bool = False) -> dict[str, Any] | None:
+def context(
+    history: Sequence[Any], *, private_read: bool = False,
+    request_intent: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
     if private_read:
         return None
     broken = [step for step in history
@@ -37,6 +40,13 @@ def context(history: Sequence[Any], *, private_read: bool = False) -> dict[str, 
             and candidate.get("arguments", {}).get("path") == arguments["path"]
         ):
             continue
+        if request_intent is not None:
+            from hub.agent_intent import adequacy
+
+            observed = [item for item in history
+                        if failed.sequence < item.sequence <= step.sequence]
+            if not adequacy(request_intent, observed)["satisfied"]:
+                continue
         alternative = step
         break
     # Never turn an uncertain earlier mutation into a reason to try another path.

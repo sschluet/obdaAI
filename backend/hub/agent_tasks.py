@@ -8,7 +8,7 @@ from sqlalchemy import select
 from hub.action_api import digest, encode
 from hub.agent_models import AgentJob
 from hub.agent_runtime import create_job, execute_agent
-from hub.db import Conversation, SourceChunk, TaskRun
+from hub.db import Conversation, TaskRun
 from hub.db_locks import ownership_lock
 from hub.policy import ContextPart
 from hub.task_api import AgentTaskStep, check_bindings, check_schedule, current
@@ -49,19 +49,18 @@ async def execute_agent_task(factory: Any, cfg: Any, run_id: str, providers: Any
             )
             db.add(conversation)
             db.flush()
-            context: list[dict[str, Any]] = []
-            for source in spec.sources:
-                chunks = db.scalars(
-                    select(SourceChunk)
-                    .where(SourceChunk.source_id == str(source.id))
-                    .order_by(SourceChunk.locator)
+            from hub.memory_task_context import assemble_task_context
+
+            context = [
+                part.model_dump(mode="json")
+                for part in assemble_task_context(
+                    db,
+                    cfg,
+                    spec.goal,
+                    str(spec.project_id) if spec.project_id else None,
+                    spec.sources,
                 )
-                context.extend(
-                    ContextPart(
-                        content=c.content, source_id=c.source_id, revision=source.revision
-                    ).model_dump(mode="json")
-                    for c in chunks
-                )
+            ]
             for skill in json.loads(run.snapshot).get("skills_checked", []):
                 context.append(
                     ContextPart(

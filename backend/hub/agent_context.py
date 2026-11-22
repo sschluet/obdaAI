@@ -124,6 +124,67 @@ def _json_type(value: Any) -> str:
     return "number"
 
 
+
+def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
+    """Loss-aware typed rows, rather than a JSON prefix ending mid-value.
+
+    This is only a model view. Completion checks always inspect original receipts.
+    """
+    if not isinstance(observed, dict):
+        return None
+    body = observed.get("body", observed)
+    path = "/body" if "body" in observed else ""
+    if isinstance(body, dict):
+        key = next((key for key in ("results", "items", "data")
+                    if isinstance(body.get(key), list)), None)
+        if key is None:
+            return None
+        items, path = body[key], path + "/" + key
+    elif isinstance(body, list):
+        items = body
+    else:
+        return None
+    if not all(isinstance(item, dict) for item in items):
+        return None
+    counts: dict[str, int] = {}
+    for item in items:
+        entity = item.get("entity_id", item.get("/entity_id"))
+        if isinstance(entity, str) and "." in entity:
+            domain = entity.split(".", 1)[0]
+            if domain in counts or len(counts) < 32:
+                counts[domain] = counts.get(domain, 0) + 1
+    result: dict[str, Any] = {"items_path": path, "observed_count": len(items),
+                              "items": [], "returned": 0, "truncated": bool(items)}
+    if counts:
+        result["observed_domain_counts"] = counts
+    if isinstance(body, dict):
+        source_counts = {key: body[key] for key in ("matched", "returned", "count", "total")
+                         if type(body.get(key)) is int and body[key] >= 0}
+        if source_counts:
+            result["source_counts"] = source_counts
+        if "next" in body or "nextPageToken" in body:
+            result["source_has_more"] = bool(body.get("next") or body.get("nextPageToken"))
+    for item in items[:32]:
+        row = {key: view(item[key], 160) for key in (
+            "entity_id", "state", "id", "name", "title", "created", "modified",
+            "correspondent", "tags", "last_changed", "last_updated", "/entity_id", "/state",
+            "/attributes/friendly_name") if key in item}
+        if isinstance(item.get("attributes"), dict):
+            row["attributes"] = {key: view(item["attributes"][key], 120) for key in (
+                "friendly_name", "unit_of_measurement", "device_class")
+                if key in item["attributes"]}
+        if not row:
+            row = {str(key): view(value, 80) for key, value in list(item.items())[:5]
+                   if not isinstance(value, (dict, list))}
+        candidate = {**result, "items": [*result["items"], row]}
+        if len(json.dumps(candidate, ensure_ascii=False).encode()) > limit:
+            break
+        result["items"].append(row)
+    result["returned"] = len(result["items"])
+    result["truncated"] = len(items) != result["returned"]
+    return result if len(json.dumps(result, ensure_ascii=False).encode()) <= limit else None
+
+
 def _observation(
     entry: dict[str, Any], *, result_limit: int = 1500, metadata_limit: int = 2500
 ) -> dict[str, Any]:
@@ -152,6 +213,9 @@ def _observation(
                 for key in ("exit_code", "error")
                 if key in verification
             }
+    semantic = _semantic_view(observed, min(800, metadata_limit // 2))
+    if semantic is not None:
+        summary["semantic_view"] = semantic
     for width in (12, 6, 3, 1):
         summary["result_shape"] = _shape(observed, width=width)
         if isinstance(observed, dict) and "body" in observed:
@@ -159,7 +223,10 @@ def _observation(
         if len(json.dumps(summary, ensure_ascii=False)) <= metadata_limit:
             break
     else:
-        raise AgentContextLimitError("Observation metadata exceeds the model context limit")
+        if "semantic_view" in summary:
+            summary.pop("semantic_view")
+        if len(json.dumps(summary, ensure_ascii=False)) > metadata_limit:
+            raise AgentContextLimitError("Observation metadata exceeds the model context limit")
     encoded = json.dumps(observed, ensure_ascii=False, separators=(",", ":"))
     return {
         "sequence": entry.get("sequence"),
@@ -193,6 +260,53 @@ def _projected_mail_observation(entry: dict[str, Any]) -> dict[str, Any] | None:
         "model_projection": projection,
         "evidence_source": "mail_read_progress",
     }
+
+
+def _read_index(
+    entries: list[dict[str, Any]], latest: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Deduplicate older successful read wrappers, preserving complete receipt hashes.
+
+    Mutation, verification, failure, reconciliation and human-input records are
+    never candidates. This derived index supplies provenance, not missing data.
+    """
+    groups: dict[str, dict[str, Any]] = {}
+    retained = []
+    protected = {"effect_verified", "verification", "verification_passed", "acknowledged",
+                 "reconciled_after_uncertain", "causation_verified", "effect_step"}
+    for entry in entries:
+        document, result = entry.get("document"), entry.get("result")
+        if (entry is latest or entry.get("kind") != "read" or entry.get("status") != "succeeded"
+                or not isinstance(document, dict) or not isinstance(result, dict)
+                or not isinstance(document.get("arguments", {}), dict)
+                or _projected_mail_observation(entry) is not None
+                or document.get("tool") in {"http.verify", "research"}
+                or protected & (set(document) | set(result))
+                or protected & set(document.get("arguments") or {})):
+            retained.append(entry)
+            continue
+        arguments = document.get("arguments", {})
+        operation = {"integration_id": document.get("integration_id"),
+                     "tool": document.get("tool"),
+                     "arguments_sha256": hashlib.sha256(json.dumps(
+                         arguments, ensure_ascii=False, sort_keys=True,
+                     ).encode()).hexdigest()}
+        if isinstance(arguments, dict):
+            operation.update({key: arguments[key] for key in ("method", "path", "name")
+                              if key in arguments})
+        key = json.dumps(operation, sort_keys=True)
+        group = groups.setdefault(key, {**operation, "status": "succeeded", "receipts": [],
+                                         "content_omitted": True, "model_view_only": True})
+        group["receipts"].append({
+            "sequence": entry.get("sequence"),
+            "document_sha256": hashlib.sha256(json.dumps(
+                document, ensure_ascii=False, separators=(",", ":"),
+            ).encode()).hexdigest(),
+            "result_sha256": hashlib.sha256(json.dumps(
+                result, ensure_ascii=False, separators=(",", ":"),
+            ).encode()).hexdigest(),
+        })
+    return retained, list(groups.values())
 
 
 def fit(
@@ -243,7 +357,29 @@ def fit(
                 return {
                     "evidence_source": "mail_read_progress",
                 }
-            return view(entry["result"], limit)
+            observed = entry["result"]
+            clipped = view(observed, limit)
+            if (isinstance(observed, dict) and isinstance(clipped, dict)
+                    and clipped.get("truncated") is True
+                    and (entry.get("kind") in {"effect", "verification"}
+                         or any(key in observed for key in (
+                             "effect_verified", "verification_passed", "reconciled_after_uncertain"
+                         )))):
+                # Keep the original top-level proof vocabulary, even when body
+                # precedes it in JSON. These are model views, never new receipts.
+                clipped = {**clipped, **{key: observed[key] for key in (
+                    "effect_verified", "verification_passed", "acknowledged",
+                    "reconciled_after_uncertain", "causation_verified", "smtp_accepted",
+                    "delivery_verified", "verification_method", "exit_code", "http_status",
+                    "failure_category", "failure_phase",
+                ) if key in observed}}
+                if isinstance(observed.get("verification"), dict):
+                    clipped["verification"] = {
+                        key: view(observed["verification"][key], 200)
+                        for key in ("exit_code", "error", "verification_passed", "effect_verified")
+                        if key in observed["verification"]
+                    }
+            return clipped
 
         def history_document(entry: dict[str, Any], budget: int = size) -> Any:
             projected = (
@@ -251,6 +387,26 @@ def fit(
                 if "mail_read_progress" in data or "private_read_evidence" in data else None
             )
             document = entry["document"]
+            if (entry.get("kind") in {"effect", "verification"} and isinstance(document, dict)
+                    and len(json.dumps(document, ensure_ascii=False)) > budget):
+                arguments = document.get("arguments", {})
+                protected_document = {
+                    key: document[key] for key in ("tool", "integration_id", "target")
+                    if key in document
+                }
+                protected_document["full_sha256"] = hashlib.sha256(json.dumps(
+                    document, ensure_ascii=False, separators=(",", ":"),
+                ).encode()).hexdigest()
+                protected_document["arguments_sha256"] = hashlib.sha256(json.dumps(
+                    arguments, ensure_ascii=False, separators=(",", ":"),
+                ).encode()).hexdigest()
+                if isinstance(arguments, dict):
+                    protected_document["arguments"] = {
+                        key: arguments[key] for key in ("verification", "effect_step")
+                        if key in arguments
+                    }
+                protected_document["content_omitted"] = True
+                return protected_document
             if projected is not None and budget <= 600 and isinstance(document, dict):
                 return {
                     key: document[key] for key in ("tool", "integration_id") if key in document
@@ -262,13 +418,18 @@ def fit(
                 )
             return view(document, budget)
 
+        retained, index = (_read_index(original, latest) if size <= 600 else (original, []))
+        if index:
+            result["older_read_index"] = index
+        else:
+            result.pop("older_read_index", None)
         result["history"] = [
             {
                 **entry,
                 "document": history_document(entry),
                 "result": history_result(entry, size if i == len(original) - 1 else size // 2),
             }
-            for i, entry in enumerate(original)
+            for i, entry in enumerate(retained)
         ]
         encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
         byte_length = len(instruction.encode()) + len(encoded.encode())

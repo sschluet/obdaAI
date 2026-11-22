@@ -62,7 +62,16 @@ def _owned_ha_inventory(text: str) -> bool:
 
 def relevant(goal: str, row: Integration, rules: Rules) -> bool:
     """Known interface vocabulary only; remote descriptions never become instructions."""
+    from hub.agent_intent import infer
+
     text = goal.casefold()
+    identifier = str(getattr(row, "id", "candidate"))
+    intent = infer(goal, {identifier: (row, rules, {})})
+    if intent is not None:
+        if intent.mode == "explain":
+            return False
+        if identifier in intent.target_ids:
+            return True
     if EXPLANATION.search(text):
         return False
     if PUBLIC_RESEARCH.search(text) and not re.search(r"\b(mein\w*|unser\w*|my|our)\b", text):
@@ -163,14 +172,9 @@ def usable(kind: str, rules: Rules) -> bool:
     )
 
 
-def matching_integrations(
-    db: Session,
-    cfg: Settings,
-    selected: dict[str, Any],
-    goal: str,
-    *,
-    conversation_id: str | None = None,
-) -> list[str]:
+def _selected_candidates(
+    db: Session, cfg: Settings, selected: dict[str, Any]
+) -> list[tuple[Integration, Rules]]:
     candidates = []
     for item in selected["bindings"]:
         row = db.get(Integration, item["id"])
@@ -194,6 +198,18 @@ def matching_integrations(
         if config.get("auth") != "none" and not row.encrypted_secret:
             continue
         candidates.append((row, rules))
+    return candidates
+
+
+def matching_integrations(
+    db: Session,
+    cfg: Settings,
+    selected: dict[str, Any],
+    goal: str,
+    *,
+    conversation_id: str | None = None,
+) -> list[str]:
+    candidates = _selected_candidates(db, cfg, selected)
     named = {
         row.id
         for row, rules in candidates
@@ -205,6 +221,17 @@ def matching_integrations(
         if relevant(goal, row, rules)
         and (not named or not mail_interface(row, rules) or row.id in named)
     ]
+    if (
+        matches and conversation_id and not named
+        and all(mail_interface(row, rules) for row, rules in candidates if row.id in matches)
+        and re.search(r"\b(?:davon|those|these|them|their|previous|listed|shown)\b",
+                      goal.casefold())
+    ):
+        from hub.agent_read_references import previous_profile_ids
+
+        profiles = {row.id: (row, rules, json.loads(row.config)) for row, rules in candidates}
+        # A reply cue cannot silently turn a revoked displayed cohort into a new scan.
+        return sorted(set(matches) & previous_profile_ids(db, conversation_id, profiles))
     if (
         not matches
         and conversation_id
@@ -235,3 +262,12 @@ def route_integrations(
         conversation_id=conversation_id,
     )
     return {"route": "agent" if matches else "chat", "integration_ids": matches}
+
+
+def semantic_candidates(
+    db: Session, cfg: Settings, conversation_id: str
+) -> dict[str, Any]:
+    """Current authorized targets for LOCAL_ONLY semantic routing; never a new grant."""
+    selected = freeze_bindings(db, "conversation", conversation_id)
+    return {row.id: (row, rules, json.loads(row.config))
+            for row, rules in _selected_candidates(db, cfg, selected)}

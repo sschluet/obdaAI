@@ -182,16 +182,20 @@ def test_general_administration_still_uses_the_ordinary_model_planner(ha, monkey
 
     def invoke(cfg, config, secret, tool, args, rules, before_send):
         before_send()
-        assert tool == "http" and args["path"] == "/api/"
+        assert tool == "http" and args["path"] in {"/api/", "/api/services"}
         calls.append(args)
-        return {"http_status": 200, "body": {"message": "API running."}}
+        return {"http_status": 200, "body": {"message": "API running."} if args["path"] == "/api/"
+                else [{"domain": "light", "services": {"turn_on": {}}}]}
 
     async def model(*args):
         model_calls.append(args[-1])
+        if len(model_calls) == 1:
+            return {"kind": "tool", "message": "Dienste tatsächlich lesen", "integration_id": ha[4],
+                    "tool": "http", "arguments": {"method": "GET", "path": "/api/services"}}
         return {"kind": "finish", "message": "Synthetic general administration reviewed."}
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     monkeypatch.setattr(runtime, "generate", model)
     result = execute(ha, start(ha, "Prüfe Home Assistant und ermittle die verfügbaren Dienste."))
-    assert result["status"] == "observed" and len(model_calls) == 1
-    assert len(calls) == 1 and not ha[-1]
+    assert result["status"] == "observed" and len(model_calls) == 2
+    assert len(calls) == 2 and not ha[-1]

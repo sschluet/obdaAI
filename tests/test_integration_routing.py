@@ -4,6 +4,7 @@ import json
 from uuid import uuid4
 
 import pytest
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentJob, AgentPolicy, AgentStep
 from hub.agent_tools import Rules
 from hub.db import Message, Run
@@ -11,6 +12,21 @@ from hub.integrations import Integration
 from sqlalchemy import func, select
 
 pytest_plugins = ["test_agents"]
+
+
+def test_unresolved_private_target_cannot_silently_fall_back_to_ordinary_chat(agent, monkeypatch):
+    async def unresolved(*args, **kwargs):
+        return RequestIntent(
+            mode="unknown", topic="general", target_ids=[agent[4]], confidence="uncertain",
+        )
+
+    monkeypatch.setattr("hub.request_interpretation.interpret", unresolved)
+    response = route(agent, standalone(agent), "Kläre den vorigen Systembezug.")
+    assert response.status_code == 409
+    assert "nicht eindeutig" in response.json()["detail"]
+    with agent[0].state.sessions() as db:
+        assert db.scalar(select(func.count()).select_from(AgentJob)) == 0
+        assert db.scalar(select(func.count()).select_from(Run)) == 0
 
 
 @pytest.mark.parametrize(
@@ -28,6 +44,7 @@ def test_private_archive_vocabulary_routes_to_existing_get_authority(agent, monk
         name="Private archive",
         rules=Rules(enabled=True, http_prefixes=["/api/documents/"], http_methods=["GET"]),
     )
+    stub_semantic(monkeypatch, targets=(agent[4], identifier))
     monkeypatch.setattr("socket.getaddrinfo", lambda *a, **k: pytest.fail("Local routing only"))
     assert route(agent, standalone(agent), goal).json() == {
         "route": "agent",
@@ -36,7 +53,10 @@ def test_private_archive_vocabulary_routes_to_existing_get_authority(agent, monk
 
 
 @pytest.mark.parametrize("goal", ["Belege deine Antwort", "Welche Verträge sind allgemein üblich?"])
-def test_document_words_do_not_turn_public_explanation_into_archive_access(agent, goal):
+def test_document_words_do_not_turn_public_explanation_into_archive_access(
+    agent, monkeypatch, goal
+):
+    stub_semantic(monkeypatch, explain=True)
     add_profile(
         agent[0],
         kind="paperless",
@@ -49,7 +69,9 @@ def test_document_words_do_not_turn_public_explanation_into_archive_access(agent
 @pytest.mark.parametrize(
     "change", [None, "inactive_message", "revoked_policy", "other_conversation"]
 )
-def test_anaphoric_followup_uses_only_still_selected_observed_read(agent, change):
+def test_anaphoric_followup_uses_only_still_selected_observed_read(agent, monkeypatch, change):
+    if change is not None:
+        stub_semantic(monkeypatch)
     from hub.action_api import digest, encode
 
     app = agent[0]
@@ -167,6 +189,21 @@ def add_profile(app, *, kind="mcp", name="Proton Mail", rules=None):
         return row.id
 
 
+def stub_semantic(monkeypatch, *, targets=(), evidence="documents", explain=False):
+    """Only interpretation is synthetic; current target/revision gates remain real."""
+    async def interpret(
+        factory, cfg, goal, profiles, *, prior_target_ids=None, conversation_id=None
+    ):
+        assert set(targets) <= set(profiles)
+        return RequestIntent(
+            origin="semantic", mode="explain" if explain else "observe" if targets else "unknown",
+            topic="general" if explain else "documents", target_ids=sorted(targets),
+            confidence="certain" if targets or explain else "uncertain",
+            requirements=[Requirement(kind=evidence, integration_id=i) for i in targets],
+        )
+    monkeypatch.setattr("hub.request_interpretation.interpret", interpret)
+
+
 def standalone(agent):
     return agent[1].post("/api/conversations", json={}, headers=agent[2]).json()["id"]
 
@@ -219,7 +256,10 @@ def test_mail_question_routes_without_target_model_or_state_effects(agent, monke
         "A" * 16000,
     ],
 )
-def test_ordinary_explanation_translation_and_long_chat_do_not_enter_agent(agent, goal):
+def test_ordinary_explanation_translation_and_long_chat_do_not_enter_agent(
+    agent, monkeypatch, goal
+):
+    stub_semantic(monkeypatch, explain=True)
     add_profile(agent[0])
     add_profile(
         agent[0],
@@ -250,7 +290,10 @@ def test_named_mail_account_excludes_other_account_and_read_query_excludes_smtp(
     assert smtp in route(agent, chat, "Sende eine Mail an meinen Kontakt").json()["integration_ids"]
 
 
-def test_scope_off_missing_policy_stale_policy_and_disabled_target_prevent_routing(agent):
+def test_scope_off_missing_policy_stale_policy_and_disabled_target_prevent_routing(
+    agent, monkeypatch
+):
+    stub_semantic(monkeypatch)
     app, client, headers = agent[:3]
     identifier = add_profile(app)
     chat = standalone(agent)
@@ -350,7 +393,7 @@ def test_fresh_agent_requests_reject_unavailable_or_unapproved_subsets(agent, se
         assert db.scalar(select(func.count()).select_from(AgentJob)) == 0
 
 
-def test_send_only_binds_smtp_budget_and_private_mail_office_stays_agent(agent):
+def test_send_only_binds_smtp_budget_and_private_mail_office_stays_agent(agent, monkeypatch):
     mailbox = add_profile(agent[0])
     smtp = add_profile(
         agent[0],
@@ -361,6 +404,7 @@ def test_send_only_binds_smtp_budget_and_private_mail_office_stays_agent(agent):
     chat = standalone(agent)
     goal = "Sende eine Mail an synthetic@example.test"
     assert route(agent, chat, goal).json() == {"route": "agent", "integration_ids": [smtp]}
+    stub_semantic(monkeypatch, targets=(mailbox,), evidence="mail_content")
     assert route(agent, chat, "Erstelle eine Excel mit meinen Mails von heute").json() == {
         "route": "agent",
         "integration_ids": [mailbox],
@@ -427,7 +471,8 @@ def test_auto_job_keeps_concrete_authority_but_respects_selected_revocation(agen
     )
 
 
-def test_filesystem_folder_tool_does_not_make_a_profile_a_mailbox(agent):
+def test_filesystem_folder_tool_does_not_make_a_profile_a_mailbox(agent, monkeypatch):
+    stub_semantic(monkeypatch)
     add_profile(
         agent[0],
         name="Filesystem",

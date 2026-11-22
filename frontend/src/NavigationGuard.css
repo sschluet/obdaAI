@@ -1,0 +1,3 @@
+/* Confirmation must sit above the mobile workbench, sidebar and existing dialogs. */
+.navigation-confirm{z-index:1000}
+.navigation-confirm>div{max-height:90dvh;overflow:auto}

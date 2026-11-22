@@ -278,27 +278,31 @@ def bind(
     if job.scope != "conversation":
         return []
     refs: dict[tuple[str, int], dict[str, Any]] = {}
-    for message in sorted(messages[-12:], key=lambda m: m.created, reverse=True):
-        if not message.agent_job_id:
+    displayed = [message for message in messages
+                 if message.role == "assistant" and message.active]
+    if not displayed:
+        return []
+    message = max(displayed, key=lambda item: (item.created, item.id))
+    if not message.agent_job_id:
+        return []  # A new ordinary topic is not a license to reactivate an older cohort.
+    receipts = db.scalars(
+        select(AgentStep).where(AgentStep.job_id == message.agent_job_id)
+        .order_by(AgentStep.sequence.desc())
+    )
+    for step in receipts:
+        try:
+            reference, _, _ = _receipt(db, job, message, step, profiles)
+        except (KeyError, TypeError, ValueError, PermissionError):
             continue
-        receipts = db.scalars(
-            select(AgentStep).where(AgentStep.job_id == message.agent_job_id)
-            .order_by(AgentStep.sequence.desc())
-        )
-        for step in receipts:
-            try:
-                reference, _, _ = _receipt(db, job, message, step, profiles)
-            except (KeyError, TypeError, ValueError, PermissionError):
-                continue
-            key = (step.job_id, step.sequence)
-            if key in refs:
-                continue
-            refs[key] = ContextPart(
-                source_id=f"{_PREFIX}{step.job_id}:{step.sequence}", revision=1,
-                content=encode(reference),
-            ).model_dump(mode="json")
-            if len(refs) == 2:
-                return list(refs.values())
+        key = (step.job_id, step.sequence)
+        if key in refs:
+            continue
+        refs[key] = ContextPart(
+            source_id=f"{_PREFIX}{step.job_id}:{step.sequence}", revision=1,
+            content=encode(reference),
+        ).model_dump(mode="json")
+        if len(refs) == 2:
+            break
     return list(refs.values())
 
 
@@ -402,13 +406,13 @@ def model_context(
     return observations
 
 
-def previous_profile_ids(
+def previous_references(
     db: Any, conversation_id: str, profiles: dict[str, Any]
-) -> set[str]:
-    """Resolve anaphora to already approved targets, without creating any job."""
+) -> list[dict[str, Any]]:
+    """Current bound cohort provenance for local cache/final freshness checks."""
     conversation = db.get(Conversation, conversation_id)
     if not conversation or conversation.archived or conversation.purpose != "chat":
-        return set()
+        return []
     bindings = []
     for identifier in profiles:
         policy = db.get(AgentPolicy, identifier)
@@ -430,8 +434,15 @@ def previous_profile_ids(
             Message.role == "assistant",
         ).order_by(Message.created.desc()).limit(12)
     ))
+    return bind(db, candidate, messages, profiles)
+
+
+def previous_profile_ids(
+    db: Any, conversation_id: str, profiles: dict[str, Any]
+) -> set[str]:
+    """Resolve anaphora to the current displayed cohort without granting authority."""
     return {json.loads(part["content"])["integration_id"]
-            for part in bind(db, candidate, messages, profiles)}
+            for part in previous_references(db, conversation_id, profiles)}
 
 
 def validated_receipts(

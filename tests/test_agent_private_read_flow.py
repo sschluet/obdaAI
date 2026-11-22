@@ -9,6 +9,7 @@ import pytest
 from hub import agent_runtime as runtime
 from hub import agent_tools
 from hub.agent_context import fit
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentJob, AgentPolicy
 from hub.integrations import Integration
 
@@ -67,6 +68,16 @@ def execute(case, job_id):
     return client.get(f"/api/agent-runs/{job_id}").json()
 
 
+def document_intent(data, identifier):
+    """Explicit semantic model stub, separate from the dispatch decision under test."""
+    assert data["intent_schema"] and data["label"] == "LOCAL_ONLY"
+    assert identifier in {row["id"] for row in data["targets"]}
+    return RequestIntent(
+        origin="semantic", mode="observe", topic="documents", target_ids=[identifier],
+        requirements=[Requirement(kind="documents", integration_id=identifier)],
+    ).model_dump()
+
+
 def decision(identifier, **arguments):
     return {
         "kind": "tool",
@@ -95,6 +106,8 @@ def test_private_archive_uses_typed_read_no_research_or_confirmation_and_real_re
     phases = []
 
     async def generate(factory, cfg, providers, current_job, instruction, data):
+        if data.get("intent_schema"):
+            return document_intent(data, identifier)
         assert "LOCAL_ONLY" in instruction and "keine Endpunkte erfinden" in instruction
         assert data["read_only"] and set(data["tools"]) == {"paperless.read"}
         assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
@@ -189,6 +202,8 @@ def test_full_large_ocr_receipt_kept_but_planner_remains_bounded(archive, monkey
 
     async def generate(*args):
         instruction, data = args[-2:]
+        if data.get("intent_schema"):
+            return document_intent(data, agent[4])
         assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
         phases.append(data)
         if len(phases) == 1:
@@ -442,6 +457,8 @@ def test_followup_uses_revocable_actual_receipt_id_then_reads_document_content(
 
     async def followup(*args):
         data = args[-1]
+        if data.get("intent_schema"):
+            return document_intent(data, agent[4])
         phase.append(data)
         assert data["read_only"] is True
         if len(phase) == 1:
@@ -717,7 +734,8 @@ def test_private_archive_rejects_confirmation_before_and_after_reads_then_answer
 
     async def generate(*args):
         data = args[-1]
-        assert data["allow_ask"] is False and data["allow_stop"] is True
+        assert data["allow_ask"] is False
+        assert data["allow_stop"] is (not data.get("initial_private_read_required", False))
         states.append(data["allow_finish"])
         return responses.pop(0)
 
@@ -743,14 +761,18 @@ def test_private_archive_can_stop_unverified_without_permission_question_or_inve
     ]
 
     async def generate(*args):
-        assert args[-1]["allow_stop"] and not args[-1]["allow_ask"]
-        return responses.pop(0)
+        assert not args[-1]["allow_ask"]
+        assert args[-1]["allow_stop"] is (not args[-1].get("initial_private_read_required", False))
+        return responses.pop(0) if len(responses) > 1 else responses[0]
 
     monkeypatch.setattr(runtime, "generate", generate)
     result = execute(archive, start())
-    assert result["status"] == "unverified" and len(calls) == int(queried)
-    assert result["summary"].startswith("Anfrage nicht vollständig beantwortet: ")
-    assert not any(s["kind"] in {"effect", "input", "feedback"} for s in result["steps"])
+    assert result["status"] == ("unverified" if queried else "failed")
+    assert len(calls) == int(queried)
+    if queried:
+        assert result["summary"].startswith("Anfrage nicht vollständig beantwortet: ")
+    assert not any(s["kind"] in {"effect", "input"} for s in result["steps"])
+    assert sum(s["kind"] == "feedback" for s in result["steps"]) == (0 if queried else 2)
 
 
 def test_repeated_private_confirmation_is_bounded_and_never_waits_for_user(archive, monkeypatch):
@@ -786,7 +808,7 @@ def test_administrative_question_remains_askable_and_private_stop_is_rejected(ar
     monkeypatch.setattr(runtime, "research", disabled_research)
     monkeypatch.setattr(runtime, "generate", generate)
     result = execute(
-        archive, start("Prüfe die Paperless API Konfiguration", research_allowed=False)
+        archive, start("Ändere die Paperless API Konfiguration", research_allowed=False)
     )
     assert result["status"] == "awaiting_input" and len(phases) == 2 and not calls
     assert sum(s["kind"] == "feedback" for s in result["steps"]) == 1
@@ -824,7 +846,8 @@ def test_private_mail_rejects_ask_but_reads_current_messages_then_answers(
 
     async def generate(*args):
         instruction, data = args[-2:]
-        assert not data["allow_ask"] and data["allow_stop"]
+        assert not data["allow_ask"]
+        assert data["allow_stop"] is (not data.get("initial_private_read_required", False))
         assert len(instruction.encode()) + len(runtime.encode(data).encode()) <= 14000
         return responses.pop(0)
 
@@ -936,16 +959,18 @@ def test_private_mail_stop_remains_unverified_with_or_without_current_data(
 
     async def generate(*args):
         data = args[-1]
-        assert not data["allow_ask"] and data["allow_stop"]
-        return responses.pop(0)
+        assert not data["allow_ask"]
+        assert data["allow_stop"] is (not data.get("initial_private_read_required", False))
+        return responses.pop(0) if len(responses) > 1 else responses[0]
 
     monkeypatch.setattr(runtime, "research", forbidden)
     monkeypatch.setattr(runtime, "generate", generate)
     asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, job_id))
     with app.state.sessions() as db:
         job = db.get(AgentJob, job_id)
-        assert job.status == "unverified"
-        assert job.summary.startswith("Anfrage nicht vollständig beantwortet: ")
+        assert job.status == ("unverified" if queried else "failed")
+        if queried:
+            assert job.summary.startswith("Anfrage nicht vollständig beantwortet: ")
         assert not any(s.kind in {"effect", "input"} for s in runtime.steps(db, job_id))
     assert sum(c["method"] == "tools/call" for c in calls) == int(queried)
 

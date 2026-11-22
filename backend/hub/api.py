@@ -165,6 +165,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_workspace_search(app, factory)
     install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
+    from hub.runtime_status import install_runtime_status
+
+    install_runtime_status(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
     from hub.deletion_cleanup import install_cleanup_api
 

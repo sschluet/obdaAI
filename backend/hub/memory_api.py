@@ -25,6 +25,11 @@ from hub.memory import (
 )
 
 
+class PromoteInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1)
+
+
 class MemoryInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str = Field(pattern=r"^[0-9a-f-]{36}$")
@@ -81,10 +86,30 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
             raise HTTPException(409, str(error)) from None
         return path
 
+    @app.post("/api/memories/{memory_id}/promote")
+    def promote(memory_id: str, body: PromoteInput, auth: Auth) -> dict[str, Any]:
+        from hub.memory_service import promote_memory
+
+        with factory() as db:
+            row = db.get(Memory, memory_id)
+            if not row:
+                raise HTTPException(404, "Erinnerung nicht gefunden")
+            try:
+                promote_memory(db, row, expected_revision=body.expected_revision)
+                db.commit()
+                return info(row)
+            except ValueError:
+                raise HTTPException(409, "Erinnerung oder archivierte Quelle geändert") from None
+
     @app.get("/api/memories")
     def listing(
-        auth: Auth, project_id: str | None = None, q: str = "", deleted: bool = False,
-        category: str | None = None, status: str | None = None, all_projects: bool = False,
+        auth: Auth,
+        project_id: str | None = None,
+        q: str = "",
+        deleted: bool = False,
+        category: str | None = None,
+        status: str | None = None,
+        all_projects: bool = False,
     ) -> list[dict[str, Any]]:
         if len(q) > 500:
             raise HTTPException(422, "Suchtext zu lang")
@@ -145,12 +170,19 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
             with factory() as db:
                 try:
                     row = create_app_memory(
-                        db, identifier=body.id, content=body.content, title=body.title,
-                        category=body.category, fact_type=body.fact_type, subject=body.subject,
-                        predicate=body.predicate, sensitivity=body.sensitivity,
+                        db,
+                        identifier=body.id,
+                        content=body.content,
+                        title=body.title,
+                        category=body.category,
+                        fact_type=body.fact_type,
+                        subject=body.subject,
+                        predicate=body.predicate,
+                        sensitivity=body.sensitivity,
                         cloud_providers=[str(p) for p in body.cloud_providers],
                         project_id=body.project_id,
-                        valid_from=body.valid_from, valid_until=body.valid_until,
+                        valid_from=body.valid_from,
+                        valid_until=body.valid_until,
                     )
                     db.commit()
                     return info(row)
@@ -203,12 +235,19 @@ def install_memory_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sessio
                     raise HTTPException(404, "Erinnerung nicht gefunden")
                 try:
                     edit_app_memory(
-                        db, row, expected_revision=body.revision, content=body.content,
-                        title=body.title, category=body.category, fact_type=body.fact_type,
-                        subject=body.subject, predicate=body.predicate,
+                        db,
+                        row,
+                        expected_revision=body.revision,
+                        content=body.content,
+                        title=body.title,
+                        category=body.category,
+                        fact_type=body.fact_type,
+                        subject=body.subject,
+                        predicate=body.predicate,
                         sensitivity=body.sensitivity,
                         cloud_providers=[str(p) for p in body.cloud_providers],
-                        project_id=body.project_id, valid_from=body.valid_from,
+                        project_id=body.project_id,
+                        valid_from=body.valid_from,
                         valid_until=body.valid_until,
                     )
                     db.commit()

@@ -289,6 +289,19 @@ def bound_interfaces():
     ]
 
 
+def test_mixed_request_keeps_observation_target_read_only_in_the_actual_generation_schema():
+    interfaces = bound_interfaces()
+    interfaces[0]["kind"] = "home_assistant"
+    interfaces[1]["read_only"] = True
+    schema = Draft202012Validator(decision_schema([TARGET, HA_TARGET], interfaces=interfaces))
+    action = decision("http", {"method": "POST", "path": "/api/change", "verification": PROOF})
+    assert schema.is_valid(action)
+    action["integration_id"] = HA_TARGET
+    assert not schema.is_valid(action)
+    action["arguments"] = {"method": "GET", "path": "/api/states"}
+    assert schema.is_valid(action)
+
+
 def test_bound_interfaces_enforce_kind_tool_mapping_and_ha_command_scopes():
     validator = Draft202012Validator(
         decision_schema([TARGET, HA_TARGET], interfaces=bound_interfaces())

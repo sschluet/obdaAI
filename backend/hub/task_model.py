@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, text
 
 from hub.action_api import digest, encode
-from hub.db import ProviderConfig, SourceChunk, TaskRun, TaskStep
+from hub.db import ProviderConfig, TaskRun, TaskStep
 from hub.paperless_api import collect_context
 from hub.policy import ContextPart
 from hub.provider_settings import runtime_provider
@@ -56,7 +56,9 @@ def execution_lock(factory: Any, run_id: str) -> Any:
                 connection.commit()
 
 
-def context(db: Any, spec: Any, manifest: dict[str, Any]) -> tuple[list[ContextPart], list[str]]:
+def context(
+    db: Any, spec: Any, manifest: dict[str, Any], cfg: Any = None
+) -> tuple[list[ContextPart], list[str]]:
     parts = [
         ContextPart(
             source_id="task-policy",
@@ -80,26 +82,18 @@ def context(db: Any, spec: Any, manifest: dict[str, Any]) -> tuple[list[ContextP
             )
         )
         roles.append("system")
-    for source in spec.sources:
-        chunks = list(
-            db.scalars(
-                select(SourceChunk)
-                .where(SourceChunk.source_id == str(source.id))
-                .order_by(SourceChunk.locator, SourceChunk.id)
-                .limit(129)
-            )
-        )
-        if not chunks or len(chunks) > 128:
-            raise HTTPException(409, "Quelle fehlt oder überschreitet Analysegrenze")
-        for chunk in chunks:
-            parts.append(
-                ContextPart(
-                    source_id=str(source.id),
-                    revision=source.revision,
-                    content="Untrusted source [" + chunk.locator + "]:\n" + chunk.content,
-                )
-            )
-            roles.append("user")
+    from hub.config import Settings
+    from hub.memory_task_context import assemble_task_context
+
+    shared = assemble_task_context(
+        db,
+        cfg or Settings(),
+        spec.goal,
+        str(spec.project_id) if spec.project_id else None,
+        spec.sources,
+    )
+    parts.extend(shared)
+    roles.extend(["user"] * len(shared))
     parts.append(ContextPart(source_id="task-goal", revision=1, content=spec.goal))
     roles.append("user")
     return parts, roles
@@ -190,7 +184,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                 actual = db.get(ProviderConfig, row.id)
                 if not actual or not actual.enabled or actual.revision != row.revision:
                     raise ValueError("Provider drift before inference")
-            parts, roles = context(db, spec, manifest)
+            parts, roles = context(db, spec, manifest, cfg)
             integration_step = db.get(TaskStep, (run_id, 0))
             integration_selection = (
                 json.loads(integration_step.result)["selection"]
@@ -448,7 +442,45 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                 ):
                     raise ValueError("Task stopped before Paperless provider boundary")
                 validate_task_integrations(db, run.task_id, actual_spec, integration_selection)
-        async with asyncio.timeout(min(remaining, cfg.local_timeout)):
+        from hub.memory_task_context import validate_task_context
+
+        def context_boundary() -> None:
+            with factory() as current_db:
+                bound_run = current_db.get(TaskRun, run_id)
+                if not bound_run:
+                    raise PermissionError("Task run no longer available")
+                bound_task, _, bound_spec = current(current_db, bound_run.task_id)
+                if (
+                    bound_run.status != "running"
+                    or bound_run.error
+                    or bound_task.paused
+                    or bound_task.archived
+                    or bound_task.revision != bound_run.task_revision
+                    or bound_task.control_revision != bound_run.control_revision
+                ):
+                    raise PermissionError("Task changed before provider dispatch")
+                check_schedule(current_db, bound_run)
+                if row:
+                    actual_provider = current_db.get(ProviderConfig, row.id)
+                    if (
+                        not actual_provider
+                        or not actual_provider.enabled
+                        or actual_provider.revision != row.revision
+                    ):
+                        raise PermissionError("Task provider changed before dispatch")
+                check_bindings(current_db, bound_spec)
+                validate_task_context(current_db, cfg, spec.goal, parts)
+                if integration_selection:
+                    validate_task_integrations(
+                        current_db, bound_run.task_id, bound_spec, integration_selection
+                    )
+
+        context_boundary()
+        if isinstance(provider, Providers):
+            provider.before_send = context_boundary
+        # The provider enforces queue, first-content and idle deadlines. An idle
+        # timeout is not a total task-generation budget, especially during prefill.
+        async with asyncio.timeout(remaining):
             async with aclosing(provider.stream(parts, roles, external=False, grants=[])) as stream:
                 async for chunk in stream:
                     if not isinstance(chunk, str) or len(audit["answer"]) + len(chunk) > 24000:
@@ -469,6 +501,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
                             raise ValueError("Cancelled or task drift")
                         check_schedule(db, run)
                         check_bindings(db, current_spec)
+                        validate_task_context(db, cfg, spec.goal, parts)
                         if integration_selection:
                             validate_task_integrations(
                                 db, run.task_id, current_spec, integration_selection

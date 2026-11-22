@@ -4,7 +4,9 @@ import asyncio
 import ipaddress
 import json
 import socket
+import time
 from collections.abc import AsyncIterator, Callable
+from contextlib import nullcontext
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -12,6 +14,7 @@ import httpx
 
 from hub.budgets import ExecutionLimitError
 from hub.config import Settings, read_secret
+from hub.inference_capacity import InferenceWaitTimeout, local_capacity
 from hub.policy import CloudGrant, ContextPart, check_egress
 from hub.routing import Capability, Route
 
@@ -154,6 +157,7 @@ class Providers:
         self.route_calls = 0
         self.local_json_schema: dict[str, Any] | None = None
         self.before_send: Callable[[], None] | None = None
+        self.on_progress: Callable[[str], None] | None = None
 
     def _target(self, external: bool) -> tuple[str, dict[str, str], dict[str, str], str]:
         s = self.settings
@@ -255,6 +259,7 @@ class Providers:
         ]
         async with (
             self.local_slot,
+            local_capacity(self.settings, self.on_progress),
             httpx.AsyncClient(
                 # The router returns one complete JSON response: unlike an
                 # answer stream, it may produce no HTTP data during generation.
@@ -268,6 +273,8 @@ class Providers:
             ) as client,
         ):
             for attempt in range(2):
+                if self.before_send:
+                    self.before_send()
                 self.route_calls += 1
                 response = await client.post(
                     target,
@@ -336,10 +343,13 @@ class Providers:
         ]
         async with (
             self.local_slot,
+            local_capacity(self.settings, self.on_progress),
             httpx.AsyncClient(
                 timeout=self.settings.local_timeout, trust_env=False, follow_redirects=False
             ) as client,
         ):
+            if self.before_send:
+                self.before_send()
             response = await client.post(
                 target,
                 headers=headers,
@@ -430,6 +440,7 @@ class Providers:
         if not external and self.settings.local_disable_thinking:
             body["enable_thinking"] = False
         if not external and self.local_json_schema is not None:
+            body["temperature"] = 0
             body["response_format"] = {
                 "type": "json_schema",
                 "json_schema": {
@@ -443,22 +454,42 @@ class Providers:
         slot = asyncio.Semaphore(1) if external else self.local_slot
         async with (
             slot,
+            nullcontext() if external else local_capacity(self.settings, self.on_progress),
             httpx.AsyncClient(
-                timeout=self.settings.openrouter_timeout
-                if external
-                else self.settings.local_timeout,
+                timeout=(self.settings.openrouter_timeout if external else httpx.Timeout(
+                    self.settings.local_timeout, read=self.settings.local_first_token_timeout
+                )),
                 trust_env=False,
                 follow_redirects=False,
             ) as client,
         ):
             if self.before_send:
                 self.before_send()
+            content_received = False
+            content_deadline = time.monotonic() + (
+                self.settings.openrouter_timeout if external
+                else self.settings.local_first_token_timeout
+            )
             async with client.stream(
                 "POST", target, headers=headers, extensions=extensions, json=body
             ) as response:
                 response.raise_for_status()
                 limited = False
-                async for line in response.aiter_lines():
+                iterator = response.aiter_lines().__aiter__()
+                while True:
+                    try:
+                        async with asyncio.timeout(
+                            max(0.001, content_deadline - time.monotonic())
+                        ):
+                            line = await anext(iterator)
+                    except TimeoutError:
+                        if external:
+                            raise
+                        raise InferenceWaitTimeout(
+                            "idle" if content_received else "first_content"
+                        ) from None
+                    except StopAsyncIteration:
+                        break
                     if not line.startswith("data: "):
                         continue
                     value = line[6:]
@@ -487,6 +518,11 @@ class Providers:
                             )
                         chunk = choices[0].get("delta", {}).get("content")
                         if chunk:
+                            content_received = True
+                            content_deadline = time.monotonic() + (
+                                self.settings.openrouter_timeout if external
+                                else self.settings.local_timeout
+                            )
                             yield chunk
                         if choices[0].get("finish_reason") == "length":
                             limited = True
