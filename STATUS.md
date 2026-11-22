@@ -29,6 +29,16 @@ Vertrags-/Browserprüfungen. Gmail, Drive und UniFi sind dort nicht konfiguriert
 und erhalten keinen behaupteten Live-Nachweis. Exakte neue CI- und Live-Ergebnisse
 werden erst nach ihrem tatsächlichen Abschluss ergänzt.
 
+Lokale Vollprüfung des Auditstands: 3.130 Tests einschließlich PostgreSQL bestanden.
+CI 45041833469 bestand 3.124 Tests mit sechs Plattform-Skips sowie die neuen
+Integrations-Browserfälle, scheiterte jedoch an einem bestehenden mobilen
+Scrolltest. Eine isolierte Ablaufspur zeigte native Tastaturbewegung nach dem
+Messbeginn bei unverändertem Layout. Der Test wartet nun auf `scrollend` statt
+auf eine feste kurze Pause; seine Drei-Pixel-Grenze und der Produktionscode
+bleiben unverändert. Der gezielte vollständige Scrollablauf bestand auf einer
+frischen Fixture. Eine neue vollständige exakte CI ist weiterhin erforderlich;
+der ursprüngliche fehlgeschlagene Lauf bleibt als Beleg erhalten.
+
 ## 22.11.2026 — Fähigkeitsgestützte Werkzeugplanung und lesende Zugriffsprüfung
 
 Der gemeinsame Agentenlauf für Chat, Aufgaben und Projekte erhält kompakte
