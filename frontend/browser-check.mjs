@@ -432,3 +432,5 @@ console.log('Browser checks passed: login, SSE chat, durable reload, titles, edi
 await import('./memory-intelligence-check.mjs');
 
 await import('./google-drive-check.mjs');
+
+await import('./ha-access-check.mjs');

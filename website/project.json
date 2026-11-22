@@ -6,6 +6,12 @@
   "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
   "screenshots": [
     {
+      "id": "ha-access",
+      "title": "Zugriff prüfen. Klar antworten.",
+      "description": "Eine einfache Frage nach Home Assistant nutzt automatisch die freigegebene Verbindung und eine feste lesende HTTP-Prüfung. Erfolg und Verbindungsfehler erscheinen verständlich im Chat, ohne Änderungsfreigaben. Ausschließlich synthetische API-Antworten und Testdaten; kein Nachweis eines echten HA-Zugriffs.",
+      "image": "assets/haaccess.png"
+    },
+    {
       "id": "google-drive",
       "title": "Google Drive als Quelle und Ablage",
       "description": "Optionale geführte Einrichtung, Ordnerauswahl und eigener Ablageordner. Ausschließlich synthetisches Konto und simulierte Google-Antworten; keine echte Anmeldung, kein realer Drive-Zugriff.",
@@ -662,7 +668,7 @@
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Produktive Wartung und Restore bleiben offen.",
+          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Einfache Zugriffsfragen nutzen die verfügbare lesende HTTP-Schnittstelle und unterscheiden Erreichbarkeit, Anmeldung und Fehler. Die neue Chatdarstellung ist synthetisch im Browser geprüft; ihre echte Zielabnahme steht noch aus. Produktive Wartung und Restore bleiben offen.",
           "status": "limited"
         },
         {

@@ -21,9 +21,11 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import defer
 
+from hub import agent_capabilities
 from hub.action_api import digest, encode, lock
 from hub.agent_clock import freeze_clock
 from hub.agent_context import AgentContextLimitError, fit
+from hub.agent_failures import failure_info, failure_summary, http_read_failure
 from hub.agent_models import AgentJob, AgentPolicy, AgentStep
 from hub.agent_tools import (
     SCHEMAS,
@@ -172,6 +174,13 @@ dieser Struktur. Ein solcher Schritt verifiziert keine Änderung.
 Für weitere öffentliche Recherche nutze research mit einem topic. Die getrennte
 Rechercheplanung erhält nur den aktuellen Benutzerauftrag und bereits öffentliche
 Quellen, keine privaten Werkzeugergebnisse. Erfinde keine Recherchebelege.
+Nutze interfaces.capabilities und vorhandene erfolgreiche Lesebelege.
+Wenn sie den Auftrag bereits beantworten, schließe ihn ab.
+Wähle sonst passende beobachtete Werkzeuge oder freigegebene Recherche.
+Erfinde keine Schnittstellen, Bestätigungs- oder Testbefehle.
+Freigegebene Lesezugriffe erfordern keine zusätzliche Benutzerbestätigung.
+Wähle nachvollziehbare Standardwerte selbst, wenn der Auftrag damit eindeutig
+erfüllbar ist. Frage nur bei tatsächlich fehlenden notwendigen Angaben nach.
 """
 
 
@@ -1392,7 +1401,12 @@ def create_job(
         )
         and all(is_read_profile(p, r, c) for p, r, c in chosen_profiles)
     )
-    read_only = read_only or archive_read_only
+    connection_read_only = agent_capabilities.access_question(
+        goal, {p.id: (p, r, c) for p, r, c in chosen_profiles}
+    ) and not any(
+        str(part.get("source_id", "")).startswith("agent-effect:") for part in context or []
+    )
+    read_only = read_only or archive_read_only or connection_read_only
     hidden = Conversation(
         purpose="agent", title="Systemsteuerung", manual_title=True, cloud_allowed=False
     )
@@ -1406,18 +1420,21 @@ def create_job(
         conversation_id=conversation_id,
         model_conversation_id=hidden.id,
         goal=goal,
-        research_allowed=research_allowed,
+        research_allowed=research_allowed and not connection_read_only,
         bindings=encode(
             {
                 "selection": concrete_selection(selected, {item["id"] for item in profiles}),
                 "profiles": profiles,
                 "read_only": read_only,
+                "capability_access": connection_read_only,
+                "capability_version": 1,
                 "clock": freeze_clock(cfg.agent_timezone),
             }
         ),
         context=encode(context or []),
         max_steps=min(r.max_steps for r in rulesets),
-        max_effects=0 if archive_read_only else min(r.max_effects for r in rulesets),
+        max_effects=(0 if archive_read_only or connection_read_only
+                     else min(r.max_effects for r in rulesets)),
         timeout_seconds=min(r.timeout_seconds for r in rulesets),
     )
     if task_run:
@@ -1813,6 +1830,16 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
                 secret = encode(refresh_credentials(db, cfg, profile, final_gate))
             result = invoke(cfg, config, secret, document["tool"], args, rules, final_gate)
             step.status, step.result = "succeeded", encode(result)
+            if not effect and document["tool"] == "http":
+                status = result.get("http_status")
+                failure = http_read_failure(status if type(status) is int else 0)
+                if failure:
+                    step.status, step.result = "failed", encode({**result, **failure})
+            if not effect and document["tool"] == "ha.websocket" and (
+                result.get("success") is False
+            ):
+                step.status = "failed"
+                step.result = encode(failure_info(ValueError(), False))
             if document["tool"] == "shell" and (
                 result.get("exit_code") != 0
                 or result.get("verification", {}).get("exit_code", 0) != 0
@@ -1841,29 +1868,8 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
                     )
                     reference.result = encode(receipt)
         except Exception as error:
-            from hub.agent_schema import SchemaValidationFailure
-            from hub.mcp_client import MCPFailure
-
-            failure_info: dict[str, str] = (
-                {"failure_category": error.reason}
-                if isinstance(error, MCPFailure)
-                else {
-                    "failure_category": "timeout" if error.reason.endswith("_timeout")
-                    else "protocol_error",
-                    "failure_phase": "schema_" + error.reason,
-                }
-                if isinstance(error, SchemaValidationFailure)
-                else {}
-            )
             step.status = "uncertain" if effect else "failed"
-            step.result = encode(
-                {
-                    "message": "Keine eindeutige Ausführungsbestätigung",
-                    "automatic_retry": False,
-                    "effect_verified": False,
-                    **failure_info,
-                }
-            )
+            step.result = encode(failure_info(error, effect))
         db.commit()
         if effect and args.get("verification"):
             from hub.agent_reconcile import verify
@@ -1884,6 +1890,92 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
             )
             step.status = "succeeded" if proof["effect_verified"] else "uncertain"
             db.commit()
+
+
+async def inspect_capabilities(factory: Any, cfg: Settings, job_id: str) -> tuple[bool, bool]:
+    """Use the shared durable dispatch path for adapter-authored first reads."""
+    sequences: list[int] = []
+    with factory() as db:
+        job = db.get(AgentJob, job_id)
+        assert job
+        profiles = gate(db, cfg, job)
+        frozen = json.loads(job.bindings)
+        access = frozen.get("capability_access") is True
+        if frozen.get("capability_version") != 1:
+            return False, False
+        if not access and job.max_steps < 2:
+            return False, False  # Leave the single permitted operation to the planner.
+        history = steps(db, job_id)
+        # Never insert a new inspection into an already planned/executed action chain.
+        if history:
+            if not all(json.loads(step.document).get("capability_inspection") is True
+                       and step.kind == "read" for step in history):
+                return False, any(json.loads(step.document).get("capability_inspection")
+                                  for step in history)
+            for step in history:
+                document = json.loads(step.document)
+                profile, rules, _ = profiles[document["integration_id"]]
+                expected = agent_capabilities.bootstrap(profile, rules)
+                if expected is None or any(document[key] != expected[key]
+                                           for key in ("tool", "arguments")):
+                    raise PermissionError("Gebundene Verbindungsprüfung geändert")
+                sequences.append(step.sequence)
+        for profile, rules, _ in profiles.values():
+            if history:
+                break
+            if profile.kind != "home_assistant" and not access:
+                continue
+            inspection = agent_capabilities.bootstrap(profile, rules)
+            if inspection is None:
+                continue
+            step = record(db, job, "read", {
+                "kind": "tool", "integration_id": profile.id,
+                **inspection, "capability_inspection": True,
+                "message": "Freigegebene Verbindung ausschließlich lesend prüfen",
+                "target": {"kind": profile.kind, "profile_revision": profile.revision,
+                           "config_sha256": digest(profile.config)},
+            })
+            sequences.append(step.sequence)
+        if len(sequences) > job.max_steps:
+            complete(db, job, "failed", "Das Schrittlimit reicht für die ausgewählten "
+                     "Verbindungsprüfungen nicht aus. Bitte wähle weniger Verbindungen.")
+            db.commit()
+            return True, False
+        db.commit()  # Durable intent before DNS/authentication or any target request.
+    for sequence in sequences:
+        await asyncio.to_thread(dispatch, factory, cfg, job_id, sequence)
+    with factory() as db:
+        job = db.get(AgentJob, job_id)
+        assert job
+        profiles = gate(db, cfg, job)
+        history = steps(db, job_id)
+        failed = [step for step in history if step.status == "failed"]
+        if failed:
+            complete(db, job, "failed", failure_summary(json.loads(failed[-1].result)))
+            db.commit()
+            return True, bool(sequences)
+        if access:
+            if len(sequences) != len(profiles):
+                complete(db, job, "failed", "Für diese Verbindungsprüfung ist kein "
+                         "passendes lesendes Werkzeug freigegeben.")
+            else:
+                kinds = {profile.kind for profile, _, _ in profiles.values()}
+                if kinds == {"home_assistant"}:
+                    valid = all(
+                        isinstance((body := json.loads(step.result).get("body")), dict)
+                        and body.get("message") == "API running."
+                        for step in history if step.sequence in sequences
+                    )
+                    complete(db, job, "observed" if valid else "failed",
+                             "Ja, Home Assistant ist erreichbar. Die Anmeldung funktioniert."
+                             if valid else "Die Verbindung antwortet, aber eine gültige "
+                             "Home-Assistant-API-Antwort wurde nicht bestätigt.")
+                else:
+                    complete(db, job, "observed", "Die ausgewählten Verbindungen wurden "
+                             "mit den freigegebenen lesenden Werkzeugen geprüft.")
+            db.commit()
+            return True, bool(sequences)
+    return False, bool(sequences)
 
 
 async def execute_agent(factory: Any, cfg: Settings, providers: Any, job_id: str) -> None:
@@ -1919,12 +2011,22 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                 ]
                 if interrupted:
                     for step in interrupted:
-                        step.status = "uncertain"
+                        step.status = "uncertain" if step.kind == "effect" else "failed"
+                    unresolved = any(
+                        step.kind == "effect" and (
+                            step.status in {"uncertain", "dispatching", "verifying"}
+                            or step.status == "succeeded"
+                            and not json.loads(step.result).get("effect_verified")
+                        ) for step in steps(db, job_id)
+                    )
                     complete(
                         db,
                         job,
-                        "uncertain",
-                        "Unterbrochener Schritt: kein automatischer Wiederholungsversuch.",
+                        "uncertain" if unresolved else "failed",
+                        "Unterbrochener Änderungsschritt: kein automatischer "
+                        "Wiederholungsversuch." if unresolved
+                        else "Die lesende Prüfung wurde unterbrochen. "
+                        "Du kannst eine neue Anfrage stellen.",
                     )
                     db.commit()
                     return
@@ -1932,11 +2034,17 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                 private_mail_read = mail_read_job(job, profiles)
                 private_archive_read = paperless_read_job(job, profiles)
                 private_read = private_mail_read or private_archive_read
+                if json.loads(job.bindings).get("capability_access"):
+                    private_mail_read = private_archive_read = private_read = False
                 if private_mail_read:
                     prepare_mail_catalogs(db, job, profiles)
                 db.commit()
             if not private_read:
-                await research(factory, cfg, providers, job_id)
+                handled, inspected = await inspect_capabilities(factory, cfg, job_id)
+                if handled:
+                    return
+                if not inspected:
+                    await research(factory, cfg, providers, job_id)
             while True:
                 with factory() as db:
                     job = db.get(AgentJob, job_id)
@@ -1946,15 +2054,19 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     private_archive_read = paperless_read_job(job, profiles)
                     private_read = private_mail_read or private_archive_read
                     history = steps(db, job_id)
-                    if any(
-                        s.status in {"uncertain", "failed"} and s.kind != "model" for s in history
-                    ):
+                    broken = [s for s in history if s.status in {"uncertain", "failed"}
+                              and s.kind != "model"]
+                    if broken:
+                        unresolved = any(s.kind == "effect" and (
+                            s.status in {"dispatching", "verifying", "uncertain"}
+                            or s.status == "succeeded"
+                            and not json.loads(s.result).get("effect_verified")
+                        ) for s in history)
                         complete(
-                            db,
-                            job,
-                            "uncertain",
-                            "Ein Werkzeugschritt ist nicht eindeutig abgeschlossen. "
-                            "Keine weitere Änderung gestartet.",
+                            db, job, "uncertain" if unresolved else "failed",
+                            "Ein Änderungsschritt ist nicht eindeutig abgeschlossen. "
+                            "Keine weitere Änderung gestartet." if unresolved
+                            else failure_summary(json.loads(broken[-1].result)),
                         )
                         db.commit()
                         return
@@ -2081,6 +2193,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 "kind": p.kind,
                                 "name": p.name,
                                 "writes_enabled": p.writes_enabled,
+                                "capabilities": agent_capabilities.describe(p, r),
                                 "rules": r.model_dump(),
                             }
                             for p, r, _ in profiles.values()

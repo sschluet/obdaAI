@@ -647,7 +647,11 @@ SCHEMAS: dict[str, type[Strict]] = {
 
 def ha_metadata_read(data: dict[str, Any]) -> bool:
     """Only the installation/backup reads already used by the fixed HA reader."""
+    from hub.agent_capabilities import HA_WS_READS
+
     parameters = data["parameters"]
+    if data["type"] in HA_WS_READS and not parameters:
+        return True
     return (data["type"] == "backup/info" and not parameters) or (
         data["type"] == "supervisor/api"
         and set(parameters) == {"endpoint", "method"}

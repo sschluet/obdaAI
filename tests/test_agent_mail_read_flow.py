@@ -629,7 +629,7 @@ def test_prepared_catalog_is_not_duplicated_and_dispatching_catalog_is_never_rep
 
     monkeypatch.setattr(runtime, "generate", finish)
     status, history = execute(read_mailbox)
-    assert status == ("uncertain" if interrupted else "failed")
+    assert status == "failed"
     assert sum(step.kind == "read" for step in history) == 1
     assert sum(step.kind == "feedback" for step in history) == (0 if interrupted else 2)
     assert bool(calls) is not interrupted

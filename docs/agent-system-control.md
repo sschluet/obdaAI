@@ -57,6 +57,36 @@ Beispielaktionen dürfen das erreichbare Funktionsspektrum nicht definieren.
 Die Schnittstellen bleiben austauschbar; der Agent benötigt keine ungeprüft
 importierten Erweiterungsprogramme für jedes neue Ziel.
 
+Der gemeinsame Planer erhält unter `interfaces.capabilities` kompakte, von der
+Anwendung erstellte Hinweise auf freigegebene Schnittstellen, feste Inspektionen
+und geeignete Wege zur Ermittlung weiterer Funktionen. Diese Hinweise ersetzen
+keine Zielberechtigungen und begrenzen bestehende Verwaltungsfreigaben nicht auf
+eine feste Liste. Modelle müssen Ergebnisse und aktuelle Schnittstellen nutzen;
+ein freigegebenes Befehlspräfix belegt allein keinen tatsächlich vorhandenen Befehl.
+
+Vollständige reine Zugriffsfragen werden als lesende Aufträge ohne Recherche,
+Modellplanung oder Schreibschritte ausgeführt. Je nach freigegebenem Adapter
+stehen HTTP, SSH-Inspektion, MCP-Katalog oder Gmail-Profil zur Verfügung. Für HA
+prüft ein authentifiziertes `GET /api/` die erwartete API-Antwort. Bei allgemeinen
+HA-Aufträgen steht dieser erste Lesebeleg vor der weiteren Modellplanung bereit;
+Recherche bleibt danach bei Bedarf wählbar. Die bereits vorhandenen speziellen
+Mail- und Paperless-Leseplaner bleiben erhalten. Andere Formulierungen verwenden
+weiterhin den begrenzten allgemeinen Planer. Der
+[offizielle HA-REST-Vertrag](https://contributors.home-assistant.io/core/internals/rest-api/)
+dokumentiert den Statusendpunkt; dies ist kein vollständiger Administrationsnachweis.
+Die zusätzlich als reine Leseoperationen eingeordneten WebSocket-Kommandos
+`get_config`, `get_states`, `get_services` und `get_panels` nehmen keine Parameter
+an und folgen dem [offiziellen WebSocket-Vertrag](https://contributors.home-assistant.io/core/internals/websocket-api/).
+
+Feste Inspektionen verwenden dieselben dauerhaften Absichten, aktuellen Profil-
+und Richtlinienrevisionen, Laufgrenzen und letzten Transportprüfungen wie andere
+Werkzeuge. Erfolgreiche oder fehlgeschlagene Schritte werden nicht blind erneut
+versandt. Lesefehler enden als `failed` mit festen verständlichen Kategorien
+(beispielsweise Anmeldung, Verbindung oder Timeout), ohne Ausnahmetexte oder
+Zielinhalte als Fehlermeldung auszugeben. Ungeklärte Änderungen behalten
+`uncertain`, auch wenn erst ihre anschließende Nachprüfung unterbrochen wurde.
+Bestehende ungeklärte Aufträge werden nicht nachträglich als erfolgreich bewertet.
+
 Öffentliche Recherche und private Systembeobachtung sind getrennte Datenwege.
 Der lokale Rechercheplan verwendet ein exaktes JSON-Schema mit ausschließlich
 `queries`: höchstens drei nichtleere Suchfragen mit je höchstens 500 Zeichen.

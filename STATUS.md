@@ -1,5 +1,31 @@
 # obdaAI — Status 22.11.2026
 
+## 22.11.2026 — Fähigkeitsgestützte Werkzeugplanung und lesende Zugriffsprüfung
+
+Der gemeinsame Agentenlauf für Chat, Aufgaben und Projekte erhält kompakte
+adapterbezogene Fähigkeitshinweise. Bei allgemeinen HA-Aufträgen prüft er zuerst
+die freigegebene API lesend und plant anschließend auf Basis des tatsächlichen
+Ergebnisses. Geeignete Werkzeuge und Recherche bleiben innerhalb der bestehenden
+Rechte wählbar; die Hinweise ersetzen keine dynamisch ermittelten Schnittstellen.
+Reine Zugriffsfragen verwenden feste lesende Prüfungen ohne Modellplanung,
+Recherche, Schreibaktion oder zusätzliche Bestätigungsrunde. Die bereits
+vorhandenen besonderen Mail-/Paperless-Lesewege werden weiterverwendet.
+
+Lesefehler erhalten verständliche feste Kategorien und enden als fehlgeschlagene
+Leseanfrage. Ungeklärte Änderungen bleiben ausdrücklich ungeklärt, auch bei einem
+Abbruch ihrer Nachprüfung. Bereits gespeicherte ungeklärte Aufträge bleiben
+unverändert. Keine Schemaänderung, keine Änderung bestehender Zielrechte.
+
+Die konkrete HA-Fehlerspur wurde auf der Test-VM nachvollzogen: ein ungeeigneter
+WebSocket-Verwaltungsbefehl wurde für eine Zugriffsfrage gewählt. Eine getrennte,
+echte freigegebene authentifizierte `GET /api/`-Prüfung bestätigte den vorhandenen
+Zugang ohne Zieländerung. Dies ist noch keine Abnahme des neuen Releases.
+Neue Unit-/API-Verträge und eine isolierte synthetische Desktop-/Mobilprüfung
+decken den korrigierten Ablauf ab. Vollständige exakte CI, Auslieferung und
+Abnahme des neuen Releases werden nach ihrem tatsächlichen Abschluss ergänzt.
+Die allgemeine autonome Administrationsqualität aller Adapter bleibt teilweise
+abgenommen; diese Korrektur behauptet keine universell fehlerfreie Modellplanung.
+
 ## 22.11.2026 — Test-VM repariert; aktueller Release ausgerollt
 
 **ab2b861 / Schema 0047** läuft auf der Test-VM. Der Benutzer hat die autonome
