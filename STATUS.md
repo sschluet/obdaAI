@@ -1,6 +1,6 @@
 # obdaAI — Status 22.11.2026
 
-## 22.11.2026 — Optionale Google-Drive-Verbindung in Entwicklung
+## 22.11.2026 — Optionale Google-Drive-Verbindung geprüft; Rollout blockiert
 
 Google Drive ist als eigener Einrichtungstyp unter Einstellungen → Integrationen
 implementiert. Quellen und Ablage erhalten getrennte ausdrückliche OAuth-Rechte.
@@ -14,12 +14,29 @@ Ordner-/Kontowechsel nehmen alte Quellensnapshots aus dem aktiven Bereich, ohne
 Originale zu löschen. Auch wartende Parser und Retry-Aufrufe dürfen sie nicht
 reaktivieren. Quellenrechte werden am finalen Modellübergang erneut geprüft.
 
-Gezielte synthetische Backend-/Transport-/Browserfälle sind bestanden; vollständige
-lokale und exakte CI-Prüfung dieses Entwicklungsstands folgen noch. Kein echter
-Google-Account wurde verwendet. Anmeldung, reale Downloads/Uploads und VM-Rollout
-bleiben offen. Am 22.11. war die Test-VM weder über LAN noch Tailscale erreichbar;
-der letzte tatsächlich bestätigte VM-Stand bleibt aa4a5ae / 0046 vom 21.10.
-Es wurden keine VM-, Firewall-, Konto- oder Inferenzänderungen vorgenommen.
+Die vollständige lokale Backendprüfung bestand 2.817 Tests einschließlich der
+isolierten PostgreSQL-Prüfungen; Ruff, mypy (135 Module) und Secret-Scan bestanden.
+Die exakte vollständige CI für **ab2b861 / Schema 0047** ist erfolgreich:
+[45014790113](https://github.com/sschluet/obdaAI/actions/runs/45014790113) bestand 2.811 Tests,
+6 plattformbedingte Skips, alle 41 Browserprüfungen und alle sechs Pflichtjobs
+samt App-Tree-Beleg. Lokal liefen die Backendtests auf a1e10e2; danach änderte
+ab2b861 ausschließlich eine vorhandene UI-Beschriftung. TypeScript und Build
+bestanden erneut. Der lokale Browsernachweis ist zusammengesetzt: zuerst trat
+ein bestehendes asynchrones Listenproblem auf, der unveränderte Nachlauf bestand;
+der Designfall benötigte eine frische synthetische Fixture, weil alte Beispieldaten
+außerhalb der letzten 100 Chats lagen. Dies wird nicht als ein einziger lokal
+erfolgreicher Gesamtlauf ausgegeben; die exakte CI bestand unabhängig komplett.
+Kein echter Google-Account wurde verwendet. Anmeldung und reale Downloads/Uploads
+bleiben offen.
+
+Die Test-VM war am 22.11. zunächst unerreichbar, später über den vorgesehenen
+Tailscale-Fallback wieder lesend prüfbar: neun App-Dienste laufen mit aa4a5ae /
+0046. Der Rollout bleibt blockiert, weil der konfigurierte Vault nicht eingehängt
+ist und deshalb keine vollständige Sicherung möglich ist. Zusätzlich fehlen die
+registrierte LAN-Adresse, der Host-nginx meldet einen Bind-Fehler und es sind nur
+rund 4,6 GiB frei. Keine Sicherungen oder Releases wurden gelöscht; keine Mount-,
+Netzwerk-, VM- oder Dienstkonfiguration wurde geändert. Vor einer Ausrollung ist
+der vollständige Sicherungsweg wiederherzustellen und frisch zu prüfen.
 Einrichtung, Datenfluss und Grenzen: [Google Drive](docs/google-drive.md).
 
 ## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand

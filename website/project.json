@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-22",
-  "applicationCommit": "aa4a5ae",
-  "schema": "0046",
-  "tests": 2701,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
+  "applicationCommit": "ab2b861",
+  "schema": "0047",
+  "tests": 2811,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
   "screenshots": [
     {
       "id": "google-drive",
@@ -838,18 +838,18 @@
   ],
   "development": {
     "mode": "local",
-    "schema": "0046",
-    "browserChecks": 40,
-    "serverDeployment": true,
-    "commit": "aa4a5ae",
-    "ciTests": 2701,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
+    "schema": "0047",
+    "browserChecks": 41,
+    "serverDeployment": false,
+    "commit": "ab2b861",
+    "ciTests": 2811,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
     "deployedCommit": "aa4a5ae",
     "deployedSchema": "0046",
-    "liveScope": "Release aa4a5ae / Schema 0046: vollständige lokale/exakte CI-Prüfung und getrennte synthetische HTTP-/Workerabnahme für enge deterministische Berufsfakten, Korrektur und späteren Abruf mit echtem lokalem Antwortmodell. Keine LLM-Extraktionszusage für diese Korrektur. Patch erhielt Schema/native Zustände; erste 2c85335-Korrekturabnahme blieb fehlgeschlagen und dokumentiert. Frühere d5940db-Mail-/Paperless-Abnahmen sind historische separate Belege. Allgemeine Sprach-/Langzeitqualität und optionale reale Embeddings bleiben offen; V1 partiell.",
+    "liveScope": "Google Drive: ab2b861 / Schema 0047 vollständig lokal und in exakter CI geprüft (2811 Tests, 6 plattformbedingte Skips, 41 UI-Prüfungen). Keine echte Google-Anmeldung, Downloads oder Uploads abgenommen. Noch kein VM-Rollout: vollständige Sicherung wegen fehlendem konfiguriertem Vault-Mount blockiert. Bestehende App zuletzt am 22.11.2026 lesend mit aa4a5ae / Schema 0046 bestätigt. Historische Memory-Abnahme und allgemeine Sprach-/Langzeitgrenzen bleiben unverändert; V1 partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "aa4a5ae",
-    "lastSuccessfulCIUI": 40
+    "lastSuccessfulCICommit": "ab2b861",
+    "lastSuccessfulCIUI": 41
   }
 }

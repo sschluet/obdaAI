@@ -114,9 +114,17 @@ neuen Integrationstyp nicht; nach einer Einrichtung keinen unkontrollierten
 App-Rollback auf einen älteren Stand durchführen und keine Daten löschen, um
 Rollback zu erzwingen.
 
-Gezielte API-, Transport-, UI- und Migrationsfälle sind synthetisch geprüft.
-Google-spezifische Browserantworten sind ausdrücklich simuliert; Quellenspeicher,
-Extraktionsweg und gerenderte Testdateien werden zusätzlich durch Backendtests
-geprüft. Eine persönliche Google-Anmeldung, echter Dateiabruf/Upload und die
-Ausrollung auf die Test-VM sind noch nicht abgenommen. Den aktuellen exakten
-Gesamtprüfungsstand führt `STATUS.md`.
+Release **ab2b861 / Schema 0047** ist vollständig in der
+[exakten CI](https://github.com/sschluet/obdaAI/actions/runs/45014790113) geprüft:
+2.811 Tests bestanden, 6 plattformbedingte Skips, 41 Browserprüfungen und alle
+Pflichtbuilds. Lokal bestanden 2.817 Backendtests mit PostgreSQL; die anschließende
+Änderung betraf nur eine UI-Beschriftung. Lokale Browsernachläufe und frische
+Design-Fixture sind getrennte Belege, kein behaupteter monolithischer Gesamtlauf.
+
+Google-spezifische Browserantworten sind simuliert; Quellenspeicher, Extraktionsweg
+und gerenderte Testdateien werden zusätzlich durch Backendtests geprüft. Eine
+persönliche Google-Anmeldung und echter Dateiabruf/Upload sind nicht abgenommen.
+Der VM-Rollout bleibt blockiert: Der konfigurierte Vault ist nicht eingehängt,
+damit ist kein vollständiges aktuelles Backup möglich. Es wurden weder Mounts
+noch Netzwerke geändert, keine alten Sicherungen gelöscht und kein unvollständiges
+Backup erzwungen. Den aktuellen Betriebs- und Prüfstand führt `STATUS.md`.
