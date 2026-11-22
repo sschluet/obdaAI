@@ -652,8 +652,8 @@
       "features": [
         {
           "title": "Google Drive als Wissensquelle und Dateiablage",
-          "status": "local",
-          "description": "Optionale Google-OAuth-Einrichtung mit getrennten Quellen- und Ablagerechten. Gewählte Ordner über die bestehende lokale Quellenindexierung nutzen; geprüfte Dateiversionen nach konkreter Freigabe neu im eigenen obdaAI-Ordner ablegen. Synthetische Tests, keine echte Google-Anmeldung. VM-Ausrollung noch offen."
+          "status": "limited",
+          "description": "Optionale Google-OAuth-Einrichtung mit getrennten Quellen- und Ablagerechten auf der Test-VM installiert; native API und Dialog im echten Browser geprüft. Gewählte Ordner verwenden die bestehende lokale Quellenindexierung, geprüfte Dateiversionen die eigene Ablage. Echte Google-Anmeldung und reale Transfers bleiben bis zur Kontoeinrichtung ungeprüft."
         },
         {
           "title": "Versionierte Skills",
@@ -840,13 +840,13 @@
     "mode": "local",
     "schema": "0047",
     "browserChecks": 41,
-    "serverDeployment": false,
+    "serverDeployment": true,
     "commit": "ab2b861",
     "ciTests": 2811,
     "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
-    "deployedCommit": "aa4a5ae",
-    "deployedSchema": "0046",
-    "liveScope": "Google Drive: ab2b861 / Schema 0047 vollständig lokal und in exakter CI geprüft (2811 Tests, 6 plattformbedingte Skips, 41 UI-Prüfungen). Keine echte Google-Anmeldung, Downloads oder Uploads abgenommen. Noch kein VM-Rollout: vollständige Sicherung wegen fehlendem konfiguriertem Vault-Mount blockiert. Bestehende App zuletzt am 22.11.2026 lesend mit aa4a5ae / Schema 0046 bestätigt. Historische Memory-Abnahme und allgemeine Sprach-/Langzeitgrenzen bleiben unverändert; V1 partiell.",
+    "deployedCommit": "ab2b861",
+    "deployedSchema": "0047",
+    "liveScope": "Release ab2b861 / Schema 0047 auf der reparierten Test-VM installiert. Native Drive-API und optionale Einrichtung im echten Browser (Desktop/320 px), ein strikt lokaler Chat mit Workerbeleg, echter Neustart und aktuelle verschlüsselte Sicherung bestanden. Netzwerk, Vault, Modell-/Suchzugang und Proton wieder verfügbar; vorhandene Daten und statische Zugangsdaten erhalten. Reale Google-Anmeldung, Drive-Downloads/Uploads und eine neue Wiederherstellungsprüfung bleiben offen; V1 partiell.",
     "designModernized": true,
     "interactionModernized": true,
     "lastSuccessfulCICommit": "ab2b861",

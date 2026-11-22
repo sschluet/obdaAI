@@ -124,7 +124,11 @@ Design-Fixture sind getrennte Belege, kein behaupteter monolithischer Gesamtlauf
 Google-spezifische Browserantworten sind simuliert; Quellenspeicher, Extraktionsweg
 und gerenderte Testdateien werden zusätzlich durch Backendtests geprüft. Eine
 persönliche Google-Anmeldung und echter Dateiabruf/Upload sind nicht abgenommen.
-Der VM-Rollout bleibt blockiert: Der konfigurierte Vault ist nicht eingehängt,
-damit ist kein vollständiges aktuelles Backup möglich. Es wurden weder Mounts
-noch Netzwerke geändert, keine alten Sicherungen gelöscht und kein unvollständiges
-Backup erzwungen. Den aktuellen Betriebs- und Prüfstand führt `STATUS.md`.
+Der Release ist inzwischen auf der Test-VM mit Schema 0047 installiert. Native API,
+Einrichtungsdialog (Desktop/320 px), ein echter lokaler Chat, Neustart und aktuelle
+verschlüsselte Sicherung sind live geprüft. Die erforderliche Reparatur stellte
+die bisherige Netzwerkidentität sowie Vault-/Modellverbindungen wieder her und
+korrigierte die Cache-Abgrenzung und Startreihenfolge der Sicherung. Bestehende
+Daten und Zugänge wurden erhalten; kein alter Cache oder Backup wurde gelöscht.
+Die Benutzeranmeldung bei Google, echte Downloads und Uploads bleiben ausdrücklich
+ungetestet. Aktuellen Betriebs- und Prüfstand führt `STATUS.md`.
