@@ -20,6 +20,13 @@ werden vor erneutem Dispatch durch begrenzte Planungskorrektur abgefangen.
 Die vorhandene Paperless-Auswahl versteht zusätzlich singuläre partitive Verweise
 wie „im ersten dieser Dokumente“; Mehrfachauswahl und unklare Quellen bleiben gesperrt.
 Exakte neue CI und reale Nachabnahme dieser Nachbesserung stehen noch aus.
+Die lokale Vollprüfung von 0826181 bestand 3.200 Tests einschließlich PostgreSQL,
+Ruff, mypy (139 Module) und Secret-Scan. Eine zusätzliche unabhängige Quellcodeprüfung
+fand zwei Randfälle: höfliche Präfixe erreichten den festen Inventarweg noch nicht,
+und der GET-Duplikatvergleich unterschied boolesche und numerische Filterwerte nicht.
+Beide sind korrigiert; 65 gezielte Runtime-/Fähigkeitstests bestanden einschließlich
+neuer Gegenproben. Der überholte CI-Lauf 45048823715 wurde gezielt abgebrochen;
+sein Teilfortschritt ist kein vollständiger Nachweis für den korrigierten Stand.
 
 Auf fef6347 bestanden dagegen echte SSH-Zugriffsfrage und Proton-Zweiturnabnahme:
 vier tatsächlich abgerufene heutige Kopfzeilen und anschließender quellgebundener

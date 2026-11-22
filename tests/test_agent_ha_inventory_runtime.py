@@ -54,10 +54,13 @@ def assert_no_bound_read_refs(ha):
         assert not any(part["source_id"].startswith("agent-read:") for part in context)
 
 
-def test_inventory_is_one_projected_read_without_model_research_or_confirmation(ha, monkeypatch):
+@pytest.mark.parametrize("goal", [GOAL, "Bitte liste unsere Leuchten.", "Please list our lights."])
+def test_inventory_is_one_projected_read_without_model_research_or_confirmation(
+    ha, monkeypatch, goal
+):
     no_planning(monkeypatch)
     calls = target(ha, monkeypatch)
-    identifier = start(ha, GOAL)
+    identifier = start(ha, goal)
     with ha[0].state.sessions() as db:
         job = db.get(AgentJob, identifier)
         assert json.loads(job.bindings)["read_only"] is True and job.max_effects == 0

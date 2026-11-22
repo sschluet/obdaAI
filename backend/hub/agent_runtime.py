@@ -2629,7 +2629,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             if s.kind == "read" and s.status == "succeeded"
                             and (document := json.loads(s.document)).get("tool") == "http"
                             and document.get("integration_id") == decision.integration_id
-                            and document.get("arguments") == args), None)
+                            and encode(document.get("arguments")) == encode(args)), None)
                         if previous_read is not None:
                             format_feedback(db, cfg, job, {"kind": "tool"}, [{
                                 "type": "read_already_observed",

@@ -181,6 +181,7 @@ def ha_inventory_question(goal: str, profiles: list[Any]) -> bool:
     if not profiles or any(profile.kind != "home_assistant" for profile in profiles):
         return False
     text = goal.casefold().strip()
+    text = re.sub(r"^(?:bitte|please)\s+", "", text)
     if not re.match(r"^(?:welche\w*|was|wie viele|zeig\w*|liste\w*|which|what|show|list)\b", text):
         return False
     return not re.search(

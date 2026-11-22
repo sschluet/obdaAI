@@ -674,7 +674,7 @@
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Diese Nachbesserung ist implementiert, ihre neue reale Abnahme steht noch aus. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen.",
+          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen, auch mit höflichem Präfix, verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Diese Nachbesserung ist implementiert, ihre neue reale Abnahme steht noch aus. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen.",
           "status": "limited"
         },
         {
