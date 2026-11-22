@@ -227,7 +227,7 @@ def test_fresh_schema_change_at_final_transport_boundary_blocks_query(overview, 
 
     monkeypatch.setattr(runtime, "dispatch", dispatch)
     status, history = execute(overview)
-    assert status == "uncertain" and not query_calls(overview)
+    assert status == "failed" and not query_calls(overview)
     assert not any(s.kind == "model" for s in history)
 
 
@@ -251,7 +251,7 @@ def test_interrupted_or_ambiguous_read_is_never_replayed(overview, interrupted):
         runtime.steps(db, job_id)[-1].status = interrupted
         db.commit()
     status, history = execute(overview)
-    assert status == "uncertain" and not query_calls(overview)
+    assert status == "failed" and not query_calls(overview)
     assert next(s for s in history if s.sequence == sequence).status in {"uncertain", "failed"}
 
 
@@ -320,7 +320,7 @@ def test_failed_mail_read_is_terminal_and_never_replayed(overview, monkeypatch):
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     status, history = execute(overview)
-    assert status == "uncertain" and attempts == ["mcp.call"]
+    assert status == "failed" and attempts == ["mcp.call"]
     assert not any(s.kind == "model" for s in history)
     execute(overview)
     assert attempts == ["mcp.call"]
@@ -357,7 +357,7 @@ def test_mail_read_failure_keeps_safe_category_without_replaying_intent(
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     status, history = execute(overview)
-    assert status == "uncertain" and attempts == ["mcp.call"]
+    assert status == "failed" and attempts == ["mcp.call"]
     failed = next(s for s in history if s.kind == "read" and s.status == "failed")
     receipt = json.loads(failed.result)
     expected = reason

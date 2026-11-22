@@ -1,10 +1,22 @@
 {
   "updated": "2026-11-22",
-  "applicationCommit": "ab2b861",
+  "applicationCommit": "7d3916e",
   "schema": "0047",
-  "tests": 2811,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
+  "tests": 3197,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45049558158",
   "screenshots": [
+    {
+      "id": "ha-lights",
+      "title": "Lampen aus vorhandenen Zuständen",
+      "description": "Eine fehlende Lampen-Schnittstelle bleibt als 404-Beleg sichtbar. Eine begrenzte alternative Leseabfrage filtert die vorhandenen Zustände lokal nach Lampen. Synthetische Aurora-Lampen und simulierte Modell-/HA-Antworten; kein echter Systemzugriff.",
+      "image": "assets/halights.png"
+    },
+    {
+      "id": "ha-access",
+      "title": "Zugriff prüfen. Klar antworten.",
+      "description": "Eine einfache Frage nach Home Assistant nutzt automatisch die freigegebene Verbindung und eine feste lesende HTTP-Prüfung. Erfolg und Verbindungsfehler erscheinen verständlich im Chat, ohne Änderungsfreigaben. Ausschließlich synthetische API-Antworten und Testdaten; kein Nachweis eines echten HA-Zugriffs.",
+      "image": "assets/haaccess.png"
+    },
     {
       "id": "google-drive",
       "title": "Google Drive als Quelle und Ablage",
@@ -662,7 +674,7 @@
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Produktive Wartung und Restore bleiben offen.",
+          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen, auch mit höflichem Präfix, verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Lampenübersicht und Zustandsfolgefrage sind mit echten freigegebenen Abrufen ohne zusätzliche Bestätigung geprüft. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen.",
           "status": "limited"
         },
         {
@@ -839,17 +851,17 @@
   "development": {
     "mode": "local",
     "schema": "0047",
-    "browserChecks": 41,
+    "browserChecks": 43,
     "serverDeployment": true,
-    "commit": "ab2b861",
-    "ciTests": 2811,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
-    "deployedCommit": "ab2b861",
+    "commit": "7d3916e",
+    "ciTests": 3197,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45049558158",
+    "deployedCommit": "7d3916e",
     "deployedSchema": "0047",
-    "liveScope": "Release ab2b861 / Schema 0047 auf der reparierten Test-VM installiert. Native Drive-API und optionale Einrichtung im echten Browser (Desktop/320 px), ein strikt lokaler Chat mit Workerbeleg, echter Neustart und aktuelle verschlüsselte Sicherung bestanden. Netzwerk, Vault, Modell-/Suchzugang und Proton wieder verfügbar; vorhandene Daten und statische Zugangsdaten erhalten. Reale Google-Anmeldung, Drive-Downloads/Uploads und eine neue Wiederherstellungsprüfung bleiben offen; V1 partiell.",
+    "liveScope": "Release 7d3916e / Schema 0047 mit frischer verschlüsselter Sicherung ausgerollt. Neun exakte Images und beide APIs gesund; vorhandene Daten, Zugangskonfigurationen und Netzwerkregeln erhalten. Reale lokale Leseabnahme: HA-Lampenübersicht und Zustandsfolgefrage, Paperless-Übersicht und erster belegter Dokumentinhalt, Proton-Tagesübersicht und begrenzter Antwortstatusabgleich sowie SSH-Zugriff. Keine zusätzlichen Bestätigungsrunden oder Zieländerungen; eigene QA-Chats archiviert und Prüfsitzungen entfernt. Dies belegt gebundene Abrufe, keine universelle semantische Modellrichtigkeit. Gmail, Drive und UniFi nicht live konfiguriert; umfassende Administration, Google-Anmeldung, reale Drive-Uploads/Downloads und neue Wiederherstellungsprüfung bleiben offen. V1 partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "ab2b861",
-    "lastSuccessfulCIUI": 41
+    "lastSuccessfulCICommit": "7d3916e",
+    "lastSuccessfulCIUI": 43
   }
 }

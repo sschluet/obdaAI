@@ -5,6 +5,14 @@ Gmail**. Ein eigener Assistent führt durch Google-Vorbereitung, OAuth-Client un
 Anmeldung. Gmail ist eine Postfachanbindung über die offizielle Gmail API; der
 vorhandene SMTP-Typ bleibt ein gesonderter Versandzugang.
 
+Gmail-Suchen liefern zunächst Nachrichten-IDs. Betreff, Absender und Inhalt
+benötigen anschließende Nachrichten-/Threadabrufe; eine ID-Liste ist keine
+Inhaltszusammenfassung. Der automatische Abgleich, auf welche Nachrichten bereits
+geantwortet wurde, ist für Gmail noch nicht durchgehend implementiert. Solche
+Statusfragen werden ausdrücklich als nicht belegt beantwortet. Der gesonderte
+Proton-Abgleich anhand von Kopfzeilen und gesendeten Nachrichten ist kein
+Live-Nachweis dieser Gmail-Funktion.
+
 ## Einmalige Vorbereitung bei Google
 
 1. Ein eigenes Google-Cloud-Projekt anlegen und die Gmail API aktivieren.

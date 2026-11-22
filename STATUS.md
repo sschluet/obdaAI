@@ -1,5 +1,168 @@
 # obdaAI — Status 22.11.2026
 
+## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
+
+**7d3916e / Schema 0047** ist ausgeliefert und an allen vier eingerichteten
+Verbindungen lesend nachgeprüft. Lokale Vollprüfung: 3.203 Tests einschließlich
+PostgreSQL. Exakte [CI 45049558158](https://github.com/sschluet/obdaAI/actions/runs/45049558158):
+3.197 bestanden, sechs optionale Calc-Skips, alle synthetischen Browserprüfungen
+und Pflichtjobs samt App-Tree-Beleg erfolgreich.
+
+| Reale Abnahme | Ergebnis |
+| --- | --- |
+| HA: Lampen und „Welche davon sind an?“ | Beide Antworten nennen alle erwarteten Entitäten des jeweiligen Abrufs; je ein frischer GET, keine Modellplanung. |
+| Paperless: Übersicht und „Was steht im ersten dieser Dokumente?“ | Tatsächliche Suche und erster belegter Dokumentinhalt abgerufen; Antwort an die aktuelle Dokumentquelle gebunden. |
+| Proton: heutige Mails und Antwortstatusfolgefrage | Tatsächliche Kopfzeilen, Antwortkennzeichen und begrenzte Gesendet-Beziehungen ausgewertet; unbekannt bleibt unbekannt. |
+| SSH: vorhandenen Zugang prüfen | Feste authentifizierte Inspektion erfolgreich. |
+
+Alle sieben Aufträge endeten ohne Rückfrage, Freigaberunde, Recherche, Cloud oder
+Zieländerung. Pro Fall bestanden Datenerhalt, statischer Konfigurationsvergleich,
+Archivierung ausschließlich eigener QA-Chats und Entfernung der Prüfsitzung.
+Die Nachprüfung zertifiziert gebundene Abrufe und beobachtete Antwortmerkmale,
+keine universelle semantische Richtigkeit von Modellzusammenfassungen oder
+vollständige Postfachabdeckung. Reale Gmail-, Drive- und UniFi-Zugänge waren nicht
+eingerichtet; allgemeine administrative Abdeckung und V1 bleiben partiell.
+
+Vor Umschaltung wurde eine frische verschlüsselte Sicherung mit geprüftem
+Ciphertext erstellt; Quota und Reserve blieben erhalten. Keine Migration,
+Wiederherstellung oder Zielschreibaktion. Nach Abschluss: neun exakte Images,
+beide APIs gesund, installierte und Quellcode-Backendbytes geprüft, keine
+fehlgeschlagenen Systemdienste, Backup und Timer gesund. Die beschleunigte private
+Datenerhaltungsprüfung lieferte im echten Vergleich für alle 82 Tabellen exakt
+dieselben Fingerprints wie das bisherige Verfahren. Frühere Fehlerbelege bleiben
+erhalten. Private Belege liegen ausschließlich unter `.local/deployment`.
+
+Die reale Abnahme von fef6347 deckte zwei weitere Fälle auf: Die Lampenfrage las
+dreimal dieselben ungefilterten Zustände und endete nach rund 142 Sekunden an
+der lokalen Kontextgrenze. Die Paperless-Übersicht bestand; die Folgefrage
+„Was steht im ersten dieser Dokumente?“ erkannte den vorhandenen Ordinalverweis
+nicht und endete ohne Dokumentabruf als nicht belegt. Beide Belege bleiben
+unverändert erhalten, mit erfolgreicher Datenerhaltungs- und QA-Bereinigungsprüfung.
+
+Die Nachbesserung nutzt für eng erkannte Lampenfragen genau eine freigegebene,
+lokal nach `light.` gefilterte Zustandsabfrage und stellt die Beobachtung ohne
+Modellplanung dar. „Welche davon sind an?“ bindet ausschließlich die zuletzt
+belegte Auswahl und gleicht deren aktuellen Zustand ab; neue, nicht zuvor gezeigte
+Entitäten werden nicht hineingemischt. Ausschnitt, unbekannte Zustände und fehlende
+Beobachtungen bleiben sichtbar. Andere Aufträge verwenden weiterhin den allgemeinen
+Agenten. Identische erfolgreiche GET-Abfragen in einem allgemeinen reinen Leseauftrag
+werden vor erneutem Dispatch durch begrenzte Planungskorrektur abgefangen.
+Die vorhandene Paperless-Auswahl versteht zusätzlich singuläre partitive Verweise
+wie „im ersten dieser Dokumente“; Mehrfachauswahl und unklare Quellen bleiben gesperrt.
+Die abschließende reale Nachabnahme dieser Nachbesserung ist oben belegt.
+Die lokale Vollprüfung von 0826181 bestand 3.200 Tests einschließlich PostgreSQL,
+Ruff, mypy (139 Module) und Secret-Scan. Eine zusätzliche unabhängige Quellcodeprüfung
+fand zwei Randfälle: höfliche Präfixe erreichten den festen Inventarweg noch nicht,
+und der GET-Duplikatvergleich unterschied boolesche und numerische Filterwerte nicht.
+Beide sind korrigiert; 65 gezielte Runtime-/Fähigkeitstests bestanden einschließlich
+neuer Gegenproben. Der überholte CI-Lauf 45048823715 wurde gezielt abgebrochen;
+sein Teilfortschritt ist kein vollständiger Nachweis für den korrigierten Stand.
+Die anschließende vollständige lokale Prüfung von **7d3916e** bestand 3.203 Tests
+einschließlich PostgreSQL, Ruff, mypy und Secret-Scan. Die exakte vollständige
+[CI 45049558158](https://github.com/sschluet/obdaAI/actions/runs/45049558158) bestand
+3.197 Tests mit sechs optionalen Offline-Calc-Skips, alle Browserprüfungen und alle
+Pflichtjobs samt App-Tree-Beleg. Reale Nachabnahme siehe oben.
+
+Auf fef6347 bestanden dagegen echte SSH-Zugriffsfrage und Proton-Zweiturnabnahme:
+tatsächlich abgerufene heutige Kopfzeilen und anschließender quellgebundener
+Antwortstatusabgleich mit beobachteter Gesendet-Suche. Fehlende Beziehungen wurden
+nicht als „unbeantwortet“ ausgegeben. Kein Vollständigkeits- oder Zustellnachweis. Je Fall
+bestanden Datenerhalt, Archivierung eigener QA-Chats und Entfernung der Prüfsitzung.
+
+Nach dem Zugriffsfix zeigte eine echte Lampenfrage weiterhin einen erfundenen
+REST-Endpunkt. Die Folgelieferung ergänzt validierte HA-Lesebeispiele und lokale
+Domänenfilter sowie genau einen begrenzten anderen Leseweg nach einem GET-404.
+Ein fehlgeschlagener Schritt bleibt erhalten; Wiederholung desselben Pfads,
+Änderungen vor einer belegten Alternative und eine Korrektur nach unklaren
+Änderungen sind ausgeschlossen. Authentifizierungsfehler und Timeouts werden
+nicht durch blindes Wiederholen verdeckt.
+
+Die breitere Quellcodeprüfung fand zusätzlich fehlenden Integrationsbezug bei
+nativen Folgefragen und zu optimistische Erfolgswertung bei ungültiger
+HTTP-Projektion beziehungsweise fehlgeschlagener SSH-Inspektion. Neue typisierte
+Lesebelege und erneute Revisions-/Rechteprüfung erweitern die vorhandenen
+Gesprächsreferenzen; Fehler bleiben Fehler. Eindeutige HA-Inventarfragen und
+explizit lesende Aufträge erhalten keine Bestätigungsrunde. Potenziell auslösende
+HA-Webhook-GETs sind keine Lese- oder Verifikationsoperationen.
+
+Gmail-ID-Suchen belegen keinen Nachrichteninhalt. Der noch unvollständige native
+Gmail-Antwortstatusabgleich wird ausdrücklich als nicht belegt ausgegeben.
+Drive bleibt Wissensquelle und explizite Dateiablage; ein allgemeines
+Drive-Chatwerkzeug sowie ein nativer UniFi-Fähigkeitskatalog bleiben offen.
+
+Auf der Test-VM sind HA, Proton-MCP, Paperless und SSH eingerichtet. Die erweiterte
+Abnahme prüft echte Leseabfragen und Folgefragen getrennt von synthetischen
+Vertrags-/Browserprüfungen. Gmail, Drive und UniFi sind dort nicht konfiguriert
+und erhalten keinen behaupteten Live-Nachweis. Exakte abschließende CI- und
+Live-Ergebnisse sind im jüngsten Nachweis oben getrennt aufgeführt.
+
+Lokale Vollprüfung des Auditstands: 3.130 Tests einschließlich PostgreSQL bestanden.
+CI 45041833469 bestand 3.124 Tests mit sechs Plattform-Skips sowie die neuen
+Integrations-Browserfälle, scheiterte jedoch an einem bestehenden mobilen
+Scrolltest. Eine isolierte Ablaufspur zeigte native Tastaturbewegung nach dem
+Messbeginn bei unverändertem Layout. Der Test wartet nun auf `scrollend` statt
+auf eine feste kurze Pause; seine Drei-Pixel-Grenze und der Produktionscode
+bleiben unverändert. Der gezielte vollständige Scrollablauf bestand auf einer
+frischen Fixture. Die anschließende vollständige exakte
+[CI 45044579845](https://github.com/sschluet/obdaAI/actions/runs/45044579845)
+für **fef6347** bestand alle Pflichtjobs samt App-Tree-Beleg: 3.124 Tests,
+sechs mangels Offline-Calc übersprungene Fälle sowie die gesamte synthetische
+Browserprüfung einschließlich Scrolltest und beider neuer HA-Fälle. Nach bisheriger
+Zählkonvention sind es 43 Browserprüfungen (39 direkte Einstiegsskripte plus vier
+zusätzliche Importe im Hauptcheck); weitere verschachtelte Prüfgruppen sind darin
+nicht gesondert gezählt. Der ursprüngliche fehlgeschlagene Lauf bleibt erhalten.
+
+**fef6347 / Schema 0047** wurde nach frischer verschlüsselter Sicherung auf die
+Test-VM ausgerollt. Neun exakte Images, beide gesunden APIs und installierte sowie
+Quellcode-Backendhashes geprüft; Abhängigkeiten, Frontend und Schema blieben
+unverändert. Vorhandene Anwendungsdaten, statische Zugangskonfigurationen und
+Netzwerkregeln bestanden den Vergleich. Keine Migration und keine Wiederherstellung
+durchgeführt. Die vier Phasen Vorbereitung, Build, Sicherung und Umschaltung
+bestanden ohne Wiederholung eines unterbrochenen Dispatches.
+
+## 22.11.2026 — Fähigkeitsgestützte Werkzeugplanung und lesende Zugriffsprüfung
+
+Der gemeinsame Agentenlauf für Chat, Aufgaben und Projekte erhält kompakte
+adapterbezogene Fähigkeitshinweise. Bei allgemeinen HA-Aufträgen prüft er zuerst
+die freigegebene API lesend und plant anschließend auf Basis des tatsächlichen
+Ergebnisses. Geeignete Werkzeuge und Recherche bleiben innerhalb der bestehenden
+Rechte wählbar; die Hinweise ersetzen keine dynamisch ermittelten Schnittstellen.
+Reine Zugriffsfragen verwenden feste lesende Prüfungen ohne Modellplanung,
+Recherche, Schreibaktion oder zusätzliche Bestätigungsrunde. Die bereits
+vorhandenen besonderen Mail-/Paperless-Lesewege werden weiterverwendet.
+
+Lesefehler erhalten verständliche feste Kategorien und enden als fehlgeschlagene
+Leseanfrage. Ungeklärte Änderungen bleiben ausdrücklich ungeklärt, auch bei einem
+Abbruch ihrer Nachprüfung. Bereits gespeicherte ungeklärte Aufträge bleiben
+unverändert. Keine Schemaänderung, keine Änderung bestehender Zielrechte.
+
+Die konkrete HA-Fehlerspur wurde auf der Test-VM nachvollzogen: ein ungeeigneter
+WebSocket-Verwaltungsbefehl wurde für eine Zugriffsfrage gewählt. Eine getrennte,
+echte freigegebene authentifizierte `GET /api/`-Prüfung bestätigte den vorhandenen
+Zugang ohne Zieländerung. Dies ist noch keine Abnahme des neuen Releases.
+**5ba4899 / Schema 0047** wurde nach erfolgreicher
+[vollständiger CI 45033853747](https://github.com/sschluet/obdaAI/actions/runs/45033853747)
+ausgeliefert: 2.922 Tests bestanden, sechs Skips, 42 synthetische Browserprüfungen;
+lokal bestanden 2.928 Tests einschließlich PostgreSQL. Neun exakte Images und beide
+gesunden APIs sowie installierte Backend-Hashes, unveränderte Abhängigkeiten und
+Datenerhalt wurden nach frischer verschlüsselter Sicherung geprüft. Keine Migration.
+Eine fehlende Checkpoint-Elternstruktur wurde nach lesendem Abgleich mit einem
+getrennten Fortsetzungsschritt korrigiert; kein App-Update wurde blind wiederholt.
+
+Die echte neue Zugriffsfrage wurde durch den PostgreSQL-Worker mit genau einem
+authentifizierten `GET /api/` beantwortet, ohne Modell, Recherche oder Änderungen.
+Eigene QA-Chats wurden archiviert, die temporäre Sitzung entfernt. Eine zu enge
+erste Prüfbedingung hatte vorher lediglich auf Rückfragen wartende Altchats als
+aktive Arbeit behandelt und vor jedem neuen Auftrag abgebrochen. Der folgende
+funktionale Nachweis bestand; sein globaler QA-Vorher-/Nachhervergleich bestand
+bei paralleler Nutzung jedoch nicht. Die damaligen Einzelhash-Snapshots wurden
+nicht dauerhaft gespeichert, daher wird daraus kein nachträglicher erfolgreicher
+Datenerhaltungsnachweis abgeleitet. Der getrennte Vergleich unmittelbar nach dem
+Rollout bestand. Weitere Abnahmehelfer persistieren Snapshots und eigene IDs vor
+weiteren Mutationen und weisen parallele Änderungen gesondert aus.
+Die allgemeine autonome Administrationsqualität aller Adapter bleibt teilweise
+abgenommen; diese Korrektur behauptet keine universell fehlerfreie Modellplanung.
+
 ## 22.11.2026 — Test-VM repariert; aktueller Release ausgerollt
 
 **ab2b861 / Schema 0047** läuft auf der Test-VM. Der Benutzer hat die autonome

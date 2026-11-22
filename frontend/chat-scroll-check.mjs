@@ -12,6 +12,23 @@ const endButton=()=>page.getByRole('button',{name:'Zum Ende',exact:true});
 const metrics=()=>region.evaluate(el=>({top:el.scrollTop,height:el.scrollHeight,viewport:el.clientHeight,gap:el.scrollHeight-el.clientHeight-el.scrollTop,window:window.scrollY}));
 async function waitForGrowth(height){await page.waitForFunction(previous=>{const el=document.querySelector('.chat-scroll');return el&&el.scrollHeight>previous+100},height);}
 async function wheel(delta){const before=await metrics();await region.hover({position:{x:120,y:180}});await page.mouse.wheel(0,delta);await page.waitForFunction(previous=>document.querySelector('.chat-scroll').scrollTop<previous-1,before.top);await page.waitForTimeout(80);}
+async function keyboardScrollSettled(key,previous){
+ // PageUp/PageDown animate natively even with reduced motion and scroll-behavior:auto.
+ // Arm before the key; measure streaming stability only after that user scroll ends.
+ await region.evaluate((el,previous)=>{
+  if(!('onscrollend' in el))throw Error('Keyboard scroll-end observation unavailable');
+  el.__keyboardScrollEnded=false;
+  el.__keyboardScrollEnd=event=>{if(event.target===el&&Math.abs(el.scrollTop-previous)>2)el.__keyboardScrollEnded=true};
+  el.addEventListener('scrollend',el.__keyboardScrollEnd);
+ },previous);
+ try{
+  await page.keyboard.press(key);
+  await page.waitForFunction(top=>Math.abs(document.querySelector('.chat-scroll').scrollTop-top)>2,previous);
+  await page.waitForFunction(()=>document.querySelector('.chat-scroll').__keyboardScrollEnded===true);
+ }finally{
+  await region.evaluate(el=>{el.removeEventListener('scrollend',el.__keyboardScrollEnd);delete el.__keyboardScrollEnd;delete el.__keyboardScrollEnded});
+ }
+}
 async function stableWhileGrowing(label){
  const before=await metrics();
  await waitForGrowth(before.height);
@@ -86,8 +103,8 @@ try{
  await page.waitForTimeout(100);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  await page.waitForTimeout(250);await stableWhileGrowing('Mobile touch reader');await cdp.detach();
- const beforeKey=await metrics();await region.focus();await page.keyboard.press(beforeKey.top>5?'PageUp':'PageDown');
- await page.waitForFunction(previous=>Math.abs(document.querySelector('.chat-scroll').scrollTop-previous)>2,beforeKey.top);await page.waitForTimeout(120);await stableWhileGrowing('Mobile keyboard reader');
+ const beforeKey=await metrics();await region.focus();await keyboardScrollSettled(beforeKey.top>5?'PageUp':'PageDown',beforeKey.top);
+ await stableWhileGrowing('Mobile keyboard reader');
  await endButton().click();await atEnd('Mobile explicit jump');
  before=await metrics();await waitForGrowth(before.height);await atEnd('Mobile follow resumed');
  await wheel(-300);await stableWhileGrowing('Detached before cancellation');const cancelPosition=await metrics();

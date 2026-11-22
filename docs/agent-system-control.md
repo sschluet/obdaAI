@@ -57,6 +57,109 @@ Beispielaktionen dürfen das erreichbare Funktionsspektrum nicht definieren.
 Die Schnittstellen bleiben austauschbar; der Agent benötigt keine ungeprüft
 importierten Erweiterungsprogramme für jedes neue Ziel.
 
+Der gemeinsame Planer erhält unter `interfaces.capabilities` kompakte, von der
+Anwendung erstellte Hinweise auf freigegebene Schnittstellen, feste Inspektionen
+und geeignete Wege zur Ermittlung weiterer Funktionen. Diese Hinweise ersetzen
+keine Zielberechtigungen und begrenzen bestehende Verwaltungsfreigaben nicht auf
+eine feste Liste. Modelle müssen Ergebnisse und aktuelle Schnittstellen nutzen;
+ein freigegebenes Befehlspräfix belegt allein keinen tatsächlich vorhandenen Befehl.
+
+Vollständige reine Zugriffsfragen werden als lesende Aufträge ohne Recherche,
+Modellplanung oder Schreibschritte ausgeführt. Je nach freigegebenem Adapter
+stehen HTTP, SSH-Inspektion, MCP-Katalog oder Gmail-Profil zur Verfügung. Für HA
+prüft ein authentifiziertes `GET /api/` die erwartete API-Antwort. Bei allgemeinen
+HA-Aufträgen steht dieser erste Lesebeleg vor der weiteren Modellplanung bereit;
+Recherche bleibt danach bei Bedarf wählbar. Die bereits vorhandenen speziellen
+Mail- und Paperless-Leseplaner bleiben erhalten. Andere Formulierungen verwenden
+weiterhin den begrenzten allgemeinen Planer. Der
+[offizielle HA-REST-Vertrag](https://contributors.home-assistant.io/core/internals/rest-api/)
+dokumentiert den Statusendpunkt; dies ist kein vollständiger Administrationsnachweis.
+Die zusätzlich als reine Leseoperationen eingeordneten WebSocket-Kommandos
+`get_config`, `get_states`, `get_services` und `get_panels` nehmen keine Parameter
+an und folgen dem [offiziellen WebSocket-Vertrag](https://contributors.home-assistant.io/core/internals/websocket-api/).
+
+Feste Inspektionen verwenden dieselben dauerhaften Absichten, aktuellen Profil-
+und Richtlinienrevisionen, Laufgrenzen und letzten Transportprüfungen wie andere
+Werkzeuge. Erfolgreiche oder fehlgeschlagene Schritte werden nicht blind erneut
+versandt. Lesefehler enden als `failed` mit festen verständlichen Kategorien
+(beispielsweise Anmeldung, Verbindung oder Timeout), ohne Ausnahmetexte oder
+Zielinhalte als Fehlermeldung auszugeben. Ungeklärte Änderungen behalten
+`uncertain`, auch wenn erst ihre anschließende Nachprüfung unterbrochen wurde.
+Bestehende ungeklärte Aufträge werden nicht nachträglich als erfolgreich bewertet.
+
+### Inventar, Folgefragen und begrenzte Lesekorrektur
+
+Eng erkannte Fragen nach den eigenen Lampen verwenden eine feste lesende
+`GET /api/states`-Abfrage mit lokalem `light.`-Filter und höchstens 100 Entitäten.
+Die Anwendung stellt Namen und beobachtete Zustände direkt dar; eine zusätzliche
+Modellplanung ist dafür nicht nötig. Die Zahl beschreibt Entitäten, nicht physische
+Geräte. Größere Bestände, unbekannte Zustände und nicht beobachtete Einträge werden
+ausdrücklich eingeordnet. Andere Formulierungen und Verwaltungsaufträge bleiben
+im allgemeinen Agentenpfad.
+
+„Welche davon sind an?“ nutzt die jüngsten gültigen Lesebelege desselben Gesprächs
+und fragt den aktuellen Zustand erneut ab. Nur zuvor dargestellte Entitäten gehören
+zur Auswahl; neue Entitäten sowie zuvor ausgeblendete ausgeschaltete Lampen werden
+bei weiteren Folgefragen nicht hinzugefügt. Die Quellenbindung wird vor Dispatch
+und vor der Antwort erneut geprüft. Die feste Abfrage verwendet denselben dauerhaften
+Intent-, Rechte-, Fehler- und Abbruchpfad wie andere Werkzeuge.
+
+Im allgemeinen reinen Leseauftrag wird eine identische bereits erfolgreiche
+GET-Abfrage nicht erneut versandt. Der Planer erhält die ursprüngliche Schrittnummer
+und kann anhand des Belegs antworten oder eine andere begrenzte Auswahl wählen.
+Die vorhandene begrenzte Zahl der Planungskorrekturen verhindert eine Endlosschleife.
+Diese Regel betrifft keine Änderungsnachprüfung und keine erneute aktuelle Abfrage
+in einem neuen Auftrag.
+
+HA-Fähigkeitshinweise enthalten validierte Beispiele für `/api/states`,
+`/api/config` und `/api/services`. Entitätsdomänen sind Filter, keine automatisch
+vorhandenen REST-Endpunkte. Lampen verwenden beispielsweise eine lokale
+`light.`-Auswahl aus Zuständen; Sensoren können denselben Mechanismus mit ihrem
+eigenen Präfix nutzen. Begrenzungen und Trefferzahlen der vorhandenen
+HTTP-Projektion bleiben sichtbar. Eindeutige HA-Inventarfragen senken den Auftrag
+auf Lesen und null Änderungsschritte. Explizite Verwaltungsaufträge werden dabei
+nicht umklassifiziert. Rein lesende Aufträge verlangen keine zusätzliche
+Bestätigung; fehlende Fähigkeiten können als nicht vollständig beantwortet enden.
+
+Ein allgemeiner Auftrag darf nach genau einem bestätigten HTTP-GET-404 einen
+anderen freigegebenen Leseweg wählen. Der fehlgeschlagene Originalschritt bleibt
+erhalten. Derselbe Zielpfad wird nicht erneut versandt; vor einem erfolgreichen
+anderen Lesebeleg sind Änderungen, Rückfragen und Erfolgsabschluss gesperrt.
+Vorherige Änderungen, ein zweiter Fehler, Authentifizierungsfehler, Timeout und
+unterbrochene Ausführungen erlauben diese Korrektur nicht. Die besonderen
+Mail-/Paperless-Planer behalten ihre eigenen Quellen- und Fortschrittsverträge.
+Nach einer belegten Alternative gelten ausschließlich die bereits vorhandenen
+ursprünglichen Rechte und Verifikationspflichten.
+
+Erfolg erfordert neben dem Transportstatus eine gültige Auswahl beziehungsweise
+einen erfolgreichen Inspektionsprozess. HTTP-Projektionsfehler und fehlerhafte
+SSH-Inspektionen sind keine erfolgreichen Datenabfragen. Das feste SSH-Skript
+bricht beim ersten Fehler ab. HA-Webhooks können auch durch GET Automationen
+auslösen; sie gelten deshalb als mögliche Änderung und niemals als lesender
+Verifikationspfad. Siehe [offizieller Webhook-Vertrag](https://www.home-assistant.io/triggers/webhook/).
+Für diese Prüfung werden keine echten Webhooks aufgerufen.
+
+Erfolgreiche native HTTP-, bekannte HA-WebSocket-, SSH- und Gmail-Lesebelege können
+wie die vorhandenen Mail-/Paperless-Belege im selben Gespräch gebunden werden.
+Deutsche und englische Folgefragen können so ihre Integration behalten.
+Profil-, Richtlinien-, Nachrichten- und Belegrevisionen werden erneut geprüft;
+Widerruf oder ein fremdes Gespräch erlauben keine Wiederverwendung. Inhalt bleibt
+LOCAL_ONLY und innerhalb des bestehenden Kontextbudgets, niemals öffentliche
+Recherchegrundlage oder Berechtigungsnachweis.
+
+Gmail-Suchtreffer sind zunächst IDs und belegen keinen Nachrichteninhalt. Für
+Zusammenfassungen sind tatsächliche Nachrichten-/Threadabrufe nötig. Ein nativer
+Gmail-Abgleich gesendeter Antworten ist derzeit nicht durchgehend implementiert;
+entsprechende Statusfragen enden ausdrücklich als nicht belegt. Dies ist keine
+Gleichsetzung mit den gesonderten Proton-Kopfzeilen-/Sent-Nachweisen.
+
+Die Integrationsabnahme unterscheidet feste Unit-/API-/Transportverträge,
+synthetische Browserdialoge und echte Zielabfragen. Eine erfolgreiche Verbindung
+allein ist kein Nachweis erfolgreicher Datenfragen oder Folgefragen. Nicht auf der
+Test-VM konfigurierte Dienste erhalten keinen behaupteten Live-Nachweis. Google
+Drive ist derzeit Quelle und explizite Dateiablage; ein allgemeines agentisches
+Drive-Chatwerkzeug und ein nativer UniFi-Fähigkeitskatalog sind weiterhin offen.
+
 Öffentliche Recherche und private Systembeobachtung sind getrennte Datenwege.
 Der lokale Rechercheplan verwendet ein exaktes JSON-Schema mit ausschließlich
 `queries`: höchstens drei nichtleere Suchfragen mit je höchstens 500 Zeichen.
@@ -191,11 +294,13 @@ festgelegtes GET-Prädikat kann nach Updates oder Antwortverlust begrenzt pollen
 es belegt den beobachteten Zustand, keine Kausalität. Ohne passende Nachprüfung
 wird ein HTTP-/MCP-/SMTP-Ack nicht als bewiesene Wirkung ausgegeben. SSH verlangt vor Versand ein separates, vom Agenten definiertes Prüfskript.
 Bei einer unpassenden lokalen GET-Projektion bleibt die bereits begrenzte
-Originalantwort als Beobachtung erhalten. `projection_error` ist kein Transportfehler
-und kein Wirkungsnachweis: `http.verify` kann damit niemals erfolgreich sein.
+Originalantwort im fehlgeschlagenen Beleg erhalten, nicht als erfolgreiche
+Beobachtung. `projection_error` ist kein Wirkungsnachweis: Weder ein Leseschritt
+noch `http.verify` kann damit erfolgreich sein oder eine gültige Lesereferenz liefern.
 Es erfolgt keine automatische neue HTTP-Anfrage. Fehler bei Schreibantworten,
 Transporten und Antwortgrenzen werden dadurch nicht abgefangen.
-Die drei bereits vorhandenen HA-Metadatenabfragen (backup/info sowie GET /info
+Zusätzlich zu den vier oben genannten Zustands-/Konfigurationsabfragen sind die
+drei vorhandenen HA-Metadatenabfragen (backup/info sowie GET /info
 und /supervisor/info über supervisor/api) sind ausschließlich in ihrer exakten
 Form lesend. Andere WebSocket-Aufrufe bleiben mögliche Änderungen; eine
 fehlende Lesefähigkeit wird als Beobachtung statt als vermeintlicher Effekt geliefert. Geschlossene SSH-Kanäle
