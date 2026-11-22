@@ -12,8 +12,9 @@ from typing import Any
 from sqlalchemy import select
 
 from hub.action_api import digest, encode
+from hub.agent_failures import read_result_failure
 from hub.agent_models import AgentJob, AgentPolicy, AgentStep
-from hub.agent_tools import Rules, validate_tool
+from hub.agent_tools import Rules, ha_metadata_read, validate_tool
 from hub.db import Conversation, Message
 from hub.integrations import Integration
 from hub.policy import ContextPart
@@ -43,6 +44,8 @@ def _paperless(
     args = document["arguments"]
     legacy = document["tool"] == "http"
     if legacy:
+        if read_result_failure("http", result) is not None:
+            raise ValueError("Not a valid successful archive read")
         path = args["path"]
         if args["method"] != "GET" or result.get("http_status") != 200:
             raise ValueError("Not a successful archive read")
@@ -94,6 +97,98 @@ def _paperless(
     return {"label": "LOCAL_ONLY", "operation": operation, "data": normalized}
 
 
+
+def _native_read(
+    kind: str, tool: str, args: dict[str, Any], result: dict[str, Any], rules: Rules
+) -> None:
+    """Accept only concrete existing native read contracts, never arbitrary tools."""
+    if read_result_failure(tool, result) is not None:
+        raise ValueError("Native read result failed its shared completion contract")
+    if tool == "http" and kind in {"home_assistant", "unifi", "paperless"}:
+        status = result.get("http_status")
+        if (
+            args["method"] == "GET" and type(status) is int and 200 <= status < 300
+            and "body" in result
+        ):
+            return
+    elif tool == "ha.websocket" and kind == "home_assistant":
+        if ha_metadata_read(args) and "response" in result and result.get("success") is not False:
+            return
+    elif tool == "ssh.inspect" and kind == "ssh":
+        if (
+            type(result.get("exit_code")) is int and result["exit_code"] == 0
+            and isinstance(result.get("stdout"), str) and result["stdout"].strip()
+            and isinstance(result.get("stderr"), str)
+        ):
+            return
+    elif tool == "file.read" and kind == "ssh":
+        path = result.get("path")
+        if isinstance(path, str) and type(result.get("exists")) is bool:
+            validate_tool(kind, rules, tool, {"path": path})
+            if not result["exists"]:
+                return
+            text, sha = result.get("text"), result.get("sha256")
+            if (
+                isinstance(text, str) and isinstance(sha, str)
+                and re.fullmatch(r"[a-f0-9]{64}", sha) and digest(text) == sha
+            ):
+                return
+    elif tool == "gmail.read" and kind == "gmail":
+        _gmail_read(args, result)
+        return
+    raise ValueError("Not a supported successful native read receipt")
+
+
+def _gmail_read(args: dict[str, Any], result: dict[str, Any]) -> None:
+    """Recheck native account-bound identities without interpreting mail as policy."""
+    operation, data = result.get("operation"), result.get("data")
+    if result.get("label") != "LOCAL_ONLY" or operation != args["operation"] or not isinstance(
+        data, dict
+    ):
+        raise ValueError("Invalid native Gmail receipt")
+
+    def identity(value: Any) -> bool:
+        return isinstance(value, str) and re.fullmatch(r"[a-fA-F0-9]{1,64}", value) is not None
+
+    if operation == "search":
+        rows = data.get("messages")
+        valid = (
+            isinstance(rows, list) and len(rows) <= args["limit"]
+            and all(isinstance(row, dict) and identity(row.get("id"))
+                    and identity(row.get("threadId")) for row in rows)
+        )
+    elif operation == "message":
+        valid = (
+            data.get("id") == args["message_id"] and identity(data.get("threadId"))
+            and isinstance(data.get("headers"), dict) and isinstance(data.get("text"), str)
+        )
+    elif operation == "thread":
+        rows = data.get("messages")
+        valid = (
+            data.get("id") == args["message_id"] and isinstance(rows, list) and len(rows) <= 20
+            and all(isinstance(row, dict) and identity(row.get("id"))
+                    and row.get("threadId") == data["id"] for row in rows)
+        )
+    elif operation == "labels":
+        rows = data.get("labels")
+        valid = (
+            isinstance(rows, list) and len(rows) <= 1000
+            and all(isinstance(row, dict) and isinstance(row.get("id"), str)
+                    and isinstance(row.get("name"), str) for row in rows)
+        )
+    elif operation == "profile":
+        valid = (
+            isinstance(data.get("emailAddress"), str)
+            and re.fullmatch(r"[^\s@]+@[^\s@]+", data["emailAddress"]) is not None
+            and all(type(data.get(field)) is int and data[field] >= 0
+                    for field in ("messagesTotal", "threadsTotal"))
+        )
+    else:
+        valid = False
+    if not valid:
+        raise ValueError("Native Gmail read identity does not match its request")
+
+
 def _receipt(
     db: Any, job: AgentJob, message: Message, step: AgentStep, profiles: dict[str, Any]
 ) -> tuple[dict[str, Any], dict[str, Any], str]:
@@ -122,6 +217,14 @@ def _receipt(
     target = document["target"]
     if not isinstance(target, dict):
         raise ValueError("Invalid private read target")
+    url_matches = target.get("url") == config.get("url")
+    if not url_matches and document.get("capability_inspection") is True and "url" not in target:
+        from hub.agent_capabilities import bootstrap
+
+        inspection = bootstrap(current, rules) if current else None
+        url_matches = inspection is not None and all(
+            document.get(key) == inspection[key] for key in ("tool", "arguments")
+        )
     bound, prior = _binding(job, identifier), _binding(source, identifier)
     if (
         not current or not current.enabled or not policy or not rules.enabled
@@ -134,7 +237,7 @@ def _receipt(
         or any(b["profile_revision"] != current.revision for b in (bound, prior))
         or any(b["policy_revision"] != policy.revision for b in (bound, prior))
         or target.get("kind") != current.kind
-        or target.get("url") != config.get("url")
+        or not url_matches
         or target.get("profile_revision") != current.revision
         or target.get("config_sha256") != digest(current.config)
         or target.get("policy_revision", policy.revision) != policy.revision
@@ -149,11 +252,15 @@ def _receipt(
         if model_result(args["name"], result, account_id=identifier, max_bytes=512) is None:
             raise ValueError("Invalid mailbox receipt")
         tool = args["name"]
-    elif current.kind == "paperless" and document["tool"] in {"paperless.read", "http"}:
+    elif current.kind == "paperless" and (
+        document["tool"] == "paperless.read"
+        or document["tool"] == "http" and args["path"].startswith("/api/documents")
+    ):
         _paperless({**document, "arguments": args}, result)
         tool = "paperless.read"
     else:
-        raise PermissionError("Only actual private document or mailbox reads can be linked")
+        _native_read(current.kind, document["tool"], args, result, rules)
+        tool = document["tool"]
     reference = {
         "version": 1, "message_id": message.id, "message_revision": message.revision,
         "source_job_id": source.id, "sequence": step.sequence,
@@ -277,13 +384,17 @@ def model_context(
                 projection = model_result(
                     tool, result, account_id=ref["integration_id"], max_bytes=remaining
                 )
-            else:
+            elif tool == "paperless.read":
                 from hub.agent_paperless import model_result as paperless_model_result
 
                 source_step = db.get(AgentStep, (ref["source_job_id"], ref["sequence"]))
                 projection = paperless_model_result(
                     _paperless(json.loads(source_step.document), result), max_bytes=remaining
                 )
+            else:
+                from hub.agent_context import view
+
+                projection = view(result, remaining)
             item.update(result=projection, projection_omitted=False)
         if len(encode([*observations, item]).encode()) > max_bytes:
             raise ValueError("Private read provenance exceeds the evidence budget")

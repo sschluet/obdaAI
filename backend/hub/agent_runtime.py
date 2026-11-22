@@ -21,11 +21,11 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import defer
 
-from hub import agent_capabilities
+from hub import agent_capabilities, agent_read_recovery
 from hub.action_api import digest, encode, lock
 from hub.agent_clock import freeze_clock
 from hub.agent_context import AgentContextLimitError, fit
-from hub.agent_failures import failure_info, failure_summary, http_read_failure
+from hub.agent_failures import failure_info, failure_summary, read_result_failure
 from hub.agent_models import AgentJob, AgentPolicy, AgentStep
 from hub.agent_tools import (
     SCHEMAS,
@@ -389,11 +389,18 @@ def mailbox_queried(history: list[AgentStep]) -> bool:
             continue
         document = json.loads(step.document)
         args = document.get("arguments", {})
+        if document.get("tool") == "gmail.read" and args.get("operation") == "search":
+            result = json.loads(step.result)
+            data = result.get("data", {})
+            if (result.get("operation") == "search" and isinstance(data, dict)
+                    and data.get("messages") == [] and not data.get("nextPageToken")):
+                return True  # Empty search is evidence only of this query's empty result.
+            continue  # Gmail search returns IDs, not message headers or content.
         if (
             document.get("tool") == "mcp.call"
             and args.get("name") in MAIL_QUERY_TOOLS
             or document.get("tool") == "gmail.read"
-            and args.get("operation") in {"search", "message", "thread"}
+            and args.get("operation") in {"message", "thread"}
         ):
             return True
     return False
@@ -1406,7 +1413,12 @@ def create_job(
     ) and not any(
         str(part.get("source_id", "")).startswith("agent-effect:") for part in context or []
     )
-    read_only = read_only or archive_read_only or connection_read_only
+    inventory_read_only = agent_capabilities.ha_inventory_question(
+        goal, [profile for profile, _, _ in chosen_profiles]
+    ) and not any(
+        str(part.get("source_id", "")).startswith("agent-effect:") for part in context or []
+    )
+    read_only = read_only or archive_read_only or connection_read_only or inventory_read_only
     hidden = Conversation(
         purpose="agent", title="Systemsteuerung", manual_title=True, cloud_allowed=False
     )
@@ -1433,7 +1445,7 @@ def create_job(
         ),
         context=encode(context or []),
         max_steps=min(r.max_steps for r in rulesets),
-        max_effects=(0 if archive_read_only or connection_read_only
+        max_effects=(0 if read_only
                      else min(r.max_effects for r in rulesets)),
         timeout_seconds=min(r.timeout_seconds for r in rulesets),
     )
@@ -1727,6 +1739,8 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
         profiles = gate(db, cfg, job)
         profile, rules, config = profiles[document["integration_id"]]
         args, effect = validate_tool(profile.kind, rules, document["tool"], document["arguments"])
+        if step.kind != ("effect" if effect else "read"):
+            raise PermissionError("Werkzeugklassifikation geändert; Auftrag neu vorbereiten")
         if (
             mail_read_job(job, profiles)
             and repeated_mail_preparation(
@@ -1830,16 +1844,13 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
                 secret = encode(refresh_credentials(db, cfg, profile, final_gate))
             result = invoke(cfg, config, secret, document["tool"], args, rules, final_gate)
             step.status, step.result = "succeeded", encode(result)
-            if not effect and document["tool"] == "http":
-                status = result.get("http_status")
-                failure = http_read_failure(status if type(status) is int else 0)
+            if not effect:
+                failure = read_result_failure(document["tool"], result)
                 if failure:
-                    step.status, step.result = "failed", encode({**result, **failure})
-            if not effect and document["tool"] == "ha.websocket" and (
-                result.get("success") is False
-            ):
-                step.status = "failed"
-                step.result = encode(failure_info(ValueError(), False))
+                    step.status = "failed"
+                    step.result = encode(
+                        {**result, **failure} if document["tool"] == "http" else failure
+                    )
             if document["tool"] == "shell" and (
                 result.get("exit_code") != 0
                 or result.get("verification", {}).get("exit_code", 0) != 0
@@ -1955,21 +1966,24 @@ async def inspect_capabilities(factory: Any, cfg: Settings, job_id: str) -> tupl
             db.commit()
             return True, bool(sequences)
         if access:
+            ha_valid = all(
+                isinstance((body := json.loads(step.result).get("body")), dict)
+                and body.get("message") == "API running."
+                for step in history if step.sequence in sequences
+                and profiles[json.loads(step.document)["integration_id"]][0].kind
+                == "home_assistant"
+            )
             if len(sequences) != len(profiles):
                 complete(db, job, "failed", "Für diese Verbindungsprüfung ist kein "
                          "passendes lesendes Werkzeug freigegeben.")
+            elif not ha_valid:
+                complete(db, job, "failed", "Die Verbindung antwortet, aber eine gültige "
+                         "Home-Assistant-API-Antwort wurde nicht bestätigt.")
             else:
                 kinds = {profile.kind for profile, _, _ in profiles.values()}
                 if kinds == {"home_assistant"}:
-                    valid = all(
-                        isinstance((body := json.loads(step.result).get("body")), dict)
-                        and body.get("message") == "API running."
-                        for step in history if step.sequence in sequences
-                    )
-                    complete(db, job, "observed" if valid else "failed",
-                             "Ja, Home Assistant ist erreichbar. Die Anmeldung funktioniert."
-                             if valid else "Die Verbindung antwortet, aber eine gültige "
-                             "Home-Assistant-API-Antwort wurde nicht bestätigt.")
+                    complete(db, job, "observed",
+                             "Ja, Home Assistant ist erreichbar. Die Anmeldung funktioniert.")
                 else:
                     complete(db, job, "observed", "Die ausgewählten Verbindungen wurden "
                              "mit den freigegebenen lesenden Werkzeugen geprüft.")
@@ -2036,6 +2050,19 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                 private_read = private_mail_read or private_archive_read
                 if json.loads(job.bindings).get("capability_access"):
                     private_mail_read = private_archive_read = private_read = False
+                if not json.loads(job.bindings).get("capability_access") and any(
+                    profile.kind == "gmail" for profile, _, _ in profiles.values()
+                ) and re.search(
+                    r"\b(?:geantwortet|beantwortet\w*|antwortstatus|antwortkennzeichen|"
+                    r"antwortbeziehung\w*|replied|answered|replies|reply\s+status)\b",
+                    job.goal.casefold(),
+                ):
+                    complete(db, job, "unverified", "Für Gmail ist der Abgleich mit "
+                             "gesendeten Antworten derzeit nicht durchgehend implementiert. "
+                             "Eine Suchtrefferliste belegt nicht, ob du geantwortet hast. "
+                             "Ich kann diesen Antwortstatus deshalb nicht verlässlich angeben.")
+                    db.commit()
+                    return
                 if private_mail_read:
                     prepare_mail_catalogs(db, job, profiles)
                 db.commit()
@@ -2053,10 +2080,12 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     private_mail_read = mail_read_job(job, profiles)
                     private_archive_read = paperless_read_job(job, profiles)
                     private_read = private_mail_read or private_archive_read
+                    bounded_read = private_read or json.loads(job.bindings).get("read_only", False)
                     history = steps(db, job_id)
                     broken = [s for s in history if s.status in {"uncertain", "failed"}
                               and s.kind != "model"]
-                    if broken:
+                    recovery = agent_read_recovery.context(history, private_read=private_read)
+                    if broken and recovery is None:
                         unresolved = any(s.kind == "effect" and (
                             s.status in {"dispatching", "verifying", "uncertain"}
                             or s.status == "succeeded"
@@ -2137,6 +2166,9 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         allowed_tools.discard("mcp.catalog")
                     if private_archive_read:
                         allowed_tools = {"paperless.read"}
+                    repairing_read = bool(recovery and recovery["needs_alternative"])
+                    if repairing_read:
+                        allowed_tools -= {"shell", "mail.send", "http.upload", "http.verify"}
                     from hub.agent_files import bound_sources
 
                     clock = json.loads(job.bindings).get("clock") or freeze_clock(
@@ -2171,22 +2203,28 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         contracts = mail_read_contracts(
                             profiles, history, include_descriptions=False
                         )
-                    allow_finish = read_plan.get("allow_finish", has_read_data)
+                    allow_finish = (
+                        read_plan.get("allow_finish", has_read_data) and not repairing_read
+                    )
+                    allow_ask = not bounded_read and not repairing_read
                     ready = read_plan.get("ready", {})
                     choices = ready.get("decisions", [])
-                    allow_stop = private_read and not choices
+                    allow_stop = bounded_read and not choices
                     data = {
                         "allow_finish": allow_finish,
-                        "allow_ask": not private_read,
+                        "allow_ask": allow_ask,
                         "allow_stop": allow_stop,
                         **({"ready_reads": ready} if choices else {}),
                         "job_id": job.id,
                         "clock": clock,
-                        "read_only": json.loads(job.bindings).get("read_only", False),
+                        "read_only": repairing_read or json.loads(job.bindings).get(
+                            "read_only", False
+                        ),
                         "remaining_seconds": max(
                             0, int(job.created + job.timeout_seconds - time.time())
                         ),
                         "goal": job.goal,
+                        **({"read_recovery": recovery} if recovery else {}),
                         "interfaces": [
                             {
                                 "integration_id": p.id,
@@ -2216,7 +2254,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         # the native grammar, rather than twice in the prompt.
                         "decision_schema": decision_envelope_schema(
                             list(profiles), sorted(allowed_tools), allow_finish=allow_finish,
-                            allow_ask=not private_read, allow_stop=allow_stop
+                            allow_ask=allow_ask, allow_stop=allow_stop
                         ),
                         "private_context": json.loads(job.context),
                         "history": [
@@ -2342,6 +2380,9 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     # Recompute current choices after generation, never trust the
                     # model snapshot as authority for identities or availability.
                     current_history = steps(db, job_id)
+                    recovery = agent_read_recovery.context(
+                        current_history, private_read=private_read
+                    )
                     current_plan = (
                         mail_read_plan(
                             db, job, profiles, current_history,
@@ -2365,7 +2406,14 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         db.commit()
                         continue
                     if decision.kind != "tool":
-                        if private_read and decision.kind == "ask":
+                        if recovery and recovery["needs_alternative"]:
+                            format_feedback(db, cfg, job, {"kind": decision.kind}, [{
+                                "type": "alternative_read_required",
+                                "next_action": recovery["instruction"],
+                            }])
+                            db.commit()
+                            continue
+                        if bounded_read and decision.kind == "ask":
                             format_feedback(db, cfg, job, {"kind": "ask"}, [{
                                 "type": "private_read_question_not_allowed",
                                 "next_action": "Use authorized reads/defaults/evidence; "
@@ -2374,7 +2422,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             db.commit()
                             continue
                         if decision.kind == "stop":
-                            if not private_read:
+                            if not bounded_read:
                                 format_feedback(db, cfg, job, {"kind": "stop"}, [{
                                     "type": "private_read_terminal_not_available",
                                 }])
@@ -2480,6 +2528,18 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 include_context=False,
                             ),
                         )
+                        db.commit()
+                        continue
+                    if recovery and (
+                        recovery["needs_alternative"] and effect
+                        or decision.integration_id == recovery["integration_id"]
+                        and decision.tool == "http" and args.get("method") == "GET"
+                        and args.get("path") == recovery["failed_path"]
+                    ):
+                        format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                            "type": "alternative_read_required",
+                            "next_action": recovery["instruction"],
+                        }])
                         db.commit()
                         continue
                     private_read_tool(job, profiles, decision.tool or "", effect)

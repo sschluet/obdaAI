@@ -1,5 +1,34 @@
 # obdaAI — Status 22.11.2026
 
+## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
+
+Nach dem Zugriffsfix zeigte eine echte Lampenfrage weiterhin einen erfundenen
+REST-Endpunkt. Die Folgelieferung ergänzt validierte HA-Lesebeispiele und lokale
+Domänenfilter sowie genau einen begrenzten anderen Leseweg nach einem GET-404.
+Ein fehlgeschlagener Schritt bleibt erhalten; Wiederholung desselben Pfads,
+Änderungen vor einer belegten Alternative und eine Korrektur nach unklaren
+Änderungen sind ausgeschlossen. Authentifizierungsfehler und Timeouts werden
+nicht durch blindes Wiederholen verdeckt.
+
+Die breitere Quellcodeprüfung fand zusätzlich fehlenden Integrationsbezug bei
+nativen Folgefragen und zu optimistische Erfolgswertung bei ungültiger
+HTTP-Projektion beziehungsweise fehlgeschlagener SSH-Inspektion. Neue typisierte
+Lesebelege und erneute Revisions-/Rechteprüfung erweitern die vorhandenen
+Gesprächsreferenzen; Fehler bleiben Fehler. Eindeutige HA-Inventarfragen und
+explizit lesende Aufträge erhalten keine Bestätigungsrunde. Potenziell auslösende
+HA-Webhook-GETs sind keine Lese- oder Verifikationsoperationen.
+
+Gmail-ID-Suchen belegen keinen Nachrichteninhalt. Der noch unvollständige native
+Gmail-Antwortstatusabgleich wird ausdrücklich als nicht belegt ausgegeben.
+Drive bleibt Wissensquelle und explizite Dateiablage; ein allgemeines
+Drive-Chatwerkzeug sowie ein nativer UniFi-Fähigkeitskatalog bleiben offen.
+
+Auf der Test-VM sind HA, Proton-MCP, Paperless und SSH eingerichtet. Die erweiterte
+Abnahme prüft echte Leseabfragen und Folgefragen getrennt von synthetischen
+Vertrags-/Browserprüfungen. Gmail, Drive und UniFi sind dort nicht konfiguriert
+und erhalten keinen behaupteten Live-Nachweis. Exakte neue CI- und Live-Ergebnisse
+werden erst nach ihrem tatsächlichen Abschluss ergänzt.
+
 ## 22.11.2026 — Fähigkeitsgestützte Werkzeugplanung und lesende Zugriffsprüfung
 
 Der gemeinsame Agentenlauf für Chat, Aufgaben und Projekte erhält kompakte
@@ -20,9 +49,26 @@ Die konkrete HA-Fehlerspur wurde auf der Test-VM nachvollzogen: ein ungeeigneter
 WebSocket-Verwaltungsbefehl wurde für eine Zugriffsfrage gewählt. Eine getrennte,
 echte freigegebene authentifizierte `GET /api/`-Prüfung bestätigte den vorhandenen
 Zugang ohne Zieländerung. Dies ist noch keine Abnahme des neuen Releases.
-Neue Unit-/API-Verträge und eine isolierte synthetische Desktop-/Mobilprüfung
-decken den korrigierten Ablauf ab. Vollständige exakte CI, Auslieferung und
-Abnahme des neuen Releases werden nach ihrem tatsächlichen Abschluss ergänzt.
+**5ba4899 / Schema 0047** wurde nach erfolgreicher
+[vollständiger CI 45033853747](https://github.com/sschluet/obdaAI/actions/runs/45033853747)
+ausgeliefert: 2.922 Tests bestanden, sechs Skips, 42 synthetische Browserprüfungen;
+lokal bestanden 2.928 Tests einschließlich PostgreSQL. Neun exakte Images und beide
+gesunden APIs sowie installierte Backend-Hashes, unveränderte Abhängigkeiten und
+Datenerhalt wurden nach frischer verschlüsselter Sicherung geprüft. Keine Migration.
+Eine fehlende Checkpoint-Elternstruktur wurde nach lesendem Abgleich mit einem
+getrennten Fortsetzungsschritt korrigiert; kein App-Update wurde blind wiederholt.
+
+Die echte neue Zugriffsfrage wurde durch den PostgreSQL-Worker mit genau einem
+authentifizierten `GET /api/` beantwortet, ohne Modell, Recherche oder Änderungen.
+Eigene QA-Chats wurden archiviert, die temporäre Sitzung entfernt. Eine zu enge
+erste Prüfbedingung hatte vorher lediglich auf Rückfragen wartende Altchats als
+aktive Arbeit behandelt und vor jedem neuen Auftrag abgebrochen. Der folgende
+funktionale Nachweis bestand; sein globaler QA-Vorher-/Nachhervergleich bestand
+bei paralleler Nutzung jedoch nicht. Die damaligen Einzelhash-Snapshots wurden
+nicht dauerhaft gespeichert, daher wird daraus kein nachträglicher erfolgreicher
+Datenerhaltungsnachweis abgeleitet. Der getrennte Vergleich unmittelbar nach dem
+Rollout bestand. Weitere Abnahmehelfer persistieren Snapshots und eigene IDs vor
+weiteren Mutationen und weisen parallele Änderungen gesondert aus.
 Die allgemeine autonome Administrationsqualität aller Adapter bleibt teilweise
 abgenommen; diese Korrektur behauptet keine universell fehlerfreie Modellplanung.
 

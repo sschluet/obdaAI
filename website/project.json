@@ -6,6 +6,12 @@
   "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
   "screenshots": [
     {
+      "id": "ha-lights",
+      "title": "Lampen aus vorhandenen Zuständen",
+      "description": "Eine fehlende Lampen-Schnittstelle bleibt als 404-Beleg sichtbar. Eine begrenzte alternative Leseabfrage filtert die vorhandenen Zustände lokal nach Lampen. Synthetische Aurora-Lampen und simulierte Modell-/HA-Antworten; kein echter Systemzugriff.",
+      "image": "assets/halights.png"
+    },
+    {
       "id": "ha-access",
       "title": "Zugriff prüfen. Klar antworten.",
       "description": "Eine einfache Frage nach Home Assistant nutzt automatisch die freigegebene Verbindung und eine feste lesende HTTP-Prüfung. Erfolg und Verbindungsfehler erscheinen verständlich im Chat, ohne Änderungsfreigaben. Ausschließlich synthetische API-Antworten und Testdaten; kein Nachweis eines echten HA-Zugriffs.",
@@ -668,7 +674,7 @@
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Einfache Zugriffsfragen nutzen die verfügbare lesende HTTP-Schnittstelle und unterscheiden Erreichbarkeit, Anmeldung und Fehler. Die neue Chatdarstellung ist synthetisch im Browser geprüft; ihre echte Zielabnahme steht noch aus. Produktive Wartung und Restore bleiben offen.",
+          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Einfache Zugriffsfragen nutzen die verfügbare lesende HTTP-Schnittstelle und unterscheiden Erreichbarkeit, Anmeldung und Fehler. Die neue Chatdarstellung ist synthetisch im Browser geprüft; ihre echte Zielabnahme steht noch aus. Produktive Wartung und Restore bleiben offen. Bekannte lesende Endpunkte und lokale Filter helfen bei der Werkzeugwahl. Nach einem 404 kann der Agent begrenzt einen anderen freigegebenen Leseweg wählen; der ursprüngliche Fehler bleibt im Beleg. Lampenauswahl und Fehlerbehandlung sind implementiert und synthetisch geprüft; diese Erweiterung ist noch nicht am echten Ziel abgenommen.",
           "status": "limited"
         },
         {

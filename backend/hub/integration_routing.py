@@ -44,6 +44,22 @@ ALIASES = {
 }
 
 
+_HA_INVENTORY_ENTITY = re.compile(r"\b(?:lampen?|leuchten?|lights?|schalter\w*|switch(?:es)?)\b")
+_HA_OWNED = re.compile(
+    r"\b(?:mein(?:e[nmrs]?)?|unser(?:e[nmrs]?)?|my|our|habe ich|haben wir|"
+    r"do i have|do we have)\b"
+)
+_HA_INVENTORY = re.compile(r"\b(?:welche|wie viele|zeige|zeig|liste|which|how many|show|list)\b")
+_HA_PUBLIC_ADVICE = re.compile(r"\b(?:kauf\w*|buy|purchase|empfiehl\w*|recommend\w*)\b")
+
+
+def _owned_ha_inventory(text: str) -> bool:
+    return bool(
+        _HA_INVENTORY_ENTITY.search(text) and _HA_OWNED.search(text)
+        and _HA_INVENTORY.search(text) and not _HA_PUBLIC_ADVICE.search(text)
+    )
+
+
 def relevant(goal: str, row: Integration, rules: Rules) -> bool:
     """Known interface vocabulary only; remote descriptions never become instructions."""
     text = goal.casefold()
@@ -81,6 +97,8 @@ def relevant(goal: str, row: Integration, rules: Rules) -> bool:
             name.replace("_", " ").casefold() in text or name.casefold() in text for name in names
         ):
             return True
+    if row.kind == "home_assistant" and _owned_ha_inventory(text):
+        return True
     aliases = ALIASES.get(row.kind)
     if aliases and aliases.search(text):
         return True
@@ -195,7 +213,7 @@ def matching_integrations(
         and not FILE_CREATION.search(goal.casefold())
         and re.search(
             r"\b(davon|darin|darauf|dazu|diese[rmns]?|vorhin|genannten|"
-            r"aufgelisteten|geantwortet|beantwortet)\b",
+            r"aufgelisteten|geantwortet|beantwortet|those|these|them|their|previous|listed|shown)\b",
             goal.casefold(),
         )
     ):

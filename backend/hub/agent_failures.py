@@ -86,6 +86,37 @@ def http_read_failure(status: int) -> dict[str, Any] | None:
     return _receipt(_http_category(status), False, http_status=status)
 
 
+
+def read_result_failure(tool: str, result: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Classify acknowledged read results using only fixed markers and scalar types.
+
+    Payloads, projection diagnostics and process output never enter the receipt.
+    Callers must establish that the dispatched operation was a read.
+    """
+    if tool == "http":
+        status = result.get("http_status")
+        failure = http_read_failure(status if type(status) is int else 0)
+        if failure is not None:
+            return failure
+        if "projection_error" in result:
+            return _receipt("validation_error", False, failure_phase="projection")
+    elif tool == "ssh.inspect":
+        status = result.get("exit_code")
+        if type(status) is not int or status != 0:
+            return _receipt("remote_tool_error", False)
+        output = result.get("stdout")
+        if type(output) is not str or len(output) > 200_000:
+            return _receipt("protocol_error", False)
+        lines = output.splitlines()
+        marker = "OBDAAI_COMMAND_AVAILABILITY"
+        if marker not in lines or sum(
+            bool(line.strip()) for line in lines[:lines.index(marker)]
+        ) < 3:
+            return _receipt("protocol_error", False)
+    elif tool == "ha.websocket" and result.get("success") is False:
+        return _receipt("protocol_error", False)
+    return None
+
 def _chain(error: BaseException) -> list[BaseException]:
     """Inspect bounded exception types, never transport error strings or arguments."""
     result: list[BaseException] = []

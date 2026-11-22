@@ -434,3 +434,5 @@ await import('./memory-intelligence-check.mjs');
 await import('./google-drive-check.mjs');
 
 await import('./ha-access-check.mjs');
+
+await import('./ha-read-recovery-check.mjs');

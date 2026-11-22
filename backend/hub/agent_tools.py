@@ -29,6 +29,7 @@ LOGGER = logging.Logger("hub.agent_transport")
 LOGGER.disabled = True
 
 SSH_INSPECT = (
+    "set -e\n"
     "/usr/bin/uname -sr\n/usr/bin/id -un\n/usr/bin/uptime\n"
     "if [ -x /usr/bin/sw_vers ]; then /usr/bin/sw_vers; fi\n"
     "printf '\\nOBDAAI_COMMAND_AVAILABILITY\\n'\n"
@@ -738,7 +739,16 @@ def validate_tool(
             data["path"].startswith(prefix) for prefix in rules.http_prefixes
         ):
             raise PermissionError("API operation is outside the approved rules")
-        return data, data["method"] != "GET"
+        # HA webhooks may explicitly accept GET and trigger an automation. The
+        # canonical path validator already rejects //, escapes and dot segments;
+        # case folding classifies variants conservatively without expanding rights.
+        webhook = kind == "home_assistant" and (
+            data["path"].casefold().rstrip("/") == "/api/webhook"
+            or data["path"].casefold().startswith("/api/webhook/")
+        )
+        if webhook and tool == "http.verify":
+            raise PermissionError("Home Assistant webhooks cannot verify an effect by reading")
+        return data, data["method"] != "GET" or webhook
     if tool == "shell" and kind == "ssh" and rules.shell:
         return data, True  # Even commands claiming to be a read are potentially effective.
     if tool == "file.read" and kind == "ssh":

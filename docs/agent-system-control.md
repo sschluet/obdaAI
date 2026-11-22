@@ -87,6 +87,57 @@ Zielinhalte als Fehlermeldung auszugeben. Ungeklärte Änderungen behalten
 `uncertain`, auch wenn erst ihre anschließende Nachprüfung unterbrochen wurde.
 Bestehende ungeklärte Aufträge werden nicht nachträglich als erfolgreich bewertet.
 
+### Inventar, Folgefragen und begrenzte Lesekorrektur
+
+HA-Fähigkeitshinweise enthalten validierte Beispiele für `/api/states`,
+`/api/config` und `/api/services`. Entitätsdomänen sind Filter, keine automatisch
+vorhandenen REST-Endpunkte. Lampen verwenden beispielsweise eine lokale
+`light.`-Auswahl aus Zuständen; Sensoren können denselben Mechanismus mit ihrem
+eigenen Präfix nutzen. Begrenzungen und Trefferzahlen der vorhandenen
+HTTP-Projektion bleiben sichtbar. Eindeutige HA-Inventarfragen senken den Auftrag
+auf Lesen und null Änderungsschritte. Explizite Verwaltungsaufträge werden dabei
+nicht umklassifiziert. Rein lesende Aufträge verlangen keine zusätzliche
+Bestätigung; fehlende Fähigkeiten können als nicht vollständig beantwortet enden.
+
+Ein allgemeiner Auftrag darf nach genau einem bestätigten HTTP-GET-404 einen
+anderen freigegebenen Leseweg wählen. Der fehlgeschlagene Originalschritt bleibt
+erhalten. Derselbe Zielpfad wird nicht erneut versandt; vor einem erfolgreichen
+anderen Lesebeleg sind Änderungen, Rückfragen und Erfolgsabschluss gesperrt.
+Vorherige Änderungen, ein zweiter Fehler, Authentifizierungsfehler, Timeout und
+unterbrochene Ausführungen erlauben diese Korrektur nicht. Die besonderen
+Mail-/Paperless-Planer behalten ihre eigenen Quellen- und Fortschrittsverträge.
+Nach einer belegten Alternative gelten ausschließlich die bereits vorhandenen
+ursprünglichen Rechte und Verifikationspflichten.
+
+Erfolg erfordert neben dem Transportstatus eine gültige Auswahl beziehungsweise
+einen erfolgreichen Inspektionsprozess. HTTP-Projektionsfehler und fehlerhafte
+SSH-Inspektionen sind keine erfolgreichen Datenabfragen. Das feste SSH-Skript
+bricht beim ersten Fehler ab. HA-Webhooks können auch durch GET Automationen
+auslösen; sie gelten deshalb als mögliche Änderung und niemals als lesender
+Verifikationspfad. Siehe [offizieller Webhook-Vertrag](https://www.home-assistant.io/triggers/webhook/).
+Für diese Prüfung werden keine echten Webhooks aufgerufen.
+
+Erfolgreiche native HTTP-, bekannte HA-WebSocket-, SSH- und Gmail-Lesebelege können
+wie die vorhandenen Mail-/Paperless-Belege im selben Gespräch gebunden werden.
+Deutsche und englische Folgefragen können so ihre Integration behalten.
+Profil-, Richtlinien-, Nachrichten- und Belegrevisionen werden erneut geprüft;
+Widerruf oder ein fremdes Gespräch erlauben keine Wiederverwendung. Inhalt bleibt
+LOCAL_ONLY und innerhalb des bestehenden Kontextbudgets, niemals öffentliche
+Recherchegrundlage oder Berechtigungsnachweis.
+
+Gmail-Suchtreffer sind zunächst IDs und belegen keinen Nachrichteninhalt. Für
+Zusammenfassungen sind tatsächliche Nachrichten-/Threadabrufe nötig. Ein nativer
+Gmail-Abgleich gesendeter Antworten ist derzeit nicht durchgehend implementiert;
+entsprechende Statusfragen enden ausdrücklich als nicht belegt. Dies ist keine
+Gleichsetzung mit den gesonderten Proton-Kopfzeilen-/Sent-Nachweisen.
+
+Die Integrationsabnahme unterscheidet feste Unit-/API-/Transportverträge,
+synthetische Browserdialoge und echte Zielabfragen. Eine erfolgreiche Verbindung
+allein ist kein Nachweis erfolgreicher Datenfragen oder Folgefragen. Nicht auf der
+Test-VM konfigurierte Dienste erhalten keinen behaupteten Live-Nachweis. Google
+Drive ist derzeit Quelle und explizite Dateiablage; ein allgemeines agentisches
+Drive-Chatwerkzeug und ein nativer UniFi-Fähigkeitskatalog sind weiterhin offen.
+
 Öffentliche Recherche und private Systembeobachtung sind getrennte Datenwege.
 Der lokale Rechercheplan verwendet ein exaktes JSON-Schema mit ausschließlich
 `queries`: höchstens drei nichtleere Suchfragen mit je höchstens 500 Zeichen.

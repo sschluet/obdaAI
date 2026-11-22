@@ -8,9 +8,29 @@ from hub.agent_capabilities import (
     access_question,
     bootstrap,
     describe,
+    ha_inventory_question,
     websocket_types,
 )
 from hub.agent_tools import Rules, validate_tool
+
+
+@pytest.mark.parametrize("goal", [
+    "Welche Lampen habe ich in Home Assistant?", "Welche davon sind an?",
+    "Zeige meine Sensoren", "Which devices are available?", "What is the current status?",
+    "Welche Schalter habe ich?", "Which switch is on?",
+])
+def test_ha_inventory_lowers_authority_without_selecting_a_tool(goal):
+    assert ha_inventory_question(goal, [profile()])
+    assert not ha_inventory_question(goal, [profile(), profile("ssh")])
+
+
+@pytest.mark.parametrize("goal", [
+    "Welche Updates gibt es? Installiere sie.", "Zeige Lampen und schalte sie ein",
+    "Show lights and turn them on", "What updates are available? Restart afterwards.",
+    "Installiere das Update", "Prüfe HA und führe ein Backup aus",
+])
+def test_ha_administration_is_not_silently_converted_to_inventory(goal):
+    assert not ha_inventory_question(goal, [profile()])
 
 
 def profile(kind="home_assistant", name="Home Assistant", enabled=True):
