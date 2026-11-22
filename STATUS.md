@@ -2,6 +2,32 @@
 
 ## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
 
+Die reale Abnahme von fef6347 deckte zwei weitere Fälle auf: Die Lampenfrage las
+dreimal dieselben ungefilterten Zustände und endete nach rund 142 Sekunden an
+der lokalen Kontextgrenze. Die Paperless-Übersicht bestand; die Folgefrage
+„Was steht im ersten dieser Dokumente?“ erkannte den vorhandenen Ordinalverweis
+nicht und endete ohne Dokumentabruf als nicht belegt. Beide Belege bleiben
+unverändert erhalten, mit erfolgreicher Datenerhaltungs- und QA-Bereinigungsprüfung.
+
+Die Nachbesserung nutzt für eng erkannte Lampenfragen genau eine freigegebene,
+lokal nach `light.` gefilterte Zustandsabfrage und stellt die Beobachtung ohne
+Modellplanung dar. „Welche davon sind an?“ bindet ausschließlich die zuletzt
+belegte Auswahl und gleicht deren aktuellen Zustand ab; neue, nicht zuvor gezeigte
+Entitäten werden nicht hineingemischt. Ausschnitt, unbekannte Zustände und fehlende
+Beobachtungen bleiben sichtbar. Andere Aufträge verwenden weiterhin den allgemeinen
+Agenten. Identische erfolgreiche GET-Abfragen in einem allgemeinen reinen Leseauftrag
+werden vor erneutem Dispatch durch begrenzte Planungskorrektur abgefangen.
+Die vorhandene Paperless-Auswahl versteht zusätzlich singuläre partitive Verweise
+wie „im ersten dieser Dokumente“; Mehrfachauswahl und unklare Quellen bleiben gesperrt.
+Exakte neue CI und reale Nachabnahme dieser Nachbesserung stehen noch aus.
+
+Auf fef6347 bestanden dagegen echte SSH-Zugriffsfrage und Proton-Zweiturnabnahme:
+vier tatsächlich abgerufene heutige Kopfzeilen und anschließender quellgebundener
+Antwortstatusabgleich mit beobachteter Gesendet-Suche. In diesem Ausschnitt war
+keine positive Antwortbeziehung belegt; fehlende Beziehungen wurden nicht als
+„unbeantwortet“ ausgegeben. Kein Vollständigkeits- oder Zustellnachweis. Je Fall
+bestanden Datenerhalt, Archivierung eigener QA-Chats und Entfernung der Prüfsitzung.
+
 Nach dem Zugriffsfix zeigte eine echte Lampenfrage weiterhin einen erfundenen
 REST-Endpunkt. Die Folgelieferung ergänzt validierte HA-Lesebeispiele und lokale
 Domänenfilter sowie genau einen begrenzten anderen Leseweg nach einem GET-404.
@@ -36,8 +62,22 @@ Scrolltest. Eine isolierte Ablaufspur zeigte native Tastaturbewegung nach dem
 Messbeginn bei unverändertem Layout. Der Test wartet nun auf `scrollend` statt
 auf eine feste kurze Pause; seine Drei-Pixel-Grenze und der Produktionscode
 bleiben unverändert. Der gezielte vollständige Scrollablauf bestand auf einer
-frischen Fixture. Eine neue vollständige exakte CI ist weiterhin erforderlich;
-der ursprüngliche fehlgeschlagene Lauf bleibt als Beleg erhalten.
+frischen Fixture. Die anschließende vollständige exakte
+[CI 45044579845](https://github.com/sschluet/obdaAI/actions/runs/45044579845)
+für **fef6347** bestand alle Pflichtjobs samt App-Tree-Beleg: 3.124 Tests,
+sechs mangels Offline-Calc übersprungene Fälle sowie die gesamte synthetische
+Browserprüfung einschließlich Scrolltest und beider neuer HA-Fälle. Nach bisheriger
+Zählkonvention sind es 43 Browserprüfungen (39 direkte Einstiegsskripte plus vier
+zusätzliche Importe im Hauptcheck); weitere verschachtelte Prüfgruppen sind darin
+nicht gesondert gezählt. Der ursprüngliche fehlgeschlagene Lauf bleibt erhalten.
+
+**fef6347 / Schema 0047** wurde nach frischer verschlüsselter Sicherung auf die
+Test-VM ausgerollt. Neun exakte Images, beide gesunden APIs und installierte sowie
+Quellcode-Backendhashes geprüft; Abhängigkeiten, Frontend und Schema blieben
+unverändert. Vorhandene Anwendungsdaten, statische Zugangskonfigurationen und
+Netzwerkregeln bestanden den Vergleich. Keine Migration und keine Wiederherstellung
+durchgeführt. Die vier Phasen Vorbereitung, Build, Sicherung und Umschaltung
+bestanden ohne Wiederholung eines unterbrochenen Dispatches.
 
 ## 22.11.2026 — Fähigkeitsgestützte Werkzeugplanung und lesende Zugriffsprüfung
 

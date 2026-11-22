@@ -89,6 +89,28 @@ Bestehende ungeklärte Aufträge werden nicht nachträglich als erfolgreich bewe
 
 ### Inventar, Folgefragen und begrenzte Lesekorrektur
 
+Eng erkannte Fragen nach den eigenen Lampen verwenden eine feste lesende
+`GET /api/states`-Abfrage mit lokalem `light.`-Filter und höchstens 100 Entitäten.
+Die Anwendung stellt Namen und beobachtete Zustände direkt dar; eine zusätzliche
+Modellplanung ist dafür nicht nötig. Die Zahl beschreibt Entitäten, nicht physische
+Geräte. Größere Bestände, unbekannte Zustände und nicht beobachtete Einträge werden
+ausdrücklich eingeordnet. Andere Formulierungen und Verwaltungsaufträge bleiben
+im allgemeinen Agentenpfad.
+
+„Welche davon sind an?“ nutzt die jüngsten gültigen Lesebelege desselben Gesprächs
+und fragt den aktuellen Zustand erneut ab. Nur zuvor dargestellte Entitäten gehören
+zur Auswahl; neue Entitäten sowie zuvor ausgeblendete ausgeschaltete Lampen werden
+bei weiteren Folgefragen nicht hinzugefügt. Die Quellenbindung wird vor Dispatch
+und vor der Antwort erneut geprüft. Die feste Abfrage verwendet denselben dauerhaften
+Intent-, Rechte-, Fehler- und Abbruchpfad wie andere Werkzeuge.
+
+Im allgemeinen reinen Leseauftrag wird eine identische bereits erfolgreiche
+GET-Abfrage nicht erneut versandt. Der Planer erhält die ursprüngliche Schrittnummer
+und kann anhand des Belegs antworten oder eine andere begrenzte Auswahl wählen.
+Die vorhandene begrenzte Zahl der Planungskorrekturen verhindert eine Endlosschleife.
+Diese Regel betrifft keine Änderungsnachprüfung und keine erneute aktuelle Abfrage
+in einem neuen Auftrag.
+
 HA-Fähigkeitshinweise enthalten validierte Beispiele für `/api/states`,
 `/api/config` und `/api/services`. Entitätsdomänen sind Filter, keine automatisch
 vorhandenen REST-Endpunkte. Lampen verwenden beispielsweise eine lokale
@@ -272,11 +294,13 @@ festgelegtes GET-Prädikat kann nach Updates oder Antwortverlust begrenzt pollen
 es belegt den beobachteten Zustand, keine Kausalität. Ohne passende Nachprüfung
 wird ein HTTP-/MCP-/SMTP-Ack nicht als bewiesene Wirkung ausgegeben. SSH verlangt vor Versand ein separates, vom Agenten definiertes Prüfskript.
 Bei einer unpassenden lokalen GET-Projektion bleibt die bereits begrenzte
-Originalantwort als Beobachtung erhalten. `projection_error` ist kein Transportfehler
-und kein Wirkungsnachweis: `http.verify` kann damit niemals erfolgreich sein.
+Originalantwort im fehlgeschlagenen Beleg erhalten, nicht als erfolgreiche
+Beobachtung. `projection_error` ist kein Wirkungsnachweis: Weder ein Leseschritt
+noch `http.verify` kann damit erfolgreich sein oder eine gültige Lesereferenz liefern.
 Es erfolgt keine automatische neue HTTP-Anfrage. Fehler bei Schreibantworten,
 Transporten und Antwortgrenzen werden dadurch nicht abgefangen.
-Die drei bereits vorhandenen HA-Metadatenabfragen (backup/info sowie GET /info
+Zusätzlich zu den vier oben genannten Zustands-/Konfigurationsabfragen sind die
+drei vorhandenen HA-Metadatenabfragen (backup/info sowie GET /info
 und /supervisor/info über supervisor/api) sind ausschließlich in ihrer exakten
 Form lesend. Andere WebSocket-Aufrufe bleiben mögliche Änderungen; eine
 fehlende Lesefähigkeit wird als Beobachtung statt als vermeintlicher Effekt geliefert. Geschlossene SSH-Kanäle

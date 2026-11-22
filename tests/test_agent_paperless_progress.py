@@ -88,6 +88,15 @@ def test_exact_first_read_uses_raw_order_and_full_hashes(receipt, legacy):
             73,
         ),
         ("Was steht im ersten angezeigten Dokument?", 73),
+        ("Was steht im ersten dieser Dokumente?", 73),
+        ("Was steht im ersten der angezeigten Dokumente?", 73),
+        ("Lies den zweiten dieser Treffer.", 12),
+        ("Fasse den Inhalt des zweiten dieser Dokumente zusammen.", 12),
+        ("Fasse das zweite der gefundenen Dokumente zusammen.", 12),
+        ("Fasse die ersten dieser Dokumente zusammen.", None),
+        ("Fasse die ersten dieser Treffer zusammen.", None),
+        ("Lies den ersten dieser Dokumente und den zweiten dieser Treffer.", None),
+        ("Was steht im dritten dieser Dokumente?", None),
         ("Fasse den Inhalt des zweiten Dokuments zusammen.", 12),
         ("Zeige den Inhalt des 2. gefundenen Dokuments.", 12),
         ("Summarize the first document.", 73),
@@ -297,7 +306,8 @@ def test_ordinal_beyond_short_projection_uses_full_receipt(receipt):
 
 
 @pytest.mark.parametrize("same_identifier", [False, True])
-def test_ordinal_never_guesses_between_accounts(receipt, same_identifier):
+@pytest.mark.parametrize("partitive", [False, True])
+def test_ordinal_never_guesses_between_accounts(receipt, same_identifier, partitive):
     from hub.agent_models import AgentPolicy
     from hub.integrations import Integration
 
@@ -339,6 +349,8 @@ def test_ordinal_never_guesses_between_accounts(receipt, same_identifier):
             }
         ],
     )
+    if partitive:
+        job.goal = "Was steht im ersten dieser Dokumente?"
     assert call(receipt)["decisions"] == []
     job.goal = "Lies Dokument-ID 73."
     result = call(receipt)
@@ -346,3 +358,28 @@ def test_ordinal_never_guesses_between_accounts(receipt, same_identifier):
         assert result["decisions"] == []
     else:
         assert result["decisions"][0]["integration_id"] == receipt[5].id
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_partitive_first_document_is_source_bound_and_not_invented(receipt, legacy):
+    prepare(receipt, rows=[
+        {"id": 73, "title": "Synthetic observed first", "tags": []},
+        {"id": 12, "title": "Synthetic observed second", "tags": []},
+    ], legacy=legacy)
+    receipt[1].goal = "Was steht im ersten dieser Dokumente?"
+    result = call(receipt)
+    assert len(result["decisions"]) == 1
+    assert result["decisions"][0]["arguments"]["document_id"] == 73
+    assert result["decision_sources"][0]["pointer"] == (
+        "/body/results/0" if legacy else "/data/results/0"
+    )
+    assert result["source_receipts"][0]["result_sha256"] == digest(receipt[4].result)
+    assert "999999" not in encode(result)
+
+
+def test_partitive_first_document_without_bound_receipt_has_no_choice(receipt):
+    prepare(receipt)
+    receipt[1].goal = "Was steht im ersten dieser Dokumente?"
+    receipt[1].context = encode([])
+    receipt[0].flush()
+    assert call(receipt)["decisions"] == []

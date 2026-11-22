@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-22",
-  "applicationCommit": "ab2b861",
+  "applicationCommit": "fef6347",
   "schema": "0047",
-  "tests": 2811,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
+  "tests": 3124,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45044579845",
   "screenshots": [
     {
       "id": "ha-lights",
@@ -674,7 +674,7 @@
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Status, Backupmetadaten und Wartungsberichte über feste lesende Adapter; lokale HA-Analyse und Aufgabenpipeline live geprüft. Einfache Zugriffsfragen nutzen die verfügbare lesende HTTP-Schnittstelle und unterscheiden Erreichbarkeit, Anmeldung und Fehler. Die neue Chatdarstellung ist synthetisch im Browser geprüft; ihre echte Zielabnahme steht noch aus. Produktive Wartung und Restore bleiben offen. Bekannte lesende Endpunkte und lokale Filter helfen bei der Werkzeugwahl. Nach einem 404 kann der Agent begrenzt einen anderen freigegebenen Leseweg wählen; der ursprüngliche Fehler bleibt im Beleg. Lampenauswahl und Fehlerbehandlung sind implementiert und synthetisch geprüft; diese Erweiterung ist noch nicht am echten Ziel abgenommen.",
+          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Diese Nachbesserung ist implementiert, ihre neue reale Abnahme steht noch aus. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen.",
           "status": "limited"
         },
         {
@@ -851,17 +851,17 @@
   "development": {
     "mode": "local",
     "schema": "0047",
-    "browserChecks": 41,
+    "browserChecks": 43,
     "serverDeployment": true,
-    "commit": "ab2b861",
-    "ciTests": 2811,
-    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45014790113",
+    "commit": "fef6347",
+    "ciTests": 3124,
+    "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45044579845",
     "deployedCommit": "ab2b861",
     "deployedSchema": "0047",
     "liveScope": "Release ab2b861 / Schema 0047 auf der reparierten Test-VM installiert. Native Drive-API und optionale Einrichtung im echten Browser (Desktop/320 px), ein strikt lokaler Chat mit Workerbeleg, echter Neustart und aktuelle verschlüsselte Sicherung bestanden. Netzwerk, Vault, Modell-/Suchzugang und Proton wieder verfügbar; vorhandene Daten und statische Zugangsdaten erhalten. Reale Google-Anmeldung, Drive-Downloads/Uploads und eine neue Wiederherstellungsprüfung bleiben offen; V1 partiell.",
     "designModernized": true,
     "interactionModernized": true,
-    "lastSuccessfulCICommit": "ab2b861",
-    "lastSuccessfulCIUI": 41
+    "lastSuccessfulCICommit": "fef6347",
+    "lastSuccessfulCIUI": 43
   }
 }

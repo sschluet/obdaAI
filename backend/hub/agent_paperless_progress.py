@@ -90,7 +90,14 @@ def _selection(goal: str) -> tuple[str, int] | None:
             r"(?:(?:gefunden|angezeigt|beobachtet|found|listed)(?:e|en|er|es|em)?\s+)?"
             r"(?:dokument(?:s)?|document|treffer(?:s)?|result|hit)\b"
         )
-        if re.search(pattern, goal, re.I):
+        # A singular partitive points into the prior result set: "im ersten
+        # dieser Dokumente" still selects one document, unlike "die ersten".
+        partitive = (
+            rf"\b(?:im|vom|am|zum|des|dem|den|das)\s+{stem}(?:e|en|er|es|em)?\s+"
+            r"(?:dieser|der)\s+(?:(?:gefunden|angezeigt|beobachtet)en\s+)?"
+            r"(?:dokumente|treffer)\b"
+        )
+        if re.search(pattern, goal, re.I) or re.search(partitive, goal, re.I):
             ordinals.append(number)
     ordinals.extend(
         int(n)

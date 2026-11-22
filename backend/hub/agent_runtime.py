@@ -1903,6 +1903,84 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
             db.commit()
 
 
+async def inspect_ha_inventory(factory: Any, cfg: Settings, job_id: str) -> bool:
+    """Answer a narrow typed inventory query through the ordinary durable read path."""
+    from hub.agent_ha_inventory import plan, summary
+    from hub.agent_read_references import _validated
+
+    with factory() as db:
+        job = db.get(AgentJob, job_id)
+        assert job
+        profiles = gate(db, cfg, job)
+        frozen = json.loads(job.bindings)
+        if (frozen.get("capability_version") != 1 or frozen.get("capability_access")
+                or not frozen.get("read_only")):
+            return False
+        references = []
+        for reference, result, tool in _validated(db, job, profiles):
+            source = db.get(AgentStep, (reference["source_job_id"], reference["sequence"]))
+            message = db.get(Message, reference["message_id"])
+            assert source and message
+            references.append(((message.created, message.id), {
+                "reference": reference, "result": result, "tool": tool,
+                "document": json.loads(source.document),
+            }))
+        latest_source = max((key for key, _ in references), default=None)
+        source_refs = [value for key, value in references if key == latest_source]
+        selected = plan(job.goal, profiles, source_refs=source_refs)
+        history = steps(db, job_id)
+        if selected is None:
+            if any("inventory_plan" in json.loads(step.document) for step in history):
+                raise PermissionError("Gebundene Inventarabfrage geändert")
+            return False
+        if history:
+            if not any("inventory_plan" in json.loads(item.document) for item in history):
+                return False  # Never insert an inventory read into an existing action chain.
+            if (len(history) != 1
+                    or json.loads(history[0].document).get("inventory_plan") != selected):
+                raise PermissionError("Gebundene Inventarabfrage geändert")
+            step = history[0]
+        else:
+            profile, rules, target_config = profiles[selected["integration_id"]]
+            arguments, effect = validate_tool(profile.kind, rules, selected["tool"],
+                                              selected["arguments"])
+            if effect or arguments != selected["arguments"]:
+                raise PermissionError("Inventarabfrage ist keine freigegebene Leseoperation")
+            step = record(db, job, "read", {
+                "kind": "tool", "integration_id": profile.id, "tool": selected["tool"],
+                "arguments": arguments, "inventory_plan": selected,
+                "message": "Licht-Entitäten und ihren aktuellen Zustand lesen",
+                "target": {"kind": profile.kind, "url": target_config.get("url"),
+                           "profile_revision": profile.revision,
+                           "config_sha256": digest(profile.config)},
+            })
+        sequence = step.sequence
+        db.commit()  # The exact query and source cohort are durable before target access.
+    await asyncio.to_thread(dispatch, factory, cfg, job_id, sequence)
+    with factory() as db:
+        job = db.get(AgentJob, job_id)
+        assert job
+        gate(db, cfg, job)  # Recheck source revisions, cancellation and policy before answering.
+        step = db.get(AgentStep, (job_id, sequence))
+        assert step
+        if step.status == "failed":
+            complete(db, job, "failed", failure_summary(json.loads(step.result)))
+        elif step.status != "succeeded":
+            raise ValueError("Inventarabfrage nicht abgeschlossen")
+        else:
+            answer = summary(json.loads(step.result), selected)
+            if answer is None:
+                step.status = "failed"
+                step.result = encode({**json.loads(step.result),
+                                      "failure_category": "protocol_error"})
+                complete(db, job, "failed", "Die Zustandsabfrage lieferte keine gültigen "
+                         "Lichtdaten. Es wurde keine Änderung ausgeführt.")
+            else:
+                complete(db, job, "observed", answer)
+        db.commit()
+    return True
+
+
 async def inspect_capabilities(factory: Any, cfg: Settings, job_id: str) -> tuple[bool, bool]:
     """Use the shared durable dispatch path for adapter-authored first reads."""
     sequences: list[int] = []
@@ -2067,6 +2145,8 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     prepare_mail_catalogs(db, job, profiles)
                 db.commit()
             if not private_read:
+                if await inspect_ha_inventory(factory, cfg, job_id):
+                    return
                 handled, inspected = await inspect_capabilities(factory, cfg, job_id)
                 if handled:
                     return
@@ -2543,6 +2623,23 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         db.commit()
                         continue
                     private_read_tool(job, profiles, decision.tool or "", effect)
+                    if (bounded_read and not private_read and decision.tool == "http"
+                            and args.get("method") == "GET"):
+                        previous_read = next((s.sequence for s in current_history
+                            if s.kind == "read" and s.status == "succeeded"
+                            and (document := json.loads(s.document)).get("tool") == "http"
+                            and document.get("integration_id") == decision.integration_id
+                            and document.get("arguments") == args), None)
+                        if previous_read is not None:
+                            format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                                "type": "read_already_observed",
+                                "original_sequence": previous_read,
+                                "next_action": "Use the successful observation to answer, or "
+                                "select a different bounded projection needed for this question. "
+                                "Do not repeat the identical successful GET in this read-only job.",
+                            }])
+                            db.commit()
+                            continue
                     previous = (
                         repeated_mail_preparation(
                             steps(db, job_id),

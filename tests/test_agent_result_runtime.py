@@ -38,7 +38,9 @@ def test_failed_projection_cannot_prove_an_answer_or_resolve_a_missing_endpoint(
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     monkeypatch.setattr(runtime, "generate", model)
-    result = execute(ha, start(ha, "Welche Lampen habe ich in Home Assistant?"))
+    result = execute(ha, start(
+        ha, "Welche Lampen sind laut den verfügbaren Schnittstellen in Home Assistant vorhanden?"
+    ))
     assert result["status"] == "failed" and "Lesezugriff fehlgeschlagen" in result["summary"]
     assert "SYNTHETIC-PRIVATE-TARGET-ERROR" not in result["summary"]
     assert len(turns) == (2 if missing_first else 1)
@@ -147,7 +149,9 @@ def test_get_webhook_cannot_escape_an_inventory_read_boundary(ha, monkeypatch): 
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     monkeypatch.setattr(runtime, "generate", model)
-    result = execute(ha, start(ha, "Welche Lampen sind in Home Assistant vorhanden?"))
+    result = execute(ha, start(
+        ha, "Welche Lampen sind laut den verfügbaren Schnittstellen in Home Assistant vorhanden?"
+    ))
     assert result["status"] == "failed" and sent == ["/api/"]
 
 

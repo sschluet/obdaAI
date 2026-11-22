@@ -17,7 +17,9 @@ from test_agent_capability_runtime import ha  # noqa: F401
 from test_agents import agent  # noqa: F401
 from test_integration_writes import writes  # noqa: F401
 
-GOAL = "Welche Lampen sind in meinem Home Assistant vorhanden?"
+# Exercise the general planner; the short inventory-only question has a native read path.
+GOAL = ("Welche Lampen sind in meinem Home Assistant vorhanden? "
+        "Prüfe die verfügbaren Schnittstellen.")
 STATES = [
     {"entity_id": "light.synthetic_living", "state": "on",
      "attributes": {"friendly_name": "Synthetic living room"}},
