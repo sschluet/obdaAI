@@ -2,6 +2,36 @@
 
 ## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
 
+**7d3916e / Schema 0047** ist ausgeliefert und an allen vier eingerichteten
+Verbindungen lesend nachgeprüft. Lokale Vollprüfung: 3.203 Tests einschließlich
+PostgreSQL. Exakte [CI 45049558158](https://github.com/sschluet/obdaAI/actions/runs/45049558158):
+3.197 bestanden, sechs optionale Calc-Skips, alle synthetischen Browserprüfungen
+und Pflichtjobs samt App-Tree-Beleg erfolgreich.
+
+| Reale Abnahme | Ergebnis |
+| --- | --- |
+| HA: Lampen und „Welche davon sind an?“ | Beide Antworten nennen alle erwarteten Entitäten des jeweiligen Abrufs; je ein frischer GET, keine Modellplanung. |
+| Paperless: Übersicht und „Was steht im ersten dieser Dokumente?“ | Tatsächliche Suche und erster belegter Dokumentinhalt abgerufen; Antwort an die aktuelle Dokumentquelle gebunden. |
+| Proton: heutige Mails und Antwortstatusfolgefrage | Tatsächliche Kopfzeilen, Antwortkennzeichen und begrenzte Gesendet-Beziehungen ausgewertet; unbekannt bleibt unbekannt. |
+| SSH: vorhandenen Zugang prüfen | Feste authentifizierte Inspektion erfolgreich. |
+
+Alle sieben Aufträge endeten ohne Rückfrage, Freigaberunde, Recherche, Cloud oder
+Zieländerung. Pro Fall bestanden Datenerhalt, statischer Konfigurationsvergleich,
+Archivierung ausschließlich eigener QA-Chats und Entfernung der Prüfsitzung.
+Die Nachprüfung zertifiziert gebundene Abrufe und beobachtete Antwortmerkmale,
+keine universelle semantische Richtigkeit von Modellzusammenfassungen oder
+vollständige Postfachabdeckung. Reale Gmail-, Drive- und UniFi-Zugänge waren nicht
+eingerichtet; allgemeine administrative Abdeckung und V1 bleiben partiell.
+
+Vor Umschaltung wurde eine frische verschlüsselte Sicherung mit geprüftem
+Ciphertext erstellt; Quota und Reserve blieben erhalten. Keine Migration,
+Wiederherstellung oder Zielschreibaktion. Nach Abschluss: neun exakte Images,
+beide APIs gesund, installierte und Quellcode-Backendbytes geprüft, keine
+fehlgeschlagenen Systemdienste, Backup und Timer gesund. Die beschleunigte private
+Datenerhaltungsprüfung lieferte im echten Vergleich für alle 82 Tabellen exakt
+dieselben Fingerprints wie das bisherige Verfahren. Frühere Fehlerbelege bleiben
+erhalten. Private Belege liegen ausschließlich unter `.local/deployment`.
+
 Die reale Abnahme von fef6347 deckte zwei weitere Fälle auf: Die Lampenfrage las
 dreimal dieselben ungefilterten Zustände und endete nach rund 142 Sekunden an
 der lokalen Kontextgrenze. Die Paperless-Übersicht bestand; die Folgefrage
@@ -19,7 +49,7 @@ Agenten. Identische erfolgreiche GET-Abfragen in einem allgemeinen reinen Leseau
 werden vor erneutem Dispatch durch begrenzte Planungskorrektur abgefangen.
 Die vorhandene Paperless-Auswahl versteht zusätzlich singuläre partitive Verweise
 wie „im ersten dieser Dokumente“; Mehrfachauswahl und unklare Quellen bleiben gesperrt.
-Exakte neue CI und reale Nachabnahme dieser Nachbesserung stehen noch aus.
+Die abschließende reale Nachabnahme dieser Nachbesserung ist oben belegt.
 Die lokale Vollprüfung von 0826181 bestand 3.200 Tests einschließlich PostgreSQL,
 Ruff, mypy (139 Module) und Secret-Scan. Eine zusätzliche unabhängige Quellcodeprüfung
 fand zwei Randfälle: höfliche Präfixe erreichten den festen Inventarweg noch nicht,
@@ -27,12 +57,16 @@ und der GET-Duplikatvergleich unterschied boolesche und numerische Filterwerte n
 Beide sind korrigiert; 65 gezielte Runtime-/Fähigkeitstests bestanden einschließlich
 neuer Gegenproben. Der überholte CI-Lauf 45048823715 wurde gezielt abgebrochen;
 sein Teilfortschritt ist kein vollständiger Nachweis für den korrigierten Stand.
+Die anschließende vollständige lokale Prüfung von **7d3916e** bestand 3.203 Tests
+einschließlich PostgreSQL, Ruff, mypy und Secret-Scan. Die exakte vollständige
+[CI 45049558158](https://github.com/sschluet/obdaAI/actions/runs/45049558158) bestand
+3.197 Tests mit sechs optionalen Offline-Calc-Skips, alle Browserprüfungen und alle
+Pflichtjobs samt App-Tree-Beleg. Reale Nachabnahme siehe oben.
 
 Auf fef6347 bestanden dagegen echte SSH-Zugriffsfrage und Proton-Zweiturnabnahme:
-vier tatsächlich abgerufene heutige Kopfzeilen und anschließender quellgebundener
-Antwortstatusabgleich mit beobachteter Gesendet-Suche. In diesem Ausschnitt war
-keine positive Antwortbeziehung belegt; fehlende Beziehungen wurden nicht als
-„unbeantwortet“ ausgegeben. Kein Vollständigkeits- oder Zustellnachweis. Je Fall
+tatsächlich abgerufene heutige Kopfzeilen und anschließender quellgebundener
+Antwortstatusabgleich mit beobachteter Gesendet-Suche. Fehlende Beziehungen wurden
+nicht als „unbeantwortet“ ausgegeben. Kein Vollständigkeits- oder Zustellnachweis. Je Fall
 bestanden Datenerhalt, Archivierung eigener QA-Chats und Entfernung der Prüfsitzung.
 
 Nach dem Zugriffsfix zeigte eine echte Lampenfrage weiterhin einen erfundenen
@@ -59,8 +93,8 @@ Drive-Chatwerkzeug sowie ein nativer UniFi-Fähigkeitskatalog bleiben offen.
 Auf der Test-VM sind HA, Proton-MCP, Paperless und SSH eingerichtet. Die erweiterte
 Abnahme prüft echte Leseabfragen und Folgefragen getrennt von synthetischen
 Vertrags-/Browserprüfungen. Gmail, Drive und UniFi sind dort nicht konfiguriert
-und erhalten keinen behaupteten Live-Nachweis. Exakte neue CI- und Live-Ergebnisse
-werden erst nach ihrem tatsächlichen Abschluss ergänzt.
+und erhalten keinen behaupteten Live-Nachweis. Exakte abschließende CI- und
+Live-Ergebnisse sind im jüngsten Nachweis oben getrennt aufgeführt.
 
 Lokale Vollprüfung des Auditstands: 3.130 Tests einschließlich PostgreSQL bestanden.
 CI 45041833469 bestand 3.124 Tests mit sechs Plattform-Skips sowie die neuen
