@@ -1,10 +1,16 @@
 {
-  "updated": "2026-10-21",
+  "updated": "2026-11-22",
   "applicationCommit": "aa4a5ae",
   "schema": "0046",
   "tests": 2701,
   "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/39647243916",
   "screenshots": [
+    {
+      "id": "google-drive",
+      "title": "Google Drive als Quelle und Ablage",
+      "description": "Optionale geführte Einrichtung, Ordnerauswahl und eigener Ablageordner. Ausschließlich synthetisches Konto und simulierte Google-Antworten; keine echte Anmeldung, kein realer Drive-Zugriff.",
+      "image": "assets/googledrive.png"
+    },
     {
       "id": "memory",
       "title": "Dein Gedächtnis. Unter deiner Kontrolle.",
@@ -644,6 +650,11 @@
       "symbol": "⊞",
       "intro": "Anleitungen und verbundene Funktionen passend einsetzen.",
       "features": [
+        {
+          "title": "Google Drive als Wissensquelle und Dateiablage",
+          "status": "local",
+          "description": "Optionale Google-OAuth-Einrichtung mit getrennten Quellen- und Ablagerechten. Gewählte Ordner über die bestehende lokale Quellenindexierung nutzen; geprüfte Dateiversionen nach konkreter Freigabe neu im eigenen obdaAI-Ordner ablegen. Synthetische Tests, keine echte Google-Anmeldung. VM-Ausrollung noch offen."
+        },
         {
           "title": "Versionierte Skills",
           "description": "Skill-Bibliothek mit Suche, Markdown-Editor und geprüften Revisionen. Einzelne SKILL.md-Dateien sowie ZIP-/Skill-Pakete mit Office-Vorlagen, Bildern und Referenzen importieren. Paketdateien, Abhängigkeiten und Importhinweise im Editor prüfen; Originale bleiben lokal und unverändert. Verwendung Immer, Bei Erwähnung oder Nach Stichwort; Cloudfreigabe je Anleitung. Skripte werden archiviert und nicht ausgeführt. Vorlagen für die Dateierstellung sind an die geprüfte Skillrevision gebunden. Paketimport, unveränderte Originalhashes, reale lokale Vorlagenausgaben und Dateidialog mit gemischten Markdown-/Paketbibliotheken auf der Test-VM geprüft.",

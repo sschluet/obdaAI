@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from hub.action_api import StrictInput, encode
 from hub.config import Settings
 from hub.db import KnowledgeConnection, KnowledgeDocument, Memory, Project, Source
+from hub.db_locks import ownership_lock
 from hub.extract import MAX_BYTES
 from hub.knowledge import extract_source, store
 from hub.knowledge_api import Auth
@@ -72,15 +73,31 @@ def info(db: Session, row: KnowledgeConnection) -> dict[str, Any]:
         "error": row.error,
         "config": json.loads(row.config),
         "secret_set": bool(row.encrypted_secret),
-        "chat_ready": row.enabled and ready > 0 and row.status in {"ready", "partial"},
+        "chat_ready": row.enabled
+        and ready > 0
+        and row.status in {"ready", "partial"}
+        and _drive_source_enabled(db, row),
     }
 
 
+def _drive_source_enabled(db: Session, row: KnowledgeConnection) -> bool:
+    if row.kind != "google_drive":
+        return True
+    from hub.google_drive_files import source_enabled
+
+    return source_enabled(db, row)
+
+
 def check_chat_source(db: Session, project_id: str) -> None:
-    row = db.scalar(select(KnowledgeConnection).where(KnowledgeConnection.project_id == project_id))
+    row = db.scalar(
+        select(KnowledgeConnection)
+        .where(KnowledgeConnection.project_id == project_id)
+        .execution_options(populate_existing=True)
+    )
     if (
         not row
         or not row.enabled
+        or not _drive_source_enabled(db, row)
         or row.status not in {"ready", "partial"}
         or not (
             db.scalar(
@@ -116,12 +133,18 @@ async def index_connection(
                 row.error = "Verschlüsselte Zugangsdaten nicht verfügbar; Ablage und Quelle prüfen."
                 db.commit()
         return
-    iterator = documents(body, password)
+    if body.kind == "google_drive":
+        from hub.google_drive_files import drive_documents
+
+        iterator = drive_documents(factory, cfg, body)
+    else:
+        iterator = documents(body, password)
     imported, seen, total = [], set(), 0
     try:
         from hub.source_network import request_network
 
-        await request_network(factory, cfg, body.kind, body.public())
+        if body.kind != "google_drive":
+            await request_network(factory, cfg, body.kind, body.public())
         sentinel = object()
         while True:
             document = await asyncio.to_thread(next, iterator, sentinel)
@@ -135,6 +158,8 @@ async def index_connection(
             total += len(content)
             seen.add(path)
             with factory() as db:
+                if body.kind == "google_drive":
+                    ownership_lock(db)
                 lock(db)
                 row = db.get(KnowledgeConnection, connection_id)
                 if (
@@ -144,6 +169,10 @@ async def index_connection(
                     or row.status != "indexing"
                 ):
                     return
+                if body.kind == "google_drive":
+                    from hub.google_drive_files import validate_source
+
+                    validate_source(db, body)
                 old = db.scalar(
                     select(KnowledgeDocument).where(
                         KnowledgeDocument.connection_id == row.id, KnowledgeDocument.path == path
@@ -190,9 +219,15 @@ async def index_connection(
                 imported.append(source.id)
                 db.commit()
         with factory() as db:
+            if body.kind == "google_drive":
+                ownership_lock(db)
             lock(db)
             row = db.get(KnowledgeConnection, connection_id)
             if row and row.enabled and row.revision == revision and row.status == "indexing":
+                if body.kind == "google_drive":
+                    from hub.google_drive_files import validate_source
+
+                    validate_source(db, body)
                 row.status = (
                     "partial" if len(seen) >= body.max_files and body.kind != "sql" else "ready"
                 )
@@ -206,6 +241,9 @@ async def index_connection(
                 db.commit()
     except Exception:
         with factory() as db:
+            if body.kind == "google_drive":
+                ownership_lock(db)
+                lock(db)
             row = db.get(KnowledgeConnection, connection_id)
             if row and row.revision == revision and row.status == "indexing":
                 row.status = "failed"
@@ -267,6 +305,10 @@ def install_knowledge_connections(
     @app.post("/api/knowledge-sources")
     def create(body: ConnectionInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
+            if body.kind == "google_drive":
+                raise HTTPException(
+                    409, "Google Drive unter Einstellungen → Integrationen verbinden"
+                )
             p = Project(name=body.name, kind="knowledge")
             db.add(p)
             db.flush()
@@ -298,6 +340,10 @@ def install_knowledge_connections(
                 raise HTTPException(409, "Wissensquelle inzwischen geändert")
             if row.status == "indexing":
                 raise HTTPException(409, "Laufende Indexierung zuerst beenden lassen")
+            if row.kind == "google_drive" or body.kind == "google_drive":
+                raise HTTPException(
+                    409, "Google-Drive-Quelle in den Integrationseinstellungen ändern"
+                )
             previous = json.loads(row.config)
             identity = [
                 "server",
@@ -358,7 +404,12 @@ def install_knowledge_connections(
             password = credentials(cfg, row)
 
         def probe() -> None:
-            iterator = documents(config, password, probe=True)
+            if config.kind == "google_drive":
+                from hub.google_drive_files import drive_documents
+
+                iterator = drive_documents(factory, cfg, config, probe=True)
+            else:
+                iterator = documents(config, password, probe=True)
             try:
                 next(iterator, None)
             finally:
@@ -367,7 +418,8 @@ def install_knowledge_connections(
         try:
             from hub.source_network import request_network
 
-            await request_network(factory, cfg, config.kind, config.public())
+            if config.kind != "google_drive":
+                await request_network(factory, cfg, config.kind, config.public())
             await asyncio.to_thread(probe)
         except Exception:
             raise HTTPException(
@@ -392,6 +444,8 @@ def install_knowledge_connections(
             row = db.get(KnowledgeConnection, connection_id)
             if not row or row.revision != body.revision:
                 raise HTTPException(409, "Wissensquelle inzwischen geändert")
+            if not _drive_source_enabled(db, row):
+                raise HTTPException(409, "Google-Drive-Freigabe geändert; Quelle erneut verbinden")
             if row.status == "indexing":
                 return info(db, row)
             row.revision += 1

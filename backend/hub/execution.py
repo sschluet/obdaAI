@@ -6,7 +6,7 @@ import logging
 import re
 import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Protocol
@@ -116,6 +116,10 @@ async def execute_run(
         )
 
     def check_integration_context() -> None:
+        if snapshot.get("google_drive_source"):
+            from hub.google_drive_context import check_source
+
+            check_source(factory, snapshot["google_drive_source"])
         if snapshot.get("agent_generation"):
             from hub.agent_models import AgentJob
             from hub.agent_runtime import gate as agent_gate
@@ -1143,14 +1147,24 @@ async def execute_run(
                     check_integration_context()
                     while True:
                         try:
+                            if snapshot.get("google_drive_source") and isinstance(
+                                providers, Providers
+                            ):
+                                providers.before_send = check_integration_context
                             if memory_parts:
                                 from hub.memory_context import boundary_guard
 
-                                guard = boundary_guard(
+                                memory_guard = boundary_guard(
                                     factory, snapshot["memory"], memory_parts,
                                     external=external, provider_id=provider,
                                     byte_budget=memory_budget,
                                 )
+
+                                def guard(memory_check: Callable[[], None] = memory_guard) -> None:
+                                    if snapshot.get("google_drive_source"):
+                                        check_integration_context()
+                                    memory_check()
+
                                 guard()
                                 if isinstance(providers, Providers):
                                     providers.before_send = guard
@@ -1383,6 +1397,9 @@ async def execute_run(
                 },
             )
         finally:
+            if snapshot.get("google_drive_source") and isinstance(providers, Providers):
+                # A run-bound authority callback must not affect another conversation.
+                providers.before_send = None
             with factory() as db:
                 if output:
                     db.add(

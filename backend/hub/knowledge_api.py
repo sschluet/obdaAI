@@ -368,6 +368,8 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
                 raise HTTPException(409, "Projekt archiviert")
             if source.status in {"queued", "extracting"}:
                 raise HTTPException(409, "Extraktion bereits aktiv")
+            if source.status in {"superseded", "deleted"}:
+                raise HTTPException(409, "Quelle gehört nicht mehr zum aktuellen Datenbereich")
             if source.revision >= 1000:
                 raise HTTPException(409, "Revisionslimit erreicht")
             source.revision += 1

@@ -48,6 +48,8 @@ from hub.db_locks import ownership_lock
 from hub.deletion import DeletionInput
 from hub.execution import execute_run
 from hub.gmail_setup import install_gmail_setup
+from hub.google_drive_files import GoogleDriveTransfer, install_google_drive_files  # noqa: F401
+from hub.google_drive_setup import install_google_drive_setup
 from hub.integration_api import freeze_bindings, install_integration_api
 from hub.jobs import enqueue
 from hub.knowledge import context as project_context
@@ -183,6 +185,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_use_case_delivery(app, cfg, factory)
     install_proton_bridge_setup(app, cfg, factory)
     install_gmail_setup(app, cfg, factory)
+    install_google_drive_setup(app, cfg, factory)
+    install_google_drive_files(app, cfg, factory)
     install_integration_api(app, cfg, factory)
     from hub.integration_writes import install_write_api
 
@@ -864,6 +868,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except ValueError as error:
                 raise HTTPException(409, str(error)) from None
             snapshot["sources"] = [p.model_dump(mode="json") for p in sources]
+            from hub.google_drive_context import freeze_source as freeze_drive_source
+
+            drive_source = freeze_drive_source(db, c.project_id)
+            if drive_source:
+                snapshot["google_drive_source"] = drive_source
             snapshot["parts"].extend(p.model_dump(mode="json") for p in sources)
             snapshot["roles"].extend("user" for _ in sources)
             snapshot["skills"] = skill_audit

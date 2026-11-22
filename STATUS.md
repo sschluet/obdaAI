@@ -1,4 +1,26 @@
-# obdaAI — Status 21.10.2026
+# obdaAI — Status 22.11.2026
+
+## 22.11.2026 — Optionale Google-Drive-Verbindung in Entwicklung
+
+Google Drive ist als eigener Einrichtungstyp unter Einstellungen → Integrationen
+implementiert. Quellen und Ablage erhalten getrennte ausdrückliche OAuth-Rechte.
+Die vorhandene Wissensindexierung wird wiederverwendet; Dateiablage schreibt nur
+neue, geprüfte Artefaktversionen in einen verifizierten app-eigenen Ordner, mit
+konkreter Übertragungsfreigabe und dauerhaftem Abgleich unklarer Ergebnisse.
+Anbieterfreigaben für KI-Modelle werden dadurch nicht erweitert.
+
+Die neue Migration 0047 ist additiv und besitzt Verlustschutz für Drive-Zustände.
+Ordner-/Kontowechsel nehmen alte Quellensnapshots aus dem aktiven Bereich, ohne
+Originale zu löschen. Auch wartende Parser und Retry-Aufrufe dürfen sie nicht
+reaktivieren. Quellenrechte werden am finalen Modellübergang erneut geprüft.
+
+Gezielte synthetische Backend-/Transport-/Browserfälle sind bestanden; vollständige
+lokale und exakte CI-Prüfung dieses Entwicklungsstands folgen noch. Kein echter
+Google-Account wurde verwendet. Anmeldung, reale Downloads/Uploads und VM-Rollout
+bleiben offen. Am 22.11. war die Test-VM weder über LAN noch Tailscale erreichbar;
+der letzte tatsächlich bestätigte VM-Stand bleibt aa4a5ae / 0046 vom 21.10.
+Es wurden keine VM-, Firewall-, Konto- oder Inferenzänderungen vorgenommen.
+Einrichtung, Datenfluss und Grenzen: [Google Drive](docs/google-drive.md).
 
 ## 21.10.2026 — Intelligentes Gedächtnis: Gap-Analyse und Entwicklungsstand
 
