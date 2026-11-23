@@ -1,10 +1,22 @@
 {
   "updated": "2026-11-23",
-  "applicationCommit": "78617e2",
-  "schema": "0049",
-  "tests": 3484,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45096515809",
+  "applicationCommit": "f07dd44",
+  "schema": "0050",
+  "tests": 3511,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45129676744",
   "screenshots": [
+    {
+      "id": "compact-chat",
+      "title": "Mehr Platz für die eigentliche Antwort.",
+      "description": "Kurze synthetische Mailübersicht, standardmäßig eingeklappte „Details Abarbeitung“ und ausgeblendete obere Leisten nach tatsächlichem Scrollen. Isolierte Browserfixture mit erfundenen Aurora-Mails; kein echtes Postfach und kein Modellaufruf.",
+      "image": "assets/compactchat.png"
+    },
+    {
+      "id": "project-model",
+      "title": "Ein Modell für dein Projekt.",
+      "description": "Auto oder eine konfigurierte Modellverbindung am Projekt auswählen. Ausschließlich synthetisches Aurora-Projekt und erfundene Modellkonfiguration; kein realer Modell- oder Cloudaufruf. Cloud-Präferenzen bleiben ohne Projektfreigabe gesperrt.",
+      "image": "assets/projectmodel.png"
+    },
     {
       "id": "runtime-status",
       "title": "Verbindung und Planer getrennt prüfen.",
@@ -338,6 +350,11 @@
       "intro": "Von der ersten Frage bis zur nachvollziehbaren Antwort.",
       "features": [
         {
+          "title": "Mehr Platz im mobilen Chat",
+          "status": "limited",
+          "description": "Kompakte Mailübersichten, eine standardmäßig eingeklappte Zeile „Details Abarbeitung“ und beim tatsächlichen Lesen ausblendbare mobile Chatleisten. Freigaben und Rückfragen bleiben gezielt erreichbar. Synthetische Browserprüfungen; reale Telefonbedienung wird dadurch nicht behauptet."
+        },
+        {
           "title": "Gemeinsame Stabilisierung von Planung und Kontext",
           "status": "limited",
           "description": "Versionierter Anfragevertrag, wirksame Toolrechte, passende Abschlussbelege, getrennte Modellwartezeiten, Memory-Korrekturen, Aufgaben-Kontext, Entwurfsschutz und Betriebsdiagnose sind ergänzt. Aktuelle Quellenbindung, faktische Dokumentübersichten und begrenzte Mail-Antwortstatusabfragen wurden mit HA, Paperless, Proton und SSH auf der Test-VM lesend nachgeprüft. Zwei zusätzliche echte Modellproben zu Inhaltsvergleichen scheiterten sicher vor Werkzeugaufrufen; allgemeine Modellzuverlässigkeit, administrative Abdeckung und vollständige V1 bleiben offen."
@@ -430,6 +447,11 @@
       "symbol": "▧",
       "intro": "Ein gemeinsamer Kontext für Unterlagen, Fragen und Ergebnisse.",
       "features": [
+        {
+          "title": "Modellvorgabe pro Projekt",
+          "status": "limited",
+          "description": "Auto oder eine feste konfigurierte Modellverbindung direkt am Projekt speichern. Lokale Antworten und Aufgaben übernehmen die Projektwahl mit erneuter Revisionsprüfung; globale Standards bleiben erhalten. Cloud-Präferenzen erteilen keine Freigabe privater Projektinhalte und sind bis zu einer solchen Freigabe blockiert."
+        },
         {
           "title": "Eigene Projekträume",
           "description": "Getrennte Gespräche, Quellen und erstellte Dateien. Projektdaten werden nicht automatisch mit fremden Räumen vermischt.",
