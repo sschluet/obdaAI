@@ -1,15 +1,33 @@
 {
-  "updated": "2026-11-22",
-  "applicationCommit": "7d3916e",
-  "schema": "0047",
-  "tests": 3197,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45049558158",
+  "updated": "2026-11-23",
+  "applicationCommit": "78617e2",
+  "schema": "0049",
+  "tests": 3484,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45096515809",
   "screenshots": [
+    {
+      "id": "runtime-status",
+      "title": "Verbindung und Planer getrennt prüfen.",
+      "description": "Getrennte Betriebsdiagnose für Anwendung, Datenbank, Worker und vergangene lokale Modell- und Planerprüfungen. Ausschließlich synthetische Zustände; kein Nachweis echter Server- oder Modellverfügbarkeit.",
+      "image": "assets/runtimestatus.png"
+    },
+    {
+      "id": "task-draft-recovery",
+      "title": "Am Aufgabenentwurf weiterarbeiten.",
+      "description": "Ein bestehender Aufgabenentwurf bleibt im Browsertab wieder aufnehmbar. Ausschließlich synthetische Aufgabe und lokale Browserprüfung; keine echte Aufgabe oder Systemänderung.",
+      "image": "assets/taskdraftrecovery.png"
+    },
     {
       "id": "ha-lights",
       "title": "Lampen aus vorhandenen Zuständen",
       "description": "Eine fehlende Lampen-Schnittstelle bleibt als 404-Beleg sichtbar. Eine begrenzte alternative Leseabfrage filtert die vorhandenen Zustände lokal nach Lampen. Synthetische Aurora-Lampen und simulierte Modell-/HA-Antworten; kein echter Systemzugriff.",
       "image": "assets/halights.png"
+    },
+    {
+      "id": "memory-provenance",
+      "title": "Herkunft bleibt nachvollziehbar.",
+      "description": "Archivierte Herkunft, aktuelle Kontextverwendung und ausdrückliches unabhängiges lokales Behalten direkt am Eintrag erkennen. Ausschließlich erfundene Inhalte und simulierte API-Antworten; keine echten persönlichen Daten.",
+      "image": "assets/memoryprovenance.png"
     },
     {
       "id": "ha-access",
@@ -25,14 +43,14 @@
     },
     {
       "id": "memory",
-      "title": "Dein Gedächtnis. Unter deiner Kontrolle.",
-      "description": "Persönliche Erinnerungen im bestehenden Wissensbereich prüfen, bearbeiten und nur lokal verwenden. Das Lernmodell lässt sich unabhängig vom Antwortmodell wählen. Ausschließlich synthetische Einträge und Quellen; UI-Prüfung mit Test-API, keine echte Modell- oder Betriebsabnahme.",
+      "title": "Erinnerungen gezielt aktualisieren.",
+      "description": "Lernfehler getrennt vom Chat prüfen, eine Extraktion erneut versuchen und ausdrücklich die zu ersetzende Erinnerung wählen. Ausschließlich frei erfundene Erinnerungen und simulierte Memory-API; kein Nachweis echter Lernqualität.",
       "image": "assets/memory.png"
     },
     {
       "id": "integration-selection",
       "title": "Deine Verbindungen. Einfach verfügbar.",
-      "description": "Neue Gespräche stellen alle aktivierten Integrationen automatisch bereit. Passende System- und Mailfragen nutzen freigegebene lokale Werkzeuge; eine manuelle Auswahl oder Keine bleibt möglich. Ausschließlich synthetische Verbindungen und eine ungesendete Mailfrage, kein echtes Postfach.",
+      "description": "Aktivierte Verbindungen sind automatisch zugeordnet. Die Anzeige unterscheidet eingerichteten Zugang und erneute Prüfung der aktuellen Freigaben. Ausschließlich fiktive Aurora-Verbindungen und eine ungesendete Frage; kein echter Ziel- oder Postfachzugriff.",
       "image": "assets/integrationselection.png"
     },
     {
@@ -319,6 +337,11 @@
       "symbol": "↗",
       "intro": "Von der ersten Frage bis zur nachvollziehbaren Antwort.",
       "features": [
+        {
+          "title": "Gemeinsame Stabilisierung von Planung und Kontext",
+          "status": "limited",
+          "description": "Versionierter Anfragevertrag, wirksame Toolrechte, passende Abschlussbelege, getrennte Modellwartezeiten, Memory-Korrekturen, Aufgaben-Kontext, Entwurfsschutz und Betriebsdiagnose sind ergänzt. Aktuelle Quellenbindung, faktische Dokumentübersichten und begrenzte Mail-Antwortstatusabfragen wurden mit HA, Paperless, Proton und SSH auf der Test-VM lesend nachgeprüft. Zwei zusätzliche echte Modellproben zu Inhaltsvergleichen scheiterten sicher vor Werkzeugaufrufen; allgemeine Modellzuverlässigkeit, administrative Abdeckung und vollständige V1 bleiben offen."
+        },
         {
           "title": "Persistenter Streaming-Chat",
           "description": "Antworten erscheinen schrittweise. Gespräche, Laufzustände und Historie bleiben gespeichert; Bearbeiten, erneut Antworten und Abbrechen sind unterstützt.",
