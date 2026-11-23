@@ -33,7 +33,12 @@ Planungskontextbudget und genauer Fehlermeldung eines bereits verhinderten
 Drive-Zugriffs (3.513 bestanden). Die Mailanweisung wurde ohne Verlust der
 Ergebnisregeln auf das bisherige Bytebudget gekürzt; der Widerrufstest erwartet
 bei archiviertem Projekt die frühere Projektsperre. Die vollständige exakte CI
-und kontrollierte Auslieferung werden separat dokumentiert. Neue öffentliche Screenshots sind isoliert synthetisch.
+und kontrollierte Auslieferung werden separat dokumentiert. Der erste CI-Lauf auf
+1cf7374 fand einen zu allgemein adressierten Status im älteren Icon-Browsertest
+(zusätzliche Modellstatusmeldung im selben Dialog). Der Selektor wurde auf die
+Icon-Region eingegrenzt; der korrigierte Icon-Test und alle danach im CI-Ablauf
+liegenden Browserprüfungen bestanden lokal. Dieser fehlgeschlagene CI-Lauf
+ist kein vollständiger App-Nachweis. Neue öffentliche Screenshots sind isoliert synthetisch.
 
 ## Vorherige geprüfte Lieferung — 78617e2 / Schema 0049
 
