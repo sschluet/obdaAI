@@ -46,6 +46,11 @@ und behandelt eine belegte leere Mailauswahl ohne neuen Postfachscan. Inhalt,
 Analyse, fehlende oder widerrufene Referenzen bleiben davon getrennt. Für diese
 Nachbesserung sind die gezielten Regressionen, erneute Modellabnahme, exakte CI
 und ein eigener kontrollierter Rollout erforderlich; sie ist noch nicht ausgeliefert.
+Der erste vollständige Korrekturlauf (034754a, CI 45094870123) bestand
+3.481 Pythonprüfungen; drei ältere Paperless-Modellfixtures beantworteten die
+neue Interpretation noch mit Werkzeugentscheidungen. Nach Anpassung dieser
+Fixtures ist erneut die vollständige CI erforderlich. Browser- und übrige
+Pflichtprüfungen dieses fehlgeschlagenen Laufs bestanden; er ist kein Gesamtbeleg.
 Das Schema bleibt 0049. Vorhandene Daten und alle neuen Spalten/Tabellen werden
 beim Korrekturrollout vollständig erhalten.
 
@@ -60,8 +65,10 @@ realen Kohorten nicht vollständig abgedeckt. Ein zusätzlicher echter lokaler
 Modelllauf bestand die zehn Dokumente umfassende Inventarabfrage mit vier
 synthetischen Verbindungskandidaten einschließlich aller IDs/Titel und korrekter
 Seitengrenzen. Zwei zusätzliche Inhalts-/Mehrziel-Vergleichsproben wurden mit
-`ValueError` abgewiesen und gelten ausdrücklich als nicht bestanden; ihr genauer
-Fehlergrund wird getrennt untersucht. Keine Zielwerkzeuge wurden dafür aufgerufen. Die separate Interpretationsevaluation erreichte
+`ValueError` abgewiesen und gelten ausdrücklich als nicht bestanden. Eine getrennte
+Diagnose belegt: Das lokale Modell wählte `admin`, verlangte jedoch ausschließlich
+Inhaltslesebelege. Der Vertragsvalidator verweigerte den widersprüchlichen Auftrag
+vor jedem Werkzeugaufruf. Die sichere Ablehnung zählt nicht als Zielerfüllung. Die separate Interpretationsevaluation erreichte
 auf einem Zwischenstand 20/23, darunter acht von acht zurückgehaltenen Fällen;
 das ist keine Erfolgsquote vollständiger Aufgaben. Ein breiter 98-Prozent-Nachweis,
 reale Gmail-/Drive-/UniFi-Abnahme und allgemeine administrative Abdeckung bleiben
