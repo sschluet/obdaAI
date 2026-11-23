@@ -21,6 +21,18 @@ async def stream(parts, roles, *, external, grants):
         if "current_user_request" in data:
             yield json.dumps({"queries": []})
             return
+        if data.get("intent_schema"):
+            # This UI fixture has one synthetic document-administration target.
+            # Interpretation is a separate protocol turn, not a tool decision.
+            from hub.agent_intent import RequestIntent, Requirement
+
+            assert len(data["targets"]) == 1 and data["targets"][0]["kind"] == "paperless"
+            identifier = data["targets"][0]["id"]
+            yield RequestIntent(
+                target_ids=[identifier], mode="admin", topic="documents", origin="semantic",
+                requirements=[Requirement(kind="effect_postcondition", integration_id=identifier)],
+            ).model_dump_json(exclude={"origin", "version"})
+            return
         history = data["history"]
         inputs = [s for s in history if s["kind"] == "input"]
         title = inputs[-1]["document"]["content"] if inputs else "Agentenabnahme"

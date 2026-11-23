@@ -16,6 +16,11 @@ dass ein unaufgelöster privater Systembezug still im normalen Chat landet;
 Eine exakte vollständige CI des endgültigen Commits steht noch aus. Die volle lokale
 synthetische Browsersuite bestand; spätere Gesprächswechsel-/Streamkorrekturen
 wurden zusätzlich mit echten isolierten API-/SSE-Abläufen geprüft.
+Die erste exakte CI auf 2d3762b scheiterte im synthetischen Agenten-Browserprovider:
+Er behandelte die neue Interpretationsphase fälschlich als Werkzeugplanung.
+Der Fixturevertrag ist korrigiert; Schema-Regression und vollständiger isolierter
+Agenten-Browserablauf mit Rückfrage, Freigabe und Lost-Response-Prüfung bestanden.
+Produktive Berechtigungsgrenzen wurden dafür nicht geändert oder gelockert.
 
 Der erste reale lokale Interpretationsbenchmark scheiterte in allen 23 Fällen am
 Interpretationsvertrag, trotz erfolgreicher Inferenz. Nach Vertragskorrekturen
