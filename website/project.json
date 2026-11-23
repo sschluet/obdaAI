@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-23",
-  "applicationCommit": "7d3916e",
-  "schema": "0047",
-  "tests": 3197,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45049558158",
+  "applicationCommit": "78617e2",
+  "schema": "0049",
+  "tests": 3484,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45096515809",
   "screenshots": [
     {
       "id": "runtime-status",
@@ -340,7 +340,7 @@
         {
           "title": "Gemeinsame Stabilisierung von Planung und Kontext",
           "status": "limited",
-          "description": "Versionierter Anfragevertrag, effektive Toolrechte, passende Abschlussbelege, getrennte Modellwartezeiten, begrenzte Hintergrundarbeit und transparente Diagnose sind ergänzt. Live-Gegenproben zeigten zusätzliche Grenzen bei Folgefragen, großen Belegen und Metadatenlisten. Aktuelle Quellenbindung, faktische Dokumentübersichten und die klare Behandlung leerer Auswahlen werden deshalb gesondert nachgebessert und geprüft. Memory-Korrekturen, Aufgaben-Kontext und Entwurfsschutz sind Teil derselben Stabilisierung. Die unten genannte frühere Live-Abnahme gilt nur für den dort bezeichneten getesteten Release; eine allgemeine V1-Zuverlässigkeit ist nicht belegt."
+          "description": "Versionierter Anfragevertrag, wirksame Toolrechte, passende Abschlussbelege, getrennte Modellwartezeiten, Memory-Korrekturen, Aufgaben-Kontext, Entwurfsschutz und Betriebsdiagnose sind ergänzt. Aktuelle Quellenbindung, faktische Dokumentübersichten und begrenzte Mail-Antwortstatusabfragen wurden mit HA, Paperless, Proton und SSH auf der Test-VM lesend nachgeprüft. Zwei zusätzliche echte Modellproben zu Inhaltsvergleichen scheiterten sicher vor Werkzeugaufrufen; allgemeine Modellzuverlässigkeit, administrative Abdeckung und vollständige V1 bleiben offen."
         },
         {
           "title": "Persistenter Streaming-Chat",

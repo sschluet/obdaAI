@@ -1,6 +1,54 @@
 # obdaAI — Status 23.11.2026
 
-## Aktuelle Lieferung — gemeinsame Stabilisierung und Live-Nachbesserung
+## Aktuelle Lieferung — 78617e2 / Schema 0049
+
+Der vollständig geprüfte Commit **78617e2** ist auf der Test-VM installiert.
+Exakte [CI 45096515809](https://github.com/sschluet/obdaAI/actions/runs/45096515809):
+**3.484 bestanden**, sechs optionale Calc-Skips; vollständige Browserprüfungen,
+Secret-Scan, Container und beide isolierten Werkzeugdienste sowie App-Tree-Beleg
+bestanden. Die drei veralteten Paperless-Modellfixtures aus dem vorherigen
+fehlgeschlagenen Lauf wurden korrigiert; sein Fehlerbeleg bleibt erhalten.
+
+Vor Umschaltung entstand eine frische verschlüsselte Sicherung mit geprüften
+Ciphertext-Hashes. Der Korrekturrollout benötigte keine Migration. Alle neun
+laufenden Image-IDs, installierte Backendbytes, beide APIs, bisherige Daten und
+statische Konfigurationen wurden erfolgreich geprüft. Kein Decryptions- oder
+Restoretest ist damit behauptet.
+
+| Reale Leseabnahme auf 78617e2 | Ergebnis |
+| --- | --- |
+| HA-Inventar und „Welche davon sind an?“ | Erwartete Entitäten aus frischen Zuständen genannt; Folgefrage bleibt an den gültigen vorherigen Quellen gebunden. |
+| Paperless-Übersicht und Inhaltsfolgefrage | Beobachtete Dokument-IDs/Titel stehen im Antworttext; tatsächlicher Inhalt des ersten zuvor beobachteten Dokuments gelesen und Quelle gebunden. |
+| Proton-Tagesübersicht und Antwortstatusfolgefrage | Zeitfenster und angezeigte Auswahl an Abrufe gebunden; fehlender Antwortbeleg bleibt unbekannt. |
+| SSH-Zugriff | Feste authentifizierte Inspektion erfolgreich. |
+
+Alle sieben Aufträge endeten ohne Rückfrage, Cloud, Recherche oder Zieländerung.
+Für jeden Fall bestanden Datenerhalt, Konfigurationsvergleich, Archivierung
+lediglich eigener QA-Chats und Entfernung der eigenen Prüfsitzung. Die Abnahme
+belegt begrenzte Quellen-/Abrufabdeckung, keine vollständige semantische
+Korrektheit jeder Zusammenfassung. Positive Gesendet-Antwortbeziehungen wurden
+im aktuellen Proton-Lauf nicht nachgewiesen; die leere Auswahl ist durch eigene
+Runtime-/Widerrufsregressionen abgedeckt, im aktuellen realen Lauf jedoch nicht
+aufgetreten. Reale Gmail-/Drive-/UniFi-Abnahme bleibt offen.
+
+Die gemeinsame Architektur und Bedienänderungen sind in
+[docs/assistant-stabilization.md](docs/assistant-stabilization.md) beschrieben.
+Die nachstehenden Zwischenstände und Gegenbeispiele bleiben zur Nachvollziehbarkeit
+erhalten. Insbesondere sind reine Inhaltsvergleiche mit dem konfigurierten lokalen
+Modell noch nicht zuverlässig: Zwei echte synthetische Proben wurden fälschlich als
+Administration eingeordnet und sicher vor Werkzeugzugriffen abgewiesen. Das zählt
+nicht als Zielerfüllung. Kein universeller 98-Prozent- oder vollständiger V1-Nachweis.
+
+Die neue native Planerprüfung bestand beide lokalen synthetischen Modellstufen
+über den echten Provider-Testweg, ohne Integration oder Cloud aufzurufen. Ein
+lesender Browser-Smoke auf dem aktuellen Release bestand Integrationsdialoge
+(Proton/Gmail/Drive), Fokus/Escape, Betriebsdiagnose sowie Desktop-/320-Pixel-Layout.
+Dabei wurden weder Chats noch Modell- oder Zielaktionen ausgelöst; die eigene
+Prüfsitzung wurde entfernt. Diese begrenzte UI-Abnahme ersetzt nicht die vollständige
+synthetische Browser-CI. Abschließend: neun exakte Images, beide APIs gesund,
+keine fehlgeschlagenen Systemdienste und Backup samt Timer gesund.
+
+## Vorherige Lieferung — gemeinsame Stabilisierung und Live-Nachbesserung
 
 Der Entwicklungszweig `codex/assistant-stabilization` ergänzt gemeinsame
 Anfrageinterpretation, auftragsgebundene Toolgrammatik und Abschlussbelege,
@@ -44,8 +92,8 @@ Referenzen, prüft das Bytebudget nach tatsächlichem JSON-/UTF-8-Encoding, erg�
 einen expliziten `document_inventory`-Antwortvertrag mit faktischer ID-/Titelliste
 und behandelt eine belegte leere Mailauswahl ohne neuen Postfachscan. Inhalt,
 Analyse, fehlende oder widerrufene Referenzen bleiben davon getrennt. Für diese
-Nachbesserung sind die gezielten Regressionen, erneute Modellabnahme, exakte CI
-und ein eigener kontrollierter Rollout erforderlich; sie ist noch nicht ausgeliefert.
+Nachbesserung wurden gezielte Regressionen, erneute Modellabnahme, exakte CI
+und ein eigener kontrollierter Rollout ausgeführt; der aktuelle Nachweis steht oben.
 Der erste vollständige Korrekturlauf (034754a, CI 45094870123) bestand
 3.481 Pythonprüfungen; drei ältere Paperless-Modellfixtures beantworteten die
 neue Interpretation noch mit Werkzeugentscheidungen. Nach Anpassung dieser
