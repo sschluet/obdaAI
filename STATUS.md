@@ -1,44 +1,73 @@
 # obdaAI — Status 23.11.2026
 
-## Laufende Lieferung — kompakter Chat und Projektmodell
+## Geprüfte Lieferung — f07dd44 / Schema 0050
 
-Neue Mailübersichten zeigen Ergebnisse statt pauschaler technischer Fußtexte.
-Datumsangaben werden anhand vorhandener Zeitzonen aufgelöst und lokal formatiert;
-zeitlich nicht zuordenbare Nachrichten bleiben außerhalb der Trefferanzeige.
-Originalbelege bleiben erhalten. Die gespeicherte Formatversion bewahrt alte
-Mail-Folgefragen ohne Umschreiben vorhandener Antworten.
+**f07dd44** ist auf der Test-VM installiert. Exakte vollständige
+[CI 45129676744](https://github.com/sschluet/obdaAI/actions/runs/45129676744):
+**3.511 bestanden**, sechs optionale Calc-Skips; vollständige Browserprüfungen,
+Secret-Scan, Container, isolierte Werkzeugdienste und App-Tree-Beleg erfolgreich.
 
-„Details Abarbeitung“ ist standardmäßig eine kompakte eingeklappte Zeile. Laufende
-Aufträge öffnen sie nicht automatisch; Freigaben und Rückfragen sind direkt
-erreichbar. Mobile Chatleisten blenden sich bei tatsächlichem Abwärtsscrollen aus
-und bleiben über Aufwärtsscrollen, Tastatur und Wiederherstellung erreichbar.
+Neue Mailübersichten zeigen Betreff, Absender und lokal aufgelöste Zeit statt
+pauschaler technischer Fußtexte. Zeitlich nicht zuordenbare Nachrichten werden
+nicht als Treffer angezeigt; Belege bleiben erhalten. Die gespeicherte Formatversion
+bewahrt alte Mail-Folgefragen ohne Umschreiben vorhandener Antworten.
+„Details Abarbeitung“ ist standardmäßig eine kompakte eingeklappte Zeile, auch bei
+laufenden Aufträgen; Freigaben und Rückfragen sind gezielt erreichbar. Mobile
+Chatleisten reagieren auf tatsächliches Abwärts-/Aufwärtsscrollen; Streaming und
+Layoutänderungen verstecken die Bedienung nicht automatisch.
 
-Projekte erhalten Auto oder ein festes konfiguriertes Modell. Lokale Projektchats,
-Aufgabenanalysen, Aufgabenentwürfe, Use-Case-Antworten und Agentenplanung verwenden
-die Auswahl; globale Standards bleiben erhalten. Bestehende Aufgaben übernehmen
-die aktuelle Wahl beim nächsten Lauf ohne Spezifikationsänderung. Projekt- und
-Provideränderungen nach dem Warten werden vor dem Versand erneut geprüft.
-**Cloud-Präferenzen sind speicherbar, aber ohne zusätzliche Projektfreigabe gesperrt.**
-Es gibt keinen lokalen Ersatz für eine gesperrte feste Cloudwahl und keine
-implizite Freigabe von Historie, Memory, Projektdokumenten oder Integrationen.
-Die notwendige Klärung einer ausdrücklichen Cloud-Projektfreigabe ist noch offen.
+Projekte erhalten Auto oder ein festes konfiguriertes Modell. Lokale Antworten,
+Aufgabenanalysen, Aufgabenentwürfe, Use Cases und Agentenplanung verwenden diese
+Wahl. Bestehende Aufgaben übernehmen Modellwechsel beim nächsten Lauf ohne
+Spezifikationsänderung; globale Standards bleiben erhalten. Projekt-/Anbieteränderungen
+werden vor dem tatsächlichen Versand nach einer Wartephase erneut geprüft.
+**Cloud-Präferenzen sind speicherbar, aber ohne ausdrückliche Projektfreigabe gesperrt.**
+Die Freigabefrage zu Projektbeschreibung, Anweisungen und ausgewählten Dokumenten
+ist noch offen. Historie, Memory, Quellen und Integrationsrechte werden nicht
+implizit freigegeben; eine gesperrte feste Cloudwahl erhält keinen lokalen Ersatz.
 
-Migration 0050 ergänzt ausschließlich `projects.model_policy` mit `{}` als
-Bestandsvorgabe. Ein bestätigtes Rennen zwischen Anbieterübersicht und
-Einstellungsinitialisierung wurde durch atomare Initialisierung behoben; bestehende
-Anbieter, Zugangsdaten, Nichtstandard- und deaktivierte Verbindungen bleiben
-unangetastet. Gezielte Backend-/Browserprüfungen und Typ-/Formatprüfungen bestanden;
-die vollständige lokale PostgreSQL-Prüfung fand zunächst vier Gegenfälle bei
-Planungskontextbudget und genauer Fehlermeldung eines bereits verhinderten
-Drive-Zugriffs (3.513 bestanden). Die Mailanweisung wurde ohne Verlust der
-Ergebnisregeln auf das bisherige Bytebudget gekürzt; der Widerrufstest erwartet
-bei archiviertem Projekt die frühere Projektsperre. Die vollständige exakte CI
-und kontrollierte Auslieferung werden separat dokumentiert. Der erste CI-Lauf auf
-1cf7374 fand einen zu allgemein adressierten Status im älteren Icon-Browsertest
-(zusätzliche Modellstatusmeldung im selben Dialog). Der Selektor wurde auf die
-Icon-Region eingegrenzt; der korrigierte Icon-Test und alle danach im CI-Ablauf
-liegenden Browserprüfungen bestanden lokal. Dieser fehlgeschlagene CI-Lauf
-ist kein vollständiger App-Nachweis. Neue öffentliche Screenshots sind isoliert synthetisch.
+Vor Umschaltung wurde eine frische verschlüsselte Sicherung mit geprüften
+Ciphertext-Hashes erstellt. Migration 0050 ergänzte ausschließlich
+`projects.model_policy` mit `{}`. Alle bisherigen Tabellenwerte, Projekt-IDs und
+statischen Konfigurationen blieben erhalten; neue Vorgaben wurden getrennt geprüft.
+Neun exakte laufende Image-IDs, installierte Quellbytes und beide APIs wurden
+verifiziert. Kein Decryptions-/Restoretest ist damit behauptet.
+
+| Reale Abnahme | Ergebnis |
+| --- | --- |
+| HA-Inventar und Folgefrage | Erwartete Entitäten und aktuelle Quellenbindung bestanden. |
+| Paperless-Übersicht und Inhaltsfolgefrage | Beobachtete Dokumentliste und tatsächlicher Inhalt der ersten belegten Quelle geprüft. |
+| Proton-Tagesübersicht und Antwortstatusfolgefrage | Kurze Formatversion 2 und rekonstruierte Auswahl stimmen mit den Abrufen überein; fehlende Antwortbelege bleiben unbekannt. |
+| SSH | Feste authentifizierte Leseprüfung erfolgreich. |
+| Eigenes synthetisches Projekt: Chat und ai.analyze-Aufgabe | Tatsächliche lokale Modell-/Anbieter-/Revisionsbindung und Ergebnis geprüft. Globale Modellstandards und ursprüngliche Projektvorgaben blieben unverändert. |
+
+Alle sieben Integrationsaufträge bestanden ohne Rückfrage, Cloud, Recherche oder
+Zieländerung. Datenerhalt, Konfigurationsvergleich und eigene QA-Bereinigung bestanden
+jeweils. Eigene Projektmodell-Testobjekte wurden archiviert, die Prüfsitzung entfernt.
+Der dort gewählte lokale Anbieter war zugleich der bestehende globale Standard;
+eine abweichende Anbieterwahl ist durch Mock-Transporttests, nicht live, belegt.
+Positive Gesendet-Antwortbeziehungen und vollständige Postfachabdeckung wurden im
+aktuellen Proton-Lauf nicht nachgewiesen. Die zweistufige lokale Planerprüfung
+bestand ohne Cloud oder Integrationstools.
+
+Der erste lokale Gesamtlauf fand vier Gegenfälle (3.513 bestanden) bei engem
+Mailkontext und der genauen Meldung einer früheren Projektsperre. Nach Korrektur
+bestanden 394 gezielte Prüfungen. Der erste CI-Lauf auf 1cf7374 scheiterte an einem
+mehrdeutigen alten Icon-Testselektor und wurde vom korrigierten vollständigen Lauf
+abgelöst; sein Python-Teillauf ist kein Full-CI-Beleg. Der Icon-Test und alle späteren
+Browserabläufe bestanden zuvor auch lokal. Die Mailanweisung hält weiterhin das
+bisherige Bytebudget ein. Neue öffentliche Screenshots sind ausschließlich synthetisch.
+
+Die lesende Browserabnahme auf dem aktuellen Release bestand Integrationsdialoge,
+Fokus/Escape, Betriebsdiagnose und Desktop-/320-Pixel-Layout ohne Chat-, Modell-
+oder Zielaktionen; die eigene Sitzung wurde entfernt. Die dynamische mobile
+Chatbedienung ist zusätzlich durch synthetische Browserabläufe geprüft, nicht an
+einem physischen Telefon. Abschließend waren beide APIs und alle neun Images
+gesund, keine Systemdienste fehlgeschlagen und Backup sowie Timer gesund.
+
+Weitere Architektur und Grenzen: [docs/assistant-stabilization.md](docs/assistant-stabilization.md).
+Reale Gmail-/Drive-/UniFi-Abnahme, Cloud-Projektverarbeitung, allgemeine administrative
+Abdeckung und breite Promptzuverlässigkeit bleiben offen. Keine vollständige V1.
 
 ## Vorherige geprüfte Lieferung — 78617e2 / Schema 0049
 
