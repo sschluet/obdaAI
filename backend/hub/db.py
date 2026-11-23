@@ -182,6 +182,7 @@ def session_factory(url: str) -> sessionmaker[Session]:
 
 class Project(Base):
     __tablename__ = "projects"
+    model_policy: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(160))
     icon: Mapped[str] = mapped_column(String(40), default="folder", server_default="folder")

@@ -1,6 +1,41 @@
 # obdaAI — Status 23.11.2026
 
-## Aktuelle Lieferung — 78617e2 / Schema 0049
+## Laufende Lieferung — kompakter Chat und Projektmodell
+
+Neue Mailübersichten zeigen Ergebnisse statt pauschaler technischer Fußtexte.
+Datumsangaben werden anhand vorhandener Zeitzonen aufgelöst und lokal formatiert;
+zeitlich nicht zuordenbare Nachrichten bleiben außerhalb der Trefferanzeige.
+Originalbelege bleiben erhalten. Die gespeicherte Formatversion bewahrt alte
+Mail-Folgefragen ohne Umschreiben vorhandener Antworten.
+
+„Details Abarbeitung“ ist standardmäßig eine kompakte eingeklappte Zeile. Laufende
+Aufträge öffnen sie nicht automatisch; Freigaben und Rückfragen sind direkt
+erreichbar. Mobile Chatleisten blenden sich bei tatsächlichem Abwärtsscrollen aus
+und bleiben über Aufwärtsscrollen, Tastatur und Wiederherstellung erreichbar.
+
+Projekte erhalten Auto oder ein festes konfiguriertes Modell. Lokale Projektchats,
+Aufgabenanalysen, Aufgabenentwürfe, Use-Case-Antworten und Agentenplanung verwenden
+die Auswahl; globale Standards bleiben erhalten. Bestehende Aufgaben übernehmen
+die aktuelle Wahl beim nächsten Lauf ohne Spezifikationsänderung. Projekt- und
+Provideränderungen nach dem Warten werden vor dem Versand erneut geprüft.
+**Cloud-Präferenzen sind speicherbar, aber ohne zusätzliche Projektfreigabe gesperrt.**
+Es gibt keinen lokalen Ersatz für eine gesperrte feste Cloudwahl und keine
+implizite Freigabe von Historie, Memory, Projektdokumenten oder Integrationen.
+Die notwendige Klärung einer ausdrücklichen Cloud-Projektfreigabe ist noch offen.
+
+Migration 0050 ergänzt ausschließlich `projects.model_policy` mit `{}` als
+Bestandsvorgabe. Ein bestätigtes Rennen zwischen Anbieterübersicht und
+Einstellungsinitialisierung wurde durch atomare Initialisierung behoben; bestehende
+Anbieter, Zugangsdaten, Nichtstandard- und deaktivierte Verbindungen bleiben
+unangetastet. Gezielte Backend-/Browserprüfungen und Typ-/Formatprüfungen bestanden;
+die vollständige lokale PostgreSQL-Prüfung fand zunächst vier Gegenfälle bei
+Planungskontextbudget und genauer Fehlermeldung eines bereits verhinderten
+Drive-Zugriffs (3.513 bestanden). Die Mailanweisung wurde ohne Verlust der
+Ergebnisregeln auf das bisherige Bytebudget gekürzt; der Widerrufstest erwartet
+bei archiviertem Projekt die frühere Projektsperre. Die vollständige exakte CI
+und kontrollierte Auslieferung werden separat dokumentiert. Neue öffentliche Screenshots sind isoliert synthetisch.
+
+## Vorherige geprüfte Lieferung — 78617e2 / Schema 0049
 
 Der vollständig geprüfte Commit **78617e2** ist auf der Test-VM installiert.
 Exakte [CI 45096515809](https://github.com/sschluet/obdaAI/actions/runs/45096515809):

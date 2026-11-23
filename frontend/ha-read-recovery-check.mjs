@@ -79,10 +79,10 @@ async function checks(){
   if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Explicit administration enabled before automatic read');
   await page.locator('.composer textarea').fill(goal);await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
   await page.locator('.message.assistant').getByText(summary,{exact:true}).waitFor();
-  const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});await panel.locator('summary').first().filter({hasText:'Nur lesende Schritte abgeschlossen'}).waitFor();
+  const panel=page.getByRole('region',{name:'Details Abarbeitung',exact:true});await panel.locator('summary').first().filter({hasText:'Nur lesende Schritte abgeschlossen'}).waitFor();
   if(creates!==1||routes!==1||submissions!==1||forbidden)throw Error('Read recovery required extra submission or ordinary LLM request');
   if(await page.getByRole('button',{name:/freigeben und fortsetzen|Tatsächlichen Zustand nur lesend prüfen/}).count())throw Error('Recovered read exposed approval/reconciliation');
-  await panel.locator('summary').first().click();const articles=panel.locator('article');if(await articles.count()!==3)throw Error('Read trace omitted failure or included model as action');
+  await panel.locator('summary').first().click();await panel.locator('details[data-agent-job] > summary').click();const articles=panel.locator('article');if(await articles.count()!==3)throw Error('Read trace omitted failure or included model as action');
   const expected=[{path:'/api/',status:'succeeded',code:200},{path:'/api/light',status:'failed',code:404},{path:'/api/states',status:'succeeded',code:200}];
   for(let i=0;i<3;i++){
    const article=articles.nth(i);await article.getByText('Aufruf und Beleg',{exact:true}).click();await article.locator('pre').filter({hasText:expected[i].path}).waitFor();const proof=JSON.parse(await article.locator('pre').innerText());

@@ -135,7 +135,7 @@ def test_pinned_week_overview_is_schema_bound_durable_real_read_without_model(
     response = client.get("/api/agent-runs/" + job_id).json()
     assert (
         "Observed synthetic message" in response["summary"]
-        and "keine Vollständigkeit" in response["summary"]
+        and "keine Vollständigkeit" not in response["summary"]
     )
     assert response["automatic_retry"] is False
     before = len(overview[-1])
@@ -175,7 +175,8 @@ def test_natural_arrival_questions_query_once_without_confirmation_or_folder_que
     assert not any(s.kind in {"input", "model", "effect", "research"} for s in history)
     response = client.get("/api/agent-runs/" + job_id).json()
     assert "Observed synthetic message" in response["summary"]
-    assert "INBOX" in response["summary"] and "keine Vollständigkeit" in response["summary"]
+    assert "Abfrageumfang" not in response["summary"]
+    assert "keine Vollständigkeit" not in response["summary"]
     before = len(overview[-1])
     execute(overview)
     assert len(overview[-1]) == before

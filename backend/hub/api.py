@@ -664,6 +664,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
             if not c or c.purpose != "chat" or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
+            from hub.project_models import ProjectModelError
+            from hub.project_models import freeze as freeze_project_model
+
+            try:
+                project_model = freeze_project_model(db, cfg, c.project_id)
+            except ProjectModelError as error:
+                raise HTTPException(409, str(error)) from None
+            if project_model and project_model.get("policy"):
+                if model_cloud_only:
+                    raise HTTPException(409, "Im Projekt ist ein lokales Modell fest gewählt.")
+                model_local_only = True
             from hub.agent_models import AgentJob
             from hub.agent_runtime import ACTIVE as AGENT_ACTIVE
 
@@ -775,6 +786,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "web_search_allowed": web_search_allowed,
                 "model_local_only": model_local_only,
                 "model_cloud_only": model_cloud_only,
+                "project_model": project_model,
                 **history_context,
             }
             from hub.memory_context import freeze_memory

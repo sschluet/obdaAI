@@ -1,0 +1,5 @@
+.chat-chrome-restore{display:none}
+@media(max-width:700px){
+ .workspace.mobile-chat-reading>header,.workspace.mobile-chat-reading>.chat-top,.workspace.mobile-chat-reading>.integration-binding-picker{display:none}
+ .workspace.mobile-chat-reading>.chat-chrome-restore{display:inline-flex;position:absolute;top:5px;right:8px;z-index:25;width:32px;height:30px;border:1px solid var(--border);border-radius:9px;background:var(--panel);box-shadow:0 2px 8px #00000012}
+}

@@ -320,10 +320,12 @@ def check_bindings(db: Session, spec: TaskSpec) -> dict[str, Any]:
             )
         ):
             raise HTTPException(409, "Lesewerkzeugrevision nicht mehr verfügbar")
+    from hub.project_models import selection_snapshot
+
     return {
         "spec": spec.model_dump(mode="json"),
         "skills_checked": checked,
-        "model": None,
+        "model": selection_snapshot(db, project_id),
         "cost_usd": 0,
         "label": "LOCAL_ONLY",
     }

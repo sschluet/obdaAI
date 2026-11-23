@@ -10,7 +10,7 @@ from typing import Literal
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import exists, literal, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.budgets import ExecutionLimitError
@@ -107,10 +107,15 @@ def decrypt(cfg: Settings, provider_id: str, encrypted: str) -> str:
 
 def seed(db: Session, cfg: Settings) -> None:
     # Runtime bootstrap is metadata only; original server secret files stay untouched.
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+    dialect = db.get_bind().dialect.name
+    if dialect not in {"sqlite", "postgresql"}:
+        raise ValueError("Unsupported provider database")
+    insert = sqlite_insert if dialect == "sqlite" else pg_insert
     for kind in ("local", "openrouter"):
         provider_id = kind + "-default"
-        if db.get(ProviderConfig, provider_id):
-            continue
         payload = ProviderInput(
             name="Lokales Modell" if kind == "local" else "OpenRouter",
             kind=kind,
@@ -123,17 +128,19 @@ def seed(db: Session, cfg: Settings) -> None:
             is_default=True,
             disable_thinking=cfg.local_disable_thinking if kind == "local" else False,
         )
-        row = ProviderConfig(
-            id=provider_id,
-            name=payload.name,
-            kind=kind,
-            revision=1,
-            enabled=True,
-            is_default=True,
-            config=json.dumps(payload.model_dump(exclude={"api_key", "revision", "clear_secret"})),
-        )
-        db.add(row)
-        db.add(ProviderRevision(provider_id=provider_id, revision=1, config=row.config))
+        document = json.dumps(payload.model_dump(exclude={"api_key", "revision", "clear_secret"}))
+        # Settings hydration and provider catalog can initialize concurrently.
+        # Never overwrite a current default or fabricate its revision history.
+        values = {"id": provider_id, "name": payload.name, "kind": kind, "revision": 1,
+                  "enabled": True, "is_default": True, "config": document}
+        absent_kind = ~exists(select(ProviderConfig.id).where(ProviderConfig.kind == kind))
+        inserted = db.scalar(insert(ProviderConfig).from_select(
+            list(values), select(*(literal(value) for value in values.values())).where(absent_kind)
+        ).on_conflict_do_nothing().returning(ProviderConfig.id))
+        if inserted:
+            db.execute(insert(ProviderRevision).values(
+                provider_id=provider_id, revision=1, config=document,
+            ).on_conflict_do_nothing())
     db.flush()
 
 
@@ -164,6 +171,8 @@ def runtime_provider(
     local_only: bool = False,
     cloud_only: bool = False,
     external_kind: str = "openrouter",
+    provider_id: str | None = None,
+    model: str | None = None,
 ) -> tuple[Settings, Providers, dict[str, ProviderConfig]]:
     with factory() as db:
         seed(db, cfg)
@@ -175,6 +184,13 @@ def runtime_provider(
         rows = list(db.scalars(query))
         db.commit()
     selected = {r.kind: r for r in rows}
+    if provider_id is not None:
+        with factory() as db:
+            chosen = db.get(ProviderConfig, provider_id)
+            if (not chosen or not chosen.enabled or chosen.kind != "local"
+                    or json.loads(chosen.config).get("model") != model):
+                raise ValueError("Gewähltes Projektmodell ist nicht mehr verfügbar")
+            selected[chosen.kind] = chosen
     values: dict[str, object] = {}
     keys: dict[str, str] = {}
     if local_only:

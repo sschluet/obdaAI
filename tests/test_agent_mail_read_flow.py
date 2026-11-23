@@ -415,7 +415,8 @@ def test_real_mail_dispatch_large_results_cannot_finish_as_false_empty_overview(
         "Within currentHeader" in response["summary"]
         and "Earlier prefix" not in response["summary"]
     )
-    assert "keine Vollständigkeit" in response["summary"] and "begrenzt" in response["summary"]
+    assert "keine Vollständigkeit" not in response["summary"]
+    assert "Abfrageumfang" not in response["summary"]
     actual_query = next(
         step
         for step in history

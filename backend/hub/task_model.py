@@ -15,6 +15,7 @@ from hub.action_api import digest, encode
 from hub.db import ProviderConfig, TaskRun, TaskStep
 from hub.paperless_api import collect_context
 from hub.policy import ContextPart
+from hub.project_models import ProjectModelError
 from hub.provider_settings import runtime_provider
 from hub.providers import Providers
 from hub.skill_api import parse
@@ -111,13 +112,17 @@ async def execute_task(factory: Any, cfg: Any, run_id: str, provider: Any = None
                 from hub.agent_tasks import execute_agent_task
 
                 try:
+                    from hub.project_models import freeze as freeze_project_model
+
+                    freeze_project_model(db, cfg, str(spec.project_id) if spec.project_id else None)
                     await execute_agent_task(factory, cfg, run_id, provider)
-                except Exception:
+                except Exception as error:
                     with factory() as failed_db:
                         failed_run = failed_db.get(TaskRun, run_id)
                         if failed_run and failed_run.status in {"queued", "running"}:
                             failed_run.status, failed_run.finished = "failed", time.time()
                             failed_run.error = (
+                                str(error) if isinstance(error, ProjectModelError) else
                                 "Agentenlauf nicht gestartet. Aktuelle Integrationsregeln "
                                 "und Aufgabenbindungen prüfen."
                             )
@@ -141,8 +146,19 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
     try:
         pipeline_started = time.monotonic()
         rows: dict[str, Any] = {}
+        from hub.project_models import check as check_project_model
+        from hub.project_models import freeze as freeze_project_model
+        from hub.project_models import provider_arguments
+
+        with factory() as project_db:
+            queued_run = project_db.get(TaskRun, run_id)
+            project_id = (json.loads(queued_run.snapshot).get("spec", {}).get("project_id")
+                          if queued_run else None)
+            project_model = freeze_project_model(project_db, cfg, project_id)
         if provider is None or isinstance(provider, Providers):
-            cfg, provider, rows = runtime_provider(factory, cfg, local_only=True)
+            cfg, provider, rows = runtime_provider(
+                factory, cfg, local_only=True, **provider_arguments(project_model)
+            )
             if not cfg.local_model or "local" not in rows or not rows["local"].enabled:
                 raise ValueError("Local provider unavailable")
         row = rows.get("local")
@@ -446,6 +462,7 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
 
         def context_boundary() -> None:
             with factory() as current_db:
+                check_project_model(current_db, cfg, project_model)
                 bound_run = current_db.get(TaskRun, run_id)
                 if not bound_run:
                     raise PermissionError("Task run no longer available")
@@ -538,13 +555,14 @@ async def analyze(factory: Any, cfg: Any, run_id: str, provider: Any) -> None:
             db.get(TaskStep, (run_id, sequence)).result = encode(audit)
             run.status, run.finished = "succeeded", time.time()
             db.commit()
-    except Exception:
+    except Exception as error:
         with factory() as db:
             lock(db)
             run = db.get(TaskRun, run_id)
             if run and run.status in ("queued", "running"):
                 run.status, run.error, run.finished = (
                     "cancelled" if run.error == "Abbruch angefordert" else "failed",
+                    str(error) if isinstance(error, ProjectModelError) else
                     "Lokale Aufgabenanalyse gestoppt. Vorhandene Teilantwort bleibt erhalten. "
                     "Kein automatischer Retry",
                     time.time(),

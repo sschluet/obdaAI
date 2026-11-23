@@ -84,10 +84,10 @@ try{
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
  await page.reload();await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
- await page.getByRole('region',{name:'Systemsteuerung',exact:true}).getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).waitFor();
+ await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByRole('button',{name:'Rückfrage anzeigen',exact:true}).click();await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).waitFor();
  if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Restored agent job makes explicit system mode sticky');
  await composer.fill('Agentenabnahme');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
- const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});
+ const panel=page.getByRole('region',{name:'Details Abarbeitung',exact:true});
  const approve=panel.getByRole('button',{name:'Diesen Schritt freigeben und fortsetzen',exact:true});await approve.waitFor();
  let parallelMessages=0;const blockedPath='**/api/conversations/'+chat.id+'/messages';await page.route(blockedPath,route=>{parallelMessages++;return route.abort()});await composer.fill('Parallelfrage während einer ausstehenden Freigabe');if(await page.getByRole('button',{name:'Nachricht senden',exact:true}).isEnabled())throw Error('Active agent permits parallel normal-chat send');await composer.press('Enter');await page.getByRole('alert').filter({hasText:'Der aktuelle Integrationsauftrag läuft oder wartet auf deine Freigabe.'}).waitFor();if(parallelMessages)throw Error('Keyboard submission bypassed active agent guard');await page.unroute(blockedPath);
  let jobs=await call('/agent-runs?conversation_id='+chat.id);let job=await call('/agent-runs/'+jobs[0].id);
@@ -96,7 +96,7 @@ try{
  job=await call('/agent-runs/'+job.id);
  if(job.status!=='succeeded'||!job.steps.find(s=>s.kind==='effect')?.result.effect_verified)throw Error('Missing independent verification');
  if(process.env.HUB_AGENT_CAPTURE){await panel.getByText(/Ausführung und Prüfschritte abgeschlossen/).first().click();await page.screenshot({path:process.env.HUB_AGENT_CAPTURE,fullPage:true})}
- await page.reload();await page.getByRole('region',{name:'Systemsteuerung',exact:true}).getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
+ await page.reload();await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
  policy=await call('/integrations/'+profile.id+'/agent-policy');
  await call('/integrations/'+profile.id+'/agent-policy','PUT',{expected_revision:policy.revision,expected_profile_revision:policy.profile_revision,rules:{...policy.rules,autonomous:true}});
 
@@ -117,7 +117,7 @@ try{
  await call('/integration-bindings/task/'+task.id,'PUT',{expected_revision:0,selection_mode:'manual',integration_ids:[profile.id]});
  task=await call('/tasks/'+task.id+'/control','PATCH',{expected_revision:task.revision,expected_control_revision:task.control_revision,paused:false});
  await call('/tasks/'+task.id+'/runs','POST',{request_id:crypto.randomUUID(),expected_revision:task.revision,expected_control_revision:task.control_revision,spec_sha256:task.spec_sha256});
- await page.getByRole('region',{name:'Systemsteuerung',exact:true}).getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
+ await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
  const taskJobs=await call('/agent-runs?task_id='+task.id);
  if(taskJobs[0]?.status!=='succeeded')throw Error('Task did not use the verified shared loop');
  await page.getByRole('button',{name:'Chat',exact:true}).click();await page.goto(base+'/?chat='+chat.id);

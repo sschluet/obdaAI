@@ -190,7 +190,9 @@ def test_deterministic_overview_separates_unknown_dates_and_displays_fallback_ba
         date="Tue, 20 Oct 2026 10:00:00 +0000",
         uid=2,
     )
-    summary = runtime.mail_overview_summary([receipt([unknown, fallback])], CLOCK, GOAL, {})
+    summary = runtime.mail_overview_summary(
+        [receipt([unknown, fallback])], CLOCK, GOAL, {}, version=1
+    )
     assert "Datum nicht sicher zuordenbar:" in summary and "Unknown source date" in summary
     assert "Header fallback" in summary and "[Header-Datum]" in summary
     assert "2026\\-10\\-20T10\\:00\\:00\\+00\\:00" in summary
@@ -200,10 +202,10 @@ def test_deterministic_overview_separates_unknown_dates_and_displays_fallback_ba
 
 def test_outside_only_and_empty_results_do_not_claim_the_mailbox_has_no_new_mail():
     outside = runtime.mail_overview_summary(
-        [receipt([header(received="2026-10-18T21:00:00+00:00")])], CLOCK, GOAL, {}
+        [receipt([header(received="2026-10-18T21:00:00+00:00")])], CLOCK, GOAL, {}, version=1
     )
     assert "außerhalb des angefragten Zeitraums" in outside
-    empty = runtime.mail_overview_summary([receipt([])], CLOCK, GOAL, {})
+    empty = runtime.mail_overview_summary([receipt([])], CLOCK, GOAL, {}, version=1)
     assert "einzelnen Abfragen haben keine Kopfzeilen" in empty
     for summary in (outside, empty):
         assert "Keine Mails" not in summary and "keine Vollständigkeit" in summary
@@ -218,7 +220,9 @@ def test_renderer_is_inert_bounds_twenty_headers_and_deduplicates_only_same_acco
         "one": (SimpleNamespace(name="Account [one]"),),
         "two": (SimpleNamespace(name="Second account"),),
     }
-    summary = runtime.mail_overview_summary([first, duplicate, another], CLOCK, GOAL, profiles)
+    summary = runtime.mail_overview_summary(
+        [first, duplicate, another], CLOCK, GOAL, profiles, version=1
+    )
     assert summary.count("\\!\\[img\\]") == 1
     assert "![img]" not in summary and "<img" not in summary.replace("\\<img", "")
     assert "[link](" not in summary
@@ -228,5 +232,7 @@ def test_renderer_is_inert_bounds_twenty_headers_and_deduplicates_only_same_acco
     other_folder = receipt(
         [header("Different folder same UID", uid=1, folder="Archive")], folder="Archive"
     )
-    both = runtime.mail_overview_summary([duplicate, another, other_folder], CLOCK, GOAL, profiles)
+    both = runtime.mail_overview_summary(
+        [duplicate, another, other_folder], CLOCK, GOAL, profiles, version=1
+    )
     assert "Different folder same UID" in both and "Other account" in both

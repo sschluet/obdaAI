@@ -31,7 +31,7 @@ export async function checkAgentChatRecovery({page, base, call, capture}) {
     const retry = page.getByRole('button', {name: 'Antwort erneut erzeugen', exact: true});
     const send = page.getByRole('button', {name: 'Nachricht senden', exact: true});
     const composer = page.getByRole('textbox', {name: 'Nachricht', exact: true});
-    await page.getByRole('region', {name: 'Systemsteuerung', exact: true}).getByText('In Arbeit · ' + goal, {exact: true}).waitFor();
+    const processing=page.getByRole('region', {name: 'Details Abarbeitung', exact: true});await processing.locator('.agent-work-summary').getByText(/In Arbeit/).waitFor();await processing.locator('.agent-work-summary').click();await processing.getByText('In Arbeit · '+goal,{exact:true}).click();
     await composer.fill('Entwurf nach der Mailfrage');
     if (await edit.isEnabled() || await retry.isEnabled() || await send.isEnabled()) throw Error('Active agent permits editing, regeneration or parallel send');
     // Even a newer terminal record must not hide a still active job.
@@ -59,7 +59,7 @@ export async function checkAgentChatRecovery({page, base, call, capture}) {
     await send.click();
     await page.waitForFunction(() => !document.querySelector('button[aria-label="Antwort abbrechen"]'));
     if (messageRequests !== 1) throw Error('New question after failed agent/retry cannot be sent');
-    await page.getByText('Angehalten · ' + goal, {exact: true}).click();
+    if(!await page.getByText('Angehalten · '+goal,{exact:true}).evaluate(e=>e.parentElement.open))await page.getByText('Angehalten · '+goal,{exact:true}).click();
     await page.getByRole('button', {name: 'Frage erneut vorbereiten', exact: true}).click();
     if (await composer.inputValue() !== goal || agentRequests) throw Error('Preparing failed question loses goal or executes before Send');
     retryAsAgent = true;
@@ -78,7 +78,7 @@ export async function checkAgentChatRecovery({page, base, call, capture}) {
       response.messages = [...response.messages, {id: 'synthetic-recovery-answer', role: 'assistant', content: summary, label: 'LOCAL_ONLY', processing: {agent_job_id: job.id}}];
       await page.setViewportSize({width: 1440, height: 1150});
       await page.reload();
-      await page.getByText('Angehalten · ' + goal, {exact: true}).click();
+      await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).locator('.agent-work-summary').click();await page.getByText('Angehalten · '+goal,{exact:true}).click();
       await page.getByRole('button', {name: 'Frage erneut vorbereiten', exact: true}).click();
       await page.evaluate(() => document.activeElement?.blur());
       if (!await send.isEnabled()) throw Error('Synthetic recovery capture has a blocked composer');

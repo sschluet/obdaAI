@@ -46,7 +46,9 @@ def test_empty_display_reply_followup_has_no_new_steps_model_or_mailbox_calls(
     asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, first_id))
     with app.state.sessions() as db:
         first = db.get(AgentJob, first_id)
-        assert first.status == "observed" and "0" in first.summary
+        assert first.status == "observed"
+        assert first.summary == ("In den abgerufenen Nachrichten wurden "
+                                 "keine passenden Mails gefunden.")
         chat = first.conversation_id
     previous_calls = len(calls)
     created = client.post(

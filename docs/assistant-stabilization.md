@@ -70,6 +70,57 @@ fehlender Quelle verschieden: Eine ausdrückliche Rückfrage zu dieser Auswahl
 benötigt keinen neuen Posteingangs-/Gesendet-Scan. Sie beweist keine allgemeine
 Aussage über beantwortete oder unbeantwortete Mails im übrigen Postfach.
 
+## Kompakte Mailantworten und mobile Ansicht
+
+Neue Tages-/Wochenübersichten zeigen Betreff, Absender und lokal formatierte Zeit.
+Technische Ordner-, Zeitzonen- und Vollständigkeitshinweise werden nicht pauschal
+an jede Antwort angehängt. Vorhandene Zeitzonen und auswertbare Headerdaten werden
+intern aufgelöst. Nicht zeitlich zuordenbare Nachrichten werden nicht als Treffer
+im angefragten Zeitraum angezeigt; die Originalbelege bleiben erhalten. Eine leere
+Auswahl wird als Ergebnis der abgerufenen Nachrichten formuliert, nicht als Beweis
+eines leeren Postfachs.
+
+Neue Aufträge speichern `mail_overview_version=2` im vorhandenen Binding. Alte
+Aufträge ohne Versionsfeld werden unverändert mit Version 1 rekonstruiert. Damit
+werden alte Antworten nicht umgeschrieben und Folgefragen bleiben an genau die
+ursprünglich angezeigte Auswahl gebunden. Der neue Filter beeinflusst ausschließlich
+die neue Anzeige; er entfernt keine Nachrichten oder gespeicherten Belege.
+
+Die Abarbeitung ist standardmäßig unter einer kompakten Zeile „Details Abarbeitung“
+eingeklappt, auch während eines laufenden Auftrags. Notwendige Freigaben und
+Rückfragen erhalten einen direkten Einstieg. Auf kleinen Bildschirmen blenden sich
+die oberen Chatleisten beim tatsächlichen Abwärtsscrollen aus; Aufwärtsscrollen,
+Tastaturnavigation und ein Wiederherstellungsbutton zeigen sie erneut. Streaming
+oder reine Layoutänderungen lösen die Ausblendung nicht aus.
+
+## Projektmodell als gemeinsame Vorgabe
+
+Die Projekteinstellungen speichern `model_policy`: `{}` bedeutet Auto; eine feste
+Wahl enthält die ID einer vorhandenen Modellverbindung und deren konfigurierten
+Modellnamen. Die Auswahl ändert keine globale Standardverbindung. Verbindungen
+müssen aktiv sein und die erforderlichen Text-/Strukturierungsfähigkeiten besitzen.
+Nicht mehr verfügbare gespeicherte Modelle werden erkennbar, statt unbemerkt durch
+ein anderes Modell ersetzt zu werden.
+
+Projektantworten, projektbezogene Aufgabenanalysen und Aufgabenentwürfe übernehmen
+das gewählte lokale Modell. Gespeicherte Aufgaben behalten ihre Spezifikation und
+übernehmen die aktuelle Projektwahl beim nächsten Lauf. Projekt-, Anbieter- und
+Modellbindung werden vor dem eigentlichen Versand nach einer Wartephase erneut
+geprüft. Reine Werkzeugschritte benötigen keinen Modellaufruf. Lokale Hilfsrollen
+wie Auftragseinordnung, Titel und Memory-Extraktion behalten ihre eigenen Grenzen.
+
+Eine Cloud-Präferenz kann gespeichert werden; sie ist keine Freigabe bestehender
+`LOCAL_ONLY`-Projektinhalte. Solange diese Freigabe fehlt, bleibt die entsprechende
+Projektverarbeitung mit verständlichem Grund gesperrt, ohne lokalen Modellfallback.
+Persönliches Memory, Quellen, gespeicherte Historie und Integrationsrechte werden
+nicht umetikettiert. Dieser Cloud-Pfad ist damit ausdrücklich noch keine nutzbare
+Cloud-Projektfreigabe.
+
+Migration 0050 ergänzt nur `projects.model_policy` mit dem Standardwert `{}`.
+Vorhandene Projekte behalten dadurch ihr bisheriges Verhalten. Die vorhandene
+Projektrevision schützt konkurrierende Änderungen; ein Downgrade mit gespeicherten
+Modellpräferenzen wird verweigert.
+
 ## Lokale Inferenz und Diagnose
 
 Drei getrennte Grenzen gelten für die lokale Antwortgenerierung:

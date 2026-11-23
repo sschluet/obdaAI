@@ -75,11 +75,11 @@ async function checks(){
    await page.locator('.composer textarea').fill(goal);
    await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
    await page.locator('.message.assistant').getByText(variant==='success'?success:failure,{exact:true}).waitFor();
-   const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});
-   await panel.getByText(variant==='success'?'Nur lesende Schritte abgeschlossen · '+goal:'Angehalten · '+goal,{exact:true}).waitFor();
+   const panel=page.getByRole('region',{name:'Details Abarbeitung',exact:true});
+   await panel.locator('.agent-work-summary').getByText(variant==='success'?/Nur lesende Schritte abgeschlossen/:/Angehalten/).waitFor();
    if(creates-before.creates!==1||routes-before.routes!==1||submissions-before.submissions!==1||forbidden)throw Error('Read required extra confirmation/submission or normal LLM request');
    if(await page.getByRole('button',{name:/freigeben und fortsetzen|Tatsächlichen Zustand nur lesend prüfen/}).count())throw Error('Read-only access check exposes write approval or uncertain recovery');
-   await panel.locator('summary').first().click();
+   await panel.locator('summary').first().click();await panel.locator('details[data-agent-job] > summary').click();
    await panel.getByText('Schritt 1: Freigegebene Verbindung ausschließlich lesend prüfen · '+(variant==='success'?'abgeschlossen':'fehlgeschlagen'),{exact:true}).waitFor();
    await panel.getByText('Aufruf und Beleg',{exact:true}).click();await panel.locator('pre').filter({hasText:'"tool": "http"'}).waitFor();
    const trace=await panel.locator('pre').filter({hasText:'"tool": "http"'}).innerText();

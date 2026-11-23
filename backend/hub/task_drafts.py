@@ -5,6 +5,7 @@ import json
 import re
 import time
 from typing import Any, Literal
+from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from pydantic import Field
@@ -20,6 +21,7 @@ from hub.task_api import AgentTaskStep, AnalyzeStep, ReadStep, TaskSpec, WriteSt
 
 
 class GoalInput(StrictInput):
+    project_id: UUID | None = None
     goal: str = Field(min_length=1, max_length=4000)
 
 
@@ -34,10 +36,20 @@ class DraftTitle(StrictInput):
     schedule: ScheduleDefinition | None = None
 
 
-async def preview(factory: Any, cfg: Any, goal: str, provider: Any = None) -> dict[str, Any]:
+async def preview(
+    factory: Any, cfg: Any, goal: str, provider: Any = None, *, project_id: str | None = None
+) -> dict[str, Any]:
+    from hub.project_models import check as check_project_model
+    from hub.project_models import freeze as freeze_project_model
+    from hub.project_models import provider_arguments
+
+    with factory() as project_db:
+        project_model = freeze_project_model(project_db, cfg, project_id)
     rows: dict[str, Any] = {}
     if provider is None or isinstance(provider, Providers):
-        cfg, provider, rows = runtime_provider(factory, cfg, local_only=True)
+        cfg, provider, rows = runtime_provider(
+            factory, cfg, local_only=True, **provider_arguments(project_model)
+        )
         if not cfg.local_model or not rows.get("local") or not rows["local"].enabled:
             raise ValueError("Local provider unavailable")
     parts = [
@@ -85,6 +97,8 @@ async def preview(factory: Any, cfg: Any, goal: str, provider: Any = None) -> di
         raise ValueError("Draft context limit")
 
     def provider_boundary() -> None:
+        with factory() as project_db:
+            check_project_model(project_db, cfg, project_model)
         if row:
             with factory() as db:
                 actual = db.get(ProviderConfig, row.id)
@@ -161,6 +175,7 @@ async def preview(factory: Any, cfg: Any, goal: str, provider: Any = None) -> di
     ):
         raise ValueError("Explicit local system report evaluation is required")
     spec = TaskSpec(
+        project_id=UUID(project_id) if project_id else None,
         title=title.title,
         goal=goal,
         steps=steps,
@@ -188,8 +203,15 @@ def install_task_drafts(app: FastAPI, cfg: Any, factory: Any) -> None:
     @app.post("/api/task-drafts")
     async def draft(body: GoalInput, auth: Auth) -> dict[str, Any]:
         try:
-            return await preview(factory, cfg, body.goal, app.state.providers)
-        except Exception:
+            return await preview(
+                factory, cfg, body.goal, app.state.providers,
+                project_id=str(body.project_id) if body.project_id else None,
+            )
+        except Exception as error:
+            from hub.project_models import ProjectModelError
+
+            if isinstance(error, ProjectModelError):
+                raise HTTPException(409, str(error)) from None
             raise HTTPException(
                 422, "Lokaler Aufgabenentwurf nicht verfügbar oder ungültig; nichts gespeichert"
             ) from None

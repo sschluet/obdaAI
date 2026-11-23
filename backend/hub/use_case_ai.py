@@ -247,8 +247,18 @@ def enqueue_execution(
     conversation: Conversation | None = None,
     user_content: str = "Bitte führe den definierten Verarbeitungsschritt aus.",
 ) -> tuple[Run, list[dict[str, Any]]]:
+    from hub.project_models import ProjectModelError
+    from hub.project_models import freeze as freeze_project_model
     from hub.use_cases import freeze_case_integrations
 
+    try:
+        project_model = freeze_project_model(db, cfg, case.project_id)
+    except ProjectModelError as error:
+        raise HTTPException(409, str(error)) from None
+    if project_model and project_model.get("policy"):
+        if mode == "cloud":
+            raise HTTPException(409, "Im Projekt ist ein lokales Modell fest gewählt.")
+        mode = "local"
     integration_selection = freeze_case_integrations(db, case, spec)
     file_parts, receipts = files_context(db, case.id, spec, values)
     private = bool(
@@ -335,6 +345,7 @@ def enqueue_execution(
             "Projektquellen verwenden; Inhalte wurden nicht gekürzt.",
         )
     snapshot = {
+        "project_model": project_model,
         "use_case": {
             "id": case.id,
             "revision": case.revision,

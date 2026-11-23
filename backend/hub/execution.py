@@ -342,6 +342,19 @@ async def execute_run(
             },
         )
         try:
+            from hub.project_models import ProjectModelError, provider_arguments
+            from hub.project_models import check as check_project_model
+            from hub.project_models import freeze as freeze_project_model
+
+            with factory() as project_db:
+                if snapshot.get("project_model"):
+                    check_project_model(project_db, cfg, snapshot["project_model"])
+                elif c.project_id:
+                    snapshot["project_model"] = freeze_project_model(project_db, cfg, c.project_id)
+            if (snapshot.get("project_model") or {}).get("policy"):
+                if snapshot.get("model_cloud_only"):
+                    raise ExecutionLimitError("Im Projekt ist ein lokales Modell fest gewählt.")
+                snapshot["model_local_only"] = True
             latest_request = next((m for m in reversed(messages) if m.role == "user"), None)
             if latest_request and not workflow_generation and "memory" in snapshot:
                 from hub.memory_context import prepare_memory
@@ -507,6 +520,7 @@ async def execute_run(
 
             def model_boundary(expected: ProviderConfig | None) -> None:
                 with factory() as current_db:
+                    check_project_model(current_db, cfg, snapshot.get("project_model"))
                     active = current_db.get(Run, run_id)
                     owner = current_db.get(Conversation, chat_id)
                     if active and active.cancel_requested:
@@ -531,6 +545,7 @@ async def execute_run(
                     cfg,
                     external_kind=c.cloud_provider,
                     cloud_only=bool(snapshot.get("model_cloud_only")),
+                    **provider_arguments(snapshot.get("project_model")),
                 )
                 if snapshot.get("agent_generation", {}).get("intent_schema"):
                     cfg = replace(cfg, local_max_tokens=min(cfg.local_max_tokens, 768),
@@ -1450,6 +1465,8 @@ async def execute_run(
                 if snapshot.get("model_cloud_only")
                 else "Provider nicht verfügbar oder ungültige Antwort"
             )
+            if isinstance(error, ProjectModelError):
+                message = str(error)
             update(error=message)
             yield (
                 "error",

@@ -441,3 +441,7 @@ await import('./ha-read-recovery-check.mjs');
 await import('./ux-navigation-check.mjs');
 
 await import('./chat-scope-check.mjs');
+
+await import('./chat-compact-check.mjs');
+
+await import('./project-model-check.mjs');

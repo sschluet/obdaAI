@@ -12,6 +12,7 @@ export type ComposerToolsProps={
  webConfigured:boolean;
  webAllowed:boolean;
  sourceLabel?:string;
+ inheritedModel?:string;
  onChooseModel:(value:string)=>void;
  onToggleWeb:()=>void;
  onAction:(action:ComposerAction)=>void;
@@ -19,7 +20,7 @@ export type ComposerToolsProps={
 type Menu='actions'|'models';
 
 /** Modes apply to the next current input; provider setup stays in Settings. */
-export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConfigured,webAllowed,sourceLabel,onChooseModel,onToggleWeb,onAction}:ComposerToolsProps){
+export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConfigured,webAllowed,sourceLabel,inheritedModel,onChooseModel,onToggleWeb,onAction}:ComposerToolsProps){
  const [menu,setMenu]=useState<Menu|null>(null);
  const root=useRef<HTMLDivElement>(null),actions=useRef<HTMLButtonElement>(null),models=useRef<HTMLButtonElement>(null),popup=useRef<HTMLDivElement>(null);
  const id=useId();
@@ -47,7 +48,7 @@ export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConf
  function choose(value:string){close(true);onChooseModel(value)}
  return <div className="composer-tools" ref={root} onKeyDown={keys}>
   <button ref={actions} className="composer-tool composer-add" type="button" aria-label="Aktionen und Anhänge" aria-haspopup="menu" aria-expanded={menu==='actions'} aria-controls={menu==='actions'?id+'-actions':undefined} disabled={disabled} onClick={()=>toggle('actions')} onKeyDown={event=>triggerKeys(event,'actions')} title="Dateien, Quellen, Aufgaben und Antwortstil"><Plus size={19}/></button>
-  <button ref={models} className="composer-tool composer-model" type="button" aria-label="Modellwahl" aria-haspopup="menu" aria-expanded={menu==='models'} aria-controls={menu==='models'?id+'-models':undefined} disabled={disabled} onClick={()=>toggle('models')} onKeyDown={event=>triggerKeys(event,'models')}><span className="composer-model-icon">{isLocal?<LockKeyhole size={14}/>:choice==='cloud'?<Cloud size={14}/>:<Sparkles size={14}/>}</span><span>{modelLabel}</span><ChevronDown className="composer-chevron" size={13}/></button>
+  {inheritedModel?<span className="composer-tool composer-model project-model-choice" role="status" title={'Im Projekt festgelegt: '+inheritedModel}><Sparkles size={14}/><span>Projekt: {inheritedModel}</span></span>:<button ref={models} className="composer-tool composer-model" type="button" aria-label="Modellwahl" aria-haspopup="menu" aria-expanded={menu==='models'} aria-controls={menu==='models'?id+'-models':undefined} disabled={disabled} onClick={()=>toggle('models')} onKeyDown={event=>triggerKeys(event,'models')}><span className="composer-model-icon">{isLocal?<LockKeyhole size={14}/>:choice==='cloud'?<Cloud size={14}/>:<Sparkles size={14}/>}</span><span>{modelLabel}</span><ChevronDown className="composer-chevron" size={13}/></button>}
   {sourceLabel&&<button className="composer-tool composer-source" type="button" disabled={disabled} onClick={()=>onAction('sources')} aria-label="Quellen für dieses Gespräch öffnen"><BookOpen size={14}/><span>{sourceLabel}</span></button>}
   <button className={'composer-tool composer-web'+(webAllowed?' is-enabled':'')} type="button" aria-label={webAllowed?'Websuche aktiviert':'Websuche'} aria-pressed={webAllowed} disabled={webDisabled} title={webHint} onClick={onToggleWeb}><Globe size={15}/><span>{webAllowed?'Websuche an':'Websuche'}</span>{webAllowed&&<Check size={13}/>}</button>
   {menu&&<div className="composer-popover" ref={popup} id={id+'-'+menu} role="menu" aria-label={menu==='actions'?'Aktionen und Anhänge':'Modellwahl'}>
