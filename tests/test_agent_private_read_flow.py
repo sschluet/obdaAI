@@ -140,6 +140,8 @@ def test_premature_finish_receives_bounded_feedback_then_must_retrieve(archive, 
     phases = []
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         data = args[-1]
         phases.append(data)
         if len(phases) == 1:
@@ -162,6 +164,8 @@ def test_repeated_premature_finish_cannot_claim_success_or_loop_forever(archive,
     count = []
 
     async def finish(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         count.append(True)
         return {"kind": "finish", "message": "Invented"}
 
@@ -184,6 +188,8 @@ def test_failed_or_revoked_reads_cannot_finish_or_replay(archive, monkeypatch, f
     requested = []
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         requested.append(True)
         return decision(agent[4], operation="search")
 
@@ -228,6 +234,8 @@ def test_model_cannot_smuggle_generic_http_change_into_private_read(archive, mon
     agent, start, _, calls = archive
 
     async def write(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         return {
             "kind": "tool",
             "integration_id": agent[4],
@@ -440,6 +448,8 @@ def test_followup_uses_revocable_actual_receipt_id_then_reads_document_content(
     phase = []
 
     async def first(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         phase.append(True)
         if len(phase) == 1:
             return decision(agent[4], operation="search", query="Synthetic contract")
@@ -733,6 +743,8 @@ def test_private_archive_rejects_confirmation_before_and_after_reads_then_answer
     states = []
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         data = args[-1]
         assert data["allow_ask"] is False
         assert data["allow_stop"] is (not data.get("initial_private_read_required", False))
@@ -761,6 +773,8 @@ def test_private_archive_can_stop_unverified_without_permission_question_or_inve
     ]
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         assert not args[-1]["allow_ask"]
         assert args[-1]["allow_stop"] is (not args[-1].get("initial_private_read_required", False))
         return responses.pop(0) if len(responses) > 1 else responses[0]
@@ -780,6 +794,8 @@ def test_repeated_private_confirmation_is_bounded_and_never_waits_for_user(archi
     count = []
 
     async def ask(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         count.append(True)
         return {"kind": "ask", "message": "Please confirm again."}
 
@@ -794,6 +810,8 @@ def test_administrative_question_remains_askable_and_private_stop_is_rejected(ar
     phases = []
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         data = args[-1]
         assert data["allow_ask"] is True and data["allow_stop"] is False
         phases.append(True)

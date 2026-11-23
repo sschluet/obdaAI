@@ -1,52 +1,71 @@
 # obdaAI — Status 23.11.2026
 
-## Aktuelle Lieferung — gemeinsame Stabilisierung (in Prüfung)
+## Aktuelle Lieferung — gemeinsame Stabilisierung und Live-Nachbesserung
 
-Ausgangspunkt: getesteter und ausgelieferter Anwendungsstand 7d3916e / Schema 0047.
 Der Entwicklungszweig `codex/assistant-stabilization` ergänzt gemeinsame
 Anfrageinterpretation, auftragsgebundene Toolgrammatik und Abschlussbelege,
 Inferenzkapazität/-zeitgrenzen, Memory-Faktidentität, dauerhafte Summarysegmente,
 Aufgaben-Kontext, Entwurfsschutz und eine getrennte Betriebsdiagnose.
 Siehe [Architektur und Abdeckung](docs/assistant-stabilization.md).
 
-Die vollständige lokale PostgreSQL-Prüfung des Zwischenstands bestand 3.438 Tests,
-Ruff, mypy und Secret-Scan. Die anschließend ergänzte letzte Routinggrenze verhindert,
-dass ein unaufgelöster privater Systembezug still im normalen Chat landet;
-48 gezielte Routing-/Interpretationsprüfungen sowie Ruff und mypy bestanden danach.
-Eine exakte vollständige CI des endgültigen Commits steht noch aus. Die volle lokale
-synthetische Browsersuite bestand; spätere Gesprächswechsel-/Streamkorrekturen
-wurden zusätzlich mit echten isolierten API-/SSE-Abläufen geprüft.
-Die erste exakte CI auf 2d3762b scheiterte im synthetischen Agenten-Browserprovider:
-Er behandelte die neue Interpretationsphase fälschlich als Werkzeugplanung.
-Der Fixturevertrag ist korrigiert; Schema-Regression und vollständiger isolierter
-Agenten-Browserablauf mit Rückfrage, Freigabe und Lost-Response-Prüfung bestanden.
-Produktive Berechtigungsgrenzen wurden dafür nicht geändert oder gelockert.
+**c5552bf / Schema 0049** ist auf der Test-VM installiert. Exakte vollständige
+[CI 45087132188](https://github.com/sschluet/obdaAI/actions/runs/45087132188):
+3.434 bestanden, sechs optionale Calc-Skips, vollständige Browserprüfungen und
+alle Pflichtjobs samt App-Tree-Beleg erfolgreich. Lokal bestand ein Zwischenstand
+3.438 PostgreSQL-/Pythonprüfungen; die letzte Routinggrenze und Fixturekorrektur
+wurden danach gezielt geprüft. Der erste CI-Lauf auf 2d3762b hatte einen
+inkompatiblen synthetischen Agentenprovider aufgedeckt und wurde nach dessen
+Browserfehler durch den korrigierten vollständigen Lauf ersetzt. Seine übrigen
+Teiljobs gelten nicht als vollständiger Nachweis.
 
-Der erste reale lokale Interpretationsbenchmark scheiterte in allen 23 Fällen am
-Interpretationsvertrag, trotz erfolgreicher Inferenz. Nach Vertragskorrekturen
-bestand der unveränderte zweite Korpus auf einem Zwischenstand 20 von 23 Fällen
-(darunter acht von acht zurückgehaltenen Fällen). Das ist ein Interpretationsnachweis und keine
-Erfolgsquote vollständiger Aufgaben. Die drei Entwicklungsfehler und alle älteren
-Fehlerbelege bleiben erhalten. Das 98-Prozent-Ziel ist noch nicht erreicht.
+Vor der Umschaltung wurde eine frische verschlüsselte Sicherung mit geprüften
+Ciphertext-Hashes erstellt; dies war kein Decryptions- oder Restoretest. Die
+additiven Migrationen 0048/0049 liefen erfolgreich. Danach bestanden der Vergleich
+aller bisherigen Daten und statischen Konfigurationen, die Prüfung aller neun
+laufenden Image-IDs sowie beide API-Gesundheitsprüfungen.
 
-Die vollständige Laufzeitprüfung mit echtem lokalen Modell und synthetischen
-Zielsystemen deckte zusätzliche Fehler auf: eine vom Modellserver abgelehnte
-HA-Pfadgrammatik, unzureichende Domäneneingrenzung und eine Dokumentfolgefrage
-ohne tatsächlichen Inhaltsabruf. Die nachgebesserte vierte Abnahme bestand alle
-vier unveränderten Fälle in rund 208 Sekunden: reine Sensorliste, tatsächliche
-Vertragssuche, quellgebundener Inhaltsabruf mit korrekter Kündigungsfrist und
-belegte leere Suche. Alle neun Modellaufrufe und fünf Werkzeuglesezugriffe
-einschließlich der HA-Zugriffsprüfung blieben lokal und ohne Zieländerung.
-Es waren keine Rückfragen oder Einzelfreigaben nötig. Die früheren Fehlversuche
-bleiben als getrennte Belege erhalten. Vier bestandene Abläufe sind kein
-98-Prozent-Nachweis für beliebige Prompts oder eine allgemeine Integrationsabnahme.
-Keine echte Zieländerung, Cloudübertragung oder produktive Datenbankmutation
-wurde für diese synthetischen Modellprüfungen ausgeführt.
+Die anschließende reale Integrationsabnahme zeigte weitere offene Fälle:
 
-Es gibt noch keinen neuen Freigabe- oder Rolloutnachweis für diese Lieferung.
-Die Test-VM bleibt auf dem nachfolgend belegten Stand 7d3916e / Schema 0047.
-Frühere Abnahmen bleiben unverändert gültig.
+| Abnahme auf c5552bf | Beobachtung |
+| --- | --- |
+| HA-Inventar | Alle in der konkreten Abfrage beobachteten Lampen wurden genannt. |
+| HA-Folgefrage | Nicht bestanden: die bekannte Kohorte wurde unnötig semantisch neu eingeordnet; anschließend scheiterte die generische Belegansicht vor der Modellplanung. |
+| Paperless | Echte neutrale Suche und korrekter Scopeblock, aber keine brauchbare Dokumentliste im eigentlichen Antwortkörper. Die Inhaltsfolgefrage wurde nach dieser fehlgeschlagenen Vorbedingung nicht gestartet. |
+| Proton | Erste begrenzte Übersicht belegt; Folgefrage nicht bestanden, weil leere angezeigte Auswahl und fehlende Belege nicht sauber getrennt wurden. |
+| SSH | Feste authentifizierte Zugriffsprüfung bestanden. |
 
+Datenerhalt, statischer Konfigurationsvergleich, Archivierung ausschließlich eigener
+QA-Chats und Entfernung der eigenen Prüfsitzungen bestanden für jeden dieser Fälle.
+Kein Cloudaufruf oder Schreibzugriff auf angebundene Systeme war Teil der Abnahme.
+Die gescheiterten Prüfungen bleiben erhalten und werden nicht als Erfolg gewertet.
+
+Die lokale Nachbesserung bindet den bekannten HA-Folgeauftrag an aktuell validierte
+Referenzen, prüft das Bytebudget nach tatsächlichem JSON-/UTF-8-Encoding, ergänzt
+einen expliziten `document_inventory`-Antwortvertrag mit faktischer ID-/Titelliste
+und behandelt eine belegte leere Mailauswahl ohne neuen Postfachscan. Inhalt,
+Analyse, fehlende oder widerrufene Referenzen bleiben davon getrennt. Für diese
+Nachbesserung sind die gezielten Regressionen, erneute Modellabnahme, exakte CI
+und ein eigener kontrollierter Rollout erforderlich; sie ist noch nicht ausgeliefert.
+Das Schema bleibt 0049. Vorhandene Daten und alle neuen Spalten/Tabellen werden
+beim Korrekturrollout vollständig erhalten.
+
+Die vorherige echte lokale Laufzeitprüfung an isolierten synthetischen Zielsystemen
+bestand vier Fälle in rund 208 Sekunden: Sensorliste, Vertragssuche,
+quellgebundener Inhaltsabruf und leere Suche. Alle neun Modellaufrufe und fünf
+Werkzeuglesezugriffe blieben lokal, ohne produktiven Datenbank-Schreibzugriff.
+Ein erneuter Lauf auf der nachgebesserten Backendfassung bestand dieselben vier
+unveränderten Fälle in rund 239 Sekunden (elf Modellaufrufe, fünf Lesezugriffe).
+Diese Vier-Fall-Nachweise haben die oben genannten größeren bzw. leeren
+realen Kohorten nicht vollständig abgedeckt. Ein zusätzlicher echter lokaler
+Modelllauf bestand die zehn Dokumente umfassende Inventarabfrage mit vier
+synthetischen Verbindungskandidaten einschließlich aller IDs/Titel und korrekter
+Seitengrenzen. Zwei zusätzliche Inhalts-/Mehrziel-Vergleichsproben wurden mit
+`ValueError` abgewiesen und gelten ausdrücklich als nicht bestanden; ihr genauer
+Fehlergrund wird getrennt untersucht. Keine Zielwerkzeuge wurden dafür aufgerufen. Die separate Interpretationsevaluation erreichte
+auf einem Zwischenstand 20/23, darunter acht von acht zurückgehaltenen Fällen;
+das ist keine Erfolgsquote vollständiger Aufgaben. Ein breiter 98-Prozent-Nachweis,
+reale Gmail-/Drive-/UniFi-Abnahme und allgemeine administrative Abdeckung bleiben
+offen. Die Anwendung wird nicht als vollständige V1 bezeichnet.
 
 ## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
 

@@ -1424,8 +1424,12 @@ def create_job(
     from hub.agent_paperless import is_read_profile
 
     available = {p.id: (p, r, c) for p, r, c in chosen_profiles}
+    from hub.agent_read_references import previous_profile_ids
+
+    prior_ids = (sorted(previous_profile_ids(db, conversation_id, available))
+                 if conversation_id else [])
     intent = (RequestIntent.model_validate(resolved_intent) if resolved_intent is not None
-              else agent_capabilities.request_intent(goal, available))
+              else agent_capabilities.request_intent(goal, available, prior_target_ids=prior_ids))
     if intent and not set(intent.target_ids) <= set(available):
         raise HTTPException(409, "Auftrag verweist auf nicht ausgewählte Verbindungen")
 
@@ -2006,6 +2010,12 @@ async def inspect_ha_inventory(factory: Any, cfg: Settings, job_id: str) -> bool
         if selected is None:
             if any("inventory_plan" in json.loads(step.document) for step in history):
                 raise PermissionError("Gebundene Inventarabfrage geändert")
+            if (frozen.get("intent") or {}).get("answer_kind") == "light_on_cohort":
+                complete(db, job, "unverified", "Zu dieser Folgefrage fehlt eine eindeutige "
+                         "aktuell gültige Liste der gemeinten Licht-Entitäten. "
+                         "Es wurde keine neue Abfrage gestartet.")
+                db.commit()
+                return True
             return False
         if history:
             if not any("inventory_plan" in json.loads(item.document) for item in history):
@@ -2209,6 +2219,24 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     )
                     db.commit()
                     return
+                if not steps(db, job_id) and not any(
+                    str(part.get("source_id", "")).startswith("agent-effect:")
+                    for part in json.loads(job.context)
+                ):
+                    from hub.agent_mail_reply_summary import empty_mail_reply_summary
+
+                    # An explicitly referenced, actually displayed empty cohort
+                    # needs no catalog, Sent scan or model turn. Validate it before
+                    # creating any new step; existing action chains stay untouched.
+                    empty_summary = empty_mail_reply_summary(db, job, profiles)
+                    if empty_summary is not None:
+                        profiles = planning_profiles(job, gate(db, cfg, job))
+                        empty_summary = empty_mail_reply_summary(db, job, profiles)
+                        if empty_summary is None:
+                            raise PermissionError("Angezeigte leere Auswahl geändert")
+                        complete(db, job, "observed", empty_summary)
+                        db.commit()
+                        return
                 job.status = "running"
                 frozen = json.loads(job.bindings)
                 needs_intent = frozen.get("intent_version") == 1 and frozen.get("intent") is None
@@ -2796,6 +2824,19 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             from hub.agent_paperless_evidence import paperless_evidence
 
                             evidence = paperless_evidence(job, profiles, current_history)
+                            if (frozen_intent or {}).get("answer_kind") == "document_inventory":
+                                from hub.agent_paperless_inventory import (
+                                    summary as inventory_summary,
+                                )
+
+                                rendered = inventory_summary(job, profiles, current_history)
+                                if rendered is None:
+                                    complete(db, job, "unverified", "Die beobachteten Dokumente "
+                                             "konnten nicht als aktuelle Metadatenübersicht "
+                                             "belegt werden. Es wurde keine Anfrage wiederholt.")
+                                    db.commit()
+                                    return
+                                decision.message = rendered
                             if evidence is None:
                                 complete(
                                     db, job, "unverified",

@@ -56,6 +56,19 @@ Dokument eine konkrete Leseauswahl erhalten; mehrere Treffer werden nicht
 willkürlich ausgewählt. Nach einem
 fehlgeschlagenen Zugriff muss eine alternative Schnittstelle tatsächlich den
 fehlenden Beleg liefern. Nicht belegte Ergebnisse bleiben als solche erkennbar.
+Der explizite Antworttyp `document_inventory` gilt nur für eine lesende
+Metadatenübersicht eines einzelnen Paperless-Ziels. Erst beim belegten Abschluss
+ersetzt die Anwendung freie Modellprosa durch tatsächlich beobachtete IDs, Titel,
+Trefferzahlen und Seitengrenzen. Werkzeug- und Seitenplanung bleiben beim Agenten;
+Inhaltsanalyse und mehrere Ziele werden dadurch nicht als erledigt behandelt.
+
+Bekannte Folgefragen verwenden aktuelle validierte Quellen auch bei mehreren
+aktivierten Verbindungen. Generische Belegansichten werden nach tatsächlichem
+JSON-Encoding und UTF-8-Byteumfang begrenzt; vollständige Originalbelege und
+Hashes bleiben unverändert gespeichert. Eine belegte leere Mailauswahl ist von
+fehlender Quelle verschieden: Eine ausdrückliche Rückfrage zu dieser Auswahl
+benötigt keinen neuen Posteingangs-/Gesendet-Scan. Sie beweist keine allgemeine
+Aussage über beantwortete oder unbeantwortete Mails im übrigen Postfach.
 
 ## Lokale Inferenz und Diagnose
 

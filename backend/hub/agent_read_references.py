@@ -396,9 +396,17 @@ def model_context(
                     _paperless(json.loads(source_step.document), result), max_bytes=remaining
                 )
             else:
-                from hub.agent_context import view
+                from hub.agent_context import _semantic_view, view
 
-                projection = view(result, remaining)
+                # JSON excerpts are escaped again inside this wrapper; character
+                # limits alone do not bound their final UTF-8 representation.
+                projection = _semantic_view(result, remaining)
+                if projection is None:
+                    for width in (remaining, remaining // 2, 128, 0):
+                        candidate = view(result, width)
+                        if len(encode(candidate).encode()) <= remaining:
+                            projection = candidate
+                            break
             item.update(result=projection, projection_omitted=False)
         if len(encode([*observations, item]).encode()) > max_bytes:
             raise ValueError("Private read provenance exceeds the evidence budget")

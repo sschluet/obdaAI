@@ -1,7 +1,7 @@
 """Application-authored capability hints and fixed inspections; never new authority."""
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -195,7 +195,9 @@ def ha_inventory_question(goal: str, profiles: list[Any]) -> bool:
     return bool(intent and intent.read_only)
 
 
-def request_intent(goal: str, profiles: Mapping[str, Any]) -> Any:
+def request_intent(
+    goal: str, profiles: Mapping[str, Any], *, prior_target_ids: Sequence[str] | None = None,
+) -> Any:
     """Public shared shortcut; None requires the local semantic interpretation path."""
     from hub.agent_intent import RequestIntent, Requirement, infer, light_answer_kind
 
@@ -206,8 +208,13 @@ def request_intent(goal: str, profiles: Mapping[str, Any]) -> Any:
                              requirements=[Requirement(kind="connection", integration_id=i)
                                            for i in targets])
     intent = infer(goal, profiles)
-    if intent is None and len(profiles) == 1 and light_answer_kind(goal) == "light_on_cohort":
-        identifier, values = next(iter(profiles.items()))
+    cohort_profiles = profiles
+    if prior_target_ids:
+        cohort_profiles = {identifier: values for identifier, values in profiles.items()
+                           if identifier in prior_target_ids}
+    if (intent is None and len(cohort_profiles) == 1
+            and light_answer_kind(goal) == "light_on_cohort"):
+        identifier, values = next(iter(cohort_profiles.items()))
         row = values[0] if isinstance(values, (tuple, list)) else values
         if row.kind == "home_assistant":
             return RequestIntent(

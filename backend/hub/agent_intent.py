@@ -34,7 +34,9 @@ class RequestIntent(BaseModel):
     target_ids: list[str] = Field(max_length=30)
     mode: Literal["observe", "admin", "explain", "unknown"]
     topic: Literal["connection", "inventory", "documents", "mail", "system", "general"]
-    answer_kind: Literal["general", "light_inventory", "light_on_cohort"] = "general"
+    answer_kind: Literal[
+        "general", "light_inventory", "light_on_cohort", "document_inventory"
+    ] = "general"
     requirements: list[Requirement] = Field(default_factory=list, max_length=30)
     research: bool = False
     followup: bool = False
@@ -50,6 +52,11 @@ class RequestIntent(BaseModel):
             raise ValueError("Intent requirements must refer to distinct selected targets")
         if self.mode == "explain" and (self.target_ids or self.requirements):
             raise ValueError("Public explanation cannot bind private targets")
+        if self.answer_kind == "document_inventory" and not (
+            self.read_only and len(self.target_ids) == 1 and len(self.requirements) == 1
+            and self.requirements[0].kind == "documents" and not self.research
+        ):
+            raise ValueError("Document inventory requires one read-only metadata target")
         return self
 
     @property
@@ -296,6 +303,8 @@ def infer(
     )
     if archive_content and document_selection(text) is None:
         return None  # Content without an explicit resource reference needs semantic interpretation.
+    if not change and requirement == "documents" and not archive_content:
+        return None  # Metadata overview vs analysis needs the typed semantic answer contract.
     if change and len({getattr(rows[i], "kind", "") for i in ids}) > 1:
         return None  # Semantic planner binds changes vs input reads to each target separately.
     requirements = []
@@ -391,7 +400,12 @@ def semantic_request(
             "state change. domain is nonempty ONLY for entity_states, otherwise empty string.\n"
             "answer_kind: light_inventory for ONLY listing/counting existing light entities; "
             "light_on_cohort for ONLY which lights are on. Any additional goal or filter uses "
-            "general. followup=true for a reference to a previously displayed cohort. "
+            "general. document_inventory for ONLY a bounded listing/overview of document "
+            "metadata (IDs, titles, counts) from ONE Paperless target, with documents evidence. "
+            "Document content, interpretation/analysis/comparison, or multiple targets "
+            "use general; "
+            "never replace a requested analysis with a metadata list. "
+            "followup=true for a reference to a previously displayed cohort. "
             "Current state uses freshness=current; historical information uses historical. "
             "research=true only if public research is requested. Clear requests use "
             "confidence=certain, ambiguous ones uncertain. No permissions are created. "
@@ -402,7 +416,7 @@ def semantic_request(
                 "target_ids": "array of provided target IDs, or [] for public explanation",
                 "mode": "observe | admin | explain | unknown",
                 "topic": "connection | inventory | documents | mail | system | general",
-                "answer_kind": "general | light_inventory | light_on_cohort",
+                "answer_kind": "general | light_inventory | light_on_cohort | document_inventory",
                 "requirements": [{"kind": "evidence kind defined in instructions",
                                   "domain": "entity domain, otherwise empty string",
                                   "integration_id": "a selected provided target ID"}],
@@ -447,6 +461,10 @@ def accept_semantic(payload: Any, profiles: Mapping[str, Any]) -> RequestIntent:
     intent = RequestIntent.model_validate({**payload, "origin": "semantic", "version": 1})
     if not set(intent.target_ids) <= set(profiles):
         raise ValueError("Semantic intent selected an unavailable target")
+    if intent.answer_kind == "document_inventory" and any(
+        profile_map(profiles)[identifier].kind != "paperless" for identifier in intent.target_ids
+    ):
+        raise ValueError("Document inventory requires a Paperless target")
     if intent.mode in {"observe", "admin"} and not intent.target_ids:
         raise ValueError("Target request needs a current target")
     if intent.mode == "admin" and not any(

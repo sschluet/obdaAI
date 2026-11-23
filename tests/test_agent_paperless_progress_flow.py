@@ -51,6 +51,8 @@ def test_known_archive_document_is_read_without_permission_or_premature_stop(
     first_turns = []
 
     async def search(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], args[-1]["targets"][0]["id"])
         first_turns.append(True)
         if len(first_turns) == 1:
             return decision(identifier, operation="search", query="Synthetic contract")

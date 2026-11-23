@@ -223,7 +223,7 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             return result
         from hub.agent_capabilities import request_intent
 
-        intent = request_intent(body.goal, profiles)
+        intent = request_intent(body.goal, profiles, prior_target_ids=prior_targets)
         if intent and intent.followup and any(
             item.kind == "mail_reply" for item in intent.requirements
         ):

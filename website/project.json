@@ -340,7 +340,7 @@
         {
           "title": "Gemeinsame Stabilisierung von Planung und Kontext",
           "status": "limited",
-          "description": "Versionierter Anfragevertrag, effektive Toolrechte, passende Abschlussbelege, getrennte Modellwartezeiten, begrenzte Hintergrundarbeit und transparente Diagnose sind im Entwicklungszweig ergänzt. Memory-Korrekturen, Aufgaben-Kontext und Entwurfsschutz werden gemeinsam geprüft. Gesamtprüfung, tatsächliche Modellqualität und neuer VM-Rollout werden getrennt nachgewiesen; bisherige Live-Abnahme gilt ausschließlich für den unten genannten getesteten Release."
+          "description": "Versionierter Anfragevertrag, effektive Toolrechte, passende Abschlussbelege, getrennte Modellwartezeiten, begrenzte Hintergrundarbeit und transparente Diagnose sind ergänzt. Live-Gegenproben zeigten zusätzliche Grenzen bei Folgefragen, großen Belegen und Metadatenlisten. Aktuelle Quellenbindung, faktische Dokumentübersichten und die klare Behandlung leerer Auswahlen werden deshalb gesondert nachgebessert und geprüft. Memory-Korrekturen, Aufgaben-Kontext und Entwurfsschutz sind Teil derselben Stabilisierung. Die unten genannte frühere Live-Abnahme gilt nur für den dort bezeichneten getesteten Release; eine allgemeine V1-Zuverlässigkeit ist nicht belegt."
         },
         {
           "title": "Persistenter Streaming-Chat",

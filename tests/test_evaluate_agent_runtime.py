@@ -213,3 +213,145 @@ def test_argument_diagnostics_are_bounded_and_do_not_export_arbitrary_urls_or_va
     assert result["projection"]["where_equals"] == "other"
     assert result["projection"]["fields"] == ["other"]
     assert "secret" not in json.dumps(result)
+
+
+def inventory_case():
+    contract = evaluation.INVENTORY_REGRESSION
+    footer = "Quelle: Synthetic archive · tatsächlich abgerufen: 10 · weitere Seiten: ja"
+    body = "10 Dokumente auf Seite 1 gelesen; 75 Treffer laut Suchantwort.\n"
+    body += "\n".join(f"Dokument-ID {identifier}: {title}"
+                      for identifier, title in zip(contract["document_ids"], contract["titles"],
+                                                   strict=True))
+    body += "\nDies ist eine begrenzte Metadatenübersicht."
+    record = {"status": "observed", "model_calls": 2, "all_model_calls_local": True,
+              "no_effects": True,
+              "synthetic_trace": {"request_intent": {
+                  "mode": "observe", "confidence": "certain", "answer_kind": "document_inventory",
+                  "target_ids": ["synthetic-paper"], "requirements": [
+                      {"kind": "documents", "integration_id": "synthetic-paper"}]}},
+              "interpretation_run": {"status": "succeeded", "provider": "local",
+                                     "answer_model_used": True, "owner_bound": True}}
+    calls = [{"kind": "paperless", "tool": "paperless.read", "arguments": {
+        "operation": "search", "query": "", "page": 1, "limit": 20},
+        "synthetic_result_document_ids": contract["document_ids"],
+        "synthetic_result_count": 75, "synthetic_result_has_next": True}]
+    return record, body, footer, calls
+
+
+def grade_inventory(record, body, footer, calls):
+    return evaluation.grade_inventory(record, body + "\n\n" + footer, calls,
+                                      paperless_id="synthetic-paper", scope_footer=footer)
+
+
+def test_inventory_regression_grade_requires_interpreter_and_ten_main_body_documents():
+    record, body, footer, calls = inventory_case()
+    assert all(grade_inventory(record, body, footer, calls).values())
+    # A full list only in the evidence footer must never count as an answer.
+    hidden_body_footer = body + "\n" + footer
+    assert not all(grade_inventory(record, "", hidden_body_footer, calls).values())
+    assert not all(grade_inventory(record, body.replace("701", "OTHER"), footer, calls).values())
+    assert not all(grade_inventory(
+        record, body.replace("document 01", "OTHER"), footer, calls
+    ).values())
+    record["interpretation_run"]["status"] = "failed"
+    assert not all(grade_inventory(record, body, footer, calls).values())
+
+
+@pytest.mark.parametrize("fault", ["wrong_target", "wrong_kind", "uncertain", "owner_unbound",
+                                    "cloud", "content", "other_target", "wrong_count",
+                                    "closed_page",
+                                    "empty_metadata", "wrong_body_count", "complete_claim"])
+def test_inventory_regression_rejects_false_success_and_scope_drift(fault):
+    record, body, footer, calls = inventory_case()
+    intent = record["synthetic_trace"]["request_intent"]
+    if fault == "wrong_target":
+        intent["target_ids"] = ["synthetic-other"]
+    elif fault == "wrong_kind":
+        intent["answer_kind"] = "general"
+    elif fault == "uncertain":
+        intent["confidence"] = "uncertain"
+    elif fault == "owner_unbound":
+        record["interpretation_run"]["owner_bound"] = False
+    elif fault == "cloud":
+        record["interpretation_run"]["provider"] = "openrouter"
+    elif fault == "content":
+        calls.append({"kind": "paperless", "tool": "paperless.read",
+                      "arguments": {"operation": "document", "document_id": 701}})
+    elif fault == "other_target":
+        calls.append({"kind": "home_assistant", "tool": "http", "arguments": {}})
+    elif fault == "wrong_count":
+        calls[0]["synthetic_result_count"] = 10
+    elif fault == "closed_page":
+        calls[0]["synthetic_result_has_next"] = False
+    elif fault == "empty_metadata":
+        calls[0]["synthetic_result_document_ids"] = []
+    elif fault == "wrong_body_count":
+        body = body.replace("10 Dokumente", "11 Dokumente")
+    elif fault == "complete_claim":
+        body += " Dies sind alle 75 Dokumente."
+    assert not all(grade_inventory(record, body, footer, calls).values())
+
+
+def test_inventory_diagnostic_is_optional_and_default_four_goals_and_grader_stay_fixed():
+    import ast
+
+    source = SCRIPT.read_text()
+    tree = ast.parse(source)
+    goals = ["Welche Sensoren habe ich in Home Assistant?",
+             "Finde meinen ALPHA Vertrag in Paperless.",
+             "Was steht darin zur Kündigungsfrist?", "Finde meine BETA Unterlagen in Paperless."]
+    assert all(source.count(repr(goal)) + source.count(json.dumps(goal, ensure_ascii=False)) == 1
+               for goal in goals)
+    assert "(request_interpretation, \"runtime_provider\", local_runtime_provider)" in source
+    assert "resolved_intent=interpreted.model_dump(mode=\"json\")" in source
+    optional = next(node for node in ast.walk(tree) if isinstance(node, ast.If)
+                    and ast.unparse(node.test)
+                    == "diagnostic_case == 'archive_inventory_multitarget'")
+    assert any(isinstance(node, ast.Await) and ast.unparse(node.value.func)
+               == "request_interpretation.interpret" for node in ast.walk(optional))
+    output = subprocess.check_output([sys.executable, str(SCRIPT), "--diagnostic-case",
+                                      "archive_inventory_multitarget"], text=True)
+    assert json.loads(output)["prepare_only"]
+    assert len(json.loads(output)["cases"]) == 4
+
+
+def test_content_analysis_probes_cannot_pass_inventory_overreach_or_invalid_contract():
+    run = {"status": "succeeded", "provider": "local",
+           "answer_model_used": True, "owner_bound": True}
+    payload = {"target_ids": ["paper", "proton"], "mode": "observe", "topic": "general",
+               "answer_kind": "general", "confidence": "certain", "research": False,
+               "followup": False, "freshness": "current", "requirements": [
+                   {"integration_id": "paper", "kind": "document_content"},
+                   {"integration_id": "proton", "kind": "mail_content"}]}
+    expected = {"paper": "document_content", "proton": "mail_content"}
+    assert all(evaluation.grade_interpretation_probe(payload, run, expected).values())
+    for field, wrong in [("answer_kind", "document_inventory"), ("target_ids", ["paper"]),
+                         ("mode", "admin"), ("confidence", "uncertain"), ("requirements", [])]:
+        assert not all(evaluation.grade_interpretation_probe(
+            {**payload, field: wrong}, run, expected
+        ).values())
+    assert not all(evaluation.grade_interpretation_probe(None, run, expected).values())
+    assert not all(evaluation.grade_interpretation_probe(
+        {key: value for key, value in payload.items() if key != "freshness"}, run, expected
+    ).values())
+    assert not all(evaluation.grade_interpretation_probe(
+        payload, {**run, "provider": "openrouter"}, expected
+    ).values())
+
+
+def test_optional_interpreter_hook_is_restored_and_boundary_goals_remain_versioned():
+    from types import SimpleNamespace
+
+    interpreter = SimpleNamespace(runtime_provider="original")
+    with pytest.raises(RuntimeError):
+        with evaluation.patched_attributes([(interpreter, "runtime_provider", "synthetic-local")]):
+            assert interpreter.runtime_provider == "synthetic-local"
+            raise RuntimeError("synthetic interruption")
+    assert interpreter.runtime_provider == "original"
+    assert [probe["goal"] for probe in evaluation.BOUNDARY_PROBES] == [
+        "Vergleiche die Kündigungsfristen meiner Verträge in Paperless.",
+        "Vergleiche die Mails in Proton mit den Verträgen in Paperless.",
+    ]
+    assert evaluation.BOUNDARY_PROBES[0]["requirements"] == {"paperless": "document_content"}
+    assert evaluation.BOUNDARY_PROBES[1]["requirements"] == {
+        "paperless": "document_content", "proton": "mail_content"}

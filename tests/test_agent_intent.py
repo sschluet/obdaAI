@@ -68,7 +68,10 @@ def test_public_advice_has_no_private_target(goal):
 ])
 def test_paperless_nouns_and_actions_share_the_same_contract(goal, mode):
     intent = infer(goal, profiles("paperless"))
-    assert intent and intent.mode == mode
+    if mode == "observe":
+        assert intent is None  # Metadata overview vs analysis is a semantic distinction.
+    else:
+        assert intent and intent.mode == mode
 
 
 @pytest.mark.parametrize("goal", [

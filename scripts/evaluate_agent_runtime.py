@@ -20,6 +20,22 @@ from typing import Any
 from uuid import uuid4
 
 SQL_COUNTS = {"reads": 0, "protocol": 0, "blocked_writes": 0}
+INVENTORY_REGRESSION = {
+    "version": "archive_inventory_multitarget-v1",
+    "goal": "Welche Dokumente sind in Paperless verfügbar? Zeige eine neutrale Übersicht.",
+    "document_ids": list(range(701, 711)),
+    "titles": [f"Synthetic inventory document {n:02}" for n in range(1, 11)],
+    "count": 75,
+}
+
+BOUNDARY_PROBES = [
+    {"id": "archive_content_analysis",
+     "goal": "Vergleiche die Kündigungsfristen meiner Verträge in Paperless.",
+     "requirements": {"paperless": "document_content"}},
+    {"id": "mail_archive_comparison",
+     "goal": "Vergleiche die Mails in Proton mit den Verträgen in Paperless.",
+     "requirements": {"proton": "mail_content", "paperless": "document_content"}},
+]
 
 
 @contextmanager
@@ -159,6 +175,78 @@ def grade_case(case_id: str, item: dict[str, Any], summary: str,
     return checks
 
 
+def grade_inventory(item: dict[str, Any], summary: str, calls: list[dict[str, Any]],
+                    *, paperless_id: str, scope_footer: str) -> dict[str, bool]:
+    """Frozen ten-row regression: footer-only document listings never count."""
+    intent = item["synthetic_trace"].get("request_intent") or {}
+    interpreted = item.get("interpretation_run", {})
+    footer_bound = bool(scope_footer and summary.endswith(scope_footer))
+    body = summary[:-len(scope_footer)].rstrip() if footer_bound else ""
+    text = body.casefold()
+    searches = [c for c in calls if c.get("kind") == "paperless"
+                and c.get("tool") == "paperless.read"
+                and c.get("arguments", {}).get("operation") == "search"]
+    ids = INVENTORY_REGRESSION["document_ids"]
+    return {
+        "observed": item["status"] == "observed",
+        "actual_local_interpreter_succeeded": interpreted.get("status") == "succeeded"
+        and interpreted.get("provider") == "local" and interpreted.get("answer_model_used") is True
+        and interpreted.get("owner_bound") is True,
+        "exact_paperless_target": intent.get("target_ids") == [paperless_id],
+        "certain_observe_inventory": intent.get("mode") == "observe"
+        and intent.get("confidence") == "certain"
+        and intent.get("answer_kind") == "document_inventory",
+        "document_requirement": any(r.get("kind") == "documents"
+            and r.get("integration_id") == paperless_id for r in intent.get("requirements", [])),
+        "actual_agent_model": item["model_calls"] > 0 and item["all_model_calls_local"],
+        "fresh_neutral_ten_row_search": bool(searches) and any(
+            c["arguments"].get("query") == "" and c["arguments"].get("page") == 1
+            and c.get("synthetic_result_document_ids") == ids
+            and c.get("synthetic_result_count") == 75 and c.get("synthetic_result_has_next") is True
+            for c in searches),
+        "all_observed_ids_in_main_answer": all(
+            re.search(r"(?<![0-9])" + str(identifier) + r"(?![0-9])", body) for identifier in ids),
+        "all_observed_titles_in_main_answer": all(title.casefold() in text
+                                                 for title in INVENTORY_REGRESSION["titles"]),
+        "partial_count_scope": footer_bound
+        and bool(re.search(r"\b75\s+(?:treffer|matches|results)\b", text))
+        and bool(re.search(r"\b10\s+(?:dokumente|documents)\b", text))
+        and bool(re.search(r"begrenzt|ausschnitt|partial", text))
+        and "weitere Seiten: ja" in scope_footer,
+        "no_false_complete_archive": not re.search(
+            r"(?:alle|sämtliche|all)\s+75|(?:vollständige|komplette)\s+(?:archiv|übersicht|liste)",
+            text,
+        ),
+        "no_content_reads": not any(c.get("arguments", {}).get("operation") == "document"
+                                     for c in calls),
+        "no_other_target_calls": bool(calls) and len(searches) == len(calls),
+        "no_effects": item["no_effects"],
+    }
+
+
+def grade_interpretation_probe(payload, run, expected_requirements) -> dict[str, bool]:
+    from hub.agent_intent import RequestIntent
+
+    required = {"target_ids", "mode", "topic", "answer_kind", "requirements", "research",
+                "followup", "freshness", "confidence"}
+    valid = isinstance(payload, dict) and required <= set(payload)
+    try:
+        parsed = RequestIntent.model_validate(payload).model_dump() if valid else {}
+    except (ValueError, TypeError):
+        valid, parsed = False, {}
+    return {
+        "valid_contract": valid,
+        "actual_local_run": run.get("status") == "succeeded" and run.get("provider") == "local"
+        and run.get("answer_model_used") is True and run.get("owner_bound") is True,
+        "exact_targets": set(parsed.get("target_ids", [])) == set(expected_requirements),
+        "general_certain_observe": parsed.get("answer_kind") == "general"
+        and parsed.get("mode") == "observe" and parsed.get("confidence") == "certain",
+        "required_content": all(any(r["integration_id"] == identifier and r["kind"] == kind
+            for r in parsed.get("requirements", []))
+            for identifier, kind in expected_requirements.items()),
+    }
+
+
 FEEDBACK_TYPES = frozenset({
     "json_invalid", "missing", "extra_forbidden", "literal_error", "value_error",
     "string_pattern_mismatch", "string_too_long", "string_too_short", "int_type",
@@ -282,7 +370,9 @@ def evaluation_report(results, *, diagnostic_case=None) -> dict[str, Any]:
         "production_blocked_writes": SQL_COUNTS["blocked_writes"],
         "cloud_calls": 0, "actual_runtime_and_model": True,
         "scope": ({"ha_sensor_inventory": "development_ha_only",
-                   "archive_search_followup": "development_archive_pair"}.get(
+                   "archive_search_followup": "development_archive_pair",
+                   "archive_inventory_multitarget": "development_archive_inventory_multitarget",
+                   }.get(
                        diagnostic_case, "four_case_runtime")),
         "diagnostic_schema_version": 3,
         "private_synthetic_summary_included": True,
@@ -295,7 +385,8 @@ def evaluation_report(results, *, diagnostic_case=None) -> dict[str, Any]:
 
 
 async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
-    if diagnostic_case not in {None, "ha_sensor_inventory", "archive_search_followup"}:
+    if diagnostic_case not in {None, "ha_sensor_inventory", "archive_search_followup",
+                               "archive_inventory_multitarget"}:
         raise ValueError("Only reviewed isolated development diagnostics are supported")
     # Delay every application import until the explicit opt-in, and redirect the
     # API module's global factory before importing it. It never sees production.
@@ -353,7 +444,7 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
         url = "sqlite:///" + str(root / "synthetic.sqlite")
         with temporary_environment("HUB_DATABASE_URL", url):
             from hub import agent_runtime as runtime
-            from hub import execution
+            from hub import execution, request_interpretation
             from hub.agent_context import project
             from hub.agent_models import AgentJob, AgentPolicy
             from hub.agent_read_references import bind
@@ -445,7 +536,7 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
                     self.before_send = previous
 
             calls: list[dict[str, Any]] = []
-            scenario = {"empty": False}
+            scenario = {"empty": False, "inventory": False}
             states = [
                 {
                     "entity_id": "sensor.synthetic_temperature",
@@ -490,16 +581,25 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
                             }
                         ]
                     )
+                    if scenario["inventory"]:
+                        rows = [{**{k: v for k, v in document.items()
+                                    if k not in {"content", "content_truncated"}},
+                                 "id": identifier, "title": title}
+                                for identifier, title in zip(INVENTORY_REGRESSION["document_ids"],
+                                    INVENTORY_REGRESSION["titles"], strict=True)
+                                ][:arguments["limit"]]
                     calls[-1]["synthetic_result_document_ids"] = [row["id"] for row in rows]
+                    if scenario["inventory"]:
+                        calls[-1].update(synthetic_result_count=75, synthetic_result_has_next=True)
                     return {
                         "label": "LOCAL_ONLY",
                         "operation": "search",
                         "data": {
-                            "count": len(rows),
+                            "count": 75 if scenario["inventory"] else len(rows),
                             "results": rows,
                             "page": arguments["page"],
                             "page_size": arguments["limit"],
-                            "has_next": False,
+                            "has_next": scenario["inventory"],
                         },
                     }
                 if tool != "http" or arguments["method"] != "GET":
@@ -518,7 +618,8 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
                     return {"http_status": 200, "body": [{"domain": "light", "services": {}}]}
                 return {"http_status": 404, "body": {"message": "Synthetic endpoint not found"}}
 
-            def prepare(kind: str, goal: str, conversation=None, profile=None, references=None):
+            def prepare(kind: str, goal: str, conversation=None, profile=None, references=None,
+                        *, defer_job=False, resolved_intent=None, integration_ids=None):
                 with factory() as db:
                     if conversation is None:
                         chat = Conversation(title="Synthetic evaluation", manual_title=True)
@@ -568,6 +669,9 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
                             db.get(Conversation, conversation),
                             db.get(Integration, profile),
                         )
+                    if defer_job:
+                        db.commit()
+                        return None, chat.id, target.id
                     job = runtime.create_job(
                         db,
                         cfg,
@@ -578,6 +682,7 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
                         goal=goal,
                         research_allowed=False,
                         read_only=True,
+                        resolved_intent=resolved_intent, integration_ids=integration_ids,
                     )
                     if references:
                         profiles = runtime.gate(db, cfg, job)
@@ -636,18 +741,120 @@ async def evaluate(*, diagnostic_case: str | None = None) -> dict[str, Any]:
                         "summary_sha256": hashlib.sha256(job.summary.encode()).hexdigest(),
                         "synthetic_trace": synthetic_trace(job, steps),
                     }
+                    if case_id == "archive_inventory_multitarget":
+                        result["_job_id"] = job.id
                     return result, source, chat, profile, job.summary, case_calls
 
             results = []
             with patched_attributes(
                 [
                     (execution, "runtime_provider", local_runtime_provider),
+                    (request_interpretation, "runtime_provider", local_runtime_provider),
                     (Providers, "stream", local_stream),
                     (runtime, "invoke", synthetic_invoke),
                     (httpx.AsyncClient, "send", observed_send),
                 ]
             ):
                 try:
+                    if diagnostic_case == "archive_inventory_multitarget":
+                        scenario["inventory"] = True
+                        goal = INVENTORY_REGRESSION["goal"]
+                        _, chat, paper = prepare("paperless", goal, defer_job=True)
+                        with factory() as db:
+                            paper_row = db.get(Integration, paper)
+                            profiles = {paper: paper_row}
+                            for kind, name in [("home_assistant", "Synthetic household"),
+                                               ("ssh", "Synthetic host"),
+                                               ("mcp", "Synthetic Proton mailbox")]:
+                                row = Integration(name=name, kind=kind, enabled=True,
+                                    writes_enabled=False, config=json.dumps({"kind": kind,
+                                    "auth": "none", "url": "https://synthetic-other.example.invalid"}))
+                                db.add(row)
+                                db.flush()
+                                profiles[row.id] = row
+                            binding = db.get(IntegrationBinding, ("conversation", chat))
+                            binding.integration_ids = json.dumps(list(profiles))
+                            db.commit()
+                            for row in profiles.values():
+                                db.expunge(row)
+                        interpreted = await request_interpretation.interpret(
+                            factory, cfg, goal, profiles, conversation_id=chat,
+                        )
+                        item, _, _, _, summary, case_calls = await run_case(
+                            "archive_inventory_multitarget", "paperless", goal,
+                            conversation=chat, profile=paper,
+                            resolved_intent=interpreted.model_dump(mode="json"),
+                            integration_ids=interpreted.target_ids,
+                        )
+                        with factory() as db:
+                            candidates = list(db.scalars(select(Run).join(Conversation,
+                                Conversation.id == Run.conversation_id).where(
+                                Conversation.purpose == "intent")))
+                            own = [run for run in candidates if json.loads(
+                                run.context_snapshot).get("request_owner") == chat]
+                            item["interpretation_run"] = ({
+                                "status": own[0].status, "provider": own[0].provider,
+                                "answer_model_used": own[0].answer_model_used,
+                                "owner_bound": True,
+                            } if len(own) == 1 else {"owner_bound": False})
+                            job = db.get(AgentJob, item.pop("_job_id"))
+                            history = runtime.steps(db, job.id)
+                            from hub.agent_paperless_evidence import paperless_evidence
+                            current_profile = db.get(Integration, paper)
+                            policy = db.get(AgentPolicy, paper)
+                            current_profiles = {paper: (current_profile,
+                                Rules.model_validate_json(policy.rules),
+                                {**json.loads(current_profile.config), "kind": "paperless"})}
+                            footer = paperless_evidence(job, current_profiles, history)
+                        item["grade_checks"] = grade_inventory(
+                            item, summary, case_calls, paperless_id=paper,
+                            scope_footer=footer or "",
+                        )
+                        aliases = {"paperless": paper,
+                                   "proton": next(key for key, profile in profiles.items()
+                                                  if profile.kind == "mcp")}
+                        item["boundary_probes"] = []
+                        for probe in BOUNDARY_PROBES:
+                            with factory() as db:
+                                previous = set(db.scalars(select(Run.id)))
+                            result = {"case_id": probe["id"], "passed": False,
+                                      "tool_calls": 0, "model_attempts": 1}
+                            before_probe_calls = len(calls)
+                            try:
+                                classified = await request_interpretation.interpret(
+                                    factory, cfg, probe["goal"], profiles, conversation_id=chat,
+                                )
+                                with factory() as db:
+                                    new_runs = list(db.scalars(select(Run).join(Conversation,
+                                        Conversation.id == Run.conversation_id).where(
+                                        Conversation.purpose == "intent", ~Run.id.in_(previous))))
+                                    metadata = ({
+                                        "status": new_runs[0].status,
+                                        "provider": new_runs[0].provider,
+                                        "answer_model_used": new_runs[0].answer_model_used,
+                                        "owner_bound": json.loads(new_runs[0].context_snapshot).get(
+                                            "request_owner") == chat,
+                                    } if len(new_runs) == 1 else {})
+                                payload = classified.model_dump(mode="json")
+                                result["checks"] = grade_interpretation_probe(
+                                    payload, metadata,
+                                    {aliases[key]: kind
+                                     for key, kind in probe["requirements"].items()},
+                                )
+                                result["interpretation_run"] = metadata
+                                result["intent"] = payload
+                                result["passed"] = all(result["checks"].values())
+                            except Exception as error:
+                                category = type(error).__name__
+                                result["error_type"] = (category if category in SAFE_ERROR_TYPES
+                                                        else "unrecognized_error")
+                            result["tool_calls"] = len(calls) - before_probe_calls
+                            result["passed"] = bool(result["passed"] and result["tool_calls"] == 0)
+                            item["boundary_probes"].append(result)
+                        item["grade_checks"]["analysis_boundaries"] = all(
+                            probe["passed"] for probe in item["boundary_probes"])
+                        item["passed"] = all(item["grade_checks"].values())
+                        return evaluation_report([item], diagnostic_case=diagnostic_case)
                     if diagnostic_case != "archive_search_followup":
                         item, _, _, _, summary, case_calls = await run_case(
                             "ha_sensor_inventory",
@@ -701,7 +908,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute-reviewed-in-container", action="store_true")
     parser.add_argument("--diagnostic-case",
-                        choices=["ha_sensor_inventory", "archive_search_followup"])
+                        choices=["ha_sensor_inventory", "archive_search_followup",
+                                 "archive_inventory_multitarget"])
     args = parser.parse_args()
     if not args.execute_reviewed_in_container:
         print(
