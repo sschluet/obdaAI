@@ -20,7 +20,10 @@ pytest_plugins = ['test_agent_capability_runtime']
 GOAL = 'Bitte prüfe Home Assistant und spiele alle ausstehenden Update ein'
 
 
-def scenario(ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False):
+def scenario(
+    ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False,
+    projection_failure_first=False, projection_followup_failure=False,
+):
     app, client, _, cfg, identifier, *_ = ha
     cfg = replace(cfg, local_model='synthetic-native-model',
                   local_base_url='http://127.0.0.1:11444/v1', local_allowed_ip='127.0.0.1',
@@ -34,7 +37,10 @@ def scenario(ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False)
         db.commit()
     model_requests, target_calls = [], []
     backup, installed = False, False
-    directives = iter([
+    initial_projection = ([{'method': 'GET', 'path': '/api/config',
+                           'projection': {'fields': ['/version'], 'limit': 1}}]
+                          if projection_failure_first else [])
+    directives = iter([*initial_projection,
         {'method': 'GET', 'path': '/api/services'},
         {'method': 'GET', 'path': '/api/states'},
         {'method': 'POST', 'path': '/api/services/backup/create',
@@ -71,6 +77,11 @@ def scenario(ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False)
             feedback = [row for row in data['history'] if row['kind'] == 'feedback']
             assert feedback[-1]['document']['issues'] == [{
                 'type': 'native_call_invalid', 'diagnostics': ['native_unknown_function']}]
+        if projection_failure_first and len(model_requests) == 3:
+            data = json.loads(body['messages'][1]['content'])
+            assert data['read_recovery']['recovery_kind'] == 'projection'
+            assert data['read_recovery']['needs_alternative']
+            assert data['read_only'] and not data['allow_finish']
         directive = next(directives)
         names = [row['function']['name'] for row in body['tools']]
         name = 'finish_run' if directive is None else next(n for n in names if n.endswith('_http'))
@@ -106,6 +117,12 @@ def scenario(ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False)
                 installed = True
             return {'http_status': 200, 'body': {}, 'effect_verified': False}
         payload = {'message': 'API running.'}
+        if projection_failure_first and args['path'] == '/api/config':
+            return {'http_status': 200, 'body': {'version': 'synthetic'},
+                    'projection_error': 'Synthetic list projection does not match object',
+                    'effect_verified': False}
+        if projection_followup_failure and args['path'] == '/api/services':
+            return {'http_status': 403, 'body': {}, 'effect_verified': False}
         if args['path'] == '/api/services':
             payload = [
                 {'domain': 'backup', 'services': {'create': {'fields': {'name': {}}}}},
@@ -141,7 +158,7 @@ def test_true_native_general_administration_loop_reads_backs_up_updates_and_veri
     ha, monkeypatch, tmp_path,
 ):
     result, requests, calls = scenario(ha, monkeypatch, tmp_path)
-    assert result['status'] == 'succeeded', result
+    assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
     assert len(requests) == 6 and len([r for r in requests if 'tools' in r]) == 5
     assert [call[2] for call in calls if call[1] == 'POST'] == [
         '/api/services/backup/create', '/api/services/update/install']
@@ -167,7 +184,7 @@ def test_native_unknown_function_gets_safe_feedback_before_any_target_dispatch(
     ha, monkeypatch, tmp_path,
 ):
     result, requests, calls = scenario(ha, monkeypatch, tmp_path, invalid_first=True)
-    assert result['status'] == 'succeeded', result
+    assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
     assert len(requests) == 7
     feedback = [step for step in result['steps'] if step['kind'] == 'feedback']
     assert len(feedback) == 1 and feedback[0]['document']['issues'] == [{
@@ -177,3 +194,31 @@ def test_native_unknown_function_gets_safe_feedback_before_any_target_dispatch(
     assert len(failed_models) == 1
     assert len([call for call in calls if call[1] == 'POST']) == 2
     assert all(call[0] != 'unknown_function' for call in calls)
+
+
+def test_native_admin_recovers_projection_before_authorized_backup_and_update(
+    ha, monkeypatch, tmp_path,
+):
+    result, requests, calls = scenario(ha, monkeypatch, tmp_path, projection_failure_first=True)
+    assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
+    assert len(requests) == 7
+    failed = [step for step in result['steps'] if step['kind'] == 'read'
+              and step['status'] == 'failed']
+    assert len(failed) == 1 and failed[0]['result']['failure_phase'] == 'projection'
+    assert failed[0]['result']['http_status'] == 200
+    assert len([call for call in calls if call[2] == '/api/config']) == 1
+    assert len([call for call in calls if call[1] == 'POST']) == 2
+    assert not [step for step in result['steps'] if step['kind'] in {'input', 'approval', 'error'}]
+
+
+def test_native_projection_correction_second_failed_read_stops_before_any_effect(
+    ha, monkeypatch, tmp_path,
+):
+    result, requests, calls = scenario(
+        ha, monkeypatch, tmp_path, projection_failure_first=True, projection_followup_failure=True,
+    )
+    assert result['status'] == 'failed', result
+    assert len(requests) == 3
+    assert len([step for step in result['steps'] if step['kind'] == 'read'
+                and step['status'] == 'failed']) == 2
+    assert not [call for call in calls if call[1] == 'POST']

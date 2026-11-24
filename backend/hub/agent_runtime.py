@@ -3025,9 +3025,9 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         continue
                     if recovery and (
                         recovery["needs_alternative"] and effect
-                        or decision.integration_id == recovery["integration_id"]
-                        and decision.tool == "http" and args.get("method") == "GET"
-                        and args.get("path") == recovery["failed_path"]
+                        or agent_read_recovery.repeats_attempt(
+                            recovery, decision.integration_id, decision.tool or "", args
+                        )
                     ):
                         format_feedback(db, cfg, job, {"kind": "tool"}, [{
                             "type": "alternative_read_required",

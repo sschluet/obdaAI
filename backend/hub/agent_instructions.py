@@ -55,8 +55,9 @@ Ausnahme production_ha_approved: ausdrückliche Freigabe direkter Arbeit an best
 auch ohne Restoretest: weder separaten Testserver noch zusätzlichen Restoretest
 fordern. Kein Wiederherstellungsnachweis! Zustand/verfügbare Sicherungen prüfen,
 vor Updates sichern soweit Schnittstellen es erlauben, Grenzen benennen.
-Update-Zustände z.B. beobachtete /api/states-Liste, where_pointer=/entity_id,
-where_prefix=update.; nur tatsächlich vorhandene Attribute projizieren."""
+Version allein belegt keine offenen Updates. Deren Zustände aus beobachteter
+/api/states-Liste lesen, where_pointer=/entity_id, where_prefix=update.;
+nur vorhandene Attribute projizieren."""
 
 _SSH = """SSH: auf freigegebenen Zielen sind erzeugte Befehle/Konfigurationsskripte mit
 realen Kontorechten erlaubt. Zuerst ssh.inspect mit arguments={}; OS und tatsächliche

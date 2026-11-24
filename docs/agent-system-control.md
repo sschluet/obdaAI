@@ -131,6 +131,26 @@ Mail-/Paperless-Planer behalten ihre eigenen Quellen- und Fortschrittsverträge.
 Nach einer belegten Alternative gelten ausschließlich die bereits vorhandenen
 ursprünglichen Rechte und Verifikationspflichten.
 
+Nach einem bestätigten HTTP-2xx-GET mit ausschließlich lokal fehlgeschlagener
+Projektion ist dieselbe begrenzte Korrektur möglich, wenn die strukturierte
+Originalantwort erhalten ist. Der Schritt bleibt fehlgeschlagen; er wird nicht
+nachträglich als erfolgreicher Auswahlbeleg umdeklariert. Der Planer darf die
+Projektion korrigieren oder entfernen beziehungsweise einen anderen erlaubten
+Leseweg wählen. Exakt dieselben normalisierten Argumente bleiben gesperrt; JSON-
+Typen wie `false` und `0` werden dabei unterschieden. Ein zweiter fehlgeschlagener
+Leseschritt beendet die Korrektur. Private Mail-/Archivverträge, unklare Wirkungen,
+Transportfehler und Berechtigungsfehler erhalten dadurch keine neue Wiederholung.
+
+Ein neuer gültiger Lesebeleg am betroffenen Ziel muss die Lesevoraussetzungen
+erfüllen. Bei mehreren bereits gebundenen Zielen zählen auch deren nachfolgende
+Lesebelege. Für einen sicher erkannten Verwaltungsauftrag wird ausschließlich in
+dieser Lesekorrektur die noch zukünftige `effect_postcondition` aus der abgeleiteten
+Leseprüfung ausgeklammert. Der originale vollständige Auftrag, Zielregeln und
+Abschluss-/Wirkungsprüfung bleiben unverändert; eine bloße Lesekorrektur bestätigt
+keine ausgeführte Änderung. Vor der gültigen Alternative bleiben Änderungen
+blockiert, danach gelten wieder dieselben ursprünglichen Rechte. Vorherige oder
+unklare Effekte werden nicht durch eine Lesekorrektur übergangen.
+
 Erfolg erfordert neben dem Transportstatus eine gültige Auswahl beziehungsweise
 einen erfolgreichen Inspektionsprozess. HTTP-Projektionsfehler und fehlerhafte
 SSH-Inspektionen sind keine erfolgreichen Datenabfragen. Das feste SSH-Skript

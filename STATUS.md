@@ -1,59 +1,43 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Administrationsplanung — native Korrektur in Prüfung
+## HA-Planung — begrenzte Lesekorrektur in Prüfung
 
-`a80fbf5` ist nach vollständiger CI und frischer verschlüsselter Sicherung auf der
-Test-VM installiert; alle neun Images, beide APIs, Schema 0050 und ursprüngliche
-Daten/Konfiguration sind geprüft. Die erste freie reale HA-Update-Leseabfrage
-scheiterte jedoch an drei ungültigen nativen Argumenten. Es gab keinen Schreibzugriff;
-Testdatenbereinigung und Erhaltungsprüfung bestanden. Dieser Lauf zählt ausdrücklich
-als fehlgeschlagene Bearbeitung.
+`5bfadaa` ist nach vollständiger [CI 45429795990](https://github.com/sschluet/obdaAI/actions/runs/45429795990)
+auf der Test-VM installiert: 3.713 Tests bestanden, sechs optionale Calc-Skips,
+alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.719 Tests. Frische
+verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und Erhalt
+ursprünglicher Daten/Konfiguration sind geprüft.
 
-Eine einzelne isolierte lokale Modellprobe und anschließende Offlineprüfung
-belegen den konkreten Übergabefehler: Der Modellserver wandelte eine JSON-Projektion
-in Text um. Die Dekodierung genau dieses Felds ergab denselben vollständig schema-
-und regelgültigen Leseaufruf, ohne ergänzte Werte. Die Nachkorrektur übergibt daher
-die Werkzeugdaten als ein vollständiges Objekt und bewahrt verschachtelte Typen.
-Sie ergänzt außerdem genaue sichere Formatdiagnosen und die ausdrückliche Vorgabe
-eines Aufrufs je Planungsschritt. Eine neue isolierte Probe mit dem tatsächlichen
-lokalen Modell liefert damit einen vollständig typisierten, schema- und regelgültigen
-HTTP-Leseaufruf; keine nachträgliche Wertänderung und kein Werkzeugversand. 99 gezielte
-Tests sind bestanden. Vollständige CI, Folge-Rollout und echte Chat-Abnahme der
-Nachkorrektur stehen noch aus.
+Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden: Nach
+korrekt typisierter nativer Werkzeugwahl antwortete HA mit HTTP 200, die lokale
+Listenprojektion passte aber nicht zur Konfigurations-Objektantwort. Der bisherige
+Lauf brach daraufhin ab. Der Fehlbeleg einschließlich unveränderter Originalantwort
+bleibt erhalten; es gab keinen Schreibzugriff. Die Erhaltungs- und Bereinigungsprüfung
+des Testauftrags bestand. Dieser Lauf zählt ausdrücklich als fehlgeschlagene Bearbeitung.
 
-Der gemeldete Auftrag scheiterte auf der Test-VM nach zwei erfolgreichen
-Lesezugriffen am Planungskontext; es wurde keine Änderung gestartet. Der Fehler
-wurde aus den gespeicherten Belegen lesend reproduziert. Zielbezogene Anweisungen,
-tatsächlich gezähltes kompaktes JSON, die ausgewählte Anbietergrenze und begrenzte
-strukturierte Versions-/Statussichten beheben diesen Kontextüberlauf. Originalbelege
-und Rechte bleiben erhalten. Ein zusätzlicher Variablenfehler nach dem ersten Effekt
-ist behoben; mehrere verifizierte Effekte erhalten einen hashgebundenen Verlauf.
+Die Nachkorrektur erlaubt eine begrenzte Neuplanung nach genau einem bestätigten
+Projektionsfehler: korrigierte Auswahl oder anderer erlaubter Leseweg, keine
+identischen Argumente, keine Abschlusserklärung oder Änderung vor einem gültigen
+Lesebeleg. Ein zweiter Lesefehler stoppt den Lauf. Alte oder unklare Effekte sowie
+private Mail-/Archivverträge erhalten keine zusätzliche Wiederholung. Ein künftiger
+Wirkungsnachweis blockiert nicht mehr die vorher nötige Lesekorrektur; der volle
+Auftrag und die endgültigen Rechte-/Wirkungsprüfungen bleiben unverändert.
+79 gezielte Tests einschließlich echter API-/Worker-/Native-Transportabläufe mit
+simuliertem Modell/Ziel bestehen. Eine isolierte reale lokale Modellprobe mit dem
+gespeicherten Fehler und der neuen Korrekturanweisung wählt einen anderen
+freigegebenen schema- und regelgültigen HA-WebSocket-Leseweg. Es gab dabei keine
+Werkzeugausführung oder Datenbankänderung. Vollständige Validierung, Folge-Rollout
+und tatsächliche Chat-Abnahme stehen aus.
 
-Reale inaktive Proben zeigten anschließend weiter ungeeignete JSON-Planungen und
-Bestätigungsfragen. Ein vollständiger nativer Werkzeugvergleich mit demselben
-lokalen Modell wählte hingegen einen schema- und regelgültigen neuen Leseaufruf,
-nach verlustfreiem Entfernen einer einzigen zusätzlichen Argumenthülle. Dieser
-Aufruf wurde zur Diagnose **nicht ausgeführt**. Das belegt einen konkreten
-Protokollansatz, keine bestandene autonome HA-Updateabnahme.
-
-Die allgemeine Planung wird deshalb über `agent_native.py` an native Funktionen
-angebunden: bestehende zielgebundene Schemas, vollständige Argumentprüfung,
-begrenzte SSE-Fragmente und anschließend dieselbe kanonische Entscheidung im
-vorhandenen Ausführungsweg. Die Funktionsschemas zählen zum lokalen Datenschutz-
-und Kontextbudget. Ein ausdrücklich nicht unterstütztes Protokoll oder eine
-beendete Antwort ohne Funktionswahl erlaubt einen einmaligen, getrennt belegten
-Wechsel zum JSON-Planer desselben gebundenen Anbieters. Fehler, Abbruch und
-unvollständige Streams erlauben diesen Wechsel nicht. Einstellungen werden nicht
-verändert. Der Einstellungs-Planertest unterscheidet native und kompatible Erfolge.
-
-Unpassende Bestätigungen werden begrenzt neu geplant; echte fehlende Angaben und
-Einzelfreigaben bleiben erhalten. Nachprüfungen werden erst nach einem Effekt,
-Uploads erst mit tatsächlich gebundener Datei angeboten. Ein Profil ohne
-Schreibfreigabe erhält auch im Planungsangebot ausschließlich Lesemöglichkeiten.
-Synthetische Tests durchlaufen große HA-Belege, Sicherung, zwei Updates und drei
-Nachprüfungen sowie einen unsicheren Ausgang ohne blindes Wiederholen.
-Vollständige Validierung und Rollout der nativen Erweiterung stehen noch aus.
-Keine echte HA-Aktualisierung oder Wiederherstellung ist dadurch nachgewiesen.
+Die vorausgegangenen Korrekturen bleiben erhalten: zielbezogene Anweisung,
+Anbieter-/UTF-8-Kontextbudget, strukturierte Versions-/Statussichten, hashgebundener
+Effektverlauf und behobene Mehrfacheffekt-Verarbeitung. Native Werkzeuge übertragen
+ein vollständiges `arguments`-Objekt. Eine einzelne reale isolierte Probe belegte
+zuvor einen Typverlust des Modellservers; der neue Objektvertrag bestand anschließend
+eine reale Modellprobe ohne Wertänderung oder Werkzeugversand. Sichere Fehlerhinweise
+und genau ein Aufruf je Planungsschritt begrenzen interne Korrekturen.
+Keine echte HA-Aktualisierung, allgemeine autonome Verwaltung oder Wiederherstellung
+ist damit live abgenommen.
 
 ## Geprüfte Lieferung — f07dd44 / Schema 0050
 

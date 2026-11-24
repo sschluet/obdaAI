@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-24",
-  "applicationCommit": "a80fbf5",
+  "applicationCommit": "5bfadaa",
   "schema": "0050",
-  "tests": 3697,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45419797441",
+  "tests": 3713,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45429795990",
   "screenshots": [
     {
       "id": "compact-chat",
@@ -769,7 +769,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionsplanung verwendet die bestehenden Zielregeln, dauerhaften Absichten und Nachprüfungen; Rechte und Kontextbudget bleiben an der Ausführungsgrenze geprüft. Reales SSH-Schreiben und HA-Lesechat früher geprüft. Die neue native Erweiterung wird derzeit validiert; umfassende autonome HA-Konfiguration und Updates sind weiterhin nicht real abgenommen. Unklare Änderungen werden nicht automatisch wiederholt.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen erhalten vollständig typisierte Argumentobjekte; Zielregeln, dauerhafte Absichten und Nachprüfungen bleiben wirksam. Kontextbudget und sichere interne Formatkorrekturen sind begrenzt. Eine zusätzliche Lesekorrektur nach bestätigten Projektionsfehlern wird derzeit validiert. Reales SSH-Schreiben und HA-Lesechat wurden früher geprüft; umfassende autonome HA-Konfiguration und Updates bleiben offen. Unklare Änderungen werden nicht automatisch wiederholt.",
           "status": "limited"
         }
       ]
