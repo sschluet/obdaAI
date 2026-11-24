@@ -173,9 +173,11 @@ def runtime_provider(
     external_kind: str = "openrouter",
     provider_id: str | None = None,
     model: str | None = None,
+    seed_defaults: bool = True,
 ) -> tuple[Settings, Providers, dict[str, ProviderConfig]]:
     with factory() as db:
-        seed(db, cfg)
+        if seed_defaults:
+            seed(db, cfg)
         query = select(ProviderConfig).where(ProviderConfig.is_default.is_(True))
         if local_only:
             query = query.where(ProviderConfig.kind == "local")

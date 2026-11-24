@@ -607,7 +607,8 @@ def test_mail_context_exhaustion_has_safe_specific_terminal_reason(read_mailbox,
     }
     app, client, _, _, _, job_id, _ = read_mailbox
     response = client.get("/api/agent-runs/" + job_id).json()
-    assert "Modellkontext" in response["summary"]
+    assert "Kontextlimit" in response["summary"]
+    assert "engere Anfrage" not in response["summary"]
     assert "SYNTHETIC_PRIVATE_MODEL_CONTENT" not in json.dumps(response)
 
 

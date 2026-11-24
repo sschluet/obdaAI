@@ -4,6 +4,7 @@ import copy
 import json
 
 import pytest
+from hub.action_api import encode
 from hub.agent_context import fit
 from hub.agent_runtime import INSTRUCTION
 from hub.agent_tools import (
@@ -192,7 +193,7 @@ def test_compact_prompt_contract_fits_ha_budget_without_duplicating_full_grammar
     fitted = fit(data, INSTRUCTION, 24000)
     assert fitted["tools"] == data["tools"]
     assert fitted["decision_schema"] == envelope
-    assert len(INSTRUCTION) + len(json.dumps(fitted, ensure_ascii=False)) < 24000
+    assert len(INSTRUCTION) + len(encode(fitted)) <= 24000 - 200
     assert "$defs" not in fitted["decision_schema"]
     assert "Tool_http" in full["$defs"]
 

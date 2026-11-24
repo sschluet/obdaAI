@@ -309,6 +309,61 @@ def _read_index(
     return retained, list(groups.values())
 
 
+def _receipt_hash(value: Any) -> str:
+    return hashlib.sha256(json.dumps(
+        value, ensure_ascii=False, separators=(",", ":"),
+    ).encode()).hexdigest()
+
+
+def _effect_payload(value: Any) -> Any:
+    """Only payload bytes may shrink; proof/control fields remain exact recursively."""
+    if not isinstance(value, dict):
+        return value
+    return {
+        key: ({"content_omitted": True, "full_sha256": _receipt_hash(item)}
+              if len(json.dumps(item, ensure_ascii=False)) > 180 else item) if key in {
+            "body", "stdout", "stderr", "script", "verification_script", "content",
+        } else _effect_payload(item)
+        for key, item in value.items()
+    }
+
+
+def _verified_terminal(entry: dict[str, Any]) -> bool:
+    result = entry.get("result")
+    return (entry.get("status") == "succeeded" and isinstance(result, dict)
+            and (result.get("effect_verified") is True
+                 or entry.get("kind") == "verification"
+                 and result.get("verification_passed") is True))
+
+
+def _effect_index(
+    entries: list[dict[str, Any]], latest: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Index only explicitly verified terminal effects, never unresolved writes.
+
+    Every sequence has its own hashes and exact proof vocabulary. This model view
+    cannot authorize replay or substitute for original persisted receipts.
+    """
+    retained, ledger = [], []
+    for entry in entries:
+        document, result = entry.get("document"), entry.get("result")
+        if (entry is latest or entry.get("kind") not in {"effect", "verification"}
+                or entry.get("status") != "succeeded" or not isinstance(document, dict)
+                or not isinstance(result, dict) or not _verified_terminal(entry)):
+            retained.append(entry)
+            continue
+        ledger.append({
+            **{key: value for key, value in entry.items() if key not in {"document", "result"}},
+            "document": _effect_payload(document),
+            "result": _effect_payload(result),
+            "document_sha256": _receipt_hash(document),
+            "arguments_sha256": _receipt_hash(document.get("arguments", {})),
+            "result_sha256": _receipt_hash(result),
+            "model_view_only": True,
+        })
+    return retained, ledger
+
+
 def fit(
     data: dict[str, Any], instruction: str, context_limit: int, *, max_bytes: int | None = None
 ) -> dict[str, Any]:
@@ -419,6 +474,11 @@ def fit(
             return view(document, budget)
 
         retained, index = (_read_index(original, latest) if size <= 600 else (original, []))
+        retained, ledger = (_effect_index(retained, latest) if size <= 600 else (retained, []))
+        if ledger:
+            result["effect_ledger"] = ledger
+        else:
+            result.pop("effect_ledger", None)
         if index:
             result["older_read_index"] = index
         else:
@@ -426,15 +486,26 @@ def fit(
         result["history"] = [
             {
                 **entry,
-                "document": history_document(entry),
-                "result": history_result(entry, size if i == len(original) - 1 else size // 2),
+                "document": (
+                    _effect_payload(entry["document"])
+                    if entry.get("kind") in {"effect", "verification"}
+                    and not _verified_terminal(entry) else history_document(entry)
+                ),
+                "result": (
+                    _effect_payload(entry["result"])
+                    if entry.get("kind") in {"effect", "verification"}
+                    and not _verified_terminal(entry) else history_result(
+                        entry, size if i == len(retained) - 1 else size // 2,
+                    )
+                ),
             }
             for i, entry in enumerate(retained)
         ]
         encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
         byte_length = len(instruction.encode()) + len(encoded.encode())
-        if len(instruction) + len(
-            json.dumps(result, ensure_ascii=False)
-        ) <= context_limit - 200 and (max_bytes is None or byte_length <= max_bytes):
+        # Match action_api.encode at dispatch: whitespace that is never sent must
+        # not consume the model budget. UTF-8 capacity remains a separate bound.
+        if (len(instruction) + len(encoded) <= context_limit - 200
+                and (max_bytes is None or byte_length <= max_bytes)):
             return result
     raise AgentContextLimitError("Goal, authority or evidence exceeds the model context limit")

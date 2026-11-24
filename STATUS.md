@@ -1,4 +1,27 @@
-# obdaAI — Status 23.11.2026
+# obdaAI — Status 24.11.2026
+
+## HA-Administrationskontext — neue Korrektur in Prüfung
+
+Der gemeldete HA-Auftrag wurde auf der Test-VM ausschließlich lesend untersucht:
+Abbruch nach zwei erfolgreichen Lesezugriffen, keine gestartete Änderung.
+Die gespeicherte Planung reproduziert den Kontextüberlauf; die Verbindung war
+funktionsfähig. Die bisherige reale Leseabnahme belegte keinen HA-Updateablauf.
+
+Die Korrektur beschränkt die Anweisung auf gebundene Zieltypen, zählt tatsächlich
+versandtes kompaktes JSON und berücksichtigt vor der Kompression die ausgewählte
+lokale Anbietergrenze einschließlich konservativem UTF-8-/Tokenbudget.
+Werkzeugschemas, Rechte und Originalbelege bleiben erhalten. Einzelne abgeschlossene
+verifizierte Effekte haben einen hashgebundenen Verlauf; Unsicherheit erlaubt
+keine Wiederholung. Ein zusätzlich gefundener Variablenfehler nach dem ersten
+Effekt ist behoben; die Liste zur Begrenzung weiterer Effekte wird nicht überschrieben.
+
+Der synthetische API-/Worker-Test durchläuft große HA-Leseantworten, Sicherung,
+zwei Updates und drei vorgebundene Nachprüfungen. Ein zweiter Test stoppt beim
+unsicheren ersten Update ohne weiteres Schreiben oder Wiederholung nach Neustart.
+Runtime, Kontextkompression und Ausführung sind echt; Modell und HA-Transport
+simuliert. Fokussierte Budget-/Schema-/Projektmodellprüfungen sind bestanden.
+Vollständige Prüfung, reale lokale Fortsetzungsprobe und Rollout stehen noch aus.
+Keine echte HA-Aktualisierung oder Wiederherstellung ist dadurch nachgewiesen.
 
 ## Geprüfte Lieferung — f07dd44 / Schema 0050
 

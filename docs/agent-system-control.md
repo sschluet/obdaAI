@@ -378,3 +378,28 @@ oder Laufzeitnachweis für obdaAI:
 - [Home Assistant: WebSocket API](https://contributors.home-assistant.io/core/internals/websocket-api/)
 - [Home Assistant: Supervisor API](https://contributors.home-assistant.io/apps/supervisor-api/)
 - [Home Assistant: Update](https://www.home-assistant.io/integrations/update/)
+
+
+## Zielbezogene Planung und Kontextgrenzen (24.11.2026)
+
+Die gemeinsame Administrationsplanung setzt die Anweisung aus einem unveränderlichen
+Sicherheitskern und Hinweisen ausschließlich zu den tatsächlich gebundenen Zieltypen
+zusammen (`agent_instructions.py`). Werkzeugschemas und Regeln werden nicht gekürzt
+oder durch Modellannahmen ersetzt. Die feste lokale Projektwahl beziehungsweise der
+aktuelle lokale Standard bestimmt bereits vor der Kontextkompression das Budget;
+eine größere globale Einstellung darf eine kleinere Anbietergrenze nicht übergehen.
+Die abschließenden Anbieter- und Berechtigungsprüfungen bleiben zusätzlich wirksam.
+
+Große Belegnutzlasten werden in der abgeleiteten Modellsicht ausdrücklich mit Hash
+und Auslassungsmarker dargestellt. Ältere, ausdrücklich verifizierte abgeschlossene
+Änderungen können als einzelne Einträge in `effect_ledger` erscheinen: Sequenz,
+Status, Ziel-/Prüfverknüpfungen, Prüfflags und Originalhashes bleiben erhalten.
+Ungeklärte Änderungen werden niemals als verifiziert zusammengefasst; ihre
+Kontrollfelder bleiben erhalten. Originalbelege in der Datenbank bleiben unverändert.
+Ein Kontextfehler startet keinen Ersatzaufruf und wiederholt keine Änderung.
+
+Die Regression umfasst einen HA-Auftrag mit großer Aktionsliste, Sicherung,
+mehreren Updates und Nachzustandsprüfung sowie einen unsicheren Updateausgang.
+Dabei sind Modell und HA-Ziel simuliert; dies ist keine reale HA-Updateabnahme.
+Ein vorhandener gescheiterter Auftrag wird zur Diagnose ausschließlich lesend
+rekonstruiert und niemals automatisch fortgesetzt.

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-23",
+  "updated": "2026-11-24",
   "applicationCommit": "f07dd44",
   "schema": "0050",
   "tests": 3511,
@@ -769,7 +769,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Zielregeln, typisierte zielgebundene Grammatik, Einzelfreigaben oder begrenzte Autonomie, dauerhafte Absichten und separate Nachprüfung. Reales SSH-Schreiben im Chat und Löschen durch eine unterstützte Aufgabe geprüft; HA-Lesechat ohne menschliche Fortsetzung erfolgreich. Vollständige Dokumentationsabrufe eingeschränkt; umfassende autonome API-Verwaltung, HA-Konfiguration und HA-Update bleiben offen.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche, dynamischen REST-/HA-WebSocket-/SSH-/MCP-Aufrufen, gebundenen Originaldateien und erlaubten Mailzielen. Zielregeln, typisierte zielgebundene Grammatik, Einzelfreigaben oder begrenzte Autonomie, dauerhafte Absichten und separate Nachprüfung. Reales SSH-Schreiben im Chat und Löschen durch eine unterstützte Aufgabe geprüft; HA-Lesechat ohne menschliche Fortsetzung erfolgreich. Vollständige Dokumentationsabrufe eingeschränkt; umfassende autonome API-Verwaltung, HA-Konfiguration und HA-Update bleiben offen. Zielbezogene Planungsanweisungen und hashgebundene Belegkompression halten den Kontext begrenzt; unsichere Änderungen werden nicht automatisch wiederholt. Echte umfassende HA-Updates sind damit nicht nachgewiesen.",
           "status": "limited"
         }
       ]
