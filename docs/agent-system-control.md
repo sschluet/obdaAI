@@ -411,3 +411,18 @@ mehreren Updates und Nachzustandsprüfung sowie einen unsicheren Updateausgang.
 Dabei sind Modell und HA-Ziel simuliert; dies ist keine reale HA-Updateabnahme.
 Ein vorhandener gescheiterter Auftrag wird zur Diagnose ausschließlich lesend
 rekonstruiert und niemals automatisch fortgesetzt.
+
+
+Allgemeine Ausführungsbestätigungen bei einem sicher gebundenen administrativen
+Auftrag und als Frage formulierte konkrete Werkzeugaufrufe erteilen keine Rechte.
+Sie gehen in die bestehende auf zwei Versuche begrenzte Formatkorrektur statt in
+eine Benutzer-Bestätigungsschleife. Fachliche Auswahlfragen und fehlende gewünschte
+Parameter bleiben Rückfragen. Die endgültigen Rechte-/Autonomieprüfungen können
+einen konkret geplanten Effekt weiterhin zur echten Einzelfreigabe anhalten.
+`http.verify` wird nur bei einem erfolgreichen vorangegangenen Effekt am gebundenen
+Ziel angeboten; es ersetzt keine anfängliche Bestandsaufnahme.
+
+Die inaktiven realen lokalen Modellproben belegen die behobene Kontextgrenze,
+keinen durchgehend richtigen autonomen Updateplan. Der lokale Planer verlangte
+weiterhin unbegründete Bestätigungen und verwechselte Bestandsaufnahme und
+Nachprüfung. Eine echte HA-Updateausführung wurde dabei nicht gestartet.

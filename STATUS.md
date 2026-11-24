@@ -25,7 +25,15 @@ zwei Updates und drei vorgebundene Nachprüfungen. Ein zweiter Test stoppt beim
 unsicheren ersten Update ohne weiteres Schreiben oder Wiederholung nach Neustart.
 Runtime, Kontextkompression und Ausführung sind echt; Modell und HA-Transport
 simuliert. Fokussierte Budget-/Schema-/Projektmodellprüfungen sind bestanden.
-Vollständige Prüfung, reale lokale Fortsetzungsprobe und Rollout stehen noch aus.
+Die realen inaktiven lokalen Proben zeigen: Kontext und JSON-Erzeugung funktionieren
+mit kürzerer strukturierter Sicht, der aktuelle lokale Planer wählte jedoch weiterhin
+unnötige Bestätigungsfragen oder unpassende Werkzeuge. Das ist **keine bestandene
+autonome HA-Updateabnahme**. Allgemeine Ausführungsbestätigungen bei sicher gebundenem
+Administrationsauftrag und als Fragen formulierte Werkzeugaufrufe werden nun über
+die vorhandene Formatkorrektur begrenzt neu geplant; echte fehlende Angaben bleiben
+Rückfragen. Nach zwei Fehlversuchen endet die Planung verständlich ohne neue Rechte
+oder automatische Wiederholung von Änderungen. `http.verify` wird erst nach einem
+tatsächlich ausgeführten Effekt angeboten. Vollständige Prüfung und Rollout stehen aus.
 Keine echte HA-Aktualisierung oder Wiederherstellung ist dadurch nachgewiesen.
 
 ## Geprüfte Lieferung — f07dd44 / Schema 0050

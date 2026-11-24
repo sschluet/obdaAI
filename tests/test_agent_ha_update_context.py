@@ -36,7 +36,10 @@ class SyntheticPlanner(FakeProviders):
             ).model_dump(mode="json")
         else:
             assert data["request_contract"]["mode"] == "admin"
-            assert {"http", "http.verify", "ha.websocket"}.issubset(data["tools"])
+            assert {"http", "ha.websocket"}.issubset(data["tools"])
+            has_effect = any(row["kind"] == "effect" and row["status"] == "succeeded"
+                             for row in data["history"]) or bool(data.get("effect_ledger"))
+            assert ("http.verify" in data["tools"]) == has_effect
             assert "$defs" in data["tools"]["http"]  # Real complete argument schema, not a stub.
             answer = next(self.decisions)
         yield json.dumps(answer)
@@ -53,7 +56,10 @@ def decision(identifier, method, path, *, body=None, expected=None):
             "arguments": arguments, "message": "Synthetic authorized operation"}
 
 
-def scenario(ha, monkeypatch, uncertain):  # noqa: F811
+def scenario(
+    ha, monkeypatch, uncertain, confirmations=0, execution_question=False,  # noqa: F811
+    essential_question=False, goal=GOAL,
+):
     app, client, headers, cfg, identifier, *_ = ha
     current = client.get(f"/api/integrations/{identifier}/agent-policy").json()
     rules = Rules.model_validate(current["rules"])
@@ -75,6 +81,15 @@ def scenario(ha, monkeypatch, uncertain):  # noqa: F811
           for i in (1, 2)],
         {"kind": "finish", "message": "Synthetic backup and both updates verified."},
     ]
+    question = (
+        "Bitte bestätigen Sie, ob ein Update der Home Assistant Instanz durchgeführt werden soll."
+        if execution_question else
+        'Bitte bestätige den Aufruf von http.verify mit path="/backup/info".'
+    )
+    if essential_question:
+        question = "Welcher Auslöser und welche Aktion soll die Automation verwenden?"
+    decisions = [{"kind": "ask", "message": question}
+                 for _ in range(confirmations)] + decisions
     model = SyntheticPlanner(identifier, decisions)
     calls = []
     installed = set()
@@ -118,14 +133,16 @@ def scenario(ha, monkeypatch, uncertain):  # noqa: F811
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     monkeypatch.setattr(agent_reconcile, "invoke", invoke)
-    job_id = start(ha, GOAL, research_allowed=False)
+    job_id = start(ha, goal, research_allowed=False)
     asyncio.run(runtime.execute_agent(app.state.sessions, cfg, model, job_id))
     result = client.get("/api/agent-runs/" + job_id).json()
     before_restart = list(calls)
     asyncio.run(runtime.execute_agent(app.state.sessions, cfg, model, job_id))
     assert calls == before_restart
     assert model.semantic_calls == 1
-    assert not [s for s in result["steps"] if s["kind"] == "error"], json.dumps(result, indent=2)
+    if confirmations < 3:
+        errors = [s for s in result["steps"] if s["kind"] == "error"]
+        assert not errors, json.dumps(result, indent=2)
     with app.state.sessions() as db:
         frozen = json.loads(db.get(AgentJob, job_id).bindings)
         assert frozen["intent"]["mode"] == "admin"
@@ -159,3 +176,47 @@ def test_uncertain_update_stops_without_redispatch_or_next_update(ha, monkeypatc
     assert mutations[-1][3] == {"entity_id": "update.synthetic_1"}
     assert not any(call[3] == {"entity_id": "update.synthetic_2"} for call in calls)
     assert len(model.inputs) == 5  # Semantic; services, states, backup, first update.
+
+
+
+def test_tool_confirmation_is_repaired_without_user_input_or_extra_dispatch(ha, monkeypatch):  # noqa: F811
+    result, calls, model = scenario(ha, monkeypatch, False, confirmations=1)
+    assert result["status"] == "succeeded"
+    assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
+    assert len([call for call in calls if call[1] == "POST"]) == 3
+    assert all(step["status"] != "awaiting_input" for step in result["steps"])
+    assert len(model.inputs) == 8
+
+
+def test_repeated_tool_confirmation_stops_bounded_without_target_changes(ha, monkeypatch):  # noqa: F811
+    result, calls, model = scenario(ha, monkeypatch, False, confirmations=3)
+    assert result["status"] == "failed"
+    assert "lokale Planung" in result["summary"]
+    assert "Zugriffsregeln" not in result["summary"]
+    assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 2
+    assert not [call for call in calls if call[1] == "POST"]
+    assert len(model.inputs) == 4
+
+
+
+def test_certain_admin_execution_confirmation_is_repaired_without_user_input(ha, monkeypatch):  # noqa: F811
+    result, calls, model = scenario(
+        ha, monkeypatch, False, confirmations=1, execution_question=True,
+    )
+    assert result["status"] == "succeeded"
+    assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
+    assert len([call for call in calls if call[1] == "POST"]) == 3
+    assert len(model.inputs) == 8
+
+
+
+def test_missing_automation_details_remain_a_real_question(ha, monkeypatch):  # noqa: F811
+    result, calls, model = scenario(
+        ha, monkeypatch, False, confirmations=1, essential_question=True,
+        goal="Richte in Home Assistant eine Automation ein.",
+    )
+    assert result["status"] == "awaiting_input"
+    assert "Auslöser" in result["summary"]
+    assert not [step for step in result["steps"] if step["kind"] == "feedback"]
+    assert not [call for call in calls if call[1] == "POST"]
+    assert len(model.inputs) == 2

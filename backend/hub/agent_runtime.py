@@ -31,6 +31,7 @@ from hub.agent_generation_budget import context_budget as generation_context_bud
 from hub.agent_instructions import instruction as administration_instruction
 from hub.agent_intent import effect_target_allowed
 from hub.agent_models import AgentJob, AgentPolicy, AgentStep
+from hub.agent_questions import execution_confirmation, tool_confirmation
 from hub.agent_tools import (
     SCHEMAS,
     Decision,
@@ -88,6 +89,10 @@ class AgentPlanningError(RuntimeError):
     def __init__(self, *, timed_out: bool):
         self.reason = "local_model_timeout" if timed_out else "local_model_failed"
         super().__init__(self.reason)
+
+
+class AgentFormatExhausted(ValueError):
+    """Bounded local correction failed; no permission or tool execution is inferred."""
 
 
 class AgentFormatError(ValueError):
@@ -1490,7 +1495,7 @@ def format_feedback(
 ) -> None:
     gate(db, cfg, job)
     if sum(s.kind == "feedback" for s in steps(db, job.id)) >= 2:
-        raise ValueError("Lokale Formatkorrekturen ausgeschöpft")
+        raise AgentFormatExhausted("Lokale Formatkorrekturen ausgeschöpft")
     record(
         db,
         job,
@@ -2419,6 +2424,15 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             allowed_tools.add("gmail.read")
                         if rules.mail_recipients:
                             allowed_tools.add("mail.send")
+                    # A postcondition checker cannot inspect a system without a
+                    # preceding effect. Keep that impossible choice out of both
+                    # prompt and native grammar; dispatch still checks the receipt.
+                    if not any(
+                        step.kind == "effect" and step.status == "succeeded"
+                        and json.loads(step.document).get("integration_id") in profiles
+                        for step in history
+                    ):
+                        allowed_tools.discard("http.verify")
                     if job.research_allowed and not private_read:
                         allowed_tools.add("research")
                     if private_mail_read:
@@ -2735,6 +2749,24 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             }])
                             db.commit()
                             continue
+                        bound_intent = json.loads(job.bindings).get("intent") or {}
+                        redundant_execution = (
+                            bound_intent.get("mode") == "admin"
+                            and bound_intent.get("confidence") == "certain"
+                            and execution_confirmation(decision.message)
+                        )
+                        if decision.kind == "ask" and (
+                            tool_confirmation(decision.message) or redundant_execution
+                        ):
+                            format_feedback(db, cfg, job, {"kind": "ask"}, [{
+                                "type": "confirmation_is_not_missing_user_input",
+                                "next_action": "Select an authorized tool using kind=tool; "
+                                "the application checks permissions and approvals. "
+                                "Never request approval in message or invent missing facts. "
+                                "http.verify requires a preceding effect, not initial discovery.",
+                            }])
+                            db.commit()
+                            continue
                         if bounded_read and decision.kind == "ask":
                             format_feedback(db, cfg, job, {"kind": "ask"}, [{
                                 "type": "private_read_question_not_allowed",
@@ -3015,6 +3047,9 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         if uncertain
                         else "Agentenlauf abgebrochen."
                         if job.cancel_requested
+                        else "Die lokale Planung konnte keinen gültigen nächsten Schritt wählen. "
+                        "Der Auftrag wurde angehalten; vorhandene Belege bleiben erhalten."
+                        if isinstance(error, AgentFormatExhausted)
                         else "Die interne Planung hat ihr Kontextlimit erreicht. Der Auftrag wurde "
                         "angehalten; vorhandene Belege bleiben erhalten. Weitere Änderungen "
                         "wurden nicht gestartet."
