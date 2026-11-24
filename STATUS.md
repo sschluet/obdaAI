@@ -1,42 +1,58 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Planung — Argumentkorrektur in Prüfung
+## HA-Planung — beleggebundener Abschluss in Prüfung
 
-`4cb1810` ist nach vollständiger [CI 45449809249](https://github.com/sschluet/obdaAI/actions/runs/45449809249)
-auf der Test-VM installiert: 3.804 Tests bestanden, sechs optionale Calc-Skips,
-alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.809 Tests vor der
-letzten Zusammenfassungs-Regressionsprüfung; danach bestanden 69 gezielte Tests.
-Frische verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und
-Erhalt ursprünglicher Daten/Konfiguration sind geprüft.
+`bbcb00b` ist nach vollständiger [CI 45459323240](https://github.com/sschluet/obdaAI/actions/runs/45459323240)
+auf der Test-VM installiert: 3.816 Tests bestanden, sechs optionale Calc-Skips,
+alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.822 Tests. Neue
+verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und Erhalt
+ursprünglicher Daten/Konfiguration sind geprüft.
 
-Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden: Das
-Modell ergänzte beim ersten GET ein `verification`-Objekt, obwohl diese
-Leseoperation ausschließlich `null` erlaubt. Drei generische Formatkorrekturen
-führten nicht zu einem gültigen Werkzeugaufruf. Eine isolierte reale Modellprobe
-mit dem exakt gespeicherten Einstieg reproduzierte den Fehler; eine anschließende
-Offline-Schemaanalyse identifizierte ausschließlich diesen falschen Feldtyp.
-Es gab keinen HA-Schreibzugriff. Datenerhalt und Bereinigung des Testauftrags sind
-geprüft. Dieser Lauf zählt ausdrücklich als fehlgeschlagene Bearbeitung.
+Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden. Ein
+ungültiges GET-Nachprüfungsobjekt wurde jetzt intern korrigiert; anschließend
+behauptete das Modell jedoch aus Versions-/Supervisor-Metadaten unbelegt,
+es gebe keine Updates. Die Abnahme erkannte den fehlenden Zustandsbeleg.
+Eine getrennte, ausdrücklich engere Diagnose erhielt vollständige Updatezustände;
+deren Modellzusammenfassung ließ einen Treffer aus und erfand eine Kennung.
+Auch diese Diagnose zählt ausdrücklich nicht als erfolgreiche freie Chat-Abnahme.
+Keine HA-Änderungen, alle Originaldaten und die Testbereinigung sind geprüft.
 
-Der standardisierte Werkzeugdialog und wörtliche skalare Ergebnispfade bleiben
-implementiert: ausgeführte, aktuell schemagültige Schritte als zusammengehörige
-native Funktionsaufrufe/Werkzeugantworten; etwa `body.version` statt zusätzlicher
-Feldhülle. Die strukturierte letzte Zusammenfassung mit Zählwerten und Hash bleibt
-erhalten. Eine frühere isolierte Probe mit bereits gelesener Konfiguration wählte
-damit einen neuen gültigen Leseweg, deckte den hier fehlgeschlagenen Einstieg aber
-nicht ab. Sie zählt ausdrücklich nicht als erfolgreiche Chat-Abnahme.
+Die Nachkorrektur erweitert bestehende Auftrags- und Belegkomponenten: Unbekannte
+HA-Lesefragen werden semantisch eingeordnet; ausdrücklich angefragte Update-Daten
+benötigen vollständige aktuelle `update`-Zustände. Metadaten erfüllen diese
+Anforderung nicht. Der allgemeine Planer wählt weiterhin selbst HTTP oder
+WebSocket und seine Argumente; es gibt keinen festen Update-Abfrageplan.
+Ein Abschluss wird erst nach erfüllten Beleganforderungen angeboten. Unbelegte
+Modellaussagen werden nicht als Ausweichantwort übernommen. Eine reine
+Updateübersicht wird danach aus unveränderten Originalbelegen erzeugt, ohne einen
+weiteren Modellaufruf für den Abschluss zu benötigen.
+Nach verifizierten Änderungen benötigte frische Lesedaten begrenzen die
+angebotenen Schnittstellen nur am betroffenen Ziel und halten den Kontext klein.
+Verbrauchte Änderungslimits werden bereits bei der Planung berücksichtigt, sobald
+die bisherigen Effekte verifiziert sind. Offene Wirkungsprüfungen bleiben möglich.
+Eine letzte kleinere Strukturansicht und kompakte Beschriftungen geschlossener
+Belege halten auch längere Abläufe im bestehenden Kontextbudget.
+Ein nicht verifizierter Effekt bleibt ausdrücklich unverifiziert; fremde
+Schreibrechte oder künftige Wirkungsnachweise werden nicht vorweggenommen.
 
-Die Nachkorrektur vereinfacht semantisch identische Einzelalternativen im Schema
-und ergänzt genaue Fehlertypen aus ausschließlich schemaeigenen Feldnamen.
-Ungültige Werte werden weder entfernt noch ersetzt; Zugriffsregeln und endgültige
-Validierung bleiben unverändert. 146 gezielte Codec-, Transport-, API-/Worker-
-und Kompatibilitätstests bestehen. Zwei isolierte reale lokale Modellproben mit
-ausschließlich dem tatsächlichen Verbindungsbeleg wählen gültige neue Leseaufrufe:
-einmal direkt mit dem vereinfachten Schema, einmal nach dem aus dem Originalfehler
-abgeleiteten präzisen Korrekturhinweis. Dauer jeweils rund 26 Sekunden, keine
-Werkzeugausführung, unveränderte Originalbelege und keine Datenbankänderung.
-Die laufenden vollständigen Prüfungen, neue Lieferung und echte Chat-Abnahme
-stehen weiterhin aus.
+62 gezielte Kontext-/Native-/Verwaltungs-/Budgetprüfungen sowie 149 weitere
+Beleg-/Intent-/Filter-/API-/Kompatibilitätsprüfungen bestehen. Filter ohne zugehörigen
+Feldpfad werden nun vor dem Werkzeugaufruf abgewiesen; die interne Korrektur nennt
+den schemaeigenen Feldtyp. Eine reale isolierte Modellprobe erkannte einen solchen
+Formatfehler, führte aber ausdrücklich noch keine vollständige Anfrage aus.
+Eine rein abgeleitete Prüfung mit tatsächlich gespeicherten HA-Daten
+bindet alle vier verfügbaren Updates an die Originalzustände und enthält keine
+erfundene Kennung. Sie führt keine Modelle/Werkzeuge aus und verändert keine
+Datenbankzeile; der ursprüngliche falsche Modelltext bleibt erhalten. Der
+Gesamtlauf und die vollständige neue Lieferung sind noch in Prüfung.
+
+Auf `4cb1810` bestanden zusätzlich sieben echte lesende Fragen: SSH-Zugriff,
+Paperless-Übersicht mit Dokumentabruf, Proton-Tagesmails mit Gesendet-Abgleich
+sowie HA-Lampenübersicht und frischer Einschaltzustand. Daten und Konfiguration
+blieben erhalten. Die Paperless-Prüfung belegt Abruf/Quellenbezug, keine vollständige
+fachliche Prüfung jeder Aussage. Im getesteten Mail-Kollektiv fand sich kein
+positiver Antwortbezug; ein solcher Treffer bleibt live ungeprüft. Diese Belege
+werden nicht als Prüfung der neuen freien Update-Planung ausgegeben.
 
 Die vorausgegangenen Korrekturen bleiben erhalten: zielbezogene Anweisung,
 Anbieter-/UTF-8-Kontextbudget, strukturierte Versions-/Statussichten, hashgebundener

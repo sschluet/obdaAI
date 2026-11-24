@@ -1,9 +1,11 @@
 """Real API/worker/fit with synthetic model text and target transport only."""
 import asyncio
+import copy
 import json
 
 from hub import agent_reconcile
 from hub import agent_runtime as runtime
+from hub.agent_context import project
 from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentJob
 from hub.agent_tools import Rules
@@ -22,6 +24,7 @@ class SyntheticPlanner(FakeProviders):
         self.identifier, self.decisions = identifier, iter(decisions)
         self.inputs = []
         self.semantic_calls = 0
+        self.fixture_checks = []
 
     async def stream(self, parts, roles, *, external, grants):
         assert not external
@@ -31,6 +34,9 @@ class SyntheticPlanner(FakeProviders):
             self.semantic_calls += 1
             answer = RequestIntent(target_ids=[self.identifier], mode="admin", topic="system",
                 requirements=[Requirement(kind="system", integration_id=self.identifier),
+                              *([] if "Automation" in data["goal"] else [
+                                  Requirement(kind="entity_states", domain="update",
+                                              integration_id=self.identifier)]),
                               Requirement(kind="effect_postcondition",
                                           integration_id=self.identifier)]
             ).model_dump(mode="json")
@@ -39,10 +45,27 @@ class SyntheticPlanner(FakeProviders):
             assert {"http", "ha.websocket"}.issubset(data["tools"])
             has_effect = any(row["kind"] == "effect" and row["status"] == "succeeded"
                              for row in data["history"]) or bool(data.get("effect_ledger"))
-            assert ("http.verify" in data["tools"]) == has_effect
+            # Fresh goal evidence narrows the entire planner turn to reads, even
+            # though an earlier verified effect remains in the durable ledger.
+            read_only_turn = data.get("read_only") is True
+            self.fixture_checks.append({
+                "has_effect": has_effect, "read_only": read_only_turn,
+                "tools": sorted(data["tools"]),
+                "interface_read_only": [row.get("read_only") for row in data["interfaces"]],
+                "interface_methods": [row["rules"]["http_methods"]
+                                      for row in data["interfaces"]],
+            })
+            assert ("http.verify" in data["tools"]) == (has_effect and not read_only_turn)
+            if has_effect and read_only_turn:
+                assert data["interfaces"] and all(
+                    row.get("read_only") is True and row["rules"]["http_methods"] == ["GET"]
+                    for row in data["interfaces"])
+
             assert "http.upload" not in data["tools"]  # No bound source file to transfer.
             assert "$defs" in data["tools"]["http"]  # Real complete argument schema, not a stub.
             answer = next(self.decisions)
+            if answer["kind"] == "finish":
+                assert data["remaining_effects"] == 0 and read_only_turn
         yield json.dumps(answer)
 
 
@@ -77,10 +100,13 @@ def scenario(
         decision(identifier, "POST", "/api/services/backup/create",
                  body={"name": "synthetic-before-update"},
                  expected=("/api/states/sensor.backup", {"/body/state": "ready"})),
-        *[decision(identifier, "POST", "/api/services/update/install",
-                   body={"entity_id": "update.synthetic_" + str(i)},
-                   expected=("/api/states/update.synthetic_" + str(i), {"/body/state": "off"}))
-          for i in (1, 2)],
+        decision(identifier, "GET", "/api/states"),
+        *[operation for i in (1, 2) for operation in (
+            decision(identifier, "POST", "/api/services/update/install",
+                     body={"entity_id": "update.synthetic_" + str(i)},
+                     expected=("/api/states/update.synthetic_" + str(i), {"/body/state": "off"})),
+            decision(identifier, "GET", "/api/states"),
+        )],
         {"kind": "finish", "message": "Synthetic backup and both updates verified."},
     ]
     question = (
@@ -128,9 +154,16 @@ def scenario(
                     raise TimeoutError("Synthetic lost update response")
                 installed.add(args["body"]["entity_id"])
             return {"http_status": 200, "body": {}, "effect_verified": False}
+        current_states = copy.deepcopy(states)
+        for row in current_states:
+            if row["entity_id"] in installed:
+                row["state"] = "off"
+                row["attributes"]["installed_version"] = "2"
         body = (services if args["path"] == "/api/services"
-                else states if args["path"] == "/api/states"
+                else current_states if args["path"] == "/api/states"
                 else {"message": "API running."})
+        if args.get("projection") is not None:
+            body = project(body, args["projection"])
         return {"http_status": 200, "body": body, "effect_verified": False}
 
     monkeypatch.setattr(runtime, "invoke", invoke)
@@ -144,7 +177,8 @@ def scenario(
     assert model.semantic_calls == 1
     if confirmations < 3:
         errors = [s for s in result["steps"] if s["kind"] == "error"]
-        assert not errors, json.dumps(result, indent=2)
+        assert not errors, json.dumps({"steps": result, "fixture_checks": model.fixture_checks},
+                                      indent=2)
     with app.state.sessions() as db:
         frozen = json.loads(db.get(AgentJob, job_id).bindings)
         assert frozen["intent"]["mode"] == "admin"
@@ -161,7 +195,19 @@ def test_large_ha_admin_discovery_backup_and_multiple_updates_fit_and_verify(ha,
     effects = [step for step in result["steps"] if step["kind"] == "effect"]
     assert len(effects) == 3 and all(s["result"]["effect_verified"] for s in effects)
     assert len([call for call in calls if call[0] == "http.verify"]) == 3
-    assert len(model.inputs) == 7  # Semantic plus six actual next-step generations.
+    fresh_reads = [step for step in result["steps"] if step["kind"] == "read"
+                   and step["document"].get("arguments", {}).get("path") == "/api/states"]
+    assert len(fresh_reads) == 4  # Initial inventory plus an actual read after each effect.
+    for effect, fresh in zip(effects, fresh_reads[1:], strict=True):
+        assert effect["sequence"] < fresh["sequence"]
+        body = fresh["result"]["body"]
+        assert body["matched"] == body["returned"] == 2
+        assert {row["entity_id"] for row in body["items"]} == {
+            "update.synthetic_1", "update.synthetic_2"}
+    assert [row["state"] for row in fresh_reads[-1]["result"]["body"]["items"]] == ["off", "off"]
+    assert all(row["attributes"]["installed_version"] == "2"
+               for row in fresh_reads[-1]["result"]["body"]["items"])
+    assert len(model.inputs) == 10  # Semantic, discovery, effects, three fresh reads, finish.
     discovery = json.dumps(model.inputs[3])  # Next step after both real discovery reads.
     assert "update.synthetic_1" in discovery and "update.synthetic_2" in discovery
     assert any(step["document"].get("arguments", {}).get("verification")
@@ -177,7 +223,11 @@ def test_uncertain_update_stops_without_redispatch_or_next_update(ha, monkeypatc
     assert len(mutations) == 2
     assert mutations[-1][3] == {"entity_id": "update.synthetic_1"}
     assert not any(call[3] == {"entity_id": "update.synthetic_2"} for call in calls)
-    assert len(model.inputs) == 5  # Semantic; services, states, backup, first update.
+    state_reads = [step for step in result["steps"] if step["kind"] == "read"
+                   and step["document"].get("arguments", {}).get("path") == "/api/states"]
+    assert len(state_reads) == 2
+    assert all(row["state"] == "on" for row in state_reads[-1]["result"]["body"]["items"])
+    assert len(model.inputs) == 6  # Semantic; discovery, backup, fresh states, first update.
 
 
 
@@ -187,7 +237,7 @@ def test_tool_confirmation_is_repaired_without_user_input_or_extra_dispatch(ha, 
     assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
     assert len([call for call in calls if call[1] == "POST"]) == 3
     assert all(step["status"] != "awaiting_input" for step in result["steps"])
-    assert len(model.inputs) == 8
+    assert len(model.inputs) == 11
 
 
 def test_repeated_tool_confirmation_stops_bounded_without_target_changes(ha, monkeypatch):  # noqa: F811
@@ -208,7 +258,7 @@ def test_certain_admin_execution_confirmation_is_repaired_without_user_input(ha,
     assert result["status"] == "succeeded"
     assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
     assert len([call for call in calls if call[1] == "POST"]) == 3
-    assert len(model.inputs) == 8
+    assert len(model.inputs) == 11
 
 
 

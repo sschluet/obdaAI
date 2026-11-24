@@ -537,3 +537,56 @@ im JSON-Kompatibilitätsversuch bleiben getrennt in der vorhandenen Testhistorie
 nachvollziehbar; die öffentliche Ergebnisnachricht bleibt kompatibel. Ein solcher
 Test führt keine echte Integrationsaktion aus und belegt keine allgemeine
 Modellqualität oder erfolgreiche HA-Aktualisierung.
+
+
+## Beleggebundener Abschluss und Updateübersicht
+
+Unbekannte HA-Lesefragen erhalten einen semantischen Auftrag statt einer pauschalen
+Anforderung „irgendein Datenabruf“. Für ausdrücklich angefragte aktuelle
+Softwareupdates ergänzt die bestehende Intent-Struktur `entity_states` mit Domain
+`update`, ausschließlich an bereits ausgewählten freigegebenen HA-Profilen.
+Modus, Ziele und Effektberechtigungen werden dadurch nicht erweitert. Reine,
+eindeutige Übersichtsfragen erhalten eine kanonische Beleganforderung;
+Erklärungen, historische Fragen, andere Domänen und gemischte Aufträge behalten
+ihre zusätzliche Semantik. Der normale native Planer wählt die Werkzeuge.
+
+`agent_ha_evidence.py` prüft erfolgreiche unveränderte Zustandsbelege aus HTTP
+oder WebSocket. Vollständige Rohlisten und exakte vollständige Domainprojektionen
+sind möglich, einschließlich `fields=[]` mit vollständigen Zeilen. Engere,
+abgeschnittene, fehlerhafte oder lediglich abgeleitete Modellansichten belegen
+keine vollständige Übersicht. Status, Namen und Versionen stammen ausschließlich
+aus den tatsächlichen Zeilen. Alte Belege nach einer Änderung desselben Ziels
+belegen dessen aktuellen Zustand nicht; Änderungen fremder Ziele entwerten sie
+nicht. Unbekannte Zustände ergeben niemals einen pauschalen Nullbefund.
+
+Die gemeinsame Planung erhält `goal_evidence`; Abschlussfunktionen fehlen bei
+noch offenen Beleganforderungen. Fehlende aktuelle Lesedaten nach einer
+verifizierten Änderung verengen die Modellwerkzeuge vorübergehend am betroffenen
+Ziel auf Lesen. Die vollständigen Rechte bleiben an der bisherigen endgültigen
+Grenze geprüft; Kontextgrenzen werden nicht angehoben. Eine reine belegte
+Updateübersicht wird aus den Originalzuständen gerendert, damit eine gekürzte
+Modellsicht weder Updates auslässt noch Kennungen erfindet. Liegen die vollständigen
+Belege vor, endet diese klar abgegrenzte Leseübersicht ohne weiteren Modellaufruf;
+die Auswahl der tatsächlichen Werkzeuge bleibt beim allgemeinen Planer. Unbelegte Abschluss-
+oder Stopptexte werden nicht als Antwort ausgegeben. Ein allein noch fehlender
+Wirkungsnachweis darf einen ausdrücklich unverifizierten Abschluss ergeben;
+er ersetzt keine fehlenden Lesedaten und erlaubt keine unbestätigte Erfolgsmeldung.
+
+Sind die vorhandenen globalen oder zielbezogenen Änderungslimits verbraucht und
+alle dort ausgeführten Effekte verifiziert, bietet die Planung an diesem Ziel nur
+noch Lesen an. Damit werden nicht mehr ausführbare Schreibschemas nicht erneut
+in das Modellfenster geladen. Noch ausstehende Wirkungsprüfungen bleiben möglich;
+die endgültige Budgetkontrolle vor dem Versand bleibt unverändert.
+
+Bei knappem Kontext werden in der abgeleiteten Ansicht geschlossener verifizierter
+Schritte wiederholte Anzeigetexte und Zielbeschriftungen entfernt. Original-Hashes,
+Aktionsargumente und Wirkungsnachweise bleiben erhalten. Eine zusätzliche letzte
+Anpassungsstufe verkleinert nur die doppelte Strukturbeschreibung gelesener Daten;
+Ziele, Regeln, Werkzeugverträge und gespeicherte Originalbelege werden nicht gekürzt.
+
+Ein Projektionsfilter mit gesetztem `where_prefix` oder von `null` verschiedenem `where_equals`
+benötigt ausdrücklich `where_pointer`. Andernfalls lehnen sowohl das native Schema
+als auch die endgültige Werkzeugvalidierung den Aufruf ab; der Filter darf niemals
+still ignoriert werden. `false`, `0` und der leere String bleiben echte Filterwerte;
+ein expliziter Pointer kann auch auf `null` vergleichen. Sichere Typkorrekturen
+nennen nur schemaeigene Felder, keine privaten Argumentwerte.

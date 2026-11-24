@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-24",
-  "applicationCommit": "4cb1810",
+  "applicationCommit": "bbcb00b",
   "schema": "0050",
-  "tests": 3804,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45449809249",
+  "tests": 3816,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45459323240",
   "screenshots": [
     {
       "id": "compact-chat",
@@ -769,7 +769,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen erhalten vollständig typisierte Argumentobjekte; Zielregeln, dauerhafte Absichten und Nachprüfungen bleiben wirksam. Kontextbudget und sichere interne Formatkorrekturen sind begrenzt. Standardisierter Werkzeugdialog und wörtliche Ergebnissichten sind implementiert. Die reale freie HA-Abfrage scheitert noch an einem ungültigen Argumenttyp; genauere Schemas und interne Korrekturhinweise werden validiert. Reales SSH-Schreiben und HA-Lesechat wurden früher geprüft; umfassende autonome HA-Konfiguration und Updates bleiben offen. Unklare Änderungen werden nicht automatisch wiederholt.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen erhalten vollständig typisierte Argumentobjekte; Zielregeln, dauerhafte Absichten und Nachprüfungen bleiben wirksam. Kontextbudget und sichere interne Formatkorrekturen sind begrenzt. Standardisierter Werkzeugdialog, wörtliche Ergebnissichten und präzise Typkorrekturen sind implementiert. Eine reale freie HA-Abfrage lieferte noch eine unbelegte Update-Aussage; vollständige Zustandsbelege und beleggebundene Abschlüsse werden validiert. Reales SSH-Schreiben und HA-Lesechat wurden früher geprüft; umfassende autonome HA-Konfiguration und Updates bleiben offen. Unklare Änderungen werden nicht automatisch wiederholt.",
           "status": "limited"
         }
       ]

@@ -36,7 +36,7 @@ def scenario(
         config.update(model=cfg.local_model, base_url=cfg.local_base_url)
         provider.config = json.dumps(config)
         db.commit()
-    model_requests, target_calls = [], []
+    model_requests, target_calls, model_failures = [], [], []
     backup, installed = False, False
     initial_projection = ([{'method': 'GET', 'path': '/api/config',
                            'projection': {'fields': ['/version'], 'limit': 1}}]
@@ -49,11 +49,13 @@ def scenario(
          'verification': {'path': '/api/states/sensor.backup',
                           'expected': {'/body/state': 'ready'},
                           'timeout_seconds': 1, 'interval_seconds': 1}},
+        {'method': 'GET', 'path': '/api/states'},
         {'method': 'POST', 'path': '/api/services/update/install',
          'body': {'entity_id': 'update.synthetic'},
          'verification': {'path': '/api/states/update.synthetic',
                           'expected': {'/body/state': 'off'},
                           'timeout_seconds': 1, 'interval_seconds': 1}},
+        {'method': 'GET', 'path': '/api/states'},
         None,
     ])
     original = httpx.AsyncClient
@@ -73,7 +75,11 @@ def scenario(
         # Even the first native step sees the real bootstrap receipt in the
         # provider's conversation protocol, rather than a second opaque history.
         messages = body['messages'][2:]
-        assert messages and len(messages) % 2 == 0
+        if len(model_requests) == 2:
+            assert messages
+        # Tight later contexts may retain a derived observation instead of
+        # reconstructing calls whose arguments were already clipped.
+        assert len(messages) % 2 == 0
         for call, receipt in zip(messages[::2], messages[1::2], strict=True):
             assert call['role'] == 'assistant' and len(call['tool_calls']) == 1
             assert receipt['role'] == 'tool'
@@ -107,6 +113,12 @@ def scenario(
             assert data['read_only'] and not data['allow_finish']
         directive = next(directives)
         names = [row['function']['name'] for row in body['tools']]
+        if directive is None:
+            final = json.loads(body['messages'][1]['content'])
+            assert final['remaining_effects'] == 0 and final['read_only']
+            assert not any(n.endswith('_http_verify') for n in names)
+            assert '"POST"' not in json.dumps([
+                row['function']['parameters'] for row in body['tools']])
         name = 'finish_run' if directive is None else next(n for n in names if n.endswith('_http'))
         arguments = ({'message': 'Synthetic backup and pending update verified.'}
                      if directive is None else {'arguments': directive})
@@ -115,8 +127,25 @@ def scenario(
         return httpx.Response(200, text=event(fragment(name, text[:midpoint]))
                               + event(fragment(arguments=text[midpoint:])) + 'data: [DONE]\n\n')
 
-    monkeypatch.setattr(httpx, 'AsyncClient',
-                        lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(model)))
+    def checked_model(request):
+        try:
+            return model(request)
+        except (AssertionError, StopIteration) as error:
+            import traceback
+
+            body = json.loads(request.content)
+            model_failures.append({
+                'type': type(error).__name__,
+                'line': traceback.extract_tb(error.__traceback__)[-1].lineno,
+                'request_count': len(model_requests),
+                'functions': [t['function']['name'] for t in body.get('tools', [])],
+                'response_format': 'response_format' in body,
+                'goal_evidence': json.loads(body['messages'][1]['content']).get('goal_evidence'),
+            })
+            raise
+
+    monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs: original(
+        **kwargs, transport=httpx.MockTransport(checked_model)))
     monkeypatch.setattr(Providers, '_target', lambda *_: (
         'http://127.0.0.1/v1/chat/completions', {'Host': 'synthetic-model'}, {}, ''))
 
@@ -152,8 +181,13 @@ def scenario(
                 {'domain': 'update', 'services': {'install': {'fields': {'entity_id': {}}}}},
             ]
         elif args['path'] == '/api/states':
-            payload = [{'entity_id': 'update.synthetic', 'state': 'on', 'attributes': {
-                'installed_version': '1', 'latest_version': '2'}}]
+            payload = [{'entity_id': 'update.synthetic', 'state': 'off' if installed else 'on',
+                        'attributes': {'installed_version': '2' if installed else '1',
+                                       'latest_version': '2'}}]
+            if args.get('projection') is not None:
+                from hub.agent_context import project
+
+                payload = project(payload, args['projection'])
         return {'http_status': 200, 'body': payload, 'effect_verified': False}
 
     monkeypatch.setattr(runtime, 'invoke', invoke)
@@ -161,6 +195,7 @@ def scenario(
     job_id = start(ha, GOAL, research_allowed=False)
     asyncio.run(runtime.execute_agent(app.state.sessions, cfg, Providers(cfg), job_id))
     result = client.get('/api/agent-runs/' + job_id).json()
+    assert not model_failures, model_failures
     before_restart = (len(model_requests), list(target_calls))
     asyncio.run(runtime.execute_agent(app.state.sessions, cfg, Providers(cfg), job_id))
     assert (len(model_requests), target_calls) == before_restart
@@ -182,7 +217,7 @@ def test_true_native_general_administration_loop_reads_backs_up_updates_and_veri
 ):
     result, requests, calls = scenario(ha, monkeypatch, tmp_path)
     assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
-    assert len(requests) == 6 and len([r for r in requests if 'tools' in r]) == 5
+    assert len(requests) == 8 and len([r for r in requests if 'tools' in r]) == 7
     assert [call[2] for call in calls if call[1] == 'POST'] == [
         '/api/services/backup/create', '/api/services/update/install']
     effects = [step for step in result['steps'] if step['kind'] == 'effect']
@@ -198,7 +233,7 @@ def test_native_general_loop_stops_on_uncertain_update_without_native_or_target_
 ):
     result, requests, calls = scenario(ha, monkeypatch, tmp_path, uncertain=True)
     assert result['status'] == 'uncertain', result
-    assert len(requests) == 5 and len([r for r in requests if 'tools' in r]) == 4
+    assert len(requests) == 6 and len([r for r in requests if 'tools' in r]) == 5
     assert len([call for call in calls if call[2] == '/api/services/update/install']) == 1
     assert not [step for step in result['steps'] if step['kind'] == 'feedback']
 
@@ -208,7 +243,7 @@ def test_native_unknown_function_gets_safe_feedback_before_any_target_dispatch(
 ):
     result, requests, calls = scenario(ha, monkeypatch, tmp_path, invalid_first=True)
     assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
-    assert len(requests) == 7
+    assert len(requests) == 9
     feedback = [step for step in result['steps'] if step['kind'] == 'feedback']
     assert len(feedback) == 1 and feedback[0]['document']['issues'] == [{
         'type': 'native_call_invalid', 'diagnostics': ['native_unknown_function']}]
@@ -224,7 +259,7 @@ def test_native_admin_recovers_projection_before_authorized_backup_and_update(
 ):
     result, requests, calls = scenario(ha, monkeypatch, tmp_path, projection_failure_first=True)
     assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
-    assert len(requests) == 7
+    assert len(requests) == 9
     failed = [step for step in result['steps'] if step['kind'] == 'read'
               and step['status'] == 'failed']
     assert len(failed) == 1 and failed[0]['result']['failure_phase'] == 'projection'
@@ -241,7 +276,7 @@ def test_invalid_read_verification_gets_precise_feedback_without_target_dispatch
         ha, monkeypatch, tmp_path, invalid_verification_first=True,
     )
     assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
-    assert len(requests) == 7
+    assert len(requests) == 9
     assert len([step for step in result['steps'] if step['kind'] == 'feedback']) == 1
     assert not [call for call in calls if call[2] == '/api/config']
     assert len([call for call in calls if call[1] == 'POST']) == 2

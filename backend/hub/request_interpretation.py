@@ -131,7 +131,7 @@ async def interpret(
                 chunks.append(chunk)
                 if sum(len(item) for item in chunks) > 12000:
                     raise ValueError("Intent output exceeded its bound")
-        result = accept_semantic(json.loads("".join(chunks)), profiles)
+        result = accept_semantic(json.loads("".join(chunks)), profiles, goal=goal)
         accepted = result.model_dump(mode="json")
         success = True
         return result

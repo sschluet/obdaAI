@@ -591,6 +591,17 @@ def _schema_issues(validator: Any, arguments: Any) -> list[str]:
                     value = "required:" + field
                     if value not in generic and len(generic) < 6:
                         generic.append(value)
+                    shape = error.schema.get("properties", {}).get(field, {})
+                    expected = shape.get("type") if isinstance(shape, dict) else None
+                    choices = [expected] if isinstance(expected, str) else expected
+                    # Conditional dependencies may strengthen a nullable field
+                    # to a required concrete type. Preserve the bounded generic
+                    # missing-field diagnostics for ordinary object schemas.
+                    if (type_applicable and "then" in error.absolute_schema_path
+                            and isinstance(choices, list) and choices
+                            and all(isinstance(item, str) and item in known_types
+                                    for item in choices)):
+                        field_types.setdefault(field, set()).update(choices)
         # Context diagnostics are bounded and remain schema-owned. Never use
         # error.message/path/instance to form field names or copy actual values.
         children = list(islice(error.context, 128))

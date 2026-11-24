@@ -44,6 +44,7 @@ verifiziert nichts. VOR Updates/Neustart/asynchronen Änderungen verification bi
 Danach nur lesend Sollzustand prüfen, auch nach Verbindungsabbruch; nie erneut ändern.
 Große Antworten: projection mit items_path (JSON-Pointer zur Liste, ""=Wurzelliste),
 where_pointer und where_equals ODER where_prefix, fields (relative JSON-Pointer), limit.
+Ein gesetzter Filter benötigt where_pointer; null würde den Filter nicht anwenden.
 Unbekannte Struktur zuerst ohne projection lesen; nur beobachtete Listen/Felder wählen.
 truncated: gekürzte Modellsicht, kein teilweise ausgeführter Aufruf; gezielt nachlesen.
 projection_error: Auswahlfehler,

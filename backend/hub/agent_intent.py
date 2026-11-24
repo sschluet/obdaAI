@@ -170,6 +170,151 @@ def light_answer_kind(goal: str) -> str | None:
     return None
 
 
+_UPDATE_NOUN = re.compile(r"\b(?:(?:software|firmware)[ -]?)?updates?\b|\baktualisierungen\b", re.I)
+_UPDATE_HISTORY = re.compile(
+    r"\b(?:gestern|damals|früher|frueher|historisch\w*|verlauf|letzte[rsnm]?\s+(?:woche|monat|jahr)|"
+    r"yesterday|histor\w*|previous|last\s+(?:week|month|year)|changelog|release[ -]notes)\b",
+    re.I,
+)
+
+
+def _update_inventory_goal(goal: str) -> bool:
+    """Closed grounding cue; ambiguous language still uses semantic planning."""
+    if (
+        not isinstance(goal, str)
+        or not _UPDATE_NOUN.search(goal)
+        or _UPDATE_HISTORY.search(goal)
+        or _EXPLAIN.search(goal)
+        or re.search(r"\bupdates?[ -](?:services?|api|schema|schnittstelle\w*)\b", goal, re.I)
+    ):
+        return False
+    availability = re.search(
+        r"\b(?:aussteh\w*|verfügbar\w*|verfuegbar\w*|ansteh\w*|pending|"
+        r"available|offene?\b|up[ -]to[ -]date)\b",
+        goal,
+        re.I,
+    )
+    direct = re.search(
+        r"\b(?:welche|was\s+für|was\s+fuer|wie\s+viele|zeig\w*|liste\w*|which|what|"
+        r"how\s+many|show|list)\s+(?:(?:alle|meine|unsere|die|all|my|our|the|"
+        r"ausstehenden|verfügbaren|verfuegbaren|available|pending|software|firmware)\s+){0,4}"
+        r"(?:updates?|aktualisierungen)\b",
+        goal,
+        re.I,
+    )
+    reading = _READ.search(goal) or re.search(r"^(?:gibt es|are there|is there)\b", goal, re.I)
+    return bool(reading and (availability or direct))
+
+
+def normalize_goal(
+    intent: RequestIntent | Mapping[str, Any],
+    profiles: Mapping[str, Any],
+    goal: str,
+) -> RequestIntent:
+    """Strengthen goal evidence only; never select a target or grant an effect."""
+    selected = RequestIntent.model_validate(intent)
+    if (
+        selected.mode not in {"observe", "admin"}
+        or selected.confidence != "certain"
+        or selected.freshness != "current"
+        or not _update_inventory_goal(goal)
+    ):
+        return selected
+    rows = profile_map(profiles)
+    requirements = list(selected.requirements)
+    pure = (
+        selected.read_only
+        and len(selected.target_ids) == 1
+        and not selected.research
+        and not selected.followup
+        and _pure_update_overview_goal(goal)
+    )
+    for identifier in selected.target_ids:
+        row = rows.get(identifier)
+        if (
+            row is None
+            or getattr(row, "kind", "") != "home_assistant"
+            or getattr(row, "enabled", False) is not True
+        ):
+            continue
+        if pure and all(
+            item.integration_id == identifier
+            and (
+                item.kind in {"system", "unspecified", "connection"}
+                or item.kind == "entity_states"
+                and item.domain in {"update", "updates"}
+            )
+            for item in requirements
+        ):
+            requirements = [
+                Requirement(kind="entity_states", domain="update", integration_id=identifier)
+            ]
+            continue
+        if not any(
+            item.kind == "entity_states"
+            and item.domain == "update"
+            and item.integration_id == identifier
+            for item in requirements
+        ):
+            requirements.append(
+                Requirement(kind="entity_states", domain="update", integration_id=identifier)
+            )
+    return RequestIntent.model_validate(
+        {**selected.model_dump(), "requirements": [r.model_dump() for r in requirements]}
+    )
+
+
+def _pure_update_overview_goal(goal: str) -> bool:
+    if not _update_inventory_goal(goal):
+        return False
+    text = " ".join(goal.casefold().strip(" .?!").split())
+    text = re.sub(r"^(?:bitte|please)\s+", "", text)
+    noun = r"(?:updates|aktualisierungen|software[ -]?updates)"
+    location = r"(?:(?:in|für|fuer|for) (?:meinem |unserem |my |our )?(?:home ?assistant|ha))"
+    qualifiers = (
+        r"(?:(?:alle|meine|unsere|all|my|our|ausstehenden|verfügbaren|"
+        r"verfuegbaren|available|pending) )*"
+    )
+    return any(
+        re.fullmatch(pattern, text)
+        for pattern in [
+            rf"(?:welche|was für|was fuer|wie viele) {qualifiers}{noun}(?: {location})?"
+            rf"(?: (?:stehen|sind|gibt es)(?: {location})? "
+            rf"(?:aus|an|verfügbar|verfuegbar|offen|ausstehend)(?: {location})?)?",
+            rf"(?:zeige|zeig|liste)(?: mir)? {qualifiers}{noun}(?: {location})?(?: auf)?",
+            rf"(?:show|list)(?: me)? {qualifiers}{noun}(?: {location})?",
+            rf"(?:which|what|how many) {qualifiers}{noun}(?: are)? "
+            rf"(?:available|pending)(?: {location})?",
+        ]
+    )
+
+
+def update_overview_goal(goal: str, intent: RequestIntent | Mapping[str, Any]) -> bool:
+    """Pure overview renderer eligibility; caller must also check the HA profile kind."""
+    selected = RequestIntent.model_validate(intent)
+    if (
+        not selected.read_only
+        or selected.freshness != "current"
+        or selected.research
+        or selected.followup
+        or len(selected.target_ids) != 1
+        or not _update_inventory_goal(goal)
+    ):
+        return False
+    if not any(
+        item.kind == "entity_states" and item.domain == "update" for item in selected.requirements
+    ):
+        return False
+    if any(
+        item.kind not in {"entity_states", "system", "unspecified", "connection"}
+        or item.kind == "entity_states"
+        and item.domain != "update"
+        for item in selected.requirements
+    ):
+        return False
+    return _pure_update_overview_goal(goal)
+
+
 def infer(
     goal: str, profiles: Mapping[str, Any], *, implicit_target: bool = False
 ) -> RequestIntent | None:
@@ -290,6 +435,10 @@ def infer(
                               else ("documents", "documents"))
     elif any(getattr(rows[i], "kind", "") == "ssh" for i in ids):
         topic, requirement = "system", "system"
+    if not change and requirement == "unspecified" and any(
+        getattr(rows[identifier], "kind", "") == "home_assistant" for identifier in ids
+    ):
+        return None  # Unknown HA observations require goal-specific semantic evidence.
     answer_kind: Any = "general"
     if requirement == "entity_states" and domain == "light" and not change:
         answer_kind = light_answer_kind(text)
@@ -326,11 +475,11 @@ def infer(
                                             integration_id=identifier))
         if change:
             requirements.append(Requirement(kind="effect_postcondition", integration_id=identifier))
-    return RequestIntent(
+    return normalize_goal(RequestIntent(
         target_ids=ids, mode="admin" if change else "observe", topic=topic,
         answer_kind=answer_kind, requirements=requirements,
         research=bool(_RESEARCH.search(text)), followup=bool(_FOLLOWUP.search(text)),
-    )
+    ), profiles, goal)
 
 
 def semantic_request(
@@ -391,13 +540,17 @@ def semantic_request(
             "admin MUST include effect_postcondition for each changed target AND separate "
             "requirements for all requested reads, including reads on that same target.\n"
             "Evidence kinds: connection proves only access; entity_states needs the requested "
-            "entity domain such as light/sensor/climate/switch; documents means search/list "
+            "entity domain such as light/sensor/climate/switch/update; documents means search/list "
             "metadata; "
             "document_content means reading actual document text or answering from its content; "
             "mail_content needs message content; mail_reply means whether messages were already "
             "answered and needs sent/reply relationship evidence; system needs host/service "
             "information; unspecified is another data read; effect_postcondition is a verified "
-            "state change. domain is nonempty ONLY for entity_states, otherwise empty string.\n"
+            "state change. domain is nonempty ONLY for entity_states, otherwise empty string. "
+            "Home Assistant software-update availability requires entity_states domain update: "
+            "update.* on means available, off means current, unknown/unavailable is not current. "
+            "Installed-version/configuration or Supervisor metadata alone does not establish "
+            "pending updates or that every add-on is current.\n"
             "answer_kind: light_inventory for ONLY listing/counting existing light entities; "
             "light_on_cohort for ONLY which lights are on. Any additional goal or filter uses "
             "general. document_inventory for ONLY a bounded listing/overview of document "
@@ -435,6 +588,8 @@ def semantic_request(
                         "binary_sensor": "boolean readings and indications",
                         "climate": "thermostat and heating-controller entities",
                         "switch": "switchable outlets and relays",
+                        "update": "software-update entities; on=update available, off=current; "
+                                  "unknown/unavailable is not proof of no updates",
                     },
                     "domain_is": "actual entity_id namespace, not a broad subject category",
                 },
@@ -452,7 +607,9 @@ def semantic_request(
     }
 
 
-def accept_semantic(payload: Any, profiles: Mapping[str, Any]) -> RequestIntent:
+def accept_semantic(
+    payload: Any, profiles: Mapping[str, Any], *, goal: str | None = None,
+) -> RequestIntent:
     required = {"target_ids", "mode", "topic", "answer_kind", "requirements", "research",
                 "followup", "freshness", "confidence"}
     if not isinstance(payload, dict) or not required <= set(payload):
@@ -480,7 +637,7 @@ def accept_semantic(payload: Any, profiles: Mapping[str, Any]) -> RequestIntent:
         or {item.integration_id for item in intent.requirements} != set(intent.target_ids)
     ):
         raise ValueError("Each observed target needs a goal-specific evidence requirement")
-    return intent
+    return normalize_goal(intent, profiles, goal) if goal is not None else intent
 
 
 def effect_target_allowed(intent: Mapping[str, Any] | None, identifier: str) -> bool:
@@ -509,6 +666,14 @@ def adequacy(intent: RequestIntent | Mapping[str, Any], history: Sequence[Any]) 
     selected = RequestIntent.model_validate(intent)
     missing = []
     for requirement in selected.requirements:
+        if requirement.kind == "entity_states" and requirement.domain == "update":
+            from hub.agent_ha_evidence import evidence_satisfied
+
+            if not evidence_satisfied(
+                history, requirement.integration_id, "update", require_complete=True
+            ):
+                missing.append(requirement.model_dump())
+            continue
         satisfied = False
         for step in history:
             if getattr(step, "status", None) != "succeeded":
@@ -603,6 +768,73 @@ def adequacy(intent: RequestIntent | Mapping[str, Any], history: Sequence[Any]) 
                 break
         if not satisfied:
             missing.append(requirement.model_dump())
-    return {"satisfied": not missing, "missing": missing,
-            "instruction": "Obtain the missing goal-specific evidence before claiming completion. "
-            "A successful connection test does not answer an inventory/content question."}
+    update_targets = list(
+        dict.fromkeys(
+            item.integration_id
+            for item in selected.requirements
+            if item.kind == "entity_states" and item.domain == "update"
+        )
+    )
+    instruction = (
+        "Obtain the missing goal-specific evidence before claiming completion. "
+        "A successful connection test does not answer an inventory/content question."
+    )
+    if update_targets:
+        instruction += (
+            " Update inventory requires complete domain evidence; partial/per-entity samples "
+            "do not establish complete availability. Installed-version/configuration or "
+            "Supervisor metadata alone does not prove update inventory."
+        )
+    return {
+        "satisfied": not missing,
+        "missing": missing,
+        "instruction": instruction,
+        **(
+            {
+                "complete_domain_evidence": [
+                    {
+                        "integration_id": identifier,
+                        "domain": "update",
+                        "required": "complete_domain_snapshot",
+                    }
+                    for identifier in update_targets
+                ]
+            }
+            if update_targets
+            else {}
+        ),
+    }
+
+
+
+def post_effect_read_targets(
+    intent: RequestIntent | Mapping[str, Any] | None,
+    history: Sequence[Any],
+) -> set[str]:
+    """Targets needing read evidence after their own verified effect; grants nothing."""
+    if intent is None:
+        return set()
+    selected = RequestIntent.model_validate(intent)
+    reads = [item for item in selected.requirements if item.kind != "effect_postcondition"]
+    if not reads:
+        return set()
+    read_view = RequestIntent.model_validate(
+        {**selected.model_dump(), "requirements": [item.model_dump() for item in reads]}
+    )
+    missing = {item["integration_id"] for item in adequacy(read_view, history)["missing"]}
+    verified_targets = set()
+    for step in history:
+        if getattr(step, "kind", None) != "effect" or getattr(step, "status", None) != "succeeded":
+            continue
+        try:
+            document, result = json.loads(step.document), json.loads(step.result)
+        except (AttributeError, TypeError, ValueError):
+            continue
+        if (
+            isinstance(document, dict)
+            and isinstance(result, dict)
+            and result.get("effect_verified") is True
+            and document.get("integration_id") in selected.target_ids
+        ):
+            verified_targets.add(document["integration_id"])
+    return missing & verified_targets

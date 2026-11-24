@@ -112,12 +112,27 @@ class Rules(Strict):
 
 
 class Projection(Strict):
+    model_config = ConfigDict(json_schema_extra={"allOf": [{
+        "if": {"anyOf": [
+            {"required": [key], "properties": {key: {"not": {"type": "null"}}}}
+            for key in ("where_prefix", "where_equals")
+        ]},
+        "then": {"required": ["where_pointer"],
+                 "properties": {"where_pointer": {"type": "string"}}},
+    }]})
     items_path: str = Field(default="", max_length=1000)
     where_pointer: str | None = Field(default=None, max_length=1000)
     where_equals: Any = None
     where_prefix: str | None = Field(default=None, max_length=200)
     fields: list[str] = Field(default_factory=list, max_length=32)
     limit: int = Field(default=30, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def filter_pointer(self) -> "Projection":
+        if (self.where_prefix is not None or self.where_equals is not None
+                ) and self.where_pointer is None:
+            raise ValueError("Projection filter requires where_pointer")
+        return self
 
 
 class ResearchCall(Strict):

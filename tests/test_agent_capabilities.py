@@ -15,13 +15,51 @@ from hub.agent_tools import Rules, validate_tool
 
 
 @pytest.mark.parametrize("goal", [
-    "Welche Lampen habe ich in Home Assistant?", "Welche davon sind an?",
-    "Zeige meine Sensoren", "Which devices are available?", "What is the current status?",
+    "Welche Lampen habe ich in Home Assistant?", "Zeige meine Sensoren",
     "Welche Schalter habe ich?", "Which switch is on?",
 ])
 def test_ha_inventory_lowers_authority_without_selecting_a_tool(goal):
     assert ha_inventory_question(goal, [profile()])
     assert not ha_inventory_question(goal, [profile(), profile("ssh")])
+
+
+@pytest.mark.parametrize("goal", ["Which devices are available?", "What is the current status?"])
+def test_unknown_ha_read_uses_explicit_semantic_evidence_not_inventory_shortcut(goal):
+    from hub.agent_intent import (
+        RequestIntent,
+        Requirement,
+        accept_semantic,
+        infer,
+        semantic_request,
+    )
+
+    selected = {"ha": profile()}
+    assert not ha_inventory_question(goal, list(selected.values()))
+    assert infer(goal, selected, implicit_target=True) is None
+    request = semantic_request(goal, selected)
+    assert request["data"]["goal"] == goal
+    payload = RequestIntent(target_ids=["ha"], mode="observe", topic="system",
+                            requirements=[Requirement(kind="system", integration_id="ha")])
+    interpreted = accept_semantic(payload.model_dump(), selected, goal=goal)
+    assert interpreted.read_only and interpreted.requirements == [
+        Requirement(kind="system", integration_id="ha")]
+    assert "tool" not in interpreted.model_dump()
+    assert "arguments" not in interpreted.model_dump()
+
+
+def test_unbound_anaphoric_inventory_is_not_a_standalone_ha_shortcut():
+    from hub.agent_intent import RequestIntent, accept_semantic, infer
+
+    goal = "Welche davon sind an?"
+    selected = {"ha": profile()}
+    assert not ha_inventory_question(goal, list(selected.values()))
+    assert infer(goal, selected, implicit_target=True) is None
+    # A missing displayed cohort cannot manufacture a fresh inventory or target.
+    payload = RequestIntent(target_ids=[], mode="unknown", topic="inventory",
+                            confidence="uncertain")
+    unresolved = accept_semantic(payload.model_dump(), selected, goal=goal)
+    assert unresolved.mode == "unknown" and unresolved.confidence == "uncertain"
+    assert not unresolved.target_ids and not unresolved.requirements
 
 
 @pytest.mark.parametrize("goal", [

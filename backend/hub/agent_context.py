@@ -335,11 +335,30 @@ def _observation(
         summary["result_shape"] = _shape(observed, width=width)
         if isinstance(observed, dict) and "body" in observed:
             summary["body_shape"] = _shape(observed["body"], width=width)
+        if metadata_limit <= 600:
+            # Final derived structure preview: typed facts and the actual result
+            # remain available independently; avoid repeating their full shape.
+            for key in ("result_shape", "body_shape"):
+                if key in summary:
+                    summary[key] = {"type": summary[key]["type"]}
         if len(json.dumps(summary, ensure_ascii=False)) <= metadata_limit:
             break
     else:
-        if "semantic_view" in summary:
-            summary.pop("semantic_view")
+        # Nested shape fields duplicate the separate body/semantic views. At the
+        # final budget stage drop only this derived structure, not literal facts.
+        for key in ("result_shape", "body_shape"):
+            if isinstance(summary.get(key), dict):
+                summary[key] = {name: value for name, value in summary[key].items()
+                                if name != "fields"}
+                if metadata_limit <= 600 and summary[key].get("key_names_truncated") is False:
+                    summary[key].pop("key_names_truncated")
+        if (len(json.dumps(summary, ensure_ascii=False)) > metadata_limit
+                and isinstance(summary.get("result_shape"), dict)):
+            summary["result_shape"] = {"type": summary["result_shape"]["type"]}
+        if len(json.dumps(summary, ensure_ascii=False)) > metadata_limit:
+            if metadata_limit <= 600:
+                raise AgentContextLimitError("Observation facts exceed the model context limit")
+            summary.pop("semantic_view", None)
         if len(json.dumps(summary, ensure_ascii=False)) > metadata_limit:
             raise AgentContextLimitError("Observation metadata exceeds the model context limit")
     encoded = json.dumps(observed, ensure_ascii=False, separators=(",", ":"))
@@ -457,8 +476,25 @@ def _verified_terminal(entry: dict[str, Any]) -> bool:
                  and result.get("verification_passed") is True))
 
 
+
+def _terminal_document(document: dict[str, Any], *, compact: bool) -> dict[str, Any]:
+    """Drop repeated display prose only; action and proof data stay literal."""
+    result: dict[str, Any] = _effect_payload(document, include_hash=False)
+    if not compact:
+        return result
+    if isinstance(result.get("message"), str):
+        result.pop("message")
+    target = result.get("target")
+    if isinstance(target, dict):
+        display = {"name", "url", "port", "username"}
+        result["target"] = {key: value for key, value in target.items() if key not in display}
+    # The enclosing ledger already marks model_view_only and binds the original
+    # document hash; no repeated omission marker is needed on every document.
+    return result
+
+
 def _effect_index(
-    entries: list[dict[str, Any]], latest: dict[str, Any] | None,
+    entries: list[dict[str, Any]], latest: dict[str, Any] | None, *, compact: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Index only explicitly verified terminal effects, never unresolved writes.
 
@@ -475,7 +511,7 @@ def _effect_index(
             continue
         ledger.append({
             **{key: value for key, value in entry.items() if key not in {"document", "result"}},
-            "document": _effect_payload(document, include_hash=False),
+            "document": _terminal_document(document, compact=compact),
             "result": _effect_payload(result, include_hash=False),
             "document_sha256": _receipt_hash(document),
             "arguments_sha256": _receipt_hash(document.get("arguments", {})),
@@ -511,7 +547,8 @@ def fit(
     )
     if latest_input is not None:
         result["latest_input"] = latest_input
-    for size in (6000, 3000, 1500, 600, 180):
+    stages = [(size, None) for size in (6000, 3000, 1500, 600, 180)] + [(180, 600)]
+    for size, metadata_override in stages:
         if latest is not None:
             protected = (
                 _projected_mail_observation(latest)
@@ -520,7 +557,9 @@ def fit(
             result["latest_observation"] = protected or _observation(
                 latest,
                 result_limit=min(size, 1500) if max_bytes is not None else 1500,
-                metadata_limit=1000 if max_bytes is not None else 2500,
+                metadata_limit=metadata_override or (
+                    1000 if max_bytes is not None or size <= 180 else 2500
+                ),
             )
         result["private_context"] = view(data.get("private_context", []), size)
 
@@ -598,7 +637,8 @@ def fit(
             return view(document, budget)
 
         retained, index = (_read_index(original, latest) if size <= 600 else (original, []))
-        retained, ledger = (_effect_index(retained, latest) if size <= 600 else (retained, []))
+        retained, ledger = (_effect_index(retained, latest, compact=size <= 180)
+                            if size <= 600 else (retained, []))
         if ledger:
             result["effect_ledger"] = ledger
         else:

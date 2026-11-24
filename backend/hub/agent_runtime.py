@@ -1410,6 +1410,10 @@ def create_job(
                  if conversation_id else [])
     intent = (RequestIntent.model_validate(resolved_intent) if resolved_intent is not None
               else agent_capabilities.request_intent(goal, available, prior_target_ids=prior_ids))
+    if intent is not None:
+        from hub.agent_intent import normalize_goal
+
+        intent = normalize_goal(intent, available, goal)
     if intent and not set(intent.target_ids) <= set(available):
         raise HTTPException(409, "Auftrag verweist auf nicht ausgewählte Verbindungen")
 
@@ -1611,6 +1615,19 @@ async def generate(
         legacy = fit(native.original_data, native.original_instruction, chars, max_bytes=byte_limit)
         return await _generate_once(factory, cfg, providers, job_id, native.original_instruction,
                                     legacy, provider_binding=error.binding)
+
+
+def unverified_effect_completion(proof: dict[str, Any], history: Sequence[Any]) -> bool:
+    """Permit only an unverified terminal report, never waive missing read evidence."""
+    missing = proof.get("missing", [])
+    if not missing or any(item.get("kind") != "effect_postcondition" for item in missing):
+        return False
+    actual = {
+        json.loads(step.document).get("integration_id") for step in history
+        if step.kind == "effect" and step.status == "succeeded"
+        and not json.loads(step.result).get("effect_verified")
+    }
+    return all(item.get("integration_id") in actual for item in missing)
 
 
 def fit_native_plan(
@@ -2353,7 +2370,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     job = db.get(AgentJob, job_id)
                     assert job
                     profiles = planning_profiles(job, gate(db, cfg, job))
-                    intent = accept_semantic(raw_intent, profiles)
+                    intent = accept_semantic(raw_intent, profiles, goal=job.goal)
                     frozen = json.loads(job.bindings)
                     frozen["intent"] = intent.model_dump(mode="json")
                     if intent.read_only:
@@ -2456,6 +2473,20 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         )
                         db.commit()
                         return
+                    if (not private_read and frozen_intent and len(profiles) == 1
+                            and next(iter(profiles.values()))[0].kind == "home_assistant"):
+                        from hub.agent_ha_evidence import summary as update_summary
+                        from hub.agent_intent import adequacy, update_overview_goal
+
+                        if (update_overview_goal(job.goal, frozen_intent)
+                                and adequacy(frozen_intent, history)["satisfied"]):
+                            rendered = update_summary(history, next(iter(profiles)), "update")
+                            if rendered is not None:
+                                # This closed factual overview needs no further model call.
+                                # Tool selection was still performed by the general planner.
+                                complete(db, job, "observed", rendered)
+                                db.commit()
+                                return
                     if private_mail_read and prepare_mail_overview(db, cfg, job, profiles, history):
                         db.commit()  # Durable application intent before any transport dispatch.
                         if job.status != "running":
@@ -2505,10 +2536,37 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             db.commit()
                             return
                         summarize_only = True  # One final answer from existing evidence, no tools.
+                    from hub.agent_intent import post_effect_read_targets
+
+                    refresh_targets = (post_effect_read_targets(frozen_intent, history)
+                                       if frozen_intent and not private_read else set())
+                    spent_effects = [step for step in history if step.kind == "effect"
+                                     and step.status in {"dispatching", "succeeded", "uncertain"}]
+                    target_effects = {
+                        identifier: sum(json.loads(step.document).get("integration_id")
+                                        == identifier for step in spent_effects)
+                        for identifier in profiles
+                    }
+                    unverified_targets = {
+                        json.loads(step.document).get("integration_id") for step in spent_effects
+                        if json.loads(step.result).get("effect_verified") is not True
+                    }
+                    exhausted_targets = {
+                        identifier for identifier, (_, rules, _) in profiles.items()
+                        if identifier not in unverified_targets and (
+                            len(spent_effects) >= job.max_effects
+                            or target_effects[identifier] >= rules.max_effects)
+                    }
+                    read_targets = refresh_targets | exhausted_targets
+                    model_read_only = bool(
+                        bounded_read or recovery and recovery["needs_alternative"]
+                        or profiles and set(profiles) <= read_targets
+                    )
                     allowed_tools = set()
                     for _profile, rules, _ in profiles.values():
                         rules = effective_rules(
-                            rules, read_only=bounded_read or not _profile.writes_enabled
+                            rules, read_only=bounded_read or _profile.id in read_targets
+                            or not _profile.writes_enabled
                             or not effect_target_allowed(
                                 frozen_intent, _profile.id,
                             ),
@@ -2593,6 +2651,13 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     allow_finish = (
                         read_plan.get("allow_finish", has_read_data) and not repairing_read
                     )
+                    from hub.agent_intent import adequacy
+
+                    goal_evidence = (adequacy(frozen_intent, history)
+                                     if frozen_intent and not private_read else None)
+                    if (goal_evidence is not None and not goal_evidence["satisfied"]
+                            and not unverified_effect_completion(goal_evidence, history)):
+                        allow_finish = False
                     allow_ask = not bounded_read and not repairing_read
                     ready = read_plan.get("ready", {})
                     choices = ready.get("decisions", [])
@@ -2620,7 +2685,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     )
 
                     allowed_tools = set(effective_tools(
-                        sorted(allowed_tools), read_only=bounded_read
+                        sorted(allowed_tools), read_only=model_read_only
                     ))
                     data = {
                         "allow_finish": allow_finish,
@@ -2632,15 +2697,15 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         **({"ready_reads": ready} if choices else {}),
                         "job_id": job.id,
                         "clock": clock,
-                        "read_only": repairing_read or json.loads(job.bindings).get(
-                            "read_only", False
-                        ),
+                        "read_only": model_read_only,
+                        "remaining_effects": max(0, job.max_effects - len(spent_effects)),
                         "remaining_seconds": max(
                             0, int(job.created + job.timeout_seconds - time.time())
                         ),
                         "goal": job.goal,
                         **({"request_contract": frozen_intent}
                            if frozen_intent and not private_read else {}),
+                        **({"goal_evidence": goal_evidence} if goal_evidence is not None else {}),
                         **({"read_recovery": recovery} if recovery else {}),
                         "interfaces": effective_interfaces([
                             {
@@ -2648,17 +2713,19 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 "kind": p.kind,
                                 "name": p.name,
                                 "writes_enabled": p.writes_enabled,
-                                "read_only": (bounded_read or not p.writes_enabled
+                                "read_only": (bounded_read or p.id in read_targets
+                                              or not p.writes_enabled
                                               or not effect_target_allowed(frozen_intent, p.id)),
                                 **({"capabilities": agent_capabilities.describe(
                                     p, effective_rules(r, read_only=(bounded_read
+                                        or p.id in read_targets
                                         or not p.writes_enabled
                                         or not effect_target_allowed(frozen_intent, p.id)))
                                 )} if not private_read else {}),
                                 "rules": r.model_dump(),
                             }
                             for p, r, _ in profiles.values()
-                        ], read_only=bounded_read),
+                        ], read_only=model_read_only),
                         "tools": {
                             name: schema.model_json_schema()
                             for name, schema in SCHEMAS.items()
@@ -2903,6 +2970,10 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 continue
                             complete(
                                 db, job, "unverified",
+                                "Die angefragten Informationen konnten noch nicht vollständig "
+                                "geprüft werden." if data.get("goal_evidence", {}).get(
+                                    "satisfied"
+                                ) is False else
                                 "Anfrage nicht vollständig beantwortet: " + decision.message,
                             )
                             db.commit()
@@ -2921,10 +2992,37 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         frozen_intent = json.loads(job.bindings).get("intent")
                         if (not private_read and decision.kind == "finish" and frozen_intent
                                 and not adequacy(frozen_intent, current_history)["satisfied"]):
-                            complete(db, job, "unverified", "Die Frage ist noch nicht vollständig "
-                                     "belegt. " + decision.message)
+                            proof = adequacy(frozen_intent, current_history)
+                            if unverified_effect_completion(proof, current_history):
+                                complete(db, job, "unverified", "Eine Änderung ist noch nicht "
+                                         "verifiziert. Vorhandene Belege bleiben erhalten.")
+                                db.commit()
+                                return
+                            format_feedback(db, cfg, job, {"kind": "finish"}, [{
+                                "type": "goal_evidence_missing",
+                                "missing": proof["missing"],
+                                "next_action": "Obtain the missing goal evidence using the "
+                                "authorized tools before finishing. Do not repeat an effect.",
+                            }])
                             db.commit()
-                            return
+                            continue
+                        if not private_read and decision.kind == "finish" and frozen_intent:
+                            from hub.agent_intent import update_overview_goal
+
+                            if (update_overview_goal(job.goal, frozen_intent)
+                                    and len(profiles) == 1
+                                    and next(iter(profiles.values()))[0].kind == "home_assistant"):
+                                from hub.agent_ha_evidence import summary as update_summary
+
+                                rendered = update_summary(
+                                    current_history, next(iter(profiles)), "update"
+                                )
+                                if rendered is None:
+                                    complete(db, job, "unverified", "Die verfügbaren Updates "
+                                             "konnten noch nicht verlässlich geprüft werden.")
+                                    db.commit()
+                                    return
+                                decision.message = rendered
                         queried = (
                             mailbox_queried(current_history) if private_mail_read
                             else paperless_queried(current_history)
@@ -3047,6 +3145,14 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         format_feedback(db, cfg, job, {"kind": "tool"}, [{
                             "type": "target_observation_only",
                             "next_action": "This target is selected for reads only in this request",
+                        }])
+                        db.commit()
+                        continue
+                    if effect and decision.integration_id in refresh_targets:
+                        format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                            "type": "fresh_goal_read_required",
+                            "next_action": "Read the requested current evidence after the "
+                            "verified effect before selecting another change.",
                         }])
                         db.commit()
                         continue
