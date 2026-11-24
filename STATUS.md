@@ -1,30 +1,42 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Planung — Werkzeugdialog in Prüfung
+## HA-Planung — Argumentkorrektur in Prüfung
 
-`86cc743` ist nach vollständiger [CI 45439006076](https://github.com/sschluet/obdaAI/actions/runs/45439006076)
-auf der Test-VM installiert: 3.751 Tests bestanden, sechs optionale Calc-Skips,
-alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.757 Tests. Frische
-verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und Erhalt
-ursprünglicher Daten/Konfiguration sind geprüft.
+`4cb1810` ist nach vollständiger [CI 45449809249](https://github.com/sschluet/obdaAI/actions/runs/45449809249)
+auf der Test-VM installiert: 3.804 Tests bestanden, sechs optionale Calc-Skips,
+alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.809 Tests vor der
+letzten Zusammenfassungs-Regressionsprüfung; danach bestanden 69 gezielte Tests.
+Frische verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und
+Erhalt ursprünglicher Daten/Konfiguration sind geprüft.
 
-Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden: Die
-begrenzte Korrektur nach einem bestätigten Projektionsfehler greift, das Modell
-fordert danach aber wiederholt eine bereits erfolgreich gelesene Konfiguration
-an. Der Wiederholungsschutz stoppt diesen Lauf. Es gab keinen Schreibzugriff;
-Originaldaten, Konfiguration und Bereinigung des Testauftrags sind geprüft.
-Dieser Lauf zählt ausdrücklich als fehlgeschlagene Bearbeitung.
+Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden: Das
+Modell ergänzte beim ersten GET ein `verification`-Objekt, obwohl diese
+Leseoperation ausschließlich `null` erlaubt. Drei generische Formatkorrekturen
+führten nicht zu einem gültigen Werkzeugaufruf. Eine isolierte reale Modellprobe
+mit dem exakt gespeicherten Einstieg reproduzierte den Fehler; eine anschließende
+Offline-Schemaanalyse identifizierte ausschließlich diesen falschen Feldtyp.
+Es gab keinen HA-Schreibzugriff. Datenerhalt und Bereinigung des Testauftrags sind
+geprüft. Dieser Lauf zählt ausdrücklich als fehlgeschlagene Bearbeitung.
 
-Die Nachkorrektur übergibt ausgeführte, aktuell schemagültige Schritte als
-zusammengehörige native Funktionsaufrufe und Werkzeugantworten. Abgeleitete
-HTTP-Objektsichten erhalten skalare Fakten an ihrem ursprünglichen Pfad, etwa
-`body.version`; Kürzungsmetadaten stehen getrennt. Werkzeugdialog, Schemas und
-Antwortreserve teilen dasselbe lokale Zeichen-/UTF-8-Budget. Unklare Effekte,
-gekürzte Argumente und nicht mehr angebotene Werkzeuge werden nicht als neue
-Aufrufe rekonstruiert. Ursprüngliche Belege und endgültige Rechteprüfungen bleiben
-unverändert. Spezialisierte private Mail-/Archivleser behalten ihre Verträge.
-Gezielte synthetische Prüfungen bestehen; vollständige Validierung, neue isolierte
-Modellprobe, Folge-Rollout und tatsächliche Chat-Abnahme stehen aus.
+Der standardisierte Werkzeugdialog und wörtliche skalare Ergebnispfade bleiben
+implementiert: ausgeführte, aktuell schemagültige Schritte als zusammengehörige
+native Funktionsaufrufe/Werkzeugantworten; etwa `body.version` statt zusätzlicher
+Feldhülle. Die strukturierte letzte Zusammenfassung mit Zählwerten und Hash bleibt
+erhalten. Eine frühere isolierte Probe mit bereits gelesener Konfiguration wählte
+damit einen neuen gültigen Leseweg, deckte den hier fehlgeschlagenen Einstieg aber
+nicht ab. Sie zählt ausdrücklich nicht als erfolgreiche Chat-Abnahme.
+
+Die Nachkorrektur vereinfacht semantisch identische Einzelalternativen im Schema
+und ergänzt genaue Fehlertypen aus ausschließlich schemaeigenen Feldnamen.
+Ungültige Werte werden weder entfernt noch ersetzt; Zugriffsregeln und endgültige
+Validierung bleiben unverändert. 146 gezielte Codec-, Transport-, API-/Worker-
+und Kompatibilitätstests bestehen. Zwei isolierte reale lokale Modellproben mit
+ausschließlich dem tatsächlichen Verbindungsbeleg wählen gültige neue Leseaufrufe:
+einmal direkt mit dem vereinfachten Schema, einmal nach dem aus dem Originalfehler
+abgeleiteten präzisen Korrekturhinweis. Dauer jeweils rund 26 Sekunden, keine
+Werkzeugausführung, unveränderte Originalbelege und keine Datenbankänderung.
+Die laufenden vollständigen Prüfungen, neue Lieferung und echte Chat-Abnahme
+stehen weiterhin aus.
 
 Die vorausgegangenen Korrekturen bleiben erhalten: zielbezogene Anweisung,
 Anbieter-/UTF-8-Kontextbudget, strukturierte Versions-/Statussichten, hashgebundener

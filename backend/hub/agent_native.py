@@ -5,8 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import deque
 from copy import deepcopy
 from dataclasses import dataclass
+from itertools import islice
 from typing import Any
 
 from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
@@ -69,6 +71,40 @@ def _refs(value: Any) -> list[str]:
     return result
 
 
+def _single_anyof(schema: dict[str, Any]) -> dict[str, Any]:
+    """Flatten a sole conjunct only when sibling interactions stay identical."""
+    variants = schema.get("anyOf")
+    if not isinstance(variants, list) or len(variants) != 1 or not isinstance(variants[0], dict):
+        return schema
+    branch = variants[0]
+    if any(
+        key in schema or key in branch
+        for key in ("$id", "$anchor", "$dynamicAnchor", "$dynamicRef")
+    ):
+        return schema
+    harmless = {
+        "type",
+        "$defs",
+        "$schema",
+        "title",
+        "description",
+        "default",
+        "examples",
+        "$comment",
+    }
+    for key, value in schema.items():
+        if key == "anyOf":
+            continue
+        if key in branch:
+            if branch[key] != value:
+                return schema
+        if key not in harmless:
+            # Even identical additionalProperties:false at both levels can
+            # constrain different property sets. Preserve those conjunctions.
+            return schema
+    return {**{key: value for key, value in schema.items() if key != "anyOf"}, **deepcopy(branch)}
+
+
 def _parameters(arguments: dict[str, Any], definitions: dict[str, Any]) -> dict[str, Any]:
     root = deepcopy(arguments)
     if set(root) == {"$ref"}:
@@ -89,6 +125,7 @@ def _parameters(arguments: dict[str, Any], definitions: dict[str, Any]) -> dict[
     root.setdefault("type", "object")
     if included:
         root["$defs"] = included
+    root = _single_anyof(root)
     Draft202012Validator.check_schema(root)
     return root
 
@@ -156,6 +193,16 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
                 "Diese feste Zielbindung erteilt keine Rechte; "
                 "nur Schema und bestehende Regeln gelten."
             )
+            null_fields = [
+                key
+                for key, value in canonical.get("properties", {}).items()
+                if isinstance(value, dict)
+                and value.get("type") == "null"
+                and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", key)
+            ]
+            if null_fields:
+                description += " Felder mit type:null: " + ", ".join(null_fields[:6]) + "."
+                description += " Nicht benötigte optionale Felder dürfen entfallen."
         elif kind in {"ask", "finish", "stop"}:
             name = {"ask": "ask_user", "finish": "finish_run", "stop": "stop_run"}[kind]
             parameters = {
@@ -206,6 +253,8 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
             "bindet Ziel und Werkzeug. Werkzeugfunktionen erhalten genau den Parameter "
             "arguments als vollständiges JSON-Objekt nach dessen Schema, keine JSON-Zeichenkette.\n"
             "ask_user, finish_run und stop_run erhalten direkt message.\n"
+            "Beachte die Feldtypen genau: type:null verlangt JSON-null, kein Objekt oder Text. "
+            "Nicht benötigte optionale Felder dürfen entfallen.\n"
             "Keine zusätzliche JSON-Hülle. Rückfragen über ask_user, Abschluss über finish_run,\n"
             "sicheres Anhalten über stop_run, jeweils nur soweit angeboten.\n"
             "Texte kurz und sachlich, keine internen Überlegungen.\n"
@@ -458,17 +507,80 @@ def _invalid_constant(value: str) -> Any:
 
 
 def _schema_issues(validator: Any, arguments: Any) -> list[str]:
-    """Only schema-owned vocabulary; never jsonschema messages or instance paths."""
-    issues = ["args_schema_invalid"]
-    pending = list(validator.iter_errors(arguments))
-    while pending and len(issues) < 6:
-        error = pending.pop(0)
+    """Only schema-owned vocabulary; never messages, instance keys or paths."""
+    generic: list[str] = []
+    field_types: dict[str, set[str]] = {}
+    pending = deque((error, True) for error in islice(validator.iter_errors(arguments), 32))
+    known_types = {"array", "boolean", "integer", "null", "number", "object", "string"}
+    inspected = 0
+    while pending and inspected < 256:
+        error, type_applicable = pending.popleft()
+        inspected += 1
         keyword = error.validator
-        # Registered validator names are trusted schema keywords, not instance keys.
+        if keyword == "type" and type_applicable:
+            path = list(error.absolute_schema_path)
+            fields = [
+                path[index + 1]
+                for index, value in enumerate(path[:-1])
+                if value == "properties"
+                and isinstance(path[index + 1], str)
+                and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", path[index + 1])
+            ]
+            expected = error.schema.get("type")
+            choices = [expected] if isinstance(expected, str) else expected
+            parent = error.parent
+            relative = list(error.schema_path)
+            if (
+                parent is not None
+                and parent.validator in {"anyOf", "oneOf"}
+                and len(relative) == 2
+                and relative[-1] == "type"
+            ):
+                # A nullable/union alternative alone is not the field contract.
+                # Union all schema-owned branch types, or omit the detail if
+                # these types cannot be established without further inference.
+                union: set[str] = set()
+                for shape in parent.schema.get(parent.validator, []):
+                    for _ in range(8):
+                        ref = shape.get("$ref") if isinstance(shape, dict) else None
+                        if not isinstance(ref, str) or not ref.startswith("#/$defs/"):
+                            break
+                        shape = validator.schema.get("$defs", {}).get(ref[8:])
+                    kind = shape.get("type") if isinstance(shape, dict) else None
+                    types = [kind] if isinstance(kind, str) else kind
+                    if (
+                        not isinstance(types, list)
+                        or not types
+                        or any(
+                            not isinstance(item, str) or item not in known_types for item in types
+                        )
+                    ):
+                        union.clear()
+                        break
+                    union.update(types)
+                choices = sorted(union)
+            if (
+                fields
+                and isinstance(choices, list)
+                and choices
+                and all(isinstance(value, str) and value in known_types for value in choices)
+            ):
+                field = fields[-1]
+                property_index = max(
+                    index
+                    for index, value in enumerate(path[:-1])
+                    if value == "properties" and path[index + 1] == fields[-1]
+                )
+                tail = path[property_index + 2 :]
+                if any(key in tail for key in ("additionalProperties", "patternProperties")):
+                    field += ".value"
+                elif any(key in tail for key in ("items", "prefixItems", "additionalItems")):
+                    field += ".item"
+                field_types.setdefault(field, set()).update(choices)
         if keyword in Draft202012Validator.VALIDATORS:
             value = "schema:" + keyword
-            if value not in issues:
-                issues.append(value)
+            if value not in generic:
+                generic.append(value)
         if keyword == "required" and isinstance(error.instance, dict):
             for field in error.schema.get("required", []):
                 if (
@@ -477,12 +589,49 @@ def _schema_issues(validator: Any, arguments: Any) -> list[str]:
                     and field not in error.instance
                 ):
                     value = "required:" + field
-                    if value not in issues and len(issues) < 6:
-                        issues.append(value)
-        # anyOf/oneOf details contain useful leaf keywords. Their messages, paths,
-        # unexpected property names, regex patterns and values remain unobserved.
-        pending.extend(error.context)
-    return issues[:6]
+                    if value not in generic and len(generic) < 6:
+                        generic.append(value)
+        # Context diagnostics are bounded and remain schema-owned. Never use
+        # error.message/path/instance to form field names or copy actual values.
+        children = list(islice(error.context, 128))
+        relevant = None
+        if keyword in {"anyOf", "oneOf"} and isinstance(error.instance, dict):
+            variants = error.schema.get(keyword, [])
+            relevant = set()
+            for index, variant in enumerate(variants):
+                if not isinstance(variant, dict):
+                    relevant.add(index)
+                    continue
+                matches = True
+                for key, shape in variant.get("properties", {}).items():
+                    if key not in error.instance or not isinstance(shape, dict):
+                        continue
+                    options = [shape["const"]] if "const" in shape else shape.get("enum")
+                    if isinstance(options, list) and not any(
+                        _encode(error.instance[key]) == _encode(choice) for choice in options
+                    ):
+                        matches = False
+                        break
+                if matches:
+                    relevant.add(index)
+        # Keep generic/missing-field evidence even for a nonmatching variant;
+        # only named TYPE hints must not imply that variant's type contract.
+        pending.extend(
+            (
+                child,
+                type_applicable
+                and (
+                    relevant is None or bool(child.schema_path) and child.schema_path[0] in relevant
+                ),
+            )
+            for child in children
+        )
+    specific = []
+    for field, types in field_types.items():
+        hint = "_or_".join(sorted(types))
+        value = "schema_type:" + field + ":" + hint
+        specific.append(value if len(value) <= 120 else "schema_type:" + field + ":union")
+    return ["args_schema_invalid", *(specific + generic)[:5]]
 
 
 def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[str, Any] | None:

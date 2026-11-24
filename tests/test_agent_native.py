@@ -540,3 +540,188 @@ def test_new_wire_control_functions_keep_direct_message():
         assert "argument_object" not in value.metadata["bindings"][name]
         result = decode_calls(value.metadata, [call(name, {"message": "Synthetic"})])
         assert result is not None and result["message"] == "Synthetic"
+
+
+def test_readonly_single_anyof_flatten_is_language_equivalent():
+    from hub.agent_tools import decision_schema
+
+    value = prepared(read_only=True)
+    data = value.original_data
+    schema = decision_schema(
+        [i["integration_id"] for i in data["interfaces"]],
+        data["tools"],
+        data["interfaces"],
+        read_only=True,
+    )
+    branch = next(
+        branch
+        for branch in schema["anyOf"]
+        if branch["properties"]["tool"].get("const") == "http"
+        and branch["properties"]["integration_id"].get("const") == "one"
+    )
+    original = deepcopy(branch["properties"]["arguments"])
+    original["$defs"] = schema["$defs"]
+    function = next(
+        row["function"]
+        for row in value.metadata["tools"]
+        if row["function"]["name"] == http_binding(value)
+    )
+    wire = function["parameters"]
+    assert "anyOf" not in wire["properties"]["arguments"]
+    assert wire["properties"]["arguments"]["properties"]["verification"] == {"type": "null"}
+    assert "Felder mit type:null: body, verification." in function["description"]
+    candidates = [
+        {"method": "GET", "path": "/api/one/config"},
+        {"method": "GET", "path": "/api/one/config", "body": None, "verification": None},
+        {"method": "GET", "path": "/api/one/config", "body": False},
+        {"method": "GET", "path": "/api/one/config", "body": 0},
+        {"method": "GET", "path": "/api/one/config", "body": {}},
+        {"method": "GET", "path": "/api/one/config", "verification": {}},
+        {"method": "GET", "path": "/api/one/config", "query": {"active": False, "limit": 0}},
+        {"method": "GET", "path": "/api/one/config", "extra": None},
+        {"method": "POST", "path": "/api/one/config", "body": {}},
+    ]
+    before, after = Draft202012Validator(original), Draft202012Validator(wire)
+    assert [before.is_valid(args) for args in candidates] == [
+        after.is_valid({"arguments": args}) for args in candidates
+    ]
+    assert before.is_valid(candidates[0]) and not before.is_valid(candidates[-1])
+    assert "type:null verlangt JSON-null, kein Objekt oder Text" in value.instruction
+
+
+def test_single_anyof_flatten_preserves_interacting_sibling_constraints():
+    from hub.agent_native import _single_anyof
+
+    branch = {
+        "type": "object",
+        "properties": {"value": {"type": "string"}},
+        "additionalProperties": False,
+        "required": ["value"],
+    }
+    root = {"type": "object", "anyOf": [branch]}
+    flattened = _single_anyof(root)
+    assert "anyOf" not in flattened
+    assert root == {"type": "object", "anyOf": [branch]}
+    for value in [
+        {},
+        {"value": "yes"},
+        {"value": False},
+        {"value": 0},
+        {"value": None},
+        {"value": "yes", "other": 1},
+        None,
+    ]:
+        assert Draft202012Validator(root).is_valid(value) == Draft202012Validator(
+            flattened
+        ).is_valid(value)
+    conflicting = {"type": "array", "anyOf": [branch]}
+    interacting = {"additionalProperties": False, "anyOf": [branch]}
+    multiple = {"anyOf": [branch, {"type": "null"}]}
+    assert _single_anyof(conflicting) == conflicting
+    assert _single_anyof(interacting) == interacting
+    assert _single_anyof(multiple) == multiple
+
+
+@pytest.mark.parametrize("field", ["body", "verification"])
+def test_readonly_null_field_diagnostics_are_schema_owned_and_prioritized(field):
+    value = prepared(read_only=True)
+    private = "SYNTHETIC_PRIVATE_VALUE"
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(
+            value.metadata,
+            [
+                call(
+                    http_binding(value),
+                    {
+                        "arguments": {
+                            "method": "GET",
+                            "path": "/api/one/config",
+                            field: {private: private},
+                        }
+                    },
+                )
+            ],
+        )
+    assert caught.value.issues[:2] == ["args_schema_invalid", f"schema_type:{field}:null"]
+    assert private not in str(caught.value) + json.dumps(caught.value.issues)
+
+
+def test_type_hint_ignores_nonmatching_http_method_branch():
+    value = prepared()
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(
+            value.metadata,
+            [
+                call(
+                    http_binding(value),
+                    {
+                        "arguments": {
+                            "method": "POST",
+                            "path": "/api/one/config",
+                            "body": "SYNTHETIC_PRIVATE_VALUE",
+                        }
+                    },
+                )
+            ],
+        )
+    assert "schema_type:body:null" not in caught.value.issues
+    assert "schema_type:body:array_or_null_or_object" in caught.value.issues
+    assert "SYNTHETIC_PRIVATE_VALUE" not in str(caught.value.issues)
+
+
+def test_nested_type_diagnostics_use_schema_fields_not_dynamic_instance_keys():
+    value = prepared(read_only=True)
+    private = "SYNTHETIC_PRIVATE_KEY"
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(
+            value.metadata,
+            [
+                call(
+                    http_binding(value),
+                    {
+                        "arguments": {
+                            "method": "GET",
+                            "path": "/api/one/config",
+                            "projection": {"items_path": "", "limit": private},
+                            "query": {private: {private: private}},
+                        }
+                    },
+                )
+            ],
+        )
+    assert any(issue.startswith("schema_type:limit:") for issue in caught.value.issues)
+    assert private not in str(caught.value) + json.dumps(caught.value.issues)
+    assert len(caught.value.issues) <= 6 and all(len(item) <= 120 for item in caught.value.issues)
+
+
+def test_dynamic_query_value_type_hint_is_not_the_query_object_type():
+    value = prepared(read_only=True)
+    private = "SYNTHETIC_PRIVATE_DYNAMIC_KEY"
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(
+            value.metadata,
+            [
+                call(
+                    http_binding(value),
+                    {
+                        "arguments": {
+                            "method": "GET",
+                            "path": "/api/one/config",
+                            "query": {private: []},
+                        }
+                    },
+                )
+            ],
+        )
+    assert any(issue.startswith("schema_type:query.value:") for issue in caught.value.issues)
+    assert not any(issue.startswith("schema_type:query:") for issue in caught.value.issues)
+    assert private not in str(caught.value.issues)
+
+
+@pytest.mark.parametrize("marker", ["$id", "$anchor", "$dynamicAnchor", "$dynamicRef"])
+def test_single_branch_with_resolution_markers_is_not_moved(marker):
+    from hub.agent_native import _single_anyof
+
+    branch = {"type": "object", marker: "synthetic"}
+    schema = {"type": "object", "anyOf": [branch]}
+    assert _single_anyof(schema) == schema

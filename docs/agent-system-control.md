@@ -464,6 +464,15 @@ korrekt dekodieren. Eine reale inaktive Probe belegte zuvor, dass der Server bei
 Union-Schemas eine Objektprojektion als Zeichenkette lieferte. Deren unveränderte
 JSON-Dekodierung bestand offline das ursprüngliche Schema und die Leseregeln.
 Es werden keine Argumentwerte ergänzt oder die fachlichen Schemas gelockert.
+
+Eine einzelne `anyOf`-Alternative wird nur bei nachgewiesen unkritischen
+Schema-Geschwistern direkt dargestellt. Referenzen, erlaubte Werte und zusätzliche
+Felder bleiben gleich streng; bei möglichen Wechselwirkungen bleibt die Hülle
+bestehen. Ausschließliche `null`-Felder sind in Schema und Funktionsbeschreibung
+sichtbar. Für einen GET ist dadurch die Grenze zur Wirkungsprüfung als Objekt
+ausdrücklich erkennbar. Ein solches Objekt wird weiterhin abgewiesen,
+nicht stillschweigend entfernt.
+
 Die Funktion bindet Ziel und Werkzeug; Argumente dürfen diese Bindung nicht
 ersetzen. `ask_user`, `finish_run` und `stop_run` sind nur gemäß den vorhandenen
 Laufregeln verfügbar. Die semantische Auftragsinterpretation, öffentliche
@@ -473,8 +482,12 @@ bestehenden Ausgabeformate. Es entsteht kein zweiter Ausführungsweg.
 Pro Planungsschritt ist ausdrücklich genau ein Funktionsaufruf erlaubt; weitere
 Aufrufe warten auf dessen Ergebnis. Steuerfunktionen behalten ihren direkten
 `message`-Parameter. Sichere Fehlerkategorien und fehlende Pflichtfelder aus den
-festen Schemas erreichen die begrenzte Formatkorrektur; private Werte,
-unerwartete Feldnamen und rohe Validierungsfehlermeldungen werden nicht übernommen.
+festen Schemas erreichen die begrenzte Formatkorrektur. Typfehler nennen zusätzlich
+ausschließlich schemaeigene Felder und erlaubte Typen, etwa
+`schema_type:verification:null`. Nicht passende Operationsalternativen werden bei
+diesen Hinweisen nicht vermischt; Typen von dynamischen Feldwerten sind als solche
+gekennzeichnet. Private Werte, unerwartete Feldnamen und rohe
+Validierungsfehlermeldungen werden nicht übernommen.
 
 Der Transport setzt SSE-Namens-/Argumentfragmente begrenzt zusammen und wertet
 erst den vollständig beendeten Stream aus. Genau ein bekannter Funktionsaufruf

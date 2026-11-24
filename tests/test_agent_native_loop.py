@@ -22,6 +22,7 @@ GOAL = 'Bitte prüfe Home Assistant und spiele alle ausstehenden Update ein'
 
 def scenario(
     ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False,
+    invalid_verification_first=False,
     projection_failure_first=False, projection_followup_failure=False,
 ):
     app, client, _, cfg, identifier, *_ = ha
@@ -81,6 +82,19 @@ def scenario(
         if invalid_first and len(model_requests) == 2:
             return httpx.Response(200, text=event(fragment('unknown_function', '{}'))
                                   + 'data: [DONE]\n\n')
+        if invalid_verification_first and len(model_requests) == 2:
+            name = next(t['function']['name'] for t in body['tools']
+                        if t['function']['name'].endswith('_http'))
+            arguments = {'arguments': {'method': 'GET', 'path': '/api/config',
+                'verification': {'path': '/api/config',
+                                 'expected': {'/body/version': 'synthetic'}}}}
+            return httpx.Response(200, text=event(fragment(name, json.dumps(arguments)))
+                                  + 'data: [DONE]\n\n')
+        if invalid_verification_first and len(model_requests) == 3:
+            data = json.loads(body['messages'][1]['content'])
+            feedback = [row for row in data['history'] if row['kind'] == 'feedback']
+            diagnostics = feedback[-1]['document']['issues'][0]['diagnostics']
+            assert 'schema_type:verification:null' in diagnostics
         if invalid_first and len(model_requests) == 3:
             data = json.loads(body['messages'][1]['content'])
             feedback = [row for row in data['history'] if row['kind'] == 'feedback']
@@ -218,6 +232,19 @@ def test_native_admin_recovers_projection_before_authorized_backup_and_update(
     assert len([call for call in calls if call[2] == '/api/config']) == 1
     assert len([call for call in calls if call[1] == 'POST']) == 2
     assert not [step for step in result['steps'] if step['kind'] in {'input', 'approval', 'error'}]
+
+
+def test_invalid_read_verification_gets_precise_feedback_without_target_dispatch(
+    ha, monkeypatch, tmp_path,
+):
+    result, requests, calls = scenario(
+        ha, monkeypatch, tmp_path, invalid_verification_first=True,
+    )
+    assert result['status'] == 'succeeded', json.dumps(result, ensure_ascii=False)
+    assert len(requests) == 7
+    assert len([step for step in result['steps'] if step['kind'] == 'feedback']) == 1
+    assert not [call for call in calls if call[2] == '/api/config']
+    assert len([call for call in calls if call[1] == 'POST']) == 2
 
 
 def test_native_projection_correction_second_failed_read_stops_before_any_effect(
