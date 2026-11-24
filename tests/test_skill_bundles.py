@@ -51,9 +51,10 @@ def upload(c, h, data):
 
 def test_import_download_exact_revision_and_edit_preserves_bundle(setup):
     app, c, h, _ = setup
+    master = office()
     original = bundle(
         {
-            "synthetic/assets/master.dotx": office(),
+            "synthetic/assets/master.dotx": master,
             "synthetic/scripts/helper.py": "raise RuntimeError('must never run')",
         }
     )
@@ -70,7 +71,7 @@ def test_import_download_exact_revision_and_edit_preserves_bundle(setup):
     )
     template = skill["bundle_manifest"]["templates"][0]
     params = {"path": template["path"], "sha256": template["sha256"]}
-    assert c.get(prefix + "/files", headers=h, params=params).content == office()
+    assert c.get(prefix + "/files", headers=h, params=params).content == master
     assert (
         c.get(prefix + "/files", headers=h, params={**params, "sha256": "0" * 64}).status_code
         == 409

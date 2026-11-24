@@ -541,6 +541,17 @@ Modellqualität oder erfolgreiche HA-Aktualisierung.
 
 ## Beleggebundener Abschluss und Updateübersicht
 
+Der native Dialog bietet bei einer offenen HA-Entitätenanforderung zusätzlich
+`ha_entities` an, sofern das bestehende zielgebundene HTTP-Werkzeug bereits einen
+lesenden Abruf von `/api/states` erlaubt. Das Modell wählt nur eine noch benötigte
+Domäne; ohne Angabe gilt die vorhandene auftragsbezogene Eingrenzung. Der Adapter
+erzeugt die technische lokale Projektion und prüft die vollständigen Argumente
+erneut gegen das ursprüngliche HTTP-Schema. Ausführung, Berechtigungen, Absichten
+und Originalbelege laufen unverändert über denselben HTTP-Werkzeugweg.
+Es gibt keinen zusätzlichen Transport oder eine neue Freigabe. Vorhandene HTTP-
+und WebSocket-Funktionen bleiben verfügbar; historische Abrufe werden weiterhin
+als tatsächliche HTTP-Aufrufe rekonstruiert, ohne einen erneuten Abruf auszulösen.
+
 Unbekannte HA-Lesefragen erhalten einen semantischen Auftrag statt einer pauschalen
 Anforderung „irgendein Datenabruf“. Für ausdrücklich angefragte aktuelle
 Softwareupdates ergänzt die bestehende Intent-Struktur `entity_states` mit Domain

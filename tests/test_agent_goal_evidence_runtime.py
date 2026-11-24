@@ -149,6 +149,75 @@ def test_native_metadata_is_not_completion_and_websocket_states_ground_the_answe
     assert not [s for s in result['steps'] if s['kind'] in {'effect', 'input', 'approval'}]
 
 
+def test_native_entities_alias_omitted_domain_is_narrowed_and_grounded_via_api(
+    ha, monkeypatch, tmp_path,
+):
+    from hub.agent_context import project
+
+    app, client, _, cfg, identifier, *_ = ha
+    cfg = replace(cfg, local_model='synthetic-entities-model',
+                  local_base_url='http://127.0.0.1:11444/v1', local_allowed_ip='127.0.0.1',
+                  source_dir=str(tmp_path / 'synthetic-entities-inference'))
+    with app.state.sessions() as db:
+        seed(db, cfg)
+        row = db.get(ProviderConfig, 'local-default')
+        row.config = json.dumps({**json.loads(row.config), 'model': cfg.local_model,
+                                 'base_url': cfg.local_base_url})
+        db.commit()
+    requests, calls = [], []
+    original = httpx.AsyncClient
+
+    def model(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        if len(requests) == 1:
+            assert 'response_format' in body
+            intent = RequestIntent(target_ids=[identifier], mode='observe', topic='system',
+                requirements=[Requirement(kind='system', integration_id=identifier)])
+            return httpx.Response(200, text=event({'content': intent.model_dump_json()})
+                                  + 'data: [DONE]\n\n')
+        assert len(requests) == 2, 'Complete actual state evidence needs no further model'
+        names = [t['function']['name'] for t in body['tools']]
+        assert names[0].endswith('_ha_entities')
+        assert 'finish_run' not in names
+        return httpx.Response(200, text=event(fragment(names[0], json.dumps({'arguments': {}})))
+                              + 'data: [DONE]\n\n')
+
+    monkeypatch.setattr(httpx, 'AsyncClient',
+                        lambda **kw: original(**kw, transport=httpx.MockTransport(model)))
+    monkeypatch.setattr(Providers, '_target', lambda *_: (
+        'http://127.0.0.1/v1/chat/completions', {'Host': 'synthetic-model'}, {}, ''))
+
+    def invoke(cfg, config, secret, tool, args, rules, before_send):
+        before_send()
+        assert tool == 'http' and args['method'] == 'GET'
+        calls.append(args)
+        if args['path'] == '/api/':
+            return {'http_status': 200, 'body': {'message': 'API running'}}
+        assert args['path'] == '/api/states'
+        assert args['projection'] == {
+            'items_path': '', 'where_pointer': '/entity_id', 'where_prefix': 'update.',
+            'where_equals': None, 'fields': [], 'limit': 100,
+        }
+        return {'http_status': 200, 'body': project(STATES, args['projection'])}
+
+    monkeypatch.setattr(runtime, 'invoke', invoke)
+    job_id = start(ha, GOAL, research_allowed=False)
+    asyncio.run(runtime.execute_agent(app.state.sessions, cfg, Providers(cfg), job_id))
+    result = client.get('/api/agent-runs/' + job_id).json()
+    assert result['status'] == 'observed', result
+    assert len(requests) == 2
+    assert [a['path'] for a in calls] == ['/api/', '/api/states']
+    assert 'Synthetic Core' in result['summary'] and '2' in result['summary']
+    assert 'keine Updates' not in result['summary']
+    assert not [s for s in result['steps'] if s['kind'] in {'effect', 'input', 'approval'}]
+    reads = [s for s in result['steps'] if s['kind'] == 'read']
+    assert len(reads) == 2 and all(s['status'] == 'succeeded' for s in reads)
+    assert reads[-1]['document']['tool'] == 'http'
+    assert reads[-1]['document']['integration_id'] == identifier
+    assert reads[-1]['document']['arguments'] == calls[-1]
+
+
 def test_unverified_effect_terminal_never_waives_missing_read_or_another_target():
     effect = SimpleNamespace(kind='effect', status='succeeded',
         document=json.dumps({'integration_id': 'one'}),

@@ -136,6 +136,128 @@ def _digest(metadata: dict[str, Any]) -> str:
     ).hexdigest()
 
 
+def _canonical_parameters(definition: dict[str, Any], binding: dict[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = deepcopy(definition["parameters"])
+    if binding.get("argument_object") is True:
+        result = deepcopy(definition["parameters"]["properties"]["arguments"])
+        if "$defs" in definition["parameters"]:
+            result["$defs"] = deepcopy(definition["parameters"]["$defs"])
+    return result
+
+
+def _entity_arguments(domain: str | None) -> dict[str, Any]:
+    return {
+        "method": "GET",
+        "path": "/api/states",
+        "projection": None
+        if domain is None
+        else {
+            "items_path": "",
+            "where_pointer": "/entity_id",
+            "where_prefix": domain + ".",
+            "where_equals": None,
+            "fields": [],
+            "limit": 100,
+        },
+    }
+
+
+def _entity_facades(
+    original: dict[str, Any],
+    tools: list[dict[str, Any]],
+    bindings: dict[str, Any],
+    targets: list[str],
+) -> None:
+    evidence = original.get("goal_evidence")
+    missing = evidence.get("missing", []) if isinstance(evidence, dict) else []
+    if not isinstance(missing, list):
+        return
+    facades = []
+    for interface in original["interfaces"]:
+        identifier = interface["integration_id"]
+        if interface.get("kind") != "home_assistant":
+            continue
+        domains = sorted(
+            {
+                item["domain"]
+                for item in missing
+                if isinstance(item, dict)
+                and item.get("kind") == "entity_states"
+                and item.get("integration_id") == identifier
+                and isinstance(item.get("domain"), str)
+                and re.fullmatch(r"[a-z][a-z0-9_]{0,39}", item["domain"])
+            }
+        )
+        canonical_name = next(
+            (
+                name
+                for name, binding in bindings.items()
+                if binding.get("kind") == "tool"
+                and binding.get("tool") == "http"
+                and binding.get("integration_id") == identifier
+                and "canonical_function" not in binding
+            ),
+            None,
+        )
+        if not domains or canonical_name is None:
+            continue
+        function = next(
+            row["function"] for row in tools if row["function"]["name"] == canonical_name
+        )
+        validator = Draft202012Validator(_canonical_parameters(function, bindings[canonical_name]))
+        if not validator.is_valid(_entity_arguments(None)):
+            continue
+        domains = [domain for domain in domains if validator.is_valid(_entity_arguments(domain))]
+        if not domains:
+            continue
+        name = f"t{targets.index(identifier)}_ha_entities"
+        if name in bindings:
+            raise NativeCallError("function_collision")
+        bindings[name] = {
+            **bindings[canonical_name],
+            "canonical_function": canonical_name,
+            "message": "Entitäten und Zustände am ausgewählten Ziel lesen.",
+        }
+        facades.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": f"HA-Entitäten lesen für integration_id={identifier}. "
+                    "Zustandsinventar für z.B. Licht, Sensoren oder verfügbare Software-Updates. "
+                    "domain wählt eine fehlende Domäne, z.B. update oder light; "
+                    "ohne domain oder bei null gilt der bestehende Auftragskontext. Nur lesen.",
+                    "parameters": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["arguments"],
+                        "properties": {
+                            "arguments": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "properties": {
+                                    "domain": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string",
+                                                "pattern": "^[a-z][a-z0-9_]{0,39}$",
+                                                "enum": domains,
+                                            },
+                                            {"type": "null"},
+                                        ],
+                                        "default": None,
+                                    }
+                                },
+                            }
+                        },
+                    },
+                },
+            }
+        )
+
+    tools[:0] = facades
+
+
 def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
     """Compile exact existing target-scoped schemas, without mutating inputs."""
     original = deepcopy(data)
@@ -228,6 +350,7 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
                 "function": {"name": name, "description": description, "parameters": parameters},
             }
         )
+    _entity_facades(original, tools, bindings, targets)
     metadata: dict[str, Any] = {"version": 1, "tools": tools, "bindings": bindings}
     metadata["sha256"] = _digest(metadata)
     native = {
@@ -408,6 +531,7 @@ def with_history(
                 if binding.get("kind") == "tool"
                 and binding.get("integration_id") == document.get("integration_id")
                 and binding.get("tool") == document.get("tool")
+                and "canonical_function" not in binding
             ),
             None,
         )
@@ -597,10 +721,13 @@ def _schema_issues(validator: Any, arguments: Any) -> list[str]:
                     # Conditional dependencies may strengthen a nullable field
                     # to a required concrete type. Preserve the bounded generic
                     # missing-field diagnostics for ordinary object schemas.
-                    if (type_applicable and "then" in error.absolute_schema_path
-                            and isinstance(choices, list) and choices
-                            and all(isinstance(item, str) and item in known_types
-                                    for item in choices)):
+                    if (
+                        type_applicable
+                        and "then" in error.absolute_schema_path
+                        and isinstance(choices, list)
+                        and choices
+                        and all(isinstance(item, str) and item in known_types for item in choices)
+                    ):
                         field_types.setdefault(field, set()).update(choices)
         # Context diagnostics are bounded and remain schema-owned. Never use
         # error.message/path/instance to form field names or copy actual values.
@@ -674,12 +801,7 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
             )
         except json.JSONDecodeError:
             raise NativeCallError("native_invalid_json") from None
-        canonical = deepcopy(definition["parameters"])
-        if binding.get("argument_object") is True:
-            canonical = deepcopy(definition["parameters"]["properties"]["arguments"])
-            if "$defs" in definition["parameters"]:
-                canonical["$defs"] = deepcopy(definition["parameters"]["$defs"])
-        validator = Draft202012Validator(canonical)
+        validator = Draft202012Validator(_canonical_parameters(definition, binding))
         if not isinstance(arguments, dict):
             raise NativeCallError(_schema_issues(validator, arguments))
         if not validator.is_valid(arguments):
@@ -693,6 +815,27 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
             if not isinstance(inner, dict) or not validator.is_valid(inner):
                 raise NativeCallError(_schema_issues(validator, inner))
             arguments = inner
+        if "canonical_function" in binding:
+            canonical_name = binding["canonical_function"]
+            origin = metadata["bindings"].get(canonical_name, {})
+            if (
+                binding.get("kind") != "tool"
+                or binding.get("tool") != "http"
+                or origin.get("kind") != "tool"
+                or origin.get("tool") != "http"
+                or origin.get("integration_id") != binding.get("integration_id")
+                or "canonical_function" in origin
+            ):
+                raise NativeCallError("native_alias_binding")
+            original = next(
+                row["function"]
+                for row in metadata["tools"]
+                if row["function"]["name"] == canonical_name
+            )
+            arguments = _entity_arguments(arguments.get("domain"))
+            scoped = Draft202012Validator(_canonical_parameters(original, origin))
+            if not scoped.is_valid(arguments):
+                raise NativeCallError(_schema_issues(scoped, arguments))
         if binding["kind"] == "tool":
             return {
                 "kind": "tool",

@@ -1,6 +1,6 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Planung — beleggebundener Abschluss in Prüfung
+## HA-Planung — verständlicher Entitätenabruf in Prüfung
 
 `bbcb00b` ist nach vollständiger [CI 45459323240](https://github.com/sschluet/obdaAI/actions/runs/45459323240)
 auf der Test-VM installiert: 3.816 Tests bestanden, sechs optionale Calc-Skips,
@@ -17,11 +17,27 @@ deren Modellzusammenfassung ließ einen Treffer aus und erfand eine Kennung.
 Auch diese Diagnose zählt ausdrücklich nicht als erfolgreiche freie Chat-Abnahme.
 Keine HA-Änderungen, alle Originaldaten und die Testbereinigung sind geprüft.
 
+Der Entwicklungsstand `9dec00d` wurde noch nicht ausgerollt. Im lokalen Gesamtlauf
+bestanden 3.941 Tests; eine zu lange Systemanweisung und ein zeitabhängiger
+ZIP-Test verhinderten den Abschluss. Der überholte CI-Lauf wurde abgebrochen.
+Die Anweisung liegt wieder innerhalb der unveränderten 4-KiB-Grenze; der Pakettest
+vergleicht die tatsächlich hochgeladenen Originalbytes. 29 gezielte Prüfungen
+bestanden. Dieser Stand zählt nicht als vollständiger neuer Prüfnachweis.
+
 Die Nachkorrektur erweitert bestehende Auftrags- und Belegkomponenten: Unbekannte
 HA-Lesefragen werden semantisch eingeordnet; ausdrücklich angefragte Update-Daten
 benötigen vollständige aktuelle `update`-Zustände. Metadaten erfüllen diese
-Anforderung nicht. Der allgemeine Planer wählt weiterhin selbst HTTP oder
-WebSocket und seine Argumente; es gibt keinen festen Update-Abfrageplan.
+Anforderung nicht. Der allgemeine Planer wählt weiterhin selbst Werkzeuge;
+es gibt keinen festen Update-Abfrageplan. Ein zusätzlicher nativer Entitätenabruf
+übersetzt die gewünschte HA-Domäne in einen gewöhnlichen lesenden HTTP-Aufruf.
+Technische JSON-Filter baut dabei der bestehende Adapter. Die erzeugten Argumente
+werden erneut gegen das ursprüngliche zielgebundene HTTP-Schema geprüft.
+Vorhandene HTTP-/WebSocket-Werkzeuge und die Ausführungsgrenzen bleiben erhalten.
+108 Codec-/Historyprüfungen, 104 synthetische Runtime-/Transportprüfungen und ein
+zusätzlicher vertikaler API-Fall bestehen. Eine reale isolierte lokale Modellprobe
+wählt den neuen Entitätenabruf und erzeugt innerhalb des Kontextbudgets einen
+gültigen vollständigen Zustandsabruf. Sie führt keinen HA-Aufruf aus, verändert
+keine Datenbankzeile und ersetzt ausdrücklich nicht die freie Chat-Abnahme.
 Ein Abschluss wird erst nach erfüllten Beleganforderungen angeboten. Unbelegte
 Modellaussagen werden nicht als Ausweichantwort übernommen. Eine reine
 Updateübersicht wird danach aus unveränderten Originalbelegen erzeugt, ohne einen
@@ -41,7 +57,7 @@ Feldpfad werden nun vor dem Werkzeugaufruf abgewiesen; die interne Korrektur nen
 den schemaeigenen Feldtyp. Eine reale isolierte Modellprobe erkannte einen solchen
 Formatfehler, führte aber ausdrücklich noch keine vollständige Anfrage aus.
 Eine rein abgeleitete Prüfung mit tatsächlich gespeicherten HA-Daten
-bindet alle vier verfügbaren Updates an die Originalzustände und enthält keine
+bindet alle gemeldeten Updates an die Originalzustände und enthält keine
 erfundene Kennung. Sie führt keine Modelle/Werkzeuge aus und verändert keine
 Datenbankzeile; der ursprüngliche falsche Modelltext bleibt erhalten. Der
 Gesamtlauf und die vollständige neue Lieferung sind noch in Prüfung.
@@ -50,8 +66,7 @@ Auf `4cb1810` bestanden zusätzlich sieben echte lesende Fragen: SSH-Zugriff,
 Paperless-Übersicht mit Dokumentabruf, Proton-Tagesmails mit Gesendet-Abgleich
 sowie HA-Lampenübersicht und frischer Einschaltzustand. Daten und Konfiguration
 blieben erhalten. Die Paperless-Prüfung belegt Abruf/Quellenbezug, keine vollständige
-fachliche Prüfung jeder Aussage. Im getesteten Mail-Kollektiv fand sich kein
-positiver Antwortbezug; ein solcher Treffer bleibt live ungeprüft. Diese Belege
+fachliche Prüfung jeder Aussage. Ein positiver Antwortbezug bleibt live ungeprüft. Diese Belege
 werden nicht als Prüfung der neuen freien Update-Planung ausgegeben.
 
 Die vorausgegangenen Korrekturen bleiben erhalten: zielbezogene Anweisung,
