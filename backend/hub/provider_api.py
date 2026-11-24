@@ -6,8 +6,10 @@ import time
 from collections.abc import Callable
 from dataclasses import replace
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Annotated, Any
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
@@ -107,6 +109,10 @@ def _probe_result(test: ProviderTest) -> dict[str, Any]:
     return {"result": test.result}
 
 
+class _PlannerSelectionError(ValueError):
+    """Fixed synthetic selection mismatch, without model-output diagnostics."""
+
+
 async def _execute_planner_probe(
     factory: sessionmaker[Session],
     cfg: Settings,
@@ -119,9 +125,11 @@ async def _execute_planner_probe(
     from hub.agent_capabilities import describe
     from hub.agent_context import AgentContextLimitError, fit
     from hub.agent_instructions import instruction
-    from hub.agent_intent import accept_semantic, semantic_request
+    from hub.agent_intent import accept_semantic, adequacy, semantic_request
     from hub.agent_native import (
+        NATIVE_INVALID_ARGUMENTS,
         NATIVE_NO_SELECTION,
+        NativeCallError,
         NativeProtocolUnavailable,
         auxiliary_parts,
         metadata_size,
@@ -159,7 +167,11 @@ async def _execute_planner_probe(
             db.commit()
 
     def parts_for(
-        policy: str, data: dict[str, Any], metadata: dict[str, Any] | None = None
+        policy: str,
+        data: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        *,
+        prefitted: bool = False,
     ) -> list[ContextPart]:
         auxiliary = auxiliary_parts(metadata) if metadata is not None else []
         chars, encoded = metadata_size(metadata) if metadata is not None else (0, 0)
@@ -175,13 +187,13 @@ async def _execute_planner_probe(
         limit = min(cfg.context_limit, limits["context_chars"]) - chars
         if min(available, limit) <= 0:
             raise AgentContextLimitError("Probe context does not fit")
-        fitted = fit(data, policy, limit, max_bytes=available)
+        fitted = data if prefitted else fit(data, policy, limit, max_bytes=available)
         parts = [
             ContextPart(
                 content=policy, label=Privacy.LOCAL_ONLY, source_id=test_id + ":policy", revision=1
             ),
             ContextPart(
-                content=json.dumps(fitted, ensure_ascii=False),
+                content=json.dumps(fitted, ensure_ascii=False, separators=(",", ":")),
                 label=Privacy.LOCAL_ONLY,
                 source_id=test_id + ":data",
                 revision=1,
@@ -207,19 +219,51 @@ async def _execute_planner_probe(
     intent_attempt = progress("json_intent")
     p.local_native_plan, p.local_json_schema = None, request["schema"]
     accepted = accept_semantic(
-        await infer(parts_for(request["instruction"], request["data"])), profiles
+        await infer(parts_for(request["instruction"], request["data"])),
+        profiles,
+        goal="Welche Lampen gibt es in Home Assistant?",
     )
     if (
         accepted.mode != "observe"
         or accepted.target_ids != [profile.id]
         or not any(r.kind == "entity_states" and r.domain == "light" for r in accepted.requirements)
     ):
-        raise ValueError("Synthetic intent check failed")
+        raise _PlannerSelectionError("Synthetic intent check failed")
     provenance["intent_pass"], intent_attempt["status"] = True, "succeeded"
     rules = Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET"], max_effects=0)
+    history = [
+        {
+            "sequence": 1,
+            "kind": "read",
+            "status": "succeeded",
+            "document": {
+                "integration_id": profile.id,
+                "tool": "http",
+                "capability_inspection": True,
+                "arguments": {"method": "GET", "path": "/api/"},
+            },
+            "result": {
+                "http_status": 200,
+                "body": {"message": "API running."},
+                "effect_verified": False,
+            },
+        }
+    ]
+    evidence = adequacy(
+        accepted,
+        [
+            SimpleNamespace(
+                **{
+                    **step,
+                    "document": json.dumps(step["document"]),
+                    "result": json.dumps(step["result"]),
+                }
+            )
+            for step in history
+        ],
+    )
     data: dict[str, Any] = {
         "goal": "Welche Lampen gibt es in Home Assistant?",
-        "observed": {"http_status": 200, "body": {"message": "API running."}},
         "read_only": True,
         "allow_finish": False,
         "allow_ask": False,
@@ -236,7 +280,9 @@ async def _execute_planner_probe(
             }
         ],
         "request_contract": accepted.model_dump(),
-        "history": [],
+        "goal_evidence": evidence,
+        "remaining_effects": 0,
+        "history": history,
     }
     data["decision_schema"] = decision_schema(
         [profile.id],
@@ -248,7 +294,16 @@ async def _execute_planner_probe(
         read_only=True,
     )
     policy = instruction({profile.kind})
+    attempt = progress("native")
+    provenance["selection_protocol"] = "native"
+    from hub.agent_runtime import fit_native_plan
+
     native = prepare(policy, data)
+    native, planned = fit_native_plan(
+        native,
+        min(cfg.context_limit, limits["context_chars"]),
+        limits["context_tokens"] - 4096 - 2 * 64 - p.settings.local_max_tokens,
+    )
 
     def validate_selection(value: Any) -> None:
         if (
@@ -257,16 +312,14 @@ async def _execute_planner_probe(
             or value.get("integration_id") != profile.id
             or value.get("tool") != "http"
         ):
-            raise ValueError("Synthetic native selection failed")
+            raise _PlannerSelectionError("Synthetic native selection failed")
         arguments, effect = validate_tool(profile.kind, rules, "http", value.get("arguments", {}))
         if effect or arguments["method"] != "GET" or arguments["path"] != "/api/states":
-            raise ValueError("Synthetic read selection failed")
+            raise _PlannerSelectionError("Synthetic read selection failed")
 
-    attempt = progress("native")
-    provenance["selection_protocol"] = "native"
     provenance["native_schema_sha256"] = native.metadata["sha256"]
     p.local_json_schema, p.local_native_plan = None, native.metadata
-    native_parts = parts_for(native.instruction, native.data, native.metadata)
+    native_parts = parts_for(native.instruction, planned, native.metadata, prefitted=True)
     try:
         value = await infer(native_parts)
     except NativeProtocolUnavailable:
@@ -275,6 +328,8 @@ async def _execute_planner_probe(
         if isinstance(value, dict) and value.get("_native_error") == NATIVE_NO_SELECTION:
             attempt["status"] = "no_selection"
         else:
+            if isinstance(value, dict) and value.get("_native_error") == NATIVE_INVALID_ARGUMENTS:
+                raise NativeCallError()
             validate_selection(value)
             attempt["status"], provenance["native_pass"] = "succeeded", True
             save_progress()
@@ -406,8 +461,41 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
     except asyncio.CancelledError:
         result, state = "Modelltest unterbrochen", "interrupted"
         raise
-    except Exception:
-        pass
+    except Exception as error:
+        if planner:
+            from hub.agent_context import AgentContextLimitError
+            from hub.agent_native import NativeCallError
+
+            protocols = {"json_intent", "native", "json_compatibility"}
+            attempts = provenance["attempts"]
+            stage = attempts[-1]["protocol"] if attempts else "setup"
+            provenance["failure_stage"] = stage if stage in protocols else "setup"
+            if isinstance(error, (asyncio.TimeoutError, httpx.TimeoutException)):
+                category = "timeout"
+            elif isinstance(error, httpx.HTTPStatusError):
+                category = (
+                    "authentication_failed"
+                    if error.response.status_code in {401, 403}
+                    else "http_error"
+                )
+            elif isinstance(error, httpx.RequestError):
+                category = "transport_error"
+            elif isinstance(error, PermissionError):
+                category = "permission_changed"
+            elif isinstance(error, NativeCallError):
+                category = "native_arguments_invalid"
+            elif isinstance(error, AgentContextLimitError):
+                category = "context_limit"
+            elif isinstance(error, json.JSONDecodeError):
+                category = "invalid_json"
+            elif isinstance(error, _PlannerSelectionError):
+                category = "selection_mismatch"
+            elif isinstance(error, ValueError):
+                category = "validation_error"
+            else:
+                # No exception text, response body, model output or input is retained.
+                category = "inference_failed"
+            provenance["failure_category"] = category
     finally:
         if p is not None:
             p.local_native_plan = None

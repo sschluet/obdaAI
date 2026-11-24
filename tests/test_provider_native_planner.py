@@ -107,7 +107,7 @@ def test_native_probe_real_fragment_decoder_and_provider_rows_preserved(managed,
             assert "response_format" in body and "tools" not in body
             return sse({"content": json.dumps(intent())})
         assert "response_format" not in body and body["tool_choice"] == "auto"
-        assert [t["function"]["name"] for t in body["tools"]] == ["t0_http"]
+        assert [t["function"]["name"] for t in body["tools"]] == ["t0_ha_entities", "t0_http"]
         assert body["tools"][0]["function"]["parameters"]
         return native()
 
@@ -204,6 +204,15 @@ def test_no_compatibility_after_other_failures(managed, monkeypatch, failure):
     assert result["status"] == "failed" and len(calls) == 2
     assert not result["provenance"]["compatibility_used"]
     assert not result["provenance"]["native_pass"]
+    assert result["provenance"]["failure_stage"] == "native"
+    expected_category = {
+        "auth": "authentication_failed",
+        "timeout": "timeout",
+        "invalid": "native_arguments_invalid",
+        "truncated": "validation_error",
+        "generic422": "http_error",
+    }[failure]
+    assert result["provenance"]["failure_category"] == expected_category
     assert "SYNTHETIC_PRIVATE_ERROR_TOKEN" not in json.dumps(result)
 
 

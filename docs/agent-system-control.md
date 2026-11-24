@@ -531,12 +531,16 @@ Zeitüberschreitung, Authentifizierungsfehler, Abbruch, Filter, unvollständiger
 und ungültige Argumente lösen diesen Wechsel nicht aus. Die vorhandene begrenzte
 Formatkorrektur ersetzt keine fehlenden Rechte.
 
-Der Einstellungs-Planertest nutzt denselben nativen Compiler und Transport mit
-einer synthetischen schreibgeschützten Funktion. Nativer Erfolg und Erfolg erst
-im JSON-Kompatibilitätsversuch bleiben getrennt in der vorhandenen Testhistorie
-nachvollziehbar; die öffentliche Ergebnisnachricht bleibt kompatibel. Ein solcher
-Test führt keine echte Integrationsaktion aus und belegt keine allgemeine
-Modellqualität oder erfolgreiche HA-Aktualisierung.
+Der Einstellungs-Planertest verwendet denselben nativen Compiler, begrenzten
+Kontextaufbau und Transport wie die Runtime. Seine synthetische lesende HA-Frage
+enthält einen vorherigen Bootstrap-Werkzeugdialog und die noch offene
+Entitätenanforderung; damit stehen dieselben passenden Entitätenfunktionen bereit.
+Es wird kein echtes Ziel aufgerufen. Nativer Erfolg und Erfolg erst nach dem
+höchstens einmal erlaubten JSON-Kompatibilitätsversuch bleiben getrennt in der
+vorhandenen Testhistorie nachvollziehbar. Fehler enthalten ausschließlich feste
+Phasen- und Ursachenkategorien, keine Modelltexte, Antwortkörper oder Secrets.
+Die öffentliche Ergebnisnachricht bleibt kompatibel. Der Test belegt weder
+allgemeine Modellqualität noch eine erfolgreiche HA-Aktualisierung.
 
 
 ## Beleggebundener Abschluss und Updateübersicht

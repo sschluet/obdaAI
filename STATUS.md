@@ -1,83 +1,56 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Planung — verständlicher Entitätenabruf in Prüfung
+## Beleggebundene HA-Abfragen — lesend live geprüft
 
-`bbcb00b` ist nach vollständiger [CI 45459323240](https://github.com/sschluet/obdaAI/actions/runs/45459323240)
-auf der Test-VM installiert: 3.816 Tests bestanden, sechs optionale Calc-Skips,
-alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.822 Tests. Neue
-verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und Erhalt
-ursprünglicher Daten/Konfiguration sind geprüft.
+`712ac60` ist nach vollständiger [CI 45484003803](https://github.com/sschluet/obdaAI/actions/runs/45484003803)
+auf der Test-VM installiert. Lokal bestanden 3.979 Tests; die vollständige CI
+bestand mit 3.973 Tests und sechs optionalen Calc-Skips einschließlich Browser-,
+Container-, Isolations- und Secretprüfungen. Alle neun installierten Images, beide
+APIs, Schema 0050 und der Erhalt ursprünglicher Daten/Konfiguration sind geprüft.
+Eine neue verschlüsselte Sicherung liegt vor; dies ist kein Wiederherstellungstest.
 
-Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden. Ein
-ungültiges GET-Nachprüfungsobjekt wurde jetzt intern korrigiert; anschließend
-behauptete das Modell jedoch aus Versions-/Supervisor-Metadaten unbelegt,
-es gebe keine Updates. Die Abnahme erkannte den fehlenden Zustandsbeleg.
-Eine getrennte, ausdrücklich engere Diagnose erhielt vollständige Updatezustände;
-deren Modellzusammenfassung ließ einen Treffer aus und erfand eine Kennung.
-Auch diese Diagnose zählt ausdrücklich nicht als erfolgreiche freie Chat-Abnahme.
-Keine HA-Änderungen, alle Originaldaten und die Testbereinigung sind geprüft.
+Die freie reale Frage nach ausstehenden HA-Updates besteht jetzt: vollständige
+aktuelle Zustandsbelege, alle gemeldeten verfügbaren Updates enthalten, keine
+erfundenen Kennungen oder behaupteten Änderungen. Der Planer wählt seine Werkzeuge
+selbst. Der native Entitätenabruf erzeugt geprüfte Argumente für den bestehenden
+HTTP-Leseweg. Ein beleggebundener Abschluss verhindert unbelegte Nullmeldungen
+und benötigt für eine reine Updateübersicht keinen weiteren Modellaufruf.
+Metadaten allein erfüllen keine Anforderung an aktuelle Entitätenzustände.
+Nach verifizierten Effekten und verbrauchten Änderungsbudgets angebotene Werkzeuge
+sowie kompakte Belegsichten begrenzen den Kontext, ohne offene Wirkungsprüfungen
+oder aktuelle Ausführungsgrenzen zu umgehen.
 
-Der Entwicklungsstand `9dec00d` wurde noch nicht ausgerollt. Im lokalen Gesamtlauf
-bestanden 3.941 Tests; eine zu lange Systemanweisung und ein zeitabhängiger
-ZIP-Test verhinderten den Abschluss. Der überholte CI-Lauf wurde abgebrochen.
-Die Anweisung liegt wieder innerhalb der unveränderten 4-KiB-Grenze; der Pakettest
-vergleicht die tatsächlich hochgeladenen Originalbytes. 29 gezielte Prüfungen
-bestanden. Dieser Stand zählt nicht als vollständiger neuer Prüfnachweis.
+Auf diesem Release bestehen auch echter SSH-Zugriff sowie Paperless-Übersicht und
+anschließender Dokumentinhaltabruf. Die Paperless-Prüfung belegt Abruf und
+Quellenzuordnung, keine vollständige fachliche Prüfung jeder Zusammenfassung.
+Auch Proton-Tagesübersicht und anschließender Gesendet-Abgleich bestehen. Ein
+positiver Antwortbezug wurde mangels beobachtetem Treffer nicht live belegt;
+fehlende Beziehungen bleiben unbekannt. HA-Lampenübersicht und die Folgefrage nach eingeschalteten Lampen bestehen
+ebenfalls mit frischen Zustandsbelegen. Das ist eine Prüfung des beobachteten
+Bestands, keine Bestätigung jeder möglichen HA-Abfrage.
 
-Die Nachkorrektur erweitert bestehende Auftrags- und Belegkomponenten: Unbekannte
-HA-Lesefragen werden semantisch eingeordnet; ausdrücklich angefragte Update-Daten
-benötigen vollständige aktuelle `update`-Zustände. Metadaten erfüllen diese
-Anforderung nicht. Der allgemeine Planer wählt weiterhin selbst Werkzeuge;
-es gibt keinen festen Update-Abfrageplan. Ein zusätzlicher nativer Entitätenabruf
-übersetzt die gewünschte HA-Domäne in einen gewöhnlichen lesenden HTTP-Aufruf.
-Technische JSON-Filter baut dabei der bestehende Adapter. Die erzeugten Argumente
-werden erneut gegen das ursprüngliche zielgebundene HTTP-Schema geprüft.
-Vorhandene HTTP-/WebSocket-Werkzeuge und die Ausführungsgrenzen bleiben erhalten.
-108 Codec-/Historyprüfungen, 104 synthetische Runtime-/Transportprüfungen und ein
-zusätzlicher vertikaler API-Fall bestehen. Eine reale isolierte lokale Modellprobe
-wählt den neuen Entitätenabruf und erzeugt innerhalb des Kontextbudgets einen
-gültigen vollständigen Zustandsabruf. Sie führt keinen HA-Aufruf aus, verändert
-keine Datenbankzeile und ersetzt ausdrücklich nicht die freie Chat-Abnahme.
-Ein Abschluss wird erst nach erfüllten Beleganforderungen angeboten. Unbelegte
-Modellaussagen werden nicht als Ausweichantwort übernommen. Eine reine
-Updateübersicht wird danach aus unveränderten Originalbelegen erzeugt, ohne einen
-weiteren Modellaufruf für den Abschluss zu benötigen.
-Nach verifizierten Änderungen benötigte frische Lesedaten begrenzen die
-angebotenen Schnittstellen nur am betroffenen Ziel und halten den Kontext klein.
-Verbrauchte Änderungslimits werden bereits bei der Planung berücksichtigt, sobald
-die bisherigen Effekte verifiziert sind. Offene Wirkungsprüfungen bleiben möglich.
-Eine letzte kleinere Strukturansicht und kompakte Beschriftungen geschlossener
-Belege halten auch längere Abläufe im bestehenden Kontextbudget.
-Ein nicht verifizierter Effekt bleibt ausdrücklich unverifiziert; fremde
-Schreibrechte oder künftige Wirkungsnachweise werden nicht vorweggenommen.
+Ein separater synthetischer Provider-Planertest scheiterte weiterhin: Intent
+anerkannt, keine native Auswahl, danach erfolgloser Kompatibilitätsversuch.
+Der fehlgeschlagene Datensatz bleibt erhalten. Der Test verwendete noch nicht
+den tatsächlichen aktuellen Planerkontext. Die Nachkorrektur gleicht Goal-Evidence,
+Bootstrap-Werkzeughistorie und Kontextbudget an den gemeinsamen Runtime-Weg an;
+der native Entitätenabruf ist dadurch auch im Test erreichbar. Sichere feste
+Fehlerkategorien unterscheiden künftig Phase und Ursache, ohne Modelltexte oder
+Zugangsdaten zu speichern. Keine Änderung an Providerkonfiguration oder Erfolgskriterien.
+Die Nachkorrektur besteht den lokalen Gesamtlauf: 3.986 Tests, Ruff, mypy
+und Secret-Scan erfolgreich. Vollständige neue GitHub-CI und Rollout stehen noch aus.
+Eine erste isolierte Probe scheiterte schon im privaten Helfer vor dem Modellaufruf.
+Nach Korrektur dieses Helfers erkennt eine tatsächliche lokale Probe den Intent,
+wählt aber nicht den geforderten Zustandsabruf. Die neue Fehlerkategorie meldet
+diesen Auswahlfehler korrekt; kein Kompatibilitätswechsel oder Zielaufruf folgt.
+Providerkonfiguration und Datenbank bleiben unverändert. Diese Probe ist kein
+Erfolgsnachweis und ersetzt nicht die erneute persistierte API-Abnahme.
 
-62 gezielte Kontext-/Native-/Verwaltungs-/Budgetprüfungen sowie 149 weitere
-Beleg-/Intent-/Filter-/API-/Kompatibilitätsprüfungen bestehen. Filter ohne zugehörigen
-Feldpfad werden nun vor dem Werkzeugaufruf abgewiesen; die interne Korrektur nennt
-den schemaeigenen Feldtyp. Eine reale isolierte Modellprobe erkannte einen solchen
-Formatfehler, führte aber ausdrücklich noch keine vollständige Anfrage aus.
-Eine rein abgeleitete Prüfung mit tatsächlich gespeicherten HA-Daten
-bindet alle gemeldeten Updates an die Originalzustände und enthält keine
-erfundene Kennung. Sie führt keine Modelle/Werkzeuge aus und verändert keine
-Datenbankzeile; der ursprüngliche falsche Modelltext bleibt erhalten. Der
-Gesamtlauf und die vollständige neue Lieferung sind noch in Prüfung.
-
-Auf `4cb1810` bestanden zusätzlich sieben echte lesende Fragen: SSH-Zugriff,
-Paperless-Übersicht mit Dokumentabruf, Proton-Tagesmails mit Gesendet-Abgleich
-sowie HA-Lampenübersicht und frischer Einschaltzustand. Daten und Konfiguration
-blieben erhalten. Die Paperless-Prüfung belegt Abruf/Quellenbezug, keine vollständige
-fachliche Prüfung jeder Aussage. Ein positiver Antwortbezug bleibt live ungeprüft. Diese Belege
-werden nicht als Prüfung der neuen freien Update-Planung ausgegeben.
-
-Die vorausgegangenen Korrekturen bleiben erhalten: zielbezogene Anweisung,
-Anbieter-/UTF-8-Kontextbudget, strukturierte Versions-/Statussichten, hashgebundener
-Effektverlauf und behobene Mehrfacheffekt-Verarbeitung. Native Werkzeuge übertragen
-ein vollständiges `arguments`-Objekt. Eine einzelne reale isolierte Probe belegte
-zuvor einen Typverlust des Modellservers; der neue Objektvertrag bestand anschließend
-eine reale Modellprobe ohne Wertänderung oder Werkzeugversand. Sichere Fehlerhinweise
-und genau ein Aufruf je Planungsschritt begrenzen interne Korrekturen.
-Keine echte HA-Aktualisierung, allgemeine autonome Verwaltung oder Wiederherstellung
-ist damit live abgenommen.
+Keine HA-Updates oder Konfigurationsänderungen wurden in dieser Abnahme ausgeführt.
+Allgemeine autonome Verwaltung, echte HA-Schreibabläufe und Wiederherstellung
+bleiben offen. Frühere erfolgreiche Leseprüfungen sind kein Ersatz dafür.
+Die bestehenden zielgebundenen Regeln, dauerhaften Absichten, Freigaben,
+Nachprüfungen und das Verbot blinder Wiederholung bleiben erhalten.
 
 ## Frühere geprüfte Lieferung — f07dd44 / Schema 0050
 
