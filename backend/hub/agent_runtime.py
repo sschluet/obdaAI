@@ -96,8 +96,10 @@ class AgentFormatExhausted(ValueError):
 
 
 class AgentFormatError(ValueError):
-    def __init__(self, rejected: str):
+    def __init__(self, rejected: str, *, native_issues: list[str] | None = None):
         self.rejected = rejected[:4000]
+        self.issues = ([{"type": "native_call_invalid", "diagnostics": native_issues}]
+                       if native_issues else [{"type": "json_invalid"}])
 
 
 # Compatibility export for contract tests; actual planning uses selected target kinds.
@@ -1725,7 +1727,11 @@ async def _generate_once(
             db.commit()
             if reason == agent_native.NATIVE_NO_SELECTION:
                 raise NativePlanningUnavailable(binding)
-            raise AgentFormatError(encode({"reason": "native_invalid_arguments"}))
+            diagnostics = output.get("issues", [])
+            raise AgentFormatError(encode({"reason": "native_invalid_arguments"}),
+                                   native_issues=[item[:120] for item in diagnostics[:6]
+                                                  if isinstance(item, str)]
+                                   if isinstance(diagnostics, list) else None)
         step.status, step.result = "succeeded", encode(output)
         db.commit()
         return output
@@ -2753,7 +2759,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                      "erstellt werden; vorhandene Belege bleiben erhalten.")
                             db.commit()
                             return
-                        format_feedback(db, cfg, job, error.rejected, [{"type": "json_invalid"}])
+                        format_feedback(db, cfg, job, error.rejected, error.issues)
                         db.commit()
                     continue
                 try:

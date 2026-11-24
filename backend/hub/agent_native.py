@@ -21,8 +21,16 @@ NATIVE_INVALID_ARGUMENTS = "native_invalid_arguments"
 class NativeCallError(ValueError):
     """Safe protocol diagnostics, never model values or private argument paths."""
 
-    def __init__(self, issue: str = NATIVE_INVALID_ARGUMENTS) -> None:
-        self.issues = [issue]
+    def __init__(self, issue: str | list[str] = NATIVE_INVALID_ARGUMENTS) -> None:
+        candidates = [issue] if isinstance(issue, str) else issue
+        self.issues = list(
+            dict.fromkeys(
+                value
+                if re.fullmatch(r"[A-Za-z0-9_.:-]{1,120}", value)
+                else NATIVE_INVALID_ARGUMENTS
+                for value in candidates
+            )
+        )[:6] or [NATIVE_INVALID_ARGUMENTS]
         super().__init__("Native Werkzeugauswahl ist ungültig.")
 
 
@@ -123,11 +131,24 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
             if identifier not in targets:
                 targets.append(identifier)
             name = f"t{targets.index(identifier)}_{tool.replace('.', '_')}"
-            parameters = _parameters(properties["arguments"], schema.get("$defs", {}))
+            canonical = _parameters(properties["arguments"], schema.get("$defs", {}))
+            definitions = canonical.pop("$defs", None)
+            # A fixed object property lets native parsers preserve nested JSON
+            # types even when the canonical root is an anyOf/ref schema.
+            canonical["type"] = "object"
+            parameters = {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"arguments": canonical},
+                "required": ["arguments"],
+                **({"$defs": definitions} if definitions is not None else {}),
+            }
+            Draft202012Validator.check_schema(parameters)
             binding = {
                 "kind": kind,
                 "integration_id": identifier,
                 "tool": tool,
+                "argument_object": True,
                 "message": "Werkzeug am ausgewählten Ziel ausführen.",
             }
             description = (
@@ -179,9 +200,12 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
     prose = (
         instruction[:start]
         + (
+            "Wähle pro Planungsschritt GENAU EINEN Funktionsaufruf. Warte dessen Ergebnis ab; "
+            "keine parallelen Aufrufe. Abschluss nur aus bereits vorliegenden Belegen.\n"
             "Verwende native Funktionsaufrufe aus der bereitgestellten Liste. Der Funktionsname\n"
-            "bindet Ziel und Werkzeug; arguments enthält nur Werkzeugargumente "
-            "nach dessen Schema.\n"
+            "bindet Ziel und Werkzeug. Werkzeugfunktionen erhalten genau den Parameter "
+            "arguments als vollständiges JSON-Objekt nach dessen Schema, keine JSON-Zeichenkette.\n"
+            "ask_user, finish_run und stop_run erhalten direkt message.\n"
             "Keine zusätzliche JSON-Hülle. Rückfragen über ask_user, Abschluss über finish_run,\n"
             "sicheres Anhalten über stop_run, jeweils nur soweit angeboten.\n"
             "Texte kurz und sachlich, keine internen Überlegungen.\n"
@@ -208,13 +232,41 @@ def _object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
-            raise NativeCallError()
+            raise NativeCallError("native_duplicate_json_keys")
         result[key] = value
     return result
 
 
 def _invalid_constant(value: str) -> Any:
-    raise NativeCallError()
+    raise NativeCallError("native_invalid_json")
+
+
+def _schema_issues(validator: Any, arguments: Any) -> list[str]:
+    """Only schema-owned vocabulary; never jsonschema messages or instance paths."""
+    issues = ["args_schema_invalid"]
+    pending = list(validator.iter_errors(arguments))
+    while pending and len(issues) < 6:
+        error = pending.pop(0)
+        keyword = error.validator
+        # Registered validator names are trusted schema keywords, not instance keys.
+        if keyword in Draft202012Validator.VALIDATORS:
+            value = "schema:" + keyword
+            if value not in issues:
+                issues.append(value)
+        if keyword == "required" and isinstance(error.instance, dict):
+            for field in error.schema.get("required", []):
+                if (
+                    isinstance(field, str)
+                    and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", field)
+                    and field not in error.instance
+                ):
+                    value = "required:" + field
+                    if value not in issues and len(issues) < 6:
+                        issues.append(value)
+        # anyOf/oneOf details contain useful leaf keywords. Their messages, paths,
+        # unexpected property names, regex patterns and values remain unobserved.
+        pending.extend(error.context)
+    return issues[:6]
 
 
 def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -222,32 +274,48 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
     if not calls:
         return None
     try:
-        if metadata["version"] != 1 or metadata["sha256"] != _digest(metadata) or len(calls) != 1:
-            raise NativeCallError()
+        if len(calls) != 1:
+            raise NativeCallError("native_call_count")
+        if metadata["version"] != 1 or metadata["sha256"] != _digest(metadata):
+            raise NativeCallError("native_metadata_invalid")
         call = calls[0]
         if call.get("type", "function") != "function":
-            raise NativeCallError()
+            raise NativeCallError("native_call_envelope_invalid")
         function = call["function"]
         name = function["name"]
+        if not isinstance(name, str) or name not in metadata["bindings"]:
+            raise NativeCallError("native_unknown_function")
         binding = metadata["bindings"][name]
         definition = next(
             row["function"] for row in metadata["tools"] if row["function"]["name"] == name
         )
         raw = function["arguments"]
-        arguments = (
-            json.loads(raw, object_pairs_hook=_object, parse_constant=_invalid_constant)
-            if isinstance(raw, str)
-            else deepcopy(raw)
-        )
+        try:
+            arguments = (
+                json.loads(raw, object_pairs_hook=_object, parse_constant=_invalid_constant)
+                if isinstance(raw, str)
+                else deepcopy(raw)
+            )
+        except json.JSONDecodeError:
+            raise NativeCallError("native_invalid_json") from None
+        canonical = deepcopy(definition["parameters"])
+        if binding.get("argument_object") is True:
+            canonical = deepcopy(definition["parameters"]["properties"]["arguments"])
+            if "$defs" in definition["parameters"]:
+                canonical["$defs"] = deepcopy(definition["parameters"]["$defs"])
+        validator = Draft202012Validator(canonical)
         if not isinstance(arguments, dict):
-            raise NativeCallError()
-        validator = Draft202012Validator(definition["parameters"])
+            raise NativeCallError(_schema_issues(validator, arguments))
         if not validator.is_valid(arguments):
-            if len(arguments) != 1 or next(iter(arguments)) not in {"parameters", "arguments"}:
-                raise NativeCallError()
+            if (
+                not isinstance(arguments, dict)
+                or len(arguments) != 1
+                or next(iter(arguments)) not in {"parameters", "arguments"}
+            ):
+                raise NativeCallError(_schema_issues(validator, arguments))
             inner = next(iter(arguments.values()))
             if not isinstance(inner, dict) or not validator.is_valid(inner):
-                raise NativeCallError()
+                raise NativeCallError(_schema_issues(validator, inner))
             arguments = inner
         if binding["kind"] == "tool":
             return {
@@ -261,4 +329,4 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
     except NativeCallError:
         raise
     except (KeyError, TypeError, ValueError, StopIteration):
-        raise NativeCallError() from None
+        raise NativeCallError("native_call_envelope_invalid") from None

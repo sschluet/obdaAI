@@ -20,7 +20,7 @@ pytest_plugins = ['test_agent_capability_runtime']
 GOAL = 'Bitte prüfe Home Assistant und spiele alle ausstehenden Update ein'
 
 
-def scenario(ha, monkeypatch, tmp_path, *, uncertain=False):
+def scenario(ha, monkeypatch, tmp_path, *, uncertain=False, invalid_first=False):
     app, client, _, cfg, identifier, *_ = ha
     cfg = replace(cfg, local_model='synthetic-native-model',
                   local_base_url='http://127.0.0.1:11444/v1', local_allowed_ip='127.0.0.1',
@@ -63,11 +63,19 @@ def scenario(ha, monkeypatch, tmp_path, *, uncertain=False):
             return httpx.Response(200, text=event({'content': intent.model_dump_json()})
                                   + 'data: [DONE]\n\n')
         assert body['tool_choice'] == 'auto' and 'temperature' not in body
+        if invalid_first and len(model_requests) == 2:
+            return httpx.Response(200, text=event(fragment('unknown_function', '{}'))
+                                  + 'data: [DONE]\n\n')
+        if invalid_first and len(model_requests) == 3:
+            data = json.loads(body['messages'][1]['content'])
+            feedback = [row for row in data['history'] if row['kind'] == 'feedback']
+            assert feedback[-1]['document']['issues'] == [{
+                'type': 'native_call_invalid', 'diagnostics': ['native_unknown_function']}]
         directive = next(directives)
         names = [row['function']['name'] for row in body['tools']]
         name = 'finish_run' if directive is None else next(n for n in names if n.endswith('_http'))
         arguments = ({'message': 'Synthetic backup and pending update verified.'}
-                     if directive is None else directive)
+                     if directive is None else {'arguments': directive})
         text = json.dumps(arguments)
         midpoint = len(text) // 2
         return httpx.Response(200, text=event(fragment(name, text[:midpoint]))
@@ -153,3 +161,19 @@ def test_native_general_loop_stops_on_uncertain_update_without_native_or_target_
     assert len(requests) == 5 and len([r for r in requests if 'tools' in r]) == 4
     assert len([call for call in calls if call[2] == '/api/services/update/install']) == 1
     assert not [step for step in result['steps'] if step['kind'] == 'feedback']
+
+
+def test_native_unknown_function_gets_safe_feedback_before_any_target_dispatch(
+    ha, monkeypatch, tmp_path,
+):
+    result, requests, calls = scenario(ha, monkeypatch, tmp_path, invalid_first=True)
+    assert result['status'] == 'succeeded', result
+    assert len(requests) == 7
+    feedback = [step for step in result['steps'] if step['kind'] == 'feedback']
+    assert len(feedback) == 1 and feedback[0]['document']['issues'] == [{
+        'type': 'native_call_invalid', 'diagnostics': ['native_unknown_function']}]
+    failed_models = [step for step in result['steps']
+                     if step['kind'] == 'model' and step['status'] == 'failed']
+    assert len(failed_models) == 1
+    assert len([call for call in calls if call[1] == 'POST']) == 2
+    assert all(call[0] != 'unknown_function' for call in calls)

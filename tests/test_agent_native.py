@@ -95,7 +95,7 @@ def test_invalid_arguments_never_expand_scope(arguments):
     value = prepared()
     with pytest.raises(NativeCallError) as caught:
         decode_calls(value.metadata, [call(http_binding(value), arguments)])
-    assert caught.value.issues == ["native_invalid_arguments"]
+    assert caught.value.issues[0] == "args_schema_invalid"
     assert "two" not in str(caught.value)
 
 
@@ -137,27 +137,31 @@ def test_complete_definitions_projection_and_verification():
     validator.check_schema(definition["parameters"])
     validator.validate(
         {
-            "method": "POST",
-            "path": "/api/one/update",
-            "verification": {
-                "path": "/api/one/state",
-                "expected": {"/body/state": "on"},
-                "timeout_seconds": 120,
-                "interval_seconds": 5,
-            },
+            "arguments": {
+                "method": "POST",
+                "path": "/api/one/update",
+                "verification": {
+                    "path": "/api/one/state",
+                    "expected": {"/body/state": "on"},
+                    "timeout_seconds": 120,
+                    "interval_seconds": 5,
+                },
+            }
         }
     )
     validator.validate(
         {
-            "method": "GET",
-            "path": "/api/one/states",
-            "projection": {
-                "items_path": "",
-                "where_pointer": "/entity_id",
-                "where_prefix": "update.",
-                "fields": ["/entity_id"],
-                "limit": 10,
-            },
+            "arguments": {
+                "method": "GET",
+                "path": "/api/one/states",
+                "projection": {
+                    "items_path": "",
+                    "where_pointer": "/entity_id",
+                    "where_prefix": "update.",
+                    "fields": ["/entity_id"],
+                    "limit": 10,
+                },
+            }
         }
     )
 
@@ -306,3 +310,233 @@ def test_descriptions_expose_exact_fixed_target_with_unavailable_leading_interfa
             assert "unavailable-first" not in function["description"]
     first = compiled.metadata["bindings"]["t0_http"]
     assert first["integration_id"] == "one"
+
+
+@pytest.mark.parametrize(
+    "case,expected",
+    [
+        ("unknown", "native_unknown_function"),
+        ("multiple", "native_call_count"),
+        ("json", "native_invalid_json"),
+        ("duplicate", "native_duplicate_json_keys"),
+        ("schema", "args_schema_invalid"),
+    ],
+)
+def test_safe_protocol_diagnostics_distinguish_failure_without_model_values(case, expected):
+    value = prepared()
+    name = http_binding(value)
+    private = "SYNTHETIC_PRIVATE_PATH_TOKEN"
+    args = {"method": "GET", "path": "/api/one/states"}
+    item = call(name, args)
+    calls = [item]
+    if case == "unknown":
+        item["function"]["name"] = private
+    elif case == "multiple":
+        calls.append(call(name, {"method": private}))
+    elif case == "json":
+        item["function"]["arguments"] = '{"secret":' + private
+    elif case == "duplicate":
+        item["function"]["arguments"] = '{"' + private + '":1,"' + private + '":2}'
+    else:
+        item["function"]["arguments"] = json.dumps({"method": private, private: private})
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(value.metadata, calls)
+    issues = caught.value.issues
+    assert issues[0] == expected
+    assert 1 <= len(issues) <= 6 and all(len(issue) <= 120 for issue in issues)
+    assert private not in str(caught.value) + json.dumps(issues)
+    if case == "schema":
+        assert "required:path" in issues
+        assert any(issue.startswith("schema:") for issue in issues)
+
+
+def test_anyof_schema_diagnostics_use_only_trusted_keywords_and_missing_fields(monkeypatch):
+    import hub.agent_native as native
+
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "projection": {
+                "anyOf": [
+                    {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"items_path": {"type": "string"}},
+                        "required": ["items_path"],
+                    },
+                    {"type": "null"},
+                ]
+            }
+        },
+        "required": ["projection"],
+    }
+    branch = {
+        "properties": {
+            "kind": {"const": "tool"},
+            "integration_id": {"const": "one"},
+            "tool": {"const": "http"},
+            "arguments": schema,
+        }
+    }
+    monkeypatch.setattr(native, "decision_schema", lambda *a, **kw: {"anyOf": [branch]})
+    value = prepared()
+    name = next(iter(value.metadata["bindings"]))
+    secret = "PRIVATE_UNKNOWN_KEY_AND_VALUE"
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(value.metadata, [call(name, {"projection": {secret: secret}})])
+    assert "schema:anyOf" in caught.value.issues
+    assert "required:items_path" in caught.value.issues
+    assert "schema:additionalProperties" in caught.value.issues
+    assert secret not in str(caught.value) + json.dumps(caught.value.issues)
+    # Both invalid outer args and the existing sole-wrapper variant remain closed.
+    with pytest.raises(NativeCallError) as wrapped:
+        decode_calls(value.metadata, [call(name, {"parameters": {"projection": {secret: secret}}})])
+    assert wrapped.value.issues == caught.value.issues
+
+
+def test_schema_issue_volume_and_names_are_bounded(monkeypatch):
+    import hub.agent_native as native
+
+    fields = {"field_" + str(i): {"type": "string"} for i in range(100)}
+    branch = {
+        "properties": {
+            "kind": {"const": "tool"},
+            "integration_id": {"const": "one"},
+            "tool": {"const": "http"},
+            "arguments": {
+                "type": "object",
+                "properties": fields,
+                "required": list(fields),
+            },
+        }
+    }
+    monkeypatch.setattr(native, "decision_schema", lambda *a, **kw: {"anyOf": [branch]})
+    value = prepared()
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(value.metadata, [call(next(iter(value.metadata["bindings"])), {})])
+    assert len(caught.value.issues) == 6
+    assert caught.value.issues[:2] == ["args_schema_invalid", "schema:required"]
+    assert all(issue.startswith("required:field_") for issue in caught.value.issues[2:])
+
+
+def test_native_instruction_requires_one_call_and_existing_evidence_for_completion():
+    value = prepared()
+    for text in [
+        "GENAU EINEN Funktionsaufruf",
+        "Warte dessen Ergebnis ab",
+        "keine parallelen Aufrufe",
+        "Abschluss nur aus bereits vorliegenden Belegen",
+    ]:
+        assert text in value.instruction
+    assert "Nachzustand unabhängig prüfen" in value.instruction
+    assert "Bei uncertain weder Ersatzaufruf" in value.instruction
+
+
+def test_tool_wire_is_one_object_with_hoisted_refs_and_typed_nested_values():
+    value = prepared()
+    name = http_binding(value)
+    function = next(
+        row["function"] for row in value.metadata["tools"] if row["function"]["name"] == name
+    )
+    wire = function["parameters"]
+    assert wire["type"] == "object" and wire["additionalProperties"] is False
+    assert wire["required"] == ["arguments"] and set(wire["properties"]) == {"arguments"}
+    assert wire["properties"]["arguments"]["type"] == "object"
+    assert "$defs" in wire and "$defs" not in wire["properties"]["arguments"]
+    assert "#/$defs/" in json.dumps(wire["properties"]["arguments"])
+    assert value.metadata["bindings"][name]["argument_object"] is True
+    examples = [
+        {
+            "method": "GET",
+            "path": "/api/one/states",
+            "query": {"enabled": True, "limit": 10},
+            "body": None,
+            "projection": {
+                "items_path": "",
+                "where_pointer": "/entity_id",
+                "where_prefix": "update.",
+                "where_equals": None,
+                "fields": ["/entity_id", "/state"],
+                "limit": 100,
+            },
+            "verification": None,
+        },
+        {
+            "method": "POST",
+            "path": "/api/one/update",
+            "query": {"dry_run": False},
+            "body": {"enabled": True, "optional": None, "items": [1, False, {"value": None}]},
+            "projection": None,
+            "verification": None,
+        },
+    ]
+    for arguments in examples:
+        Draft202012Validator(wire).validate({"arguments": arguments})
+        for actual in [arguments, {"arguments": arguments}]:
+            result = decode_calls(value.metadata, [call(name, actual)])
+            assert result is not None and result["arguments"] == arguments
+            assert type(result["arguments"]["query"][next(iter(arguments["query"]))]) is bool
+            assert result["integration_id"] == "one"
+    assert "arguments als vollständiges JSON-Objekt" in value.instruction
+    assert "direkt message" in value.instruction
+
+
+@pytest.mark.parametrize("field", ["projection", "body", "query"])
+def test_stringified_objects_are_not_silently_repaired(field):
+    value = prepared()
+    arguments = {"method": "GET", "path": "/api/one/states", field: '{"private":true}'}
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(value.metadata, [call(http_binding(value), {"arguments": arguments})])
+    assert caught.value.issues[0] == "args_schema_invalid"
+    assert "private" not in str(caught.value.issues)
+
+
+def test_historical_metadata_v1_without_argument_object_remains_compatible():
+    from hub.agent_native import _digest
+
+    value = prepared()
+    historical = deepcopy(value.metadata)
+    for row in historical["tools"]:
+        function = row["function"]
+        binding = historical["bindings"][function["name"]]
+        if binding.pop("argument_object", False):
+            wire = function["parameters"]
+            canonical = deepcopy(wire["properties"]["arguments"])
+            if "$defs" in wire:
+                canonical["$defs"] = deepcopy(wire["$defs"])
+            if "anyOf" in canonical:
+                canonical.pop("type", None)
+            function["parameters"] = canonical
+    historical["sha256"] = _digest(historical)
+    assert historical["version"] == 1
+    arguments = {
+        "method": "GET",
+        "path": "/api/one/states",
+        "body": None,
+        "query": {"enabled": False},
+    }
+    for actual in [arguments, {"parameters": arguments}, {"arguments": arguments}]:
+        result = decode_calls(historical, [call(http_binding(value), actual)])
+        assert result is not None and result["arguments"] == arguments
+    assert decode_calls(historical, [call("finish_run", {"message": "Synthetic evidence"})]) == {
+        "kind": "finish",
+        "message": "Synthetic evidence",
+    }
+    tampered = deepcopy(value.metadata)
+    tampered["bindings"][http_binding(value)].pop("argument_object")
+    with pytest.raises(NativeCallError) as caught:
+        decode_calls(tampered, [call(http_binding(value), arguments)])
+    assert caught.value.issues == ["native_metadata_invalid"]
+
+
+def test_new_wire_control_functions_keep_direct_message():
+    value = prepared(allow_ask=True, allow_finish=True, allow_stop=True)
+    for name in ["ask_user", "finish_run", "stop_run"]:
+        function = next(
+            row["function"] for row in value.metadata["tools"] if row["function"]["name"] == name
+        )
+        assert set(function["parameters"]["properties"]) == {"message"}
+        assert "argument_object" not in value.metadata["bindings"][name]
+        result = decode_calls(value.metadata, [call(name, {"message": "Synthetic"})])
+        assert result is not None and result["message"] == "Synthetic"

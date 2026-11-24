@@ -436,11 +436,25 @@ Nachprüfung. Eine echte HA-Updateausführung wurde dabei nicht gestartet.
 Die allgemeine lokale Administrationsplanung verwendet native OpenAI-kompatible
 Funktionsaufrufe (`agent_native.py`). Der Compiler leitet für jedes gebundene
 Ziel/Werkzeug eine Funktion aus dem bestehenden geschlossenen Entscheidungsschema
-ab. Die Funktion bindet Ziel und Werkzeug; Argumente dürfen diese Bindung nicht
+ab. Werkzeugfunktionen erhalten genau einen Parameter `arguments` als vollständiges
+Objekt; dessen vollständige typisierte Regeln bleiben enthalten. Referenzdefinitionen
+liegen an der Wurzel des Funktionsschemas. Der lokale Server kann dadurch das ganze
+Argumentobjekt einschließlich verschachtelter Filter, JSON-Körper und Nullwerte
+korrekt dekodieren. Eine reale inaktive Probe belegte zuvor, dass der Server bei
+Union-Schemas eine Objektprojektion als Zeichenkette lieferte. Deren unveränderte
+JSON-Dekodierung bestand offline das ursprüngliche Schema und die Leseregeln.
+Es werden keine Argumentwerte ergänzt oder die fachlichen Schemas gelockert.
+Die Funktion bindet Ziel und Werkzeug; Argumente dürfen diese Bindung nicht
 ersetzen. `ask_user`, `finish_run` und `stop_run` sind nur gemäß den vorhandenen
 Laufregeln verfügbar. Die semantische Auftragsinterpretation, öffentliche
 Suchfragen sowie die spezialisierten privaten Mail-/Archivleser behalten ihre
 bestehenden Ausgabeformate. Es entsteht kein zweiter Ausführungsweg.
+
+Pro Planungsschritt ist ausdrücklich genau ein Funktionsaufruf erlaubt; weitere
+Aufrufe warten auf dessen Ergebnis. Steuerfunktionen behalten ihren direkten
+`message`-Parameter. Sichere Fehlerkategorien und fehlende Pflichtfelder aus den
+festen Schemas erreichen die begrenzte Formatkorrektur; private Werte,
+unerwartete Feldnamen und rohe Validierungsfehlermeldungen werden nicht übernommen.
 
 Der Transport setzt SSE-Namens-/Argumentfragmente begrenzt zusammen und wertet
 erst den vollständig beendeten Stream aus. Genau ein bekannter Funktionsaufruf

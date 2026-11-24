@@ -87,7 +87,8 @@ def fake_execution(monkeypatch, modes, binding, *, hook=None):
                 value = (
                     {"_native_error": "native_no_selection"}
                     if mode == "none"
-                    else {"_native_error": "native_invalid_arguments"}
+                    else {"_native_error": "native_invalid_arguments",
+                          "issues": ["schema_required:method", "schema_additionalProperties"]}
                     if mode == "invalid"
                     else {
                         "kind": "tool",
@@ -259,3 +260,21 @@ def test_revocation_after_native_failure_blocks_compatibility(native_job, monkey
     assert len(calls) == 1 and len(records(native_job)) == 1
     with native_job[0]() as db:
         assert not json.loads(db.get(AgentJob, native_job[3]).bindings).get("native_fallback_used")
+
+
+def test_native_safe_schema_diagnostics_reach_bounded_correction(native_job, monkeypatch):
+    calls = fake_execution(monkeypatch, ["invalid"], native_job[-1])
+    with pytest.raises(runtime.AgentFormatError) as caught:
+        generate(native_job)
+    issues = [{"type": "native_call_invalid", "diagnostics": [
+        "schema_required:method", "schema_additionalProperties"]}]
+    assert caught.value.issues == issues
+    factory, cfg, _, job_id, *_ = native_job
+    with factory() as db:
+        job = db.get(AgentJob, job_id)
+        runtime.format_feedback(db, cfg, job, caught.value.rejected, caught.value.issues)
+        db.commit()
+    assert len(calls) == 1
+    feedback = records(native_job)[-1]
+    assert feedback.kind == "feedback" and feedback.status == "succeeded"
+    assert json.loads(feedback.document)["issues"] == issues

@@ -2,6 +2,25 @@
 
 ## HA-Administrationsplanung — native Korrektur in Prüfung
 
+`a80fbf5` ist nach vollständiger CI und frischer verschlüsselter Sicherung auf der
+Test-VM installiert; alle neun Images, beide APIs, Schema 0050 und ursprüngliche
+Daten/Konfiguration sind geprüft. Die erste freie reale HA-Update-Leseabfrage
+scheiterte jedoch an drei ungültigen nativen Argumenten. Es gab keinen Schreibzugriff;
+Testdatenbereinigung und Erhaltungsprüfung bestanden. Dieser Lauf zählt ausdrücklich
+als fehlgeschlagene Bearbeitung.
+
+Eine einzelne isolierte lokale Modellprobe und anschließende Offlineprüfung
+belegen den konkreten Übergabefehler: Der Modellserver wandelte eine JSON-Projektion
+in Text um. Die Dekodierung genau dieses Felds ergab denselben vollständig schema-
+und regelgültigen Leseaufruf, ohne ergänzte Werte. Die Nachkorrektur übergibt daher
+die Werkzeugdaten als ein vollständiges Objekt und bewahrt verschachtelte Typen.
+Sie ergänzt außerdem genaue sichere Formatdiagnosen und die ausdrückliche Vorgabe
+eines Aufrufs je Planungsschritt. Eine neue isolierte Probe mit dem tatsächlichen
+lokalen Modell liefert damit einen vollständig typisierten, schema- und regelgültigen
+HTTP-Leseaufruf; keine nachträgliche Wertänderung und kein Werkzeugversand. 99 gezielte
+Tests sind bestanden. Vollständige CI, Folge-Rollout und echte Chat-Abnahme der
+Nachkorrektur stehen noch aus.
+
 Der gemeldete Auftrag scheiterte auf der Test-VM nach zwei erfolgreichen
 Lesezugriffen am Planungskontext; es wurde keine Änderung gestartet. Der Fehler
 wurde aus den gespeicherten Belegen lesend reproduziert. Zielbezogene Anweisungen,
