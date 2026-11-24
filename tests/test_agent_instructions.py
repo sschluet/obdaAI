@@ -57,7 +57,7 @@ def test_common_safety_and_completion_rules_are_never_scoped_away(kinds):
 
 def test_ha_only_under_four_kib_utf8_with_explicit_production_exception():
     text = prose({"home_assistant"})
-    assert len(instruction({"home_assistant"}).encode()) < 4000
+    assert len(instruction({"home_assistant"}).encode()) < 4096
     for part in (
         "production_ha_approved", "direkter Arbeit an bestehendem HA auch ohne Restoretest",
         "weder separaten Testserver noch zusätzlichen Restoretest fordern",
@@ -80,6 +80,7 @@ def test_http_effects_async_verification_and_loss_aware_projection_preserved(kin
         'items_path (JSON-Pointer zur Liste, ""=Wurzelliste)',
         "where_equals ODER where_prefix", "Unbekannte Struktur zuerst ohne projection lesen",
         "nur beobachtete Listen/Felder", "truncated: gekürzte Modellsicht",
+        "kein teilweise ausgeführter Aufruf",
         "projection_error: Auswahlfehler, kein fehlgeschlagener GET",
         "body bewahrt Originalantwort", "ein solcher Schritt verifiziert keine Änderung",
     ):

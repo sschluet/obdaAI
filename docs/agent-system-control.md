@@ -398,6 +398,14 @@ Ungeklärte Änderungen werden niemals als verifiziert zusammengefasst; ihre
 Kontrollfelder bleiben erhalten. Originalbelege in der Datenbank bleiben unverändert.
 Ein Kontextfehler startet keinen Ersatzaufruf und wiederholt keine Änderung.
 
+Objektantworten erhalten zusätzlich eine begrenzte strukturierte Sicht tatsächlich
+vorhandener Skalarwerte. Version und Zustand bleiben auch hinter großen Listen
+sichtbar; ausgelassene Container werden ausdrücklich gezählt. Bei Update-Entitäten
+bleiben beobachtete installierte/neue Version und Fortschritts-/Funktionswerte auch
+in projizierten Zeilen erhalten. `step_status` bezeichnet den ursprünglichen
+Werkzeugstatus, `model_view_only` die abgeleitete Anzeige: eine gekürzte Modellsicht
+bedeutet keine teilweise Ausführung und benötigt keine erneute Lesebestätigung.
+
 Die Regression umfasst einen HA-Auftrag mit großer Aktionsliste, Sicherung,
 mehreren Updates und Nachzustandsprüfung sowie einen unsicheren Updateausgang.
 Dabei sind Modell und HA-Ziel simuliert; dies ist keine reale HA-Updateabnahme.

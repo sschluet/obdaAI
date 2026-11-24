@@ -6,6 +6,11 @@ Der gemeldete HA-Auftrag wurde auf der Test-VM ausschließlich lesend untersucht
 Abbruch nach zwei erfolgreichen Lesezugriffen, keine gestartete Änderung.
 Die gespeicherte Planung reproduziert den Kontextüberlauf; die Verbindung war
 funktionsfähig. Die bisherige reale Leseabnahme belegte keinen HA-Updateablauf.
+Zwei inaktive lokale Modellproben nach der ersten Korrektur passten ins Budget,
+stellten aber eine unnötige Bestätigungsfrage: Die gekürzte Konfigurationsansicht
+wurde als teilweise ausgeführter Aufruf missverstanden. Daraus folgt eine weitere
+Korrektur: beobachtete Versions-/Statuswerte bleiben strukturiert sichtbar;
+Ausführungsstatus und Anzeigeverkürzung werden ausdrücklich getrennt.
 
 Die Korrektur beschränkt die Anweisung auf gebundene Zieltypen, zählt tatsächlich
 versandtes kompaktes JSON und berücksichtigt vor der Kompression die ausgewählte

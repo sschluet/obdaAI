@@ -125,6 +125,31 @@ def _json_type(value: Any) -> str:
 
 
 
+def _object_view(body: dict[str, Any], path: str, limit: int) -> dict[str, Any] | None:
+    """Observed scalar facts only; omitted containers never become a complete body."""
+    result: dict[str, Any] = {
+        "object_path": path, "model_view_only": True, "fields": {},
+        "observed_field_count": len(body), "omitted_field_count": len(body),
+        "containers_omitted": sum(isinstance(value, (dict, list)) for value in body.values()),
+    }
+    priority = ("version", "state", "installation_type", "installationtype", "install_type",
+                "installation_method", "safe_mode", "recovery_mode", "debug", "enabled")
+    keys = [key for key in priority if key in body]
+    keys.extend(sorted(key for key in body if key not in priority))
+    for key in keys:
+        value = body[key]
+        if (len(key) > 80 or isinstance(value, (dict, list))
+                or not (value is None or type(value) in {str, bool, int, float})):
+            continue
+        candidate = {**result, "fields": {**result["fields"], key: value},
+                     "omitted_field_count": len(body) - len(result["fields"]) - 1}
+        if len(json.dumps(candidate, ensure_ascii=False).encode()) <= limit:
+            result = candidate
+        if len(result["fields"]) >= 32:
+            break
+    return result if len(json.dumps(result, ensure_ascii=False).encode()) <= limit else None
+
+
 def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
     """Loss-aware typed rows, rather than a JSON prefix ending mid-value.
 
@@ -138,7 +163,7 @@ def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
         key = next((key for key in ("results", "items", "data")
                     if isinstance(body.get(key), list)), None)
         if key is None:
-            return None
+            return _object_view(body, path, limit)
         items, path = body[key], path + "/" + key
     elif isinstance(body, list):
         items = body
@@ -168,10 +193,13 @@ def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
         row = {key: view(item[key], 160) for key in (
             "entity_id", "state", "id", "name", "title", "created", "modified",
             "correspondent", "tags", "last_changed", "last_updated", "/entity_id", "/state",
-            "/attributes/friendly_name") if key in item}
+            "/attributes/friendly_name", "/attributes/installed_version",
+            "/attributes/latest_version", "/attributes/in_progress",
+            "/attributes/supported_features") if key in item}
         if isinstance(item.get("attributes"), dict):
             row["attributes"] = {key: view(item["attributes"][key], 120) for key in (
-                "friendly_name", "unit_of_measurement", "device_class")
+                "friendly_name", "unit_of_measurement", "device_class", "installed_version",
+                "latest_version", "in_progress", "supported_features")
                 if key in item["attributes"]}
         if not row:
             row = {str(key): view(value, 80) for key, value in list(item.items())[:5]
@@ -183,6 +211,33 @@ def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
     result["returned"] = len(result["items"])
     result["truncated"] = len(items) != result["returned"]
     return result if len(json.dumps(result, ensure_ascii=False).encode()) <= limit else None
+
+
+def _http_object_result(entry: dict[str, Any], limit: int) -> dict[str, Any] | None:
+    """Replace only successful large HTTP GET object payloads with typed facts.
+
+    Transport status and proof fields stay exact. Omissions describe the local
+    model view, never partial execution of the remote command.
+    """
+    observed, document = entry.get("result"), entry.get("document")
+    if (entry.get("kind") != "read" or entry.get("status") != "succeeded"
+            or not isinstance(observed, dict) or not isinstance(document, dict)
+            or document.get("tool") != "http"
+            or not isinstance(document.get("arguments"), dict)
+            or document["arguments"].get("method") != "GET"
+            or type(observed.get("http_status")) is not int
+            or not 200 <= observed["http_status"] < 300
+            or observed.get("projection_error") or observed.get("effect_verified") is True
+            or not isinstance(observed.get("body"), dict)
+            or any(isinstance(observed["body"].get(key), list)
+                   for key in ("results", "items", "data"))
+            or len(json.dumps(observed, ensure_ascii=False, separators=(",", ":"))) <= limit):
+        return None
+    body_view = _object_view(observed["body"], "/body", max(400, min(800, limit)))
+    if body_view is None:
+        return None
+    return {**observed, "body": body_view, "model_view_only": True,
+            "full_sha256": _receipt_hash(observed)}
 
 
 def _observation(
@@ -230,9 +285,11 @@ def _observation(
     encoded = json.dumps(observed, ensure_ascii=False, separators=(",", ":"))
     return {
         "sequence": entry.get("sequence"),
+        "step_status": entry.get("status"),
+        "model_view_only": True,
         "full_sha256": hashlib.sha256(encoded.encode()).hexdigest(),
         "summary": summary,
-        "result": view(observed, result_limit),
+        "result": _http_object_result(entry, result_limit) or view(observed, result_limit),
     }
 
 
@@ -315,17 +372,21 @@ def _receipt_hash(value: Any) -> str:
     ).encode()).hexdigest()
 
 
-def _effect_payload(value: Any) -> Any:
+def _effect_payload(value: Any, *, include_hash: bool = True) -> Any:
     """Only payload bytes may shrink; proof/control fields remain exact recursively."""
     if not isinstance(value, dict):
         return value
-    return {
+    result = {
         key: ({"content_omitted": True, "full_sha256": _receipt_hash(item)}
               if len(json.dumps(item, ensure_ascii=False)) > 180 else item) if key in {
-            "body", "stdout", "stderr", "script", "verification_script", "content",
-        } else _effect_payload(item)
+            "body", "stdout", "stderr", "script", "command", "verification_script", "content",
+        } else _effect_payload(item, include_hash=False)
         for key, item in value.items()
     }
+
+    if include_hash and result != value and "full_sha256" not in value:
+        result["full_sha256"] = _receipt_hash(value)
+    return result
 
 
 def _verified_terminal(entry: dict[str, Any]) -> bool:
@@ -354,8 +415,8 @@ def _effect_index(
             continue
         ledger.append({
             **{key: value for key, value in entry.items() if key not in {"document", "result"}},
-            "document": _effect_payload(document),
-            "result": _effect_payload(result),
+            "document": _effect_payload(document, include_hash=False),
+            "result": _effect_payload(result, include_hash=False),
             "document_sha256": _receipt_hash(document),
             "arguments_sha256": _receipt_hash(document.get("arguments", {})),
             "result_sha256": _receipt_hash(result),
@@ -412,6 +473,9 @@ def fit(
                 return {
                     "evidence_source": "mail_read_progress",
                 }
+            typed_object = _http_object_result(entry, limit)
+            if typed_object is not None:
+                return typed_object
             observed = entry["result"]
             clipped = view(observed, limit)
             if (isinstance(observed, dict) and isinstance(clipped, dict)
