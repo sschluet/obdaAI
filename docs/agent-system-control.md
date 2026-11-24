@@ -487,7 +487,21 @@ abgewiesen. Ein gültiger Aufruf wird zur bisherigen kanonischen Entscheidung;
 Rechte, Einzelfreigabe, dauerhafte Absicht, Versand, Abbruch und Nachprüfung gelten
 unverändert. Bereits unklare Effekte werden nicht wiederholt.
 
-Die tatsächlich gesendeten Funktionsschemas zählen einschließlich UTF-8-Größe,
+Ausgeführte, aktuell schemagültige Lese-/Effektschritte erhalten nach der
+Kontextverdichtung standardisierte `assistant.tool_calls` und unmittelbar
+zugehörige `tool`-Antworten. Stabile rekonstruierte IDs kennzeichnen die tatsächlichen
+Schrittsequenzen, nicht ursprüngliche Anbieter-IDs. Zielbindung, Argumentschema,
+Paarung und separater Nachrichtenhash werden vor Versand validiert. Diese
+abgeleiteten Daten verleihen keine Rechte und führen keine Werkzeuge aus.
+Unklare Schritte, gekürzte Argumente und aktuell nicht verfügbare Funktionen bleiben
+im bisherigen Kontext. Controller-Feedback bleibt im begrenzten Zustands-JSON.
+Konvertierte Ergebnis-Payloads werden dort nicht zusätzlich dupliziert; die
+strukturierte letzte Zusammenfassung mit Zählwerten und Hash bleibt erhalten. Skalare HTTP-Fakten
+bleiben etwa unter `body.version`; Verlust-/Hashmetadaten stehen separat in
+`body_view`. HA-WebSocket-Objekte und Listen erhalten ebenfalls begrenzte typisierte
+Ansichten. Fehlerstatus, boolesche Falschwerte, Nullwerte und Originalbelege bleiben erhalten.
+
+Die tatsächlich gesendeten Funktionsschemas und Werkzeugnachrichten zählen einschließlich UTF-8-Größe,
 Nachrichtenrahmen und Antwortreserve zum lokalen Kontextbudget. Sie sind
 `LOCAL_ONLY` und werden auch an der endgültigen Anbietergrenze geprüft. Die
 gespeicherte Laufautorität behält die ursprünglichen Zielregeln, unabhängig von

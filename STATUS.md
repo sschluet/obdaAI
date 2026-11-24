@@ -1,33 +1,30 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Planung — begrenzte Lesekorrektur in Prüfung
+## HA-Planung — Werkzeugdialog in Prüfung
 
-`5bfadaa` ist nach vollständiger [CI 45429795990](https://github.com/sschluet/obdaAI/actions/runs/45429795990)
-auf der Test-VM installiert: 3.713 Tests bestanden, sechs optionale Calc-Skips,
-alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.719 Tests. Frische
+`86cc743` ist nach vollständiger [CI 45439006076](https://github.com/sschluet/obdaAI/actions/runs/45439006076)
+auf der Test-VM installiert: 3.751 Tests bestanden, sechs optionale Calc-Skips,
+alle vollständigen Pflichtjobs erfolgreich. Lokal bestanden 3.757 Tests. Frische
 verschlüsselte Sicherung, alle neun Images, beide APIs, Schema 0050 und Erhalt
 ursprünglicher Daten/Konfiguration sind geprüft.
 
-Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden: Nach
-korrekt typisierter nativer Werkzeugwahl antwortete HA mit HTTP 200, die lokale
-Listenprojektion passte aber nicht zur Konfigurations-Objektantwort. Der bisherige
-Lauf brach daraufhin ab. Der Fehlbeleg einschließlich unveränderter Originalantwort
-bleibt erhalten; es gab keinen Schreibzugriff. Die Erhaltungs- und Bereinigungsprüfung
-des Testauftrags bestand. Dieser Lauf zählt ausdrücklich als fehlgeschlagene Bearbeitung.
+Die freie reale HA-Update-Leseabfrage ist trotzdem noch nicht bestanden: Die
+begrenzte Korrektur nach einem bestätigten Projektionsfehler greift, das Modell
+fordert danach aber wiederholt eine bereits erfolgreich gelesene Konfiguration
+an. Der Wiederholungsschutz stoppt diesen Lauf. Es gab keinen Schreibzugriff;
+Originaldaten, Konfiguration und Bereinigung des Testauftrags sind geprüft.
+Dieser Lauf zählt ausdrücklich als fehlgeschlagene Bearbeitung.
 
-Die Nachkorrektur erlaubt eine begrenzte Neuplanung nach genau einem bestätigten
-Projektionsfehler: korrigierte Auswahl oder anderer erlaubter Leseweg, keine
-identischen Argumente, keine Abschlusserklärung oder Änderung vor einem gültigen
-Lesebeleg. Ein zweiter Lesefehler stoppt den Lauf. Alte oder unklare Effekte sowie
-private Mail-/Archivverträge erhalten keine zusätzliche Wiederholung. Ein künftiger
-Wirkungsnachweis blockiert nicht mehr die vorher nötige Lesekorrektur; der volle
-Auftrag und die endgültigen Rechte-/Wirkungsprüfungen bleiben unverändert.
-79 gezielte Tests einschließlich echter API-/Worker-/Native-Transportabläufe mit
-simuliertem Modell/Ziel bestehen. Eine isolierte reale lokale Modellprobe mit dem
-gespeicherten Fehler und der neuen Korrekturanweisung wählt einen anderen
-freigegebenen schema- und regelgültigen HA-WebSocket-Leseweg. Es gab dabei keine
-Werkzeugausführung oder Datenbankänderung. Vollständige Validierung, Folge-Rollout
-und tatsächliche Chat-Abnahme stehen aus.
+Die Nachkorrektur übergibt ausgeführte, aktuell schemagültige Schritte als
+zusammengehörige native Funktionsaufrufe und Werkzeugantworten. Abgeleitete
+HTTP-Objektsichten erhalten skalare Fakten an ihrem ursprünglichen Pfad, etwa
+`body.version`; Kürzungsmetadaten stehen getrennt. Werkzeugdialog, Schemas und
+Antwortreserve teilen dasselbe lokale Zeichen-/UTF-8-Budget. Unklare Effekte,
+gekürzte Argumente und nicht mehr angebotene Werkzeuge werden nicht als neue
+Aufrufe rekonstruiert. Ursprüngliche Belege und endgültige Rechteprüfungen bleiben
+unverändert. Spezialisierte private Mail-/Archivleser behalten ihre Verträge.
+Gezielte synthetische Prüfungen bestehen; vollständige Validierung, neue isolierte
+Modellprobe, Folge-Rollout und tatsächliche Chat-Abnahme stehen aus.
 
 Die vorausgegangenen Korrekturen bleiben erhalten: zielbezogene Anweisung,
 Anbieter-/UTF-8-Kontextbudget, strukturierte Versions-/Statussichten, hashgebundener
@@ -39,9 +36,9 @@ und genau ein Aufruf je Planungsschritt begrenzen interne Korrekturen.
 Keine echte HA-Aktualisierung, allgemeine autonome Verwaltung oder Wiederherstellung
 ist damit live abgenommen.
 
-## Geprüfte Lieferung — f07dd44 / Schema 0050
+## Frühere geprüfte Lieferung — f07dd44 / Schema 0050
 
-**f07dd44** ist auf der Test-VM installiert. Exakte vollständige
+**f07dd44** war die vorausgegangene Funktionslieferung auf der Test-VM. Exakte vollständige
 [CI 45129676744](https://github.com/sschluet/obdaAI/actions/runs/45129676744):
 **3.511 bestanden**, sechs optionale Calc-Skips; vollständige Browserprüfungen,
 Secret-Scan, Container, isolierte Werkzeugdienste und App-Tree-Beleg erfolgreich.

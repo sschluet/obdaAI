@@ -215,10 +215,226 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
     return PreparedNative(prose, native, metadata, instruction, original)
 
 
+def native_messages(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    """Validated model-view history; never a source of execution authority."""
+    if "messages" not in metadata:
+        if "messages_sha256" in metadata:
+            raise NativeCallError("native_history_hash")
+        return []
+    try:
+        messages = metadata["messages"]
+        if (
+            metadata.get("version") != 1
+            or metadata.get("sha256") != _digest(metadata)
+            or not isinstance(messages, list)
+            or metadata.get("messages_sha256")
+            != hashlib.sha256(_encode(messages).encode()).hexdigest()
+        ):
+            raise NativeCallError("native_history_hash")
+    except NativeCallError:
+        raise
+    except (KeyError, TypeError, ValueError):
+        raise NativeCallError("native_history_hash") from None
+    pending: tuple[str, dict[str, Any], int] | None = None
+    seen: set[str] = set()
+    last_sequence = 0
+    try:
+        for message in messages:
+            if not isinstance(message, dict):
+                raise NativeCallError("native_history_envelope")
+            if message.get("role") == "assistant":
+                if (
+                    pending is not None
+                    or set(message) != {"role", "content", "tool_calls"}
+                    or message["content"] is not None
+                    or len(message["tool_calls"]) != 1
+                ):
+                    raise NativeCallError("native_history_pair")
+                call = message["tool_calls"][0]
+                if set(call) != {"id", "type", "function"} or call["type"] != "function":
+                    raise NativeCallError("native_history_envelope")
+                identifier = call["id"]
+                if (
+                    not isinstance(identifier, str)
+                    or not re.fullmatch(r"call_obdaai_[1-9][0-9]{0,9}", identifier)
+                    or identifier in seen
+                ):
+                    raise NativeCallError("native_history_id")
+                sequence = int(identifier.removeprefix("call_obdaai_"))
+                if sequence <= last_sequence or set(call["function"]) != {"name", "arguments"}:
+                    raise NativeCallError("native_history_id")
+                decision = decode_calls(metadata, [call])
+                if decision is None or decision["kind"] != "tool":
+                    raise NativeCallError("native_history_binding")
+                seen.add(identifier)
+                pending = (identifier, decision, sequence)
+                last_sequence = sequence
+            elif message.get("role") == "tool":
+                if (
+                    pending is None
+                    or set(message) != {"role", "tool_call_id", "content"}
+                    or message["tool_call_id"] != pending[0]
+                    or not isinstance(message["content"], str)
+                ):
+                    raise NativeCallError("native_history_pair")
+                result = json.loads(
+                    message["content"], object_pairs_hook=_object, parse_constant=_invalid_constant
+                )
+                receipt = result.get("_obdaai_receipt") if isinstance(result, dict) else None
+                if (
+                    not isinstance(receipt, dict)
+                    or set(receipt)
+                    != {"sequence", "kind", "status", "integration_id", "tool", "model_view_only"}
+                    or type(receipt["sequence"]) is not int
+                    or receipt["sequence"] != pending[2]
+                    or receipt["kind"] not in {"read", "effect"}
+                    or receipt["status"] not in {"succeeded", "failed"}
+                    or receipt["integration_id"] != pending[1]["integration_id"]
+                    or receipt["tool"] != pending[1]["tool"]
+                    or receipt["model_view_only"] is not True
+                ):
+                    raise NativeCallError("native_history_receipt")
+                pending = None
+            else:
+                # Controller feedback remains in the ordinary bounded user JSON;
+                # source/model text is never promoted to free-standing messages.
+                raise NativeCallError("native_history_role")
+        if pending is not None:
+            raise NativeCallError("native_history_pair")
+    except NativeCallError:
+        raise
+    except (KeyError, TypeError, ValueError, IndexError):
+        raise NativeCallError("native_history_envelope") from None
+    return deepcopy(messages)
+
+
+def with_history(
+    prepared: PreparedNative,
+    fitted: dict[str, Any],
+) -> tuple[PreparedNative, dict[str, Any]]:
+    """Translate only fitted, executed and currently schema-bound observations."""
+    model_data = deepcopy(fitted)
+    metadata = deepcopy(prepared.metadata)
+    metadata.pop("messages", None)
+    metadata.pop("messages_sha256", None)
+    history = model_data.get("history", [])
+    if not isinstance(history, list):
+        raise NativeCallError("native_history_envelope")
+    counts: dict[int, int] = {}
+    for entry in history:
+        if isinstance(entry, dict) and type(entry.get("sequence")) is int:
+            sequence = entry["sequence"]
+            counts[sequence] = counts.get(sequence, 0) + 1
+    messages: list[dict[str, Any]] = []
+    retained = []
+    converted: set[int] = set()
+    last_sequence = 0
+    for entry in history:
+        if not isinstance(entry, dict):
+            retained.append(entry)
+            continue
+        sequence, document, result = (
+            entry.get("sequence"),
+            entry.get("document"),
+            entry.get("result"),
+        )
+        if (
+            type(sequence) is not int
+            or not 0 < sequence < 10**10
+            or counts.get(sequence) != 1
+            or sequence <= last_sequence
+            or entry.get("kind") not in {"read", "effect"}
+            or entry.get("status") not in {"succeeded", "failed"}
+            or not isinstance(document, dict)
+            or not isinstance(result, dict)
+            or "_obdaai_receipt" in result
+            or not isinstance(document.get("arguments"), dict)
+        ):
+            retained.append(entry)
+            continue
+        name = next(
+            (
+                name
+                for name, binding in metadata["bindings"].items()
+                if binding.get("kind") == "tool"
+                and binding.get("integration_id") == document.get("integration_id")
+                and binding.get("tool") == document.get("tool")
+            ),
+            None,
+        )
+        if name is None:
+            retained.append(entry)
+            continue
+        arguments = document["arguments"]
+        wire = (
+            {"arguments": arguments}
+            if metadata["bindings"][name].get("argument_object")
+            else arguments
+        )
+        call = {
+            "id": f"call_obdaai_{sequence}",
+            "type": "function",
+            "function": {"name": name, "arguments": _encode(wire)},
+        }
+        try:
+            decision = decode_calls(metadata, [call])
+            # No normalization or invented defaults may rewrite an executed call.
+            if decision is None or _encode(decision.get("arguments")) != _encode(arguments):
+                raise NativeCallError("native_history_arguments")
+        except NativeCallError:
+            retained.append(entry)
+            continue
+        receipt = {
+            "sequence": sequence,
+            "kind": entry["kind"],
+            "status": entry["status"],
+            "integration_id": document["integration_id"],
+            "tool": document["tool"],
+            "model_view_only": True,
+        }
+        messages.extend(
+            [
+                {"role": "assistant", "content": None, "tool_calls": [call]},
+                {
+                    "role": "tool",
+                    "tool_call_id": call["id"],
+                    "content": _encode({**result, "_obdaai_receipt": receipt}),
+                },
+            ]
+        )
+        converted.add(sequence)
+        last_sequence = sequence
+    if messages:
+        metadata["messages"] = messages
+        metadata["messages_sha256"] = hashlib.sha256(_encode(messages).encode()).hexdigest()
+        native_messages(metadata)
+        model_data["history"] = retained
+        latest = model_data.get("latest_observation")
+        if isinstance(latest, dict) and latest.get("sequence") in converted:
+            # The tool message carries the result. Keep independently derived
+            # shape/semantic summaries, hashes and status for large observations.
+            model_data["latest_observation"] = {
+                key: value for key, value in latest.items() if key != "result"
+            }
+    return PreparedNative(
+        prepared.instruction,
+        deepcopy(model_data),
+        metadata,
+        prepared.original_instruction,
+        deepcopy(prepared.original_data),
+    ), model_data
+
+
 def auxiliary_parts(metadata: dict[str, Any]) -> list[ContextPart]:
-    return [
+    parts = [
         ContextPart(content=_encode(metadata["tools"]), source_id="agent-native-tools", revision=1)
     ]
+    messages = native_messages(metadata)
+    if messages:
+        parts.append(
+            ContextPart(content=_encode(messages), source_id="agent-native-history", revision=1)
+        )
+    return parts
 
 
 def metadata_size(metadata: dict[str, Any]) -> tuple[int, int]:

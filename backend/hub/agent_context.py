@@ -124,7 +124,6 @@ def _json_type(value: Any) -> str:
     return "number"
 
 
-
 def _object_view(body: dict[str, Any], path: str, limit: int) -> dict[str, Any] | None:
     """Observed scalar facts only; omitted containers never become a complete body."""
     result: dict[str, Any] = {
@@ -157,8 +156,9 @@ def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
     """
     if not isinstance(observed, dict):
         return None
-    body = observed.get("body", observed)
-    path = "/body" if "body" in observed else ""
+    payload_key = "body" if "body" in observed else "response" if "response" in observed else None
+    body = observed[payload_key] if payload_key else observed
+    path = "/" + payload_key if payload_key else ""
     if isinstance(body, dict):
         key = next((key for key in ("results", "items", "data")
                     if isinstance(body.get(key), list)), None)
@@ -214,30 +214,87 @@ def _semantic_view(observed: Any, limit: int) -> dict[str, Any] | None:
 
 
 def _http_object_result(entry: dict[str, Any], limit: int) -> dict[str, Any] | None:
-    """Replace only successful large HTTP GET object payloads with typed facts.
+    """Keep literal facts for large GET objects, including failed selection views.
 
     Transport status and proof fields stay exact. Omissions describe the local
     model view, never partial execution of the remote command.
     """
     observed, document = entry.get("result"), entry.get("document")
-    if (entry.get("kind") != "read" or entry.get("status") != "succeeded"
-            or not isinstance(observed, dict) or not isinstance(document, dict)
-            or document.get("tool") != "http"
-            or not isinstance(document.get("arguments"), dict)
-            or document["arguments"].get("method") != "GET"
-            or type(observed.get("http_status")) is not int
-            or not 200 <= observed["http_status"] < 300
-            or observed.get("projection_error") or observed.get("effect_verified") is True
-            or not isinstance(observed.get("body"), dict)
-            or any(isinstance(observed["body"].get(key), list)
-                   for key in ("results", "items", "data"))
-            or len(json.dumps(observed, ensure_ascii=False, separators=(",", ":"))) <= limit):
+    if (
+        entry.get("kind") != "read"
+        or entry.get("status") not in {"succeeded", "failed"}
+        or not isinstance(observed, dict)
+        or not isinstance(document, dict)
+        or document.get("tool") != "http"
+        or not isinstance(document.get("arguments"), dict)
+        or document["arguments"].get("method") != "GET"
+        or type(observed.get("http_status")) is not int
+        or not 200 <= observed["http_status"] < 300
+        or (entry.get("status") == "failed" and not observed.get("projection_error"))
+        or observed.get("effect_verified") is True
+        or not isinstance(observed.get("body"), dict)
+        or any(isinstance(observed["body"].get(key), list) for key in ("results", "items", "data"))
+        or len(json.dumps(observed, ensure_ascii=False, separators=(",", ":"))) <= limit
+    ):
         return None
     body_view = _object_view(observed["body"], "/body", max(400, min(800, limit)))
     if body_view is None:
         return None
-    return {**observed, "body": body_view, "model_view_only": True,
-            "full_sha256": _receipt_hash(observed)}
+    return {
+        **observed,
+        "body": body_view["fields"],
+        "body_view": {
+            **{key: value for key, value in body_view.items() if key != "fields"},
+            "full_sha256": _receipt_hash(observed["body"]),
+        },
+        "model_view_only": True,
+        "full_sha256": _receipt_hash(observed),
+    }
+
+
+def _websocket_result(entry: dict[str, Any], limit: int) -> dict[str, Any] | None:
+    """Typed bounded HA read data; no fabricated acknowledgement or verification."""
+    observed, document = entry.get("result"), entry.get("document")
+    if (
+        entry.get("kind") != "read"
+        or entry.get("status") != "succeeded"
+        or not isinstance(observed, dict)
+        or not isinstance(document, dict)
+        or document.get("tool") != "ha.websocket"
+        or "response" not in observed
+        or observed.get("success") is False
+        or observed.get("error")
+        or observed.get("effect_verified") is True
+        or len(json.dumps(observed, ensure_ascii=False, separators=(",", ":"))) <= limit
+    ):
+        return None
+    payload = observed["response"]
+    if isinstance(payload, dict) and not any(
+        isinstance(payload.get(key), list) for key in ("results", "items", "data")
+    ):
+        typed = _object_view(payload, "/response", max(400, min(800, limit)))
+        if typed is None:
+            return None
+        values = typed.pop("fields")
+    elif isinstance(payload, list):
+        typed = _semantic_view({"response": payload}, max(400, min(800, limit)))
+        if typed is None:
+            return None
+        values = typed.pop("items")
+        typed["row_fields_may_be_omitted"] = True
+    else:
+        return None
+    return {
+        **observed,
+        "response": values,
+        "response_view": {**typed, "model_view_only": True, "full_sha256": _receipt_hash(payload)},
+        "model_view_only": True,
+        "full_sha256": _receipt_hash(observed),
+    }
+
+
+def _typed_result(entry: dict[str, Any], limit: int) -> dict[str, Any] | None:
+    return _http_object_result(entry, limit) or _websocket_result(entry, limit)
 
 
 def _observation(
@@ -258,6 +315,9 @@ def _observation(
             "smtp_accepted",
             "delivery_verified",
             "error",
+            "success",
+            "failure_category",
+            "failure_phase",
         ):
             if key in observed:
                 summary[key] = view(observed[key], 200)
@@ -289,7 +349,7 @@ def _observation(
         "model_view_only": True,
         "full_sha256": hashlib.sha256(encoded.encode()).hexdigest(),
         "summary": summary,
-        "result": _http_object_result(entry, result_limit) or view(observed, result_limit),
+        "result": _typed_result(entry, result_limit) or view(observed, result_limit),
     }
 
 
@@ -473,7 +533,7 @@ def fit(
                 return {
                     "evidence_source": "mail_read_progress",
                 }
-            typed_object = _http_object_result(entry, limit)
+            typed_object = _typed_result(entry, limit)
             if typed_object is not None:
                 return typed_object
             observed = entry["result"]

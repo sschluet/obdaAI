@@ -1613,6 +1613,37 @@ async def generate(
                                     legacy, provider_binding=error.binding)
 
 
+def fit_native_plan(
+    native: agent_native.PreparedNative, char_limit: int, byte_limit: int | None,
+) -> tuple[agent_native.PreparedNative, dict[str, Any]]:
+    """Fit derived evidence before converting it into native conversation messages.
+
+    Tools and reconstructed receipts share the same local context budget. Refit
+    from originals if message envelopes need more room; never clip authority or
+    a serialized function call after validation.
+    """
+    tool_chars, tool_bytes = agent_native.metadata_size(native.metadata)
+    reserve_chars = reserve_bytes = 0
+    for _ in range(5):
+        fitted = fit(
+            native.data, native.instruction, char_limit - tool_chars - reserve_chars,
+            max_bytes=(max(0, byte_limit - tool_bytes - 64 - reserve_bytes)
+                       if byte_limit is not None else None),
+        )
+        prepared, planned = agent_native.with_history(native, fitted)
+        auxiliary = agent_native.auxiliary_parts(prepared.metadata)
+        content = [native.instruction, encode(planned), *(part.content for part in auxiliary)]
+        chars_over = max(0, sum(len(value) for value in content) - char_limit)
+        bytes_over = (max(0, sum(len(value.encode()) for value in content)
+                          + 64 * len(auxiliary) - byte_limit)
+                      if byte_limit is not None else 0)
+        if not chars_over and not bytes_over:
+            return prepared, planned
+        reserve_chars += chars_over + 200
+        reserve_bytes += bytes_over + 200
+    raise AgentContextLimitError("Native Werkzeughistorie überschreitet die Modellgrenze")
+
+
 async def _generate_once(
     factory: Any, cfg: Settings, providers: Any, job_id: str,
     instruction: str, data: dict[str, Any],
@@ -1637,7 +1668,8 @@ async def _generate_once(
         if (sum(len(p.content) for p in budget_parts) > char_limit
                 or byte_limit is not None
                 and sum(len(p.content.encode()) for p in budget_parts)
-                + (64 if native else 0) > byte_limit):
+                + (64 * len(agent_native.auxiliary_parts(native.metadata)) if native else 0)
+                > byte_limit):
             raise AgentContextLimitError("Agentenkontext überschreitet die Modellgrenze")
         run = Run(
             conversation_id=job.model_conversation_id,
@@ -2739,12 +2771,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     if (not private_read and isinstance(providers, Providers)
                             and not bindings.get("native_tools_disabled")):
                         native = agent_native.prepare(instruction, data)
-                        auxiliary_chars, auxiliary_bytes = agent_native.metadata_size(
-                            native.metadata
-                        )
-                        planned = fit(native.data, native.instruction, char_limit - auxiliary_chars,
-                                      max_bytes=(max(0, byte_limit - auxiliary_bytes - 64)
-                                                 if byte_limit is not None else None))
+                        native, planned = fit_native_plan(native, char_limit, byte_limit)
                         planned["_native"] = native
                         instruction = native.instruction
                     else:

@@ -1,4 +1,5 @@
 """Synthetic administration context keeps durable effect identity and uncertainty."""
+
 import copy
 import hashlib
 import json
@@ -140,7 +141,7 @@ def test_large_ha_config_keeps_late_scalar_facts_not_a_fabricated_complete_body(
     assert view["containers_omitted"] == 1
     assert "components" not in view["fields"]
     assert "truncated" not in observation["result"]
-    assert observation["result"]["body"]["fields"] == view["fields"]
+    assert observation["result"]["body"] == view["fields"]
     assert observation["result"]["full_sha256"] == digest(entry["result"])
     assert observation["step_status"] == "succeeded" and observation["model_view_only"] is True
     assert observation["summary"]["http_status"] == 200
@@ -228,22 +229,25 @@ def test_large_successful_http_object_uses_same_typed_result_in_history_and_late
         assert result["http_status"] == 200 and result["effect_verified"] is False
         assert result["transport_flag"] is False and result["model_view_only"] is True
         assert result["full_sha256"] == digest(entry["result"])
-        assert result["body"]["fields"] == {
+        assert result["body"] == {
             "version": "2026.11.4", "state": "RUNNING", "safe_mode": False,
             "zero": 0, "optional": None}
-        assert result["body"]["omitted_field_count"] == 1
+        assert result["body_view"]["omitted_field_count"] == 1
         assert "excerpt" not in result and "truncated" not in result
     assert "SYNTHETIC_COMPONENT_PAYLOAD_" not in json.dumps(fitted)
     assert fitted["latest_observation"]["step_status"] == "succeeded"
     assert original == saved
 
 
-@pytest.mark.parametrize("kind,status,http_status,tool,method", [
-    ("effect", "succeeded", 200, "http", "GET"),
-    ("verification", "succeeded", 200, "http.verify", "GET"),
-    ("read", "failed", 403, "http", "GET"),
-    ("read", "succeeded", 200, "http", "POST"),
-])
+@pytest.mark.parametrize(
+    "kind,status,http_status,tool,method",
+    [
+        ("effect", "succeeded", 200, "http", "GET"),
+        ("verification", "succeeded", 200, "http.verify", "GET"),
+        ("read", "failed", 403, "http", "GET"),
+        ("read", "succeeded", 200, "http", "POST"),
+    ],
+)
 def test_typed_http_object_replacement_never_applies_to_effects_or_failed_reads(
     kind, status, http_status, tool, method,
 ):
@@ -256,4 +260,8 @@ def test_typed_http_object_replacement_never_applies_to_effects_or_failed_reads(
     entry["kind"], entry["status"] = "read", "succeeded"
     entry["document"] = {"tool": "http", "arguments": {"method": "GET"}}
     entry["result"]["projection_error"] = "invalid selection"
-    assert _http_object_result(entry, 500) is None
+    result = _http_object_result(entry, 500)
+    if http_status == 200:
+        assert result is not None and result["projection_error"] == "invalid selection"
+    else:
+        assert result is None

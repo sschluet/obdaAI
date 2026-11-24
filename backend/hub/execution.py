@@ -1062,7 +1062,7 @@ async def execute_run(
                         raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
                 memory_parts: list[ContextPart] = []
                 memory_budget = min(2400, max(0, cfg.context_limit - sum(
-                    len(p.content.encode()) + 64 for p in parts
+                    len(p.content.encode()) + 64 for p in model_parts()
                 ) - 1024))
                 if not workflow_generation and snapshot.get("memory"):
                     from hub.memory_context import projection
@@ -1204,6 +1204,14 @@ async def execute_run(
                          or snapshot["agent_generation"].get("provider_binding"))):
                     trace["native_provider"] = {"id": selected_provider.id,
                         "revision": selected_provider.revision, "model": model}
+                    auxiliary = model_parts()[len(parts):]
+                    trace["native_context"] = {
+                        "auxiliary_parts": len(auxiliary),
+                        "auxiliary_chars": sum(len(part.content) for part in auxiliary),
+                        "auxiliary_utf8_bytes": sum(
+                            len(part.content.encode()) for part in auxiliary
+                        ),
+                    }
                 trace.update(actual_provider=provider, actual_model=model or None)
                 update(
                     routing_trace=json.dumps(trace, ensure_ascii=False),

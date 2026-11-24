@@ -439,10 +439,12 @@ class Providers:
         if native is not None and (external or self.local_json_schema is not None):
             raise PermissionError("Native local planning cannot be combined with another protocol")
         auxiliary = []
+        history_messages: list[dict[str, Any]] = []
         if native is not None:
-            from hub.agent_native import auxiliary_parts
+            from hub.agent_native import auxiliary_parts, native_messages
 
             auxiliary = auxiliary_parts(native)
+            history_messages = native_messages(native)
         if self.before_send:
             self.before_send()
         check_egress(
@@ -492,7 +494,7 @@ class Providers:
             "model": self.settings.openrouter_model if external else self.settings.local_model,
             "messages": [
                 {"role": role, "content": p.content} for role, p in zip(roles, parts, strict=True)
-            ],
+            ] + history_messages,
             "max_tokens": self.settings.openrouter_max_tokens
             if external
             else self.settings.local_max_tokens,
@@ -529,6 +531,16 @@ class Providers:
         ):
             if self.before_send:
                 self.before_send()
+            if native is not None:
+                # Revalidate the exact frozen payload after waiting for capacity.
+                # These messages are data; they never select a tool for dispatch.
+                if native_messages(native) != history_messages:
+                    raise PermissionError("Native history changed before model dispatch")
+                check_egress([*parts, *auxiliary], external=False,
+                             provider_id="local", grants=grants)
+                if any(p.label not in self.settings.local_allowed_labels
+                       for p in [*parts, *auxiliary]):
+                    raise PermissionError("Local privacy class not permitted")
             content_received = False
             content_deadline = time.monotonic() + (
                 self.settings.openrouter_timeout if external

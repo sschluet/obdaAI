@@ -69,6 +69,15 @@ def scenario(
             return httpx.Response(200, text=event({'content': intent.model_dump_json()})
                                   + 'data: [DONE]\n\n')
         assert body['tool_choice'] == 'auto' and 'temperature' not in body
+        # Even the first native step sees the real bootstrap receipt in the
+        # provider's conversation protocol, rather than a second opaque history.
+        messages = body['messages'][2:]
+        assert messages and len(messages) % 2 == 0
+        for call, receipt in zip(messages[::2], messages[1::2], strict=True):
+            assert call['role'] == 'assistant' and len(call['tool_calls']) == 1
+            assert receipt['role'] == 'tool'
+            assert receipt['tool_call_id'] == call['tool_calls'][0]['id']
+            assert json.loads(receipt['content'])['_obdaai_receipt']['model_view_only']
         if invalid_first and len(model_requests) == 2:
             return httpx.Response(200, text=event(fragment('unknown_function', '{}'))
                                   + 'data: [DONE]\n\n')
