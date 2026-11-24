@@ -40,6 +40,7 @@ class SyntheticPlanner(FakeProviders):
             has_effect = any(row["kind"] == "effect" and row["status"] == "succeeded"
                              for row in data["history"]) or bool(data.get("effect_ledger"))
             assert ("http.verify" in data["tools"]) == has_effect
+            assert "http.upload" not in data["tools"]  # No bound source file to transfer.
             assert "$defs" in data["tools"]["http"]  # Real complete argument schema, not a stub.
             answer = next(self.decisions)
         yield json.dumps(answer)
@@ -64,6 +65,7 @@ def scenario(
     current = client.get(f"/api/integrations/{identifier}/agent-policy").json()
     rules = Rules.model_validate(current["rules"])
     rules.max_effects, rules.max_steps = 3, 12
+    rules.file_upload = True  # A permission alone does not supply an upload source.
     response = client.put(f"/api/integrations/{identifier}/agent-policy", headers=headers, json={
         "expected_revision": current["revision"], "expected_profile_revision": 1,
         "rules": rules.model_dump(),

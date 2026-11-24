@@ -1,39 +1,39 @@
 # obdaAI — Status 24.11.2026
 
-## HA-Administrationskontext — neue Korrektur in Prüfung
+## HA-Administrationsplanung — native Korrektur in Prüfung
 
-Der gemeldete HA-Auftrag wurde auf der Test-VM ausschließlich lesend untersucht:
-Abbruch nach zwei erfolgreichen Lesezugriffen, keine gestartete Änderung.
-Die gespeicherte Planung reproduziert den Kontextüberlauf; die Verbindung war
-funktionsfähig. Die bisherige reale Leseabnahme belegte keinen HA-Updateablauf.
-Zwei inaktive lokale Modellproben nach der ersten Korrektur passten ins Budget,
-stellten aber eine unnötige Bestätigungsfrage: Die gekürzte Konfigurationsansicht
-wurde als teilweise ausgeführter Aufruf missverstanden. Daraus folgt eine weitere
-Korrektur: beobachtete Versions-/Statuswerte bleiben strukturiert sichtbar;
-Ausführungsstatus und Anzeigeverkürzung werden ausdrücklich getrennt.
+Der gemeldete Auftrag scheiterte auf der Test-VM nach zwei erfolgreichen
+Lesezugriffen am Planungskontext; es wurde keine Änderung gestartet. Der Fehler
+wurde aus den gespeicherten Belegen lesend reproduziert. Zielbezogene Anweisungen,
+tatsächlich gezähltes kompaktes JSON, die ausgewählte Anbietergrenze und begrenzte
+strukturierte Versions-/Statussichten beheben diesen Kontextüberlauf. Originalbelege
+und Rechte bleiben erhalten. Ein zusätzlicher Variablenfehler nach dem ersten Effekt
+ist behoben; mehrere verifizierte Effekte erhalten einen hashgebundenen Verlauf.
 
-Die Korrektur beschränkt die Anweisung auf gebundene Zieltypen, zählt tatsächlich
-versandtes kompaktes JSON und berücksichtigt vor der Kompression die ausgewählte
-lokale Anbietergrenze einschließlich konservativem UTF-8-/Tokenbudget.
-Werkzeugschemas, Rechte und Originalbelege bleiben erhalten. Einzelne abgeschlossene
-verifizierte Effekte haben einen hashgebundenen Verlauf; Unsicherheit erlaubt
-keine Wiederholung. Ein zusätzlich gefundener Variablenfehler nach dem ersten
-Effekt ist behoben; die Liste zur Begrenzung weiterer Effekte wird nicht überschrieben.
+Reale inaktive Proben zeigten anschließend weiter ungeeignete JSON-Planungen und
+Bestätigungsfragen. Ein vollständiger nativer Werkzeugvergleich mit demselben
+lokalen Modell wählte hingegen einen schema- und regelgültigen neuen Leseaufruf,
+nach verlustfreiem Entfernen einer einzigen zusätzlichen Argumenthülle. Dieser
+Aufruf wurde zur Diagnose **nicht ausgeführt**. Das belegt einen konkreten
+Protokollansatz, keine bestandene autonome HA-Updateabnahme.
 
-Der synthetische API-/Worker-Test durchläuft große HA-Leseantworten, Sicherung,
-zwei Updates und drei vorgebundene Nachprüfungen. Ein zweiter Test stoppt beim
-unsicheren ersten Update ohne weiteres Schreiben oder Wiederholung nach Neustart.
-Runtime, Kontextkompression und Ausführung sind echt; Modell und HA-Transport
-simuliert. Fokussierte Budget-/Schema-/Projektmodellprüfungen sind bestanden.
-Die realen inaktiven lokalen Proben zeigen: Kontext und JSON-Erzeugung funktionieren
-mit kürzerer strukturierter Sicht, der aktuelle lokale Planer wählte jedoch weiterhin
-unnötige Bestätigungsfragen oder unpassende Werkzeuge. Das ist **keine bestandene
-autonome HA-Updateabnahme**. Allgemeine Ausführungsbestätigungen bei sicher gebundenem
-Administrationsauftrag und als Fragen formulierte Werkzeugaufrufe werden nun über
-die vorhandene Formatkorrektur begrenzt neu geplant; echte fehlende Angaben bleiben
-Rückfragen. Nach zwei Fehlversuchen endet die Planung verständlich ohne neue Rechte
-oder automatische Wiederholung von Änderungen. `http.verify` wird erst nach einem
-tatsächlich ausgeführten Effekt angeboten. Vollständige Prüfung und Rollout stehen aus.
+Die allgemeine Planung wird deshalb über `agent_native.py` an native Funktionen
+angebunden: bestehende zielgebundene Schemas, vollständige Argumentprüfung,
+begrenzte SSE-Fragmente und anschließend dieselbe kanonische Entscheidung im
+vorhandenen Ausführungsweg. Die Funktionsschemas zählen zum lokalen Datenschutz-
+und Kontextbudget. Ein ausdrücklich nicht unterstütztes Protokoll oder eine
+beendete Antwort ohne Funktionswahl erlaubt einen einmaligen, getrennt belegten
+Wechsel zum JSON-Planer desselben gebundenen Anbieters. Fehler, Abbruch und
+unvollständige Streams erlauben diesen Wechsel nicht. Einstellungen werden nicht
+verändert. Der Einstellungs-Planertest unterscheidet native und kompatible Erfolge.
+
+Unpassende Bestätigungen werden begrenzt neu geplant; echte fehlende Angaben und
+Einzelfreigaben bleiben erhalten. Nachprüfungen werden erst nach einem Effekt,
+Uploads erst mit tatsächlich gebundener Datei angeboten. Ein Profil ohne
+Schreibfreigabe erhält auch im Planungsangebot ausschließlich Lesemöglichkeiten.
+Synthetische Tests durchlaufen große HA-Belege, Sicherung, zwei Updates und drei
+Nachprüfungen sowie einen unsicheren Ausgang ohne blindes Wiederholen.
+Vollständige Validierung und Rollout der nativen Erweiterung stehen noch aus.
 Keine echte HA-Aktualisierung oder Wiederherstellung ist dadurch nachgewiesen.
 
 ## Geprüfte Lieferung — f07dd44 / Schema 0050

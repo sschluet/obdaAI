@@ -240,24 +240,27 @@ Rückfragen und einzelne Freigaben unterbrechen den dauerhaften Auftrag. Eine
 offene Rückfrage wird nach Neuladen im selben Chat wieder aufgenommen. Ungültige
 Modellhüllen und typisierte Werkzeugargumente erhalten höchstens zwei lokale
 Format-Rückmeldungen; der Server ergänzt weder Ziele noch Befehle oder Rechte.
-Agentenentscheidungen verlangen auch in der Generierungsgrammatik bei jedem
-Werkzeug explizite Ziel-ID, Werkzeug und Argumente; die IDs stammen ausschließlich
-aus der menschlich gebundenen Auswahl. Der Server ergänzt sie nicht nachträglich. Die native Grammatik bindet außerdem
-die vorhandenen typisierten Argumentmodelle und exakt die im Lauf verfügbaren
-Werkzeuge. GET kann keinen Schreibkörper oder Wirkungsnachweis enthalten.
-Die Grammatik bindet Werkzeug, Zielart, HA-Kommandopräfixe und HTTP-Methoden/Pfade
-an die menschlichen Zielregeln. Neue Snapshots enthalten deren gebundene
-Schnittstellen; alte Snapshots bleiben mit nachgelagerten Prüfungen kompatibel.
-Querystrings und absolute URLs sind im Pfadfeld ausgeschlossen.
-Die Prompt-Hülle bleibt kompakt; die vollständigen Argumentregeln werden
-ausschließlich als native Ausgabegrammatik übertragen.
+Die Werkzeugauswahl ist auch im Generierungsprotokoll auf die menschlich
+gebundenen Ziele und verfügbaren Werkzeuge begrenzt. Die native Funktion bindet
+Ziel-ID und Werkzeug bereits vor dem Modellaufruf; ihre Beschreibung benennt die
+Ziel-ID eindeutig. Der Decoder ergänzt keine frei gewählten Ziele, sondern
+rekonstruiert ausschließlich diese ursprüngliche Bindung. Argumente müssen dem
+bestehenden vollständigen Schema entsprechen. GET kann keinen Schreibkörper oder
+Wirkungsnachweis enthalten. Werkzeug, Zielart, HA-Kommandopräfixe und
+HTTP-Methoden/Pfade bleiben an die menschlichen Zielregeln gebunden. Querystrings
+und absolute URLs sind im Pfadfeld ausgeschlossen. Neue Snapshots enthalten die
+ursprünglichen gebundenen Schnittstellen; alte Snapshots bleiben mit den
+nachgelagerten Prüfungen kompatibel.
+
 Ein konkreter Auftrag enthält bereits den Ausführungswunsch. Die Planeranweisung
 verbietet redundante allgemeine Erlaubnisfragen; deren tatsächliche Vermeidung
 bleibt Teil der realen Abnahme. Einzelne Freigaben erzwingt der Gateway.
-Agentenentscheidungen fordern zusätzlich die feste Decision-JSON-Schemaausgabe am
-vorhandenen lokalen Modell an, Recherchepläne ein JSON-Objekt. Diese Anfrageoption
-ändert keine Inferenzkonfiguration und erweitert keine Rechte. Die nachgelagerte
-Validierung bleibt verbindlich; kein semantisches Reparieren ungültiger Ausgaben.
+Die allgemeine Planung nutzt native Funktionsschemas; die begrenzte
+Kompatibilitätsroute verlangt das bisherige Decision-JSON-Schema. Semantische
+Auftragsinterpretation und Recherche behalten ihr eigenes JSON-Format. Diese
+Anfrageoptionen ändern keine Inferenzkonfiguration und erweitern keine Rechte.
+Die nachgelagerte Validierung bleibt verbindlich; es werden keine semantisch
+fehlenden Argumentwerte erfunden. Der genaue Protokollvertrag steht unten.
 
 Der private Planer verwendet ausschließlich das konfigurierte lokale Modell.
 Ein begrenzter Verlauf desselben Gesprächs ist lokal an Nachrichtenrevisionen
@@ -426,3 +429,50 @@ Die inaktiven realen lokalen Modellproben belegen die behobene Kontextgrenze,
 keinen durchgehend richtigen autonomen Updateplan. Der lokale Planer verlangte
 weiterhin unbegründete Bestätigungen und verwechselte Bestandsaufnahme und
 Nachprüfung. Eine echte HA-Updateausführung wurde dabei nicht gestartet.
+
+
+## Native Werkzeugplanung im gemeinsamen Ausführungsweg (24.11.2026)
+
+Die allgemeine lokale Administrationsplanung verwendet native OpenAI-kompatible
+Funktionsaufrufe (`agent_native.py`). Der Compiler leitet für jedes gebundene
+Ziel/Werkzeug eine Funktion aus dem bestehenden geschlossenen Entscheidungsschema
+ab. Die Funktion bindet Ziel und Werkzeug; Argumente dürfen diese Bindung nicht
+ersetzen. `ask_user`, `finish_run` und `stop_run` sind nur gemäß den vorhandenen
+Laufregeln verfügbar. Die semantische Auftragsinterpretation, öffentliche
+Suchfragen sowie die spezialisierten privaten Mail-/Archivleser behalten ihre
+bestehenden Ausgabeformate. Es entsteht kein zweiter Ausführungsweg.
+
+Der Transport setzt SSE-Namens-/Argumentfragmente begrenzt zusammen und wertet
+erst den vollständig beendeten Stream aus. Genau ein bekannter Funktionsaufruf
+muss sein vollständiges Argumentschema erfüllen. Eine alleinige zusätzliche
+`parameters`- oder `arguments`-Hülle wird ausschließlich dann verlustfrei entfernt,
+wenn deren inneres Objekt bereits vollständig dem Originalschema entspricht.
+Keine Argumentwerte, Standardwerte oder Ziele werden ergänzt. Mehrere Aufrufe,
+unbekannte Funktionen, doppelte JSON-Schlüssel oder ungültige Argumente werden
+abgewiesen. Ein gültiger Aufruf wird zur bisherigen kanonischen Entscheidung;
+Rechte, Einzelfreigabe, dauerhafte Absicht, Versand, Abbruch und Nachprüfung gelten
+unverändert. Bereits unklare Effekte werden nicht wiederholt.
+
+Die tatsächlich gesendeten Funktionsschemas zählen einschließlich UTF-8-Größe,
+Nachrichtenrahmen und Antwortreserve zum lokalen Kontextbudget. Sie sind
+`LOCAL_ONLY` und werden auch an der endgültigen Anbietergrenze geprüft. Die
+gespeicherte Laufautorität behält die ursprünglichen Zielregeln, unabhängig von
+der gekürzten Modellsicht. Es gibt keine Cloud-Ausweichroute und keine Änderung
+von Modellserver, Modellgröße oder gespeicherter Anbieterkonfiguration.
+
+Bei einer ausdrücklich nicht unterstützten nativen Schnittstelle oder einer
+vollständig beendeten Antwort ohne Funktionswahl ist pro Auftrag genau ein
+Protokollwechsel zum bisherigen JSON-Planer möglich. Der native Versuch und der
+anschließende Kompatibilitätsversuch sind getrennte dauerhafte Modellläufe;
+Anbieter-ID, Modell und Revision werden gebunden und vor Versand erneut geprüft.
+Weitere Planungsschritte bleiben dann bei diesem gebundenen JSON-Protokoll.
+Zeitüberschreitung, Authentifizierungsfehler, Abbruch, Filter, unvollständiger Stream
+und ungültige Argumente lösen diesen Wechsel nicht aus. Die vorhandene begrenzte
+Formatkorrektur ersetzt keine fehlenden Rechte.
+
+Der Einstellungs-Planertest nutzt denselben nativen Compiler und Transport mit
+einer synthetischen schreibgeschützten Funktion. Nativer Erfolg und Erfolg erst
+im JSON-Kompatibilitätsversuch bleiben getrennt in der vorhandenen Testhistorie
+nachvollziehbar; die öffentliche Ergebnisnachricht bleibt kompatibel. Ein solcher
+Test führt keine echte Integrationsaktion aus und belegt keine allgemeine
+Modellqualität oder erfolgreiche HA-Aktualisierung.

@@ -10,7 +10,8 @@ from hub.providers import Providers
 
 
 def context_budget(
-    factory: Any, cfg: Settings, providers: Any, project_model: dict[str, Any] | None
+    factory: Any, cfg: Settings, providers: Any, project_model: dict[str, Any] | None,
+    provider_binding: dict[str, Any] | None = None,
 ) -> tuple[int, int | None]:
     # Injected test adapters have no managed provider configuration. Real requests
     # use exactly the project selection/default resolver used by execute_run.
@@ -18,10 +19,18 @@ def context_budget(
         return cfg.context_limit, None
     with factory() as db:
         check(db, cfg, project_model)
+    arguments: dict[str, Any] = dict(provider_arguments(project_model))
+    if provider_binding:
+        pinned = {"provider_id": provider_binding["id"], "model": provider_binding["model"]}
+        if arguments and arguments != pinned:
+            raise PermissionError("Project model differs from bound provider")
+        arguments = pinned
     selected, _, rows = runtime_provider(
-        factory, cfg, local_only=True, seed_defaults=False, **provider_arguments(project_model)
+        factory, cfg, local_only=True, seed_defaults=False, **arguments
     )
     row = rows.get("local")
+    if provider_binding and (row is None or row.revision != provider_binding["revision"]):
+        raise PermissionError("Bound local provider changed")
     if row is None:
         return min(cfg.context_limit, selected.context_limit), None
     limits = json.loads(row.config)
@@ -33,6 +42,7 @@ def context_budget(
 
 
 def context_limit(
-    factory: Any, cfg: Settings, providers: Any, project_model: dict[str, Any] | None
+    factory: Any, cfg: Settings, providers: Any, project_model: dict[str, Any] | None,
+    provider_binding: dict[str, Any] | None = None,
 ) -> int:
-    return context_budget(factory, cfg, providers, project_model)[0]
+    return context_budget(factory, cfg, providers, project_model, provider_binding)[0]

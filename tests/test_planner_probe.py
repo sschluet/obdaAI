@@ -22,8 +22,13 @@ def test_planner_probe_checks_local_schema_and_semantics(
         body = json.loads(request.content)
         seen.append(body)
         assert body["enable_thinking"] is False
-        assert body["temperature"] == 0
-        assert body["response_format"]["type"] == "json_schema"
+        if len(seen) == 1:
+            assert body["temperature"] == 0
+            assert body["response_format"]["type"] == "json_schema"
+        else:
+            assert "response_format" not in body
+            assert body["tool_choice"] == "auto"
+            assert body["tools"]
         assert body["max_tokens"] == 768
         assert "password" not in json.dumps(body).lower()
         intent = {
@@ -55,11 +60,24 @@ def test_planner_probe_checks_local_schema_and_semantics(
                 "arguments": {"method": "GET", "path": "/api/states" if tool_correct else "/api/"},
             }
         text = json.dumps(intent)
+        delta = {"content": text}
+        if len(seen) == 2:
+            delta = {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "call_synthetic",
+                        "type": "function",
+                        "function": {
+                            "name": "t0_http",
+                            "arguments": json.dumps(intent["arguments"]),
+                        },
+                    }
+                ]
+            }
         return httpx.Response(
             200,
-            text="data: "
-            + json.dumps({"choices": [{"delta": {"content": text}}]})
-            + "\n\ndata: [DONE]\n\n",
+            text="data: " + json.dumps({"choices": [{"delta": delta}]}) + "\n\ndata: [DONE]\n\n",
         )
 
     monkeypatch.setattr(

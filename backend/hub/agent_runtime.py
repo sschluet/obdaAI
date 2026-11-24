@@ -22,7 +22,7 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import defer
 
-from hub import agent_capabilities, agent_read_recovery
+from hub import agent_capabilities, agent_native, agent_read_recovery
 from hub.action_api import digest, encode, lock
 from hub.agent_clock import freeze_clock
 from hub.agent_context import AgentContextLimitError, fit
@@ -1504,8 +1504,9 @@ def format_feedback(
             "message": "Modellformat korrigieren; hierfür kein Werkzeug versandt",
             "rejected_decision": rejected,
             "issues": list(issues),
-            "instruction": "Erzeuge eine neue Entscheidung nach decision_schema und tools. "
-            "Verwende bei Werkzeugen kind=tool und die echte integration_id aus interfaces. "
+            "instruction": "Erzeuge eine neue Entscheidung nach den bereitgestellten "
+            "Funktions- und Argumentschemas. "
+            "Verwende ausschließlich die gebundenen Werkzeuge und Ziele. "
             "Keine Zielangaben oder Rechte erfinden. "
             "Keine bereits ausgeführte Änderung wiederholen.",
         },
@@ -1567,8 +1568,54 @@ def complete(db: Any, job: AgentJob, status: str, summary: str) -> None:
                 db.add(TaskStep(run_id=run.id, sequence=1, tool_id="agent.run", result=result))
 
 
+class NativePlanningUnavailable(ValueError):
+    def __init__(self, binding: dict[str, Any] | None):
+        self.binding = binding
+
+
 async def generate(
     factory: Any, cfg: Settings, providers: Any, job_id: str, instruction: str, data: dict[str, Any]
+) -> Any:
+    # Internal adapter state is never serialized as model input or authority.
+    data = dict(data)
+    native = data.pop("_native", None)
+    with factory() as db:
+        job = db.get(AgentJob, job_id)
+        assert job
+        gate(db, cfg, job)
+        bindings = json.loads(job.bindings)
+        pinned = bindings.get("native_compatibility_provider")
+    try:
+        return await _generate_once(factory, cfg, providers, job_id, instruction, data,
+                                    native=native, provider_binding=pinned)
+    except NativePlanningUnavailable as error:
+        if native is None or not error.binding:
+            raise AgentPlanningError(timed_out=False) from None
+        with factory() as db:
+            job = db.get(AgentJob, job_id)
+            assert job
+            gate(db, cfg, job)
+            bindings = json.loads(job.bindings)
+            if bindings.get("native_fallback_used"):
+                raise AgentPlanningError(timed_out=False) from None
+            bindings.update(native_fallback_used=True, native_tools_disabled=True,
+                            native_compatibility_provider=error.binding)
+            job.bindings = encode(bindings)
+            project_model = bindings.get("project_model")
+            db.commit()
+        chars, byte_limit = generation_context_budget(
+            factory, cfg, providers, project_model, error.binding,
+        )
+        legacy = fit(native.original_data, native.original_instruction, chars, max_bytes=byte_limit)
+        return await _generate_once(factory, cfg, providers, job_id, native.original_instruction,
+                                    legacy, provider_binding=error.binding)
+
+
+async def _generate_once(
+    factory: Any, cfg: Settings, providers: Any, job_id: str,
+    instruction: str, data: dict[str, Any],
+    *, native: agent_native.PreparedNative | None = None,
+    provider_binding: dict[str, Any] | None = None,
 ) -> Any:
     from hub.execution import execute_run
 
@@ -1576,16 +1623,19 @@ async def generate(
         job = db.get(AgentJob, job_id)
         assert job
         gate(db, cfg, job)
+        authority_data = native.original_data if native else data
         parts = [
             ContextPart(content=instruction, source_id="agent-policy", revision=1),
             ContextPart(content=encode(data), source_id="agent-data", revision=1),
         ]
         char_limit, byte_limit = generation_context_budget(
-            factory, cfg, providers, json.loads(job.bindings).get("project_model")
+            factory, cfg, providers, json.loads(job.bindings).get("project_model"), provider_binding
         )
-        if (sum(len(p.content) for p in parts) > char_limit
+        budget_parts = parts + (agent_native.auxiliary_parts(native.metadata) if native else [])
+        if (sum(len(p.content) for p in budget_parts) > char_limit
                 or byte_limit is not None
-                and sum(len(p.content.encode()) for p in parts) > byte_limit):
+                and sum(len(p.content.encode()) for p in budget_parts)
+                + (64 if native else 0) > byte_limit):
             raise AgentContextLimitError("Agentenkontext überschreitet die Modellgrenze")
         run = Run(
             conversation_id=job.model_conversation_id,
@@ -1595,22 +1645,24 @@ async def generate(
                     "project_model": json.loads(job.bindings).get("project_model"),
                     "agent_generation": {
                         "job_id": job.id,
-                        "decision_format": "decision_schema" in data,
-                        "allow_finish": data.get("allow_finish", True),
-                        "allow_ask": data.get("allow_ask", True),
-                        "allow_stop": data.get("allow_stop", False),
-                        "read_only": data.get("read_only", False),
-                        "intent_schema": data.get("intent_schema"),
-                        "ready_reads": data.get("ready_reads", {}).get("decisions", []),
-                        "tool_names": sorted(data.get("tools", {})),
+                        **({"native_plan": native.metadata} if native else {}),
+                        **({"provider_binding": provider_binding} if provider_binding else {}),
+                        "decision_format": "decision_schema" in authority_data,
+                        "allow_finish": authority_data.get("allow_finish", True),
+                        "allow_ask": authority_data.get("allow_ask", True),
+                        "allow_stop": authority_data.get("allow_stop", False),
+                        "read_only": authority_data.get("read_only", False),
+                        "intent_schema": authority_data.get("intent_schema"),
+                        "ready_reads": authority_data.get("ready_reads", {}).get("decisions", []),
+                        "tool_names": sorted(authority_data.get("tools", {})),
                         "interfaces": [
                             {key: interface[key] for key in (
                                 "integration_id", "kind", "rules", "read_only"
                             ) if key in interface}
-                            for interface in data.get("interfaces", [])
+                            for interface in authority_data.get("interfaces", [])
                         ],
                         "integration_ids": [
-                            i["integration_id"] for i in data.get("interfaces", [])
+                            i["integration_id"] for i in authority_data.get("interfaces", [])
                         ],
                     },
                     "parts": [p.model_dump(mode="json") for p in parts],
@@ -1627,6 +1679,8 @@ async def generate(
         db.flush()
         step = record(db, job, "model", {
             "instruction_sha256": digest(instruction),
+            "protocol": "native" if native else "json",
+            **({"native_schema_sha256": native.metadata["sha256"]} if native else {}),
             **({"intent_interpretation": True} if data.get("intent_schema") else {}),
             **({"summarize_only": True} if data.get("summarize_only") else {}),
         })
@@ -1640,6 +1694,11 @@ async def generate(
         assert run and step
         if run.status != "succeeded":
             step.status = "failed"
+            if native and (run.error or "").startswith("Native tool protocol unavailable"):
+                step.result = encode({"reason": "native_protocol_unavailable"})
+                binding = json.loads(run.routing_trace).get("native_provider")
+                db.commit()
+                raise NativePlanningUnavailable(binding)
             timed_out = (run.error or "").startswith(
                 (
                     "Provider hat zu lange keine Daten geliefert.",
@@ -1658,6 +1717,15 @@ async def generate(
             step.status, step.result = "failed", encode({"message": "Ungültiges Modell-JSON"})
             db.commit()
             raise AgentFormatError(text) from None
+        if native and isinstance(output, dict) and "_native_error" in output:
+            step.status = "failed"
+            reason = output["_native_error"]
+            step.result = encode({"reason": reason})
+            binding = json.loads(run.routing_trace).get("native_provider")
+            db.commit()
+            if reason == agent_native.NATIVE_NO_SELECTION:
+                raise NativePlanningUnavailable(binding)
+            raise AgentFormatError(encode({"reason": "native_invalid_arguments"}))
         step.status, step.result = "succeeded", encode(output)
         db.commit()
         return output
@@ -2402,7 +2470,8 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     allowed_tools = set()
                     for _profile, rules, _ in profiles.values():
                         rules = effective_rules(
-                            rules, read_only=bounded_read or not effect_target_allowed(
+                            rules, read_only=bounded_read or not _profile.writes_enabled
+                            or not effect_target_allowed(
                                 frozen_intent, _profile.id,
                             ),
                         )
@@ -2446,6 +2515,9 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         allowed_tools -= {"shell", "mail.send", "http.upload", "http.verify"}
                     from hub.agent_files import bound_sources
 
+                    job_sources = bound_sources(db, job)
+                    if not job_sources:
+                        allowed_tools.discard("http.upload")
                     clock = json.loads(job.bindings).get("clock") or freeze_clock(
                         cfg.agent_timezone, job.created
                     )
@@ -2538,10 +2610,11 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 "kind": p.kind,
                                 "name": p.name,
                                 "writes_enabled": p.writes_enabled,
-                                "read_only": (bounded_read
+                                "read_only": (bounded_read or not p.writes_enabled
                                               or not effect_target_allowed(frozen_intent, p.id)),
                                 **({"capabilities": agent_capabilities.describe(
                                     p, effective_rules(r, read_only=(bounded_read
+                                        or not p.writes_enabled
                                         or not effect_target_allowed(frozen_intent, p.id)))
                                 )} if not private_read else {}),
                                 "rules": r.model_dump(),
@@ -2560,7 +2633,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 "source_sha256": source.sha256,
                                 "name": source.name,
                             }
-                            for source in bound_sources(db, job)
+                            for source in job_sources
                         ],
                         # Exact source-bound arguments live in ready_reads and
                         # the native grammar, rather than twice in the prompt.
@@ -2647,24 +2720,30 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         else ARCHIVE_READ_INSTRUCTION if private_archive_read
                         else administration_instruction({p.kind for p, _, _ in profiles.values()})
                     )
+                    bindings = json.loads(job.bindings)
                     char_limit, byte_limit = generation_context_budget(
-                        factory, cfg, providers, json.loads(job.bindings).get("project_model")
+                        factory, cfg, providers, bindings.get("project_model"),
+                        bindings.get("native_compatibility_provider"),
                     )
                     if private_read:
                         byte_limit = min(14000, byte_limit) if byte_limit is not None else 14000
-                    raw = await generate(
-                        factory,
-                        cfg,
-                        providers,
-                        job_id,
-                        instruction,
-                        fit(
-                            data,
-                            instruction,
-                            char_limit,
-                            max_bytes=byte_limit,
-                        ),
-                    )
+                    from hub.providers import Providers
+
+                    native = None
+                    if (not private_read and isinstance(providers, Providers)
+                            and not bindings.get("native_tools_disabled")):
+                        native = agent_native.prepare(instruction, data)
+                        auxiliary_chars, auxiliary_bytes = agent_native.metadata_size(
+                            native.metadata
+                        )
+                        planned = fit(native.data, native.instruction, char_limit - auxiliary_chars,
+                                      max_bytes=(max(0, byte_limit - auxiliary_bytes - 64)
+                                                 if byte_limit is not None else None))
+                        planned["_native"] = native
+                        instruction = native.instruction
+                    else:
+                        planned = fit(data, instruction, char_limit, max_bytes=byte_limit)
+                    raw = await generate(factory, cfg, providers, job_id, instruction, planned)
                 except AgentFormatError as error:
                     with factory() as db:
                         job = db.get(AgentJob, job_id)

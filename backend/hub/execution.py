@@ -98,6 +98,14 @@ async def execute_run(
             snapshot = json.loads(run.context_snapshot)
             parts = [ContextPart.model_validate(p) for p in snapshot["parts"]]
             roles = snapshot["roles"]
+        def model_parts() -> list[ContextPart]:
+            metadata = snapshot.get("agent_generation", {}).get("native_plan")
+            if metadata is None:
+                return parts
+            from hub.agent_native import auxiliary_parts
+
+            return [*parts, *auxiliary_parts(metadata)]
+
         workflow_generation = bool(
             snapshot.get("use_case")
             or snapshot.get("use_case_designer")
@@ -219,7 +227,7 @@ async def execute_run(
             0,
             budget["capacity_bytes"]
             - budget["late_instruction_bytes"]
-            - sum(len(part.content.encode()) + 64 for part in parts),
+            - sum(len(part.content.encode()) + 64 for part in model_parts()),
         )
         selected_evidence: list[ContextPart] = []
         marker = "\n[Auszug für das aktuelle Kontextfenster gekürzt.]"
@@ -428,7 +436,7 @@ async def execute_run(
                 parts.extend(archive_parts)
                 roles.extend("user" for _ in archive_parts)
                 label = Privacy.LOCAL_ONLY
-                if sum(len(part.content) for part in parts) > cfg.context_limit:
+                if sum(len(part.content) for part in model_parts()) > cfg.context_limit:
                     raise ExecutionLimitError(
                         "Paperless und Gespräch überschreiten das Kontextlimit"
                     )
@@ -540,13 +548,29 @@ async def execute_run(
                 check_integration_context()
 
             if isinstance(providers, Providers):
+                requested_model = provider_arguments(snapshot.get("project_model"))
+                binding = snapshot.get("agent_generation", {}).get("provider_binding")
+                if binding:
+                    if (not isinstance(binding, dict) or set(binding) != {"id", "revision", "model"}
+                            or type(binding["id"]) is not str
+                            or type(binding["revision"]) is not int
+                            or type(binding["model"]) is not str):
+                        raise PermissionError("Invalid bound local provider")
+                    if requested_model and requested_model != {
+                        "provider_id": binding["id"], "model": binding["model"],
+                    }:
+                        raise PermissionError("Project model differs from bound provider")
+                    requested_model = {"provider_id": binding["id"], "model": binding["model"]}
                 cfg, providers, selected = runtime_provider(
                     factory,
                     cfg,
                     external_kind=c.cloud_provider,
                     cloud_only=bool(snapshot.get("model_cloud_only")),
-                    **provider_arguments(snapshot.get("project_model")),
+                    **requested_model,
                 )
+                if binding and (not selected.get("local")
+                                or selected["local"].revision != binding["revision"]):
+                    raise PermissionError("Bound local provider changed")
                 if snapshot.get("agent_generation", {}).get("intent_schema"):
                     cfg = replace(cfg, local_max_tokens=min(cfg.local_max_tokens, 768),
                                   local_disable_thinking=True)
@@ -554,7 +578,8 @@ async def execute_run(
                         providers.settings, local_max_tokens=cfg.local_max_tokens,
                         local_disable_thinking=True,
                     )
-                if snapshot.get("agent_generation"):
+                if (snapshot.get("agent_generation")
+                        and snapshot["agent_generation"].get("native_plan") is None):
                     from hub.agent_tools import decision_schema, ready_read_schema, research_schema
 
                     providers.local_json_schema = (
@@ -576,6 +601,13 @@ async def execute_run(
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()
                     )
+                native_plan = snapshot.get("agent_generation", {}).get("native_plan")
+                if native_plan is not None:
+                    if (snapshot.get("model_cloud_only")
+                            or snapshot["agent_generation"].get("intent_schema")):
+                        raise PermissionError("Native planning requires the local decision role")
+                    providers.local_json_schema = None
+                    providers.local_native_plan = native_plan
                 if not snapshot.get("model_cloud_only"):
                     local = selected.get("local")
                     if not local or not local.enabled:
@@ -585,14 +617,14 @@ async def execute_run(
                         raise ExecutionLimitError(
                             "Lokaler Router benötigt Text und strukturierte Ausgabe"
                         )
-                    input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    input_bound = sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                     if (
-                        sum(len(p.content) for p in parts) > limits["context_chars"]
+                        sum(len(p.content) for p in model_parts()) > limits["context_chars"]
                         or input_bound + min(1024, limits["output_tokens"])
                         > limits["context_tokens"]
                     ):
                         raise ExecutionLimitError("Kontextgrenze des lokalen Modells erreicht")
-                    if any(p.label not in limits["allowed_labels"] for p in parts):
+                    if any(p.label not in limits["allowed_labels"] for p in model_parts()):
                         raise PermissionError("Local model privacy class not allowed")
             async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
@@ -887,7 +919,7 @@ async def execute_run(
                         "status",
                         {"message": "Systemprüfung gespeichert · keine Änderungen ausgeführt"},
                     )
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError(
                             "Werkzeugbeleg gespeichert; Antwortkontext zu groß"
                         )
@@ -902,7 +934,7 @@ async def execute_run(
                     )
                     route.answer = None
                     yield ("status", {"message": "Webquellen mit URL und Abrufzeit gespeichert"})
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Recherche gespeichert; Antwortkontext zu groß")
                 # Resolve only the frozen enqueue snapshot, never mutable settings.
                 # The router and artifact specifications retain their existing contracts.
@@ -918,7 +950,7 @@ async def execute_run(
                     )
                     parts.append(style_part)
                     roles.append("system")
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Antwortkontext überschreitet die Kontextgrenze")
                     if c.cloud_allowed and style_part.label == Privacy.CLOUD_ALLOWED:
                         grants.append(
@@ -1026,7 +1058,7 @@ async def execute_run(
                     )
                     route.answer = None
                     builtin_answer = False
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
                 memory_parts: list[ContextPart] = []
                 memory_budget = min(2400, max(0, cfg.context_limit - sum(
@@ -1080,7 +1112,7 @@ async def execute_run(
                                 source_id=relevance_part.source_id, revision=1, provider_id=provider
                             )
                         )
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Antwortkontext überschreitet die Kontextgrenze")
                 if external and isinstance(providers, Providers):
                     cloud = selected.get(c.cloud_provider)
@@ -1136,16 +1168,16 @@ async def execute_run(
                 selected_provider = selected.get(provider)
                 if selected_provider:
                     final_limits = json.loads(selected_provider.config)
-                    final_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    final_bound = sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                     if (
-                        sum(len(p.content) for p in parts) > final_limits["context_chars"]
+                        sum(len(p.content) for p in model_parts()) > final_limits["context_chars"]
                         or final_bound + min(1024, final_limits["output_tokens"])
                         > final_limits["context_tokens"]
                     ):
                         raise ExecutionLimitError("Antwortkontext überschreitet die Modellgrenze")
                 if not external and selected_provider:
                     limits = json.loads(selected_provider.config)
-                    input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    input_bound = sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                     effective_output = min(
                         limits["output_tokens"], limits["context_tokens"] - input_bound
                     )
@@ -1167,6 +1199,11 @@ async def execute_run(
                 model = (
                     (cfg.openrouter_model if external else cfg.local_model) if model_used else ""
                 )
+                if (selected_provider and snapshot.get("agent_generation") and
+                        (snapshot["agent_generation"].get("native_plan") is not None
+                         or snapshot["agent_generation"].get("provider_binding"))):
+                    trace["native_provider"] = {"id": selected_provider.id,
+                        "revision": selected_provider.revision, "model": model}
                 trace.update(actual_provider=provider, actual_model=model or None)
                 update(
                     routing_trace=json.dumps(trace, ensure_ascii=False),
@@ -1312,13 +1349,14 @@ async def execute_run(
                                     ) from error
                                 limits = json.loads(local.config)
                                 input_bound = (
-                                    sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                                    sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                                 )
                                 effective_output = min(
                                     limits["output_tokens"], limits["context_tokens"] - input_bound
                                 )
                                 if (
-                                    sum(len(p.content) for p in parts) > limits["context_chars"]
+                                    sum(len(p.content) for p in model_parts())
+                                    > limits["context_chars"]
                                     or effective_output < 16
                                 ):
                                     raise ExecutionLimitError(
@@ -1465,7 +1503,11 @@ async def execute_run(
                 if snapshot.get("model_cloud_only")
                 else "Provider nicht verfügbar oder ungültige Antwort"
             )
-            if isinstance(error, ProjectModelError):
+            from hub.agent_native import NativeProtocolUnavailable
+
+            if isinstance(error, NativeProtocolUnavailable):
+                message = "Native tool protocol unavailable"
+            elif isinstance(error, ProjectModelError):
                 message = str(error)
             update(error=message)
             yield (

@@ -151,3 +151,68 @@ def test_target_names_are_literal_data_and_cannot_add_permissions_or_match_wildc
     assert result == {"tool": "mcp.catalog", "arguments": {}}
     assert not validate_tool(target.kind, selected["id"][1], result["tool"], result["arguments"])[1]
     assert not access_question("Is HA reachable?", {})
+
+
+def test_websocket_read_recipes_include_authorized_backups_and_supervisor_metadata():
+    import copy
+
+    rules = Rules(enabled=True, ha_websocket_prefixes=[
+        "backup/", "supervisor/", *sorted(HA_WS_READS),
+    ])
+    saved = copy.deepcopy(rules)
+    description = describe(profile(), rules)
+    operations = description["operations"]
+    recipes = operations["websocket_reads"]
+    assert len(recipes) == 7
+    assert set(operations["websocket_no_parameter_reads"]) == HA_WS_READS | {"backup/info"}
+    assert {recipe["arguments"]["parameters"]["endpoint"] for recipe in recipes
+            if recipe["arguments"]["type"] == "supervisor/api"} == {"/info", "/supervisor/info"}
+    for recipe in recipes:
+        normalized, effect = validate_tool("home_assistant", rules, recipe["tool"],
+                                           recipe["arguments"])
+        assert effect is False and normalized == recipe["arguments"]
+        assert normalized["verification"] is None
+    assert description["readiness"]["live_access_verified"] is False
+    assert rules == saved
+
+
+@pytest.mark.parametrize("scopes,expected", [
+    ([], set()),
+    (["config/"], set()),
+    (["backup/info"], {"backup/info"}),
+    (["backup/"], {"backup/info"}),
+    (["supervisor/api"], {"supervisor/api"}),
+    (["supervisor/"], {"supervisor/api"}),
+    (["get_"], set()),
+    (["get_config"], {"get_config"}),
+    (["backup/create"], set()),
+])
+def test_websocket_read_recipes_do_not_expand_human_scopes(scopes, expected):
+    operations = describe(profile(), Rules(
+        enabled=True, ha_websocket_prefixes=scopes,
+    ))["operations"]
+    recipes = operations["websocket_reads"]
+    assert {recipe["arguments"]["type"] for recipe in recipes} == expected
+    assert set(operations["websocket_no_parameter_reads"]) == expected - {"supervisor/api"}
+
+
+def test_each_websocket_recipe_is_validated_and_effect_classification_can_remove_it(monkeypatch):
+    import hub.agent_tools as tools
+
+    original = tools.validate_tool
+    checked = []
+
+    def validator(kind, rules, tool, arguments):
+        if tool == "ha.websocket":
+            checked.append(arguments)
+            if arguments["type"] == "backup/info":
+                normalized, _ = original(kind, rules, tool, arguments)
+                return normalized, True
+        return original(kind, rules, tool, arguments)
+
+    monkeypatch.setattr(tools, "validate_tool", validator)
+    operations = describe(profile(), Rules(enabled=True, ha_websocket_prefixes=["backup/"]))[
+        "operations"]
+    assert len(checked) == 7
+    assert operations["websocket_reads"] == []
+    assert operations["websocket_no_parameter_reads"] == []

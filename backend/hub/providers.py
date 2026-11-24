@@ -3,10 +3,12 @@
 import asyncio
 import ipaddress
 import json
+import re
 import socket
 import time
 from collections.abc import AsyncIterator, Callable
 from contextlib import nullcontext
+from copy import deepcopy
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -138,6 +140,53 @@ def pinned_url(
     return target, {"Host": u.netloc}, {"sni_hostname": u.hostname}
 
 
+async def _unsupported_native(response: httpx.Response) -> bool:
+    if response.status_code not in {400, 422}:
+        return False
+    payload = bytearray()
+    async for chunk in response.aiter_bytes():
+        if len(payload) + len(chunk) > 8192:
+            return False
+        payload.extend(chunk)
+    try:
+        error = json.loads(payload).get("error", {})
+        if not isinstance(error, dict):
+            return False
+        code, parameter = error.get("code"), error.get("param")
+        message = error.get("message", "")
+        unsupported = code in {"unsupported_parameter", "unsupported_value", "unknown_parameter",
+                               "unrecognized_request_argument", "unsupported_tool_protocol"}
+        if parameter in {"tools", "tool_choice"} and unsupported:
+            return True
+        return isinstance(message, str) and bool(re.search(
+            r"(?:\b(?:tools|tool_choice)\b\s+(?:is|are)\s+not supported|"
+            r"(?:unknown parameter|unexpected keyword argument|unrecognized request argument)"
+            r"\s*[:=]?\s*['\"]?(?:tools|tool_choice)\b)", message, re.IGNORECASE,
+        ))
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+def _native_decision(metadata: dict[str, Any], calls: dict[int, dict[str, Any]],
+                     malformed: bool) -> str:
+    from hub.agent_native import (
+        NATIVE_INVALID_ARGUMENTS,
+        NATIVE_NO_SELECTION,
+        NativeCallError,
+        decode_calls,
+    )
+
+    if malformed:
+        return json.dumps({"_native_error": NATIVE_INVALID_ARGUMENTS,
+                           "issues": ["native_call_envelope_invalid"]})
+    try:
+        decision = decode_calls(metadata, [calls[index] for index in sorted(calls)])
+        return json.dumps(decision if decision is not None else
+                          {"_native_error": NATIVE_NO_SELECTION}, ensure_ascii=False)
+    except NativeCallError as error:
+        return json.dumps({"_native_error": NATIVE_INVALID_ARGUMENTS, "issues": error.issues})
+
+
 class Providers:
     def __init__(
         self,
@@ -156,6 +205,7 @@ class Providers:
         self.measured_cost: float | None = None
         self.route_calls = 0
         self.local_json_schema: dict[str, Any] | None = None
+        self.local_native_plan: dict[str, Any] | None = None
         self.before_send: Callable[[], None] | None = None
         self.on_progress: Callable[[str], None] | None = None
 
@@ -385,10 +435,18 @@ class Providers:
     ) -> AsyncIterator[str]:
         # This constructs all content that leaves the server; no raw unlabelled
         # model context or hidden history is appended after this check.
+        native = deepcopy(self.local_native_plan)
+        if native is not None and (external or self.local_json_schema is not None):
+            raise PermissionError("Native local planning cannot be combined with another protocol")
+        auxiliary = []
+        if native is not None:
+            from hub.agent_native import auxiliary_parts
+
+            auxiliary = auxiliary_parts(native)
         if self.before_send:
             self.before_send()
         check_egress(
-            parts,
+            [*parts, *auxiliary],
             external=external,
             provider_id=self.external_kind if external else "local",
             grants=grants,
@@ -397,7 +455,7 @@ class Providers:
         if external and self.external_kind != "openrouter":
             from hub.native_providers import NativeConfig, NativeProvider
 
-            native = NativeProvider(
+            native_adapter = NativeProvider(
                 NativeConfig(
                     kind=self.external_kind,  # type: ignore[arg-type]
                     model=self.settings.openrouter_model,
@@ -410,19 +468,22 @@ class Providers:
                 ),
                 self.keys.get(self.external_kind, ""),
             )
-            native.before_send = self.before_send
+            native_adapter.before_send = self.before_send
             try:
-                async for value in native.stream(parts, roles, grants=grants):
+                async for value in native_adapter.stream(parts, roles, grants=grants):
                     yield value
             finally:
                 self.measured_cost = (
-                    float(native.estimated_cost) if native.estimated_cost is not None else None
+                    float(native_adapter.estimated_cost)
+                    if native_adapter.estimated_cost is not None else None
                 )
-                self.cost_basis = native.cost_basis
+                self.cost_basis = native_adapter.cost_basis
             return
         if not (self.settings.openrouter_model if external else self.settings.local_model):
             raise ValueError("Answer model is not configured")
-        if not external and any(p.label not in self.settings.local_allowed_labels for p in parts):
+        if not external and any(
+            p.label not in self.settings.local_allowed_labels for p in [*parts, *auxiliary]
+        ):
             raise PermissionError("Local privacy class not permitted")
         target, headers, extensions, key = self._target(external)
         if key:
@@ -449,6 +510,9 @@ class Providers:
                     "schema": self.local_json_schema,
                 },
             }
+        if native is not None:
+            body["tools"] = native["tools"]
+            body["tool_choice"] = "auto"
         if external:
             body["provider"] = {"allow_fallbacks": False}
         slot = asyncio.Semaphore(1) if external else self.local_slot
@@ -473,7 +537,13 @@ class Providers:
             async with client.stream(
                 "POST", target, headers=headers, extensions=extensions, json=body
             ) as response:
+                if native is not None and await _unsupported_native(response):
+                    from hub.agent_native import NativeProtocolUnavailable
+
+                    raise NativeProtocolUnavailable()
                 response.raise_for_status()
+                calls: dict[int, dict[str, Any]] = {}
+                native_size, malformed = 0, False
                 limited = False
                 iterator = response.aiter_lines().__aiter__()
                 while True:
@@ -496,6 +566,8 @@ class Providers:
                     if value == "[DONE]":
                         if limited:
                             raise AnswerLimitReached()
+                        if native is not None:
+                            yield _native_decision(native, calls, malformed)
                         return
                     data = json.loads(value)
                     if data.get("error"):
@@ -512,18 +584,67 @@ class Providers:
                         self.cost_basis = "provider_reported"
                     choices = data.get("choices") or []
                     if choices:
+                        if native is not None and len(choices) != 1:
+                            malformed = True
                         if choices[0].get("finish_reason") == "content_filter":
                             raise ExecutionLimitError(
                                 "Antwort durch den Inhaltsfilter des Providers beendet"
                             )
-                        chunk = choices[0].get("delta", {}).get("content")
+                        delta = choices[0].get("delta") or {}
+                        if native is not None and not isinstance(delta, dict):
+                            malformed = True
+                            delta = {}
+                        fragments = delta.get("tool_calls")
+                        if native is not None and fragments is not None:
+                            if not isinstance(fragments, list):
+                                malformed = True
+                            else:
+                                for fragment in fragments:
+                                    if not isinstance(fragment, dict):
+                                        malformed = True
+                                        continue
+                                    index = fragment.get("index")
+                                    if type(index) is not int or not 0 <= index < 8:
+                                        malformed = True
+                                        continue
+                                    function = fragment.get("function") or {}
+                                    if not isinstance(function, dict):
+                                        malformed = True
+                                        continue
+                                    record = calls.setdefault(index, {"type": "function",
+                                        "function": {"name": "", "arguments": ""}})
+                                    if fragment.get("type", "function") != "function":
+                                        malformed = True
+                                    if "id" in fragment:
+                                        identifier = fragment["id"]
+                                        if (not isinstance(identifier, str)
+                                                or len(identifier.encode()) > 256
+                                                or record.get("id", identifier) != identifier):
+                                            malformed = True
+                                        else:
+                                            record["id"] = identifier
+                                    for field in ("name", "arguments"):
+                                        value = function.get(field, "")
+                                        if not isinstance(value, str):
+                                            malformed = True
+                                            continue
+                                        native_size += len(value.encode())
+                                        if native_size > 256000:
+                                            malformed = True
+                                        elif value:
+                                            record["function"][field] += value
+                                            content_received = True
+                                            content_deadline = (time.monotonic()
+                                                                + self.settings.local_timeout)
+                        chunk = delta.get("content")
                         if chunk:
                             content_received = True
                             content_deadline = time.monotonic() + (
                                 self.settings.openrouter_timeout if external
                                 else self.settings.local_timeout
                             )
-                            yield chunk
+                            if native is None:
+                                yield chunk
                         if choices[0].get("finish_reason") == "length":
                             limited = True
                 raise ValueError("Stream ended without completion marker")

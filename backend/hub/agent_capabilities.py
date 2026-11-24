@@ -85,12 +85,37 @@ def describe(profile: "Integration", rules: "Rules") -> dict[str, Any]:
                 continue
             if not effect:
                 reads.append({"tool": "http", "arguments": arguments, "purpose": purpose})
+        websocket_reads: list[dict[str, Any]] = []
+        for command, parameters, purpose in [
+            ("backup/info", {}, "Vorhandene Backups lesen."),
+            ("get_config", {}, "Version und Konfiguration lesen."),
+            ("get_states", {}, "Entitäten und Zustände lesen."),
+            ("get_services", {}, "Verfügbare Aktionen lesen."),
+            ("get_panels", {}, "Vorhandene Oberflächen lesen."),
+            ("supervisor/api", {"method": "get", "endpoint": "/info"},
+             "Installationsbestand lesen."),
+            ("supervisor/api", {"method": "get", "endpoint": "/supervisor/info"},
+             "Supervisor-Version und Bestand lesen."),
+        ]:
+            try:
+                arguments, effect = validate_tool("home_assistant", rules, "ha.websocket", {
+                    "type": command, "parameters": parameters,
+                })
+            except (PermissionError, ValueError):
+                continue
+            if not effect:
+                websocket_reads.append({"tool": "ha.websocket", "arguments": arguments,
+                                        "purpose": purpose})
         operations = {
             "http_reads": reads,
+            "websocket_reads": websocket_reads,
             "http_methods": list(rules.http_methods) if rules.http_prefixes else [],
             "http_prefixes": list(rules.http_prefixes),
             "websocket_types": websocket_types(rules),
-            "websocket_no_parameter_reads": sorted(HA_WS_READS & set(websocket_types(rules))),
+            "websocket_no_parameter_reads": sorted({
+                read["arguments"]["type"] for read in websocket_reads
+                if read["arguments"]["parameters"] == {}
+            }),
         }
         discovery = [
             "Use authenticated /api/config and /api/services only within approved GET scopes.",
