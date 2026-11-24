@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-24",
-  "applicationCommit": "712ac60",
+  "applicationCommit": "a7695cb",
   "schema": "0050",
-  "tests": 3973,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45484003803",
+  "tests": 3980,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45495642205",
   "screenshots": [
     {
       "id": "compact-chat",
@@ -769,7 +769,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen erhalten vollständig typisierte Argumentobjekte; Zielregeln, dauerhafte Absichten und Nachprüfungen bleiben wirksam. Ein nativer Entitätenabruf erzeugt geprüfte bestehende HTTP-Leseaufrufe. Eine reale freie HA-Updateübersicht besteht mit vollständigen Zustandsbelegen und beleggebundenem Abschluss; SSH und Paperless wurden ebenfalls lesend geprüft. Der separate Provider-Planertest wird an denselben Kontextaufbau angeglichen; seine erneute Modellabnahme bleibt offen. Umfassende autonome HA-Konfiguration und Updates sind nicht live abgenommen. Unklare Änderungen werden nicht automatisch wiederholt.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen erhalten vollständig typisierte Argumentobjekte; Zielregeln, dauerhafte Absichten und Nachprüfungen bleiben wirksam. Ein nativer Entitätenabruf erzeugt geprüfte bestehende HTTP-Leseaufrufe. Eine reale freie HA-Updateübersicht besteht mit vollständigen Zustandsbelegen und beleggebundenem Abschluss; SSH und Paperless wurden ebenfalls lesend geprüft. Der separate Provider-Planertest nutzt denselben Kontextaufbau und sichere Fehlerkategorien. Seine reale Probe erkennt den Intent, scheitert aber weiterhin bei der Werkzeugauswahl; die allgemeine lokale Planerabnahme bleibt offen. Umfassende autonome HA-Konfiguration und Updates sind nicht live abgenommen. Unklare Änderungen werden nicht automatisch wiederholt.",
           "status": "limited"
         }
       ]

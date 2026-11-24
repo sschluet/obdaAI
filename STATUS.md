@@ -2,55 +2,57 @@
 
 ## Beleggebundene HA-Abfragen — lesend live geprüft
 
-`712ac60` ist nach vollständiger [CI 45484003803](https://github.com/sschluet/obdaAI/actions/runs/45484003803)
-auf der Test-VM installiert. Lokal bestanden 3.979 Tests; die vollständige CI
-bestand mit 3.973 Tests und sechs optionalen Calc-Skips einschließlich Browser-,
+`a7695cb` ist nach vollständiger [CI 45495642205](https://github.com/sschluet/obdaAI/actions/runs/45495642205)
+auf der Test-VM installiert. Lokal bestanden 3.986 Tests; die vollständige CI
+bestand mit 3.980 Tests und sechs optionalen Calc-Skips einschließlich Browser-,
 Container-, Isolations- und Secretprüfungen. Alle neun installierten Images, beide
-APIs, Schema 0050 und der Erhalt ursprünglicher Daten/Konfiguration sind geprüft.
-Eine neue verschlüsselte Sicherung liegt vor; dies ist kein Wiederherstellungstest.
+APIs, installierte Quellhashes, Schema 0050 und der Erhalt ursprünglicher
+Daten/Konfiguration sind geprüft. Eine frische verschlüsselte Sicherung liegt vor;
+keine Datenbankmigration war erforderlich. Dies ist kein Wiederherstellungstest.
 
-Die freie reale Frage nach ausstehenden HA-Updates besteht jetzt: vollständige
-aktuelle Zustandsbelege, alle gemeldeten verfügbaren Updates enthalten, keine
-erfundenen Kennungen oder behaupteten Änderungen. Der Planer wählt seine Werkzeuge
-selbst. Der native Entitätenabruf erzeugt geprüfte Argumente für den bestehenden
-HTTP-Leseweg. Ein beleggebundener Abschluss verhindert unbelegte Nullmeldungen
-und benötigt für eine reine Updateübersicht keinen weiteren Modellaufruf.
-Metadaten allein erfüllen keine Anforderung an aktuelle Entitätenzustände.
+Die freie reale Frage nach ausstehenden HA-Updates besteht auf diesem Release:
+vollständige aktuelle Zustandsbelege, alle gemeldeten verfügbaren Updates
+enthalten, keine erfundenen Kennungen oder behaupteten Änderungen. Der Planer
+wählt seine Werkzeuge selbst. Der native Entitätenabruf erzeugt geprüfte Argumente
+für den bestehenden HTTP-Leseweg. Ein beleggebundener Abschluss verhindert
+unbelegte Nullmeldungen und benötigt für reine Updateübersichten keinen weiteren
+Modellaufruf. Metadaten allein erfüllen keine Anforderung an aktuelle Zustände.
+Die Prüfung belegt den vollständigen abgerufenen Bestand an Update-Entitäten,
+keine Vollständigkeit aller denkbaren Updatequellen einer Installation.
+
 Nach verifizierten Effekten und verbrauchten Änderungsbudgets angebotene Werkzeuge
 sowie kompakte Belegsichten begrenzen den Kontext, ohne offene Wirkungsprüfungen
-oder aktuelle Ausführungsgrenzen zu umgehen.
+oder aktuelle Ausführungsgrenzen zu umgehen. Ungültige Filter werden vor Versand
+abgewiesen; begrenzte interne Korrekturen erhalten den ursprünglichen Auftrag.
+Aktuelle Rechte, Originalbelege und dauerhafte Absichten bleiben verbindlich.
 
-Auf diesem Release bestehen auch echter SSH-Zugriff sowie Paperless-Übersicht und
-anschließender Dokumentinhaltabruf. Die Paperless-Prüfung belegt Abruf und
-Quellenzuordnung, keine vollständige fachliche Prüfung jeder Zusammenfassung.
-Auch Proton-Tagesübersicht und anschließender Gesendet-Abgleich bestehen. Ein
-positiver Antwortbezug wurde mangels beobachtetem Treffer nicht live belegt;
-fehlende Beziehungen bleiben unbekannt. HA-Lampenübersicht und die Folgefrage nach eingeschalteten Lampen bestehen
-ebenfalls mit frischen Zustandsbelegen. Das ist eine Prüfung des beobachteten
-Bestands, keine Bestätigung jeder möglichen HA-Abfrage.
+Auf dem direkt vorausgehenden Release `712ac60` bestanden außerdem sieben echte
+lesende Fragen: SSH-Zugriff; Paperless-Übersicht und Dokumentinhaltabruf;
+Proton-Tagesübersicht und Gesendet-Abgleich; HA-Lampenübersicht und frischer
+Einschaltzustand. Originaldaten, Konfiguration und Bereinigung sind geprüft.
+Die Paperless-Prüfung belegt Abruf und Quellenzuordnung, keine vollständige
+fachliche Prüfung jeder Zusammenfassung. Ein positiver Mail-Antwortbezug wurde
+mangels beobachtetem Treffer nicht live belegt; fehlende Beziehungen bleiben
+unbekannt. Die neue Diagnosekorrektur verändert diese Ausführungspfade nicht;
+diese früheren Fälle werden nicht als neuer Gesamtlauf auf `a7695cb` ausgegeben.
 
-Ein separater synthetischer Provider-Planertest scheiterte weiterhin: Intent
-anerkannt, keine native Auswahl, danach erfolgloser Kompatibilitätsversuch.
-Der fehlgeschlagene Datensatz bleibt erhalten. Der Test verwendete noch nicht
-den tatsächlichen aktuellen Planerkontext. Die Nachkorrektur gleicht Goal-Evidence,
-Bootstrap-Werkzeughistorie und Kontextbudget an den gemeinsamen Runtime-Weg an;
-der native Entitätenabruf ist dadurch auch im Test erreichbar. Sichere feste
-Fehlerkategorien unterscheiden künftig Phase und Ursache, ohne Modelltexte oder
-Zugangsdaten zu speichern. Keine Änderung an Providerkonfiguration oder Erfolgskriterien.
-Die Nachkorrektur besteht den lokalen Gesamtlauf: 3.986 Tests, Ruff, mypy
-und Secret-Scan erfolgreich. Vollständige neue GitHub-CI und Rollout stehen noch aus.
-Eine erste isolierte Probe scheiterte schon im privaten Helfer vor dem Modellaufruf.
-Nach Korrektur dieses Helfers erkennt eine tatsächliche lokale Probe den Intent,
-wählt aber nicht den geforderten Zustandsabruf. Die neue Fehlerkategorie meldet
-diesen Auswahlfehler korrekt; kein Kompatibilitätswechsel oder Zielaufruf folgt.
-Providerkonfiguration und Datenbank bleiben unverändert. Diese Probe ist kein
-Erfolgsnachweis und ersetzt nicht die erneute persistierte API-Abnahme.
+Der separate Provider-Planertest nutzt jetzt denselben begrenzten Kontextaufbau,
+Bootstrap-Werkzeugdialog und Goal-Evidence wie die Runtime. Damit ist der native
+Entitätenabruf auch im synthetischen Test erreichbar. Sichere feste Fehlerphasen
+und -kategorien enthalten keine Modelltexte oder Secrets. Seine reale neue
+persistierte API-Probe erkennt den Intent, scheitert aber weiterhin bei der
+nativen Werkzeugauswahl (`selection_mismatch`). Es folgt kein Kompatibilitätswechsel.
+Der fehlgeschlagene Test bleibt erhalten; ursprüngliche Zeilen und das
+Providerprofil sind unverändert, die eigene Sitzung ist entfernt. Der Test führt
+keine echte Integrationsaktion aus. Eine zusätzliche isolierte lokale Probe
+zeigte denselben Auswahlfehler. Damit ist die Diagnose technisch angeglichen und
+ihre Fehleraufzeichnung geprüft, die allgemeine lokale Planerabnahme aber
+weiterhin nicht bestanden. Erfolgreiche einzelne Leseabläufe ersetzen diese nicht.
 
 Keine HA-Updates oder Konfigurationsänderungen wurden in dieser Abnahme ausgeführt.
 Allgemeine autonome Verwaltung, echte HA-Schreibabläufe und Wiederherstellung
-bleiben offen. Frühere erfolgreiche Leseprüfungen sind kein Ersatz dafür.
-Die bestehenden zielgebundenen Regeln, dauerhaften Absichten, Freigaben,
-Nachprüfungen und das Verbot blinder Wiederholung bleiben erhalten.
+bleiben offen. Die bestehenden zielgebundenen Regeln, dauerhaften Absichten,
+Freigaben, Nachprüfungen und das Verbot blinder Wiederholung bleiben erhalten.
 
 ## Frühere geprüfte Lieferung — f07dd44 / Schema 0050
 
