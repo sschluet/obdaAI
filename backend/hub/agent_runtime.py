@@ -36,6 +36,7 @@ from hub.agent_tools import (
     SCHEMAS,
     Decision,
     Rules,
+    ToolDomainValidationError,
     decision_envelope_schema,
     effective_rules,
     invoke,
@@ -3330,6 +3331,16 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 include_context=False,
                             ),
                         )
+                        db.commit()
+                        continue
+                    except ToolDomainValidationError as error:
+                        format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                            "type": error.code,
+                            "next_action": "HA service-execution paths are POST-only, not "
+                            "verification reads. Discover an actually readable status resource "
+                            "and its fields using permitted reads, then bind an observable "
+                            "postcondition. Do not invent routes or values. No change was sent.",
+                        }])
                         db.commit()
                         continue
                     if effect and not effect_target_allowed(

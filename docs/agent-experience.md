@@ -175,6 +175,8 @@ gleichgesetzten Operationen dieser konkreten Dienstregel.
 
 Ein Dienstaufruf unter `/api/services/<domain>/<service>` ist kein lesbarer
 Statusendpunkt und wird als HTTP-Nachprüfung vor dem Versand abgewiesen. Bei
+der Planung erhält das Modell dafür einen festen fachlichen Fehlercode zur
+begrenzten internen Korrektur; Rechtefehler werden dadurch nicht wiederholt. Bei
 einem ausdrücklich vorgeschriebenen HA-Backup muss die vorgeschlagene
 Statusressource außerdem zuvor im selben Auftrag und Ziel erfolgreich gelesen
 worden sein. Die erwarteten Felder müssen im Originalbeleg vorhanden sein;

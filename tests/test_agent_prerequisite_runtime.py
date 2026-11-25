@@ -54,8 +54,9 @@ def decision(identifier, path, *, method="GET", body=None, verification=None):
     }
 
 
+@pytest.mark.parametrize("bad_service_verifier", [False, True])
 def test_closed_all_update_pipeline_rejects_premature_change_then_backup_verify_update(
-    ha, monkeypatch
+    ha, monkeypatch, bad_service_verifier,
 ):
     configure(ha)
     job_id = start(ha, GOAL, research_allowed=False)
@@ -82,7 +83,10 @@ def test_closed_all_update_pipeline_rejects_premature_change_then_backup_verify_
                 verification=update,
             ),
             decision(
-                ha[4], RULE["requires"]["path"], method="POST", verification=backup,
+                ha[4], RULE["requires"]["path"], method="POST", verification=(
+                    {**backup, "path": RULE["requires"]["path"]}
+                    if bad_service_verifier else backup
+                ),
             ),
             decision(ha[4], "/api/states/sensor.backup"),
             decision(
@@ -174,7 +178,8 @@ def test_closed_all_update_pipeline_rejects_premature_change_then_backup_verify_
         for item in step["document"]["issues"]
     )
     assert any(
-        item["type"] == "backup_verification_observation_required"
+        item["type"] == ("verification_service_endpoint" if bad_service_verifier
+                         else "backup_verification_observation_required")
         for step in feedback for item in step["document"]["issues"]
     )
     assert all(

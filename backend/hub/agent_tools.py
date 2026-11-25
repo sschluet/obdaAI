@@ -24,6 +24,16 @@ from hub.config import Settings
 from hub.integration_transport import pinned_target, resolved_targets
 from hub.integration_write_adapters import sftp, ssh_client
 
+
+class ToolDomainValidationError(ValueError):
+    """Closed, safe planning correction for a known non-executable verifier."""
+
+    code = "verification_service_endpoint"
+
+    def __init__(self) -> None:
+        super().__init__("HA service execution endpoints are POST-only, not verification reads")
+
+
 # Frame-level debug logs must never contain the authentication token.
 LOGGER = logging.Logger("hub.agent_transport")
 LOGGER.disabled = True
@@ -906,9 +916,7 @@ def validate_tool(
             from hub.agent_path_grammar import ha_service_execution_path
 
             if ha_service_execution_path(data["path"]):
-                raise ValueError(
-                    "HA service execution endpoints are POST-only, not verification reads"
-                )
+                raise ToolDomainValidationError()
         if webhook and tool == "http.verify":
             raise PermissionError("Home Assistant webhooks cannot verify an effect by reading")
         return data, data["method"] != "GET" or webhook
