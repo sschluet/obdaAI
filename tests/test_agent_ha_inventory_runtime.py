@@ -3,6 +3,7 @@
 # ruff: noqa: F811
 
 import json
+from uuid import uuid4
 
 import pytest
 from hub import agent_runtime as runtime
@@ -11,6 +12,7 @@ from hub.agent_models import AgentJob, AgentPolicy, AgentStep
 from test_actions import gateway, set_pause  # noqa: F401
 from test_agent_capability_runtime import execute, ha, no_planning, start  # noqa: F401
 from test_agents import agent  # noqa: F401
+from test_integration_routing import add_profile
 from test_integration_writes import writes  # noqa: F401
 
 GOAL = "Welche Lampen sind in meinem Home Assistant vorhanden?"
@@ -119,6 +121,166 @@ def test_same_chat_on_followup_refreshes_only_the_previously_observed_cohort(ha,
     assert not ha[-1]
 
 
+@pytest.mark.parametrize("use_route", [False, True])
+def test_large_followup_binds_prior_ha_with_multiple_selected_adapter_kinds(
+    ha, monkeypatch, use_route,
+):
+    import asyncio
+
+    from hub.agent_tools import Rules
+
+    no_planning(monkeypatch)
+    other_ids = [add_profile(ha[0], kind=kind, name="Synthetic " + kind, rules=rules)
+                 for kind, rules in [
+                     ("paperless", Rules(enabled=True, http_methods=["GET"],
+                                         http_prefixes=["/api/"])),
+                     ("ssh", Rules(enabled=True, shell=True)),
+                     ("mcp", Rules(enabled=True, mcp=True)),
+                 ]]
+    selected = ha[1].put(
+        "/api/integration-bindings/conversation/" + ha[5], headers=ha[2],
+        json={"expected_revision": 1, "selection_mode": "manual",
+              "integration_ids": [ha[4], *other_ids]},
+    )
+    assert selected.status_code == 200, selected.text
+    states = [{"entity_id": f"light.synthetic_{i}", "state": "on" if i % 2 else "off",
+               "attributes": {"friendly_name": f"Synthetic lamp {i}"}} for i in range(75)]
+    calls = target(ha, monkeypatch, states=states)
+    first = start(ha, GOAL)
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, first))
+    assert ha[1].get("/api/agent-runs/" + first).json()["status"] == "observed"
+    if use_route:
+        routed = ha[1].post(
+            f"/api/conversations/{ha[5]}/integration-route", headers=ha[2],
+            json={"goal": "Welche davon sind an?"},
+        )
+        assert routed.status_code == 200, routed.text
+        assert routed.json() == {"route": "agent", "integration_ids": [ha[4]]}
+    states.append({"entity_id": "light.new_unrelated", "state": "on", "attributes": {}})
+    created = ha[1].post(
+        f"/api/conversations/{ha[5]}/agent-runs", headers=ha[2],
+        json={"request_id": str(uuid4()), "goal": "Welche davon sind an?"},
+    )
+    assert created.status_code == 200, created.text
+    job_id = created.json()["id"]
+    with ha[0].state.sessions() as db:
+        intent = json.loads(db.get(AgentJob, job_id).bindings)["intent"]
+        assert intent["target_ids"] == [ha[4]] and intent["answer_kind"] == "light_on_cohort"
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, job_id))
+    result = ha[1].get("/api/agent-runs/" + job_id).json()
+    assert result["status"] == "observed" and len(calls) == 2
+    assert len(result["steps"]) == 1 and result["steps"][0]["document"]["inventory_plan"]
+    assert "new_unrelated" not in result["summary"] and not ha[-1]
+    assert "light.synthetic_1" in result["summary"]
+
+
+@pytest.mark.parametrize("invalidate", ["ordinary_topic", "revoked_receipt"])
+def test_multi_profile_followup_cannot_reactivate_an_ineligible_previous_light_cohort(
+    ha, monkeypatch, invalidate,
+):
+    import asyncio
+    import time
+
+    from hub.agent_intent import RequestIntent
+    from hub.agent_tools import Rules
+    from hub.db import Message
+
+    other = add_profile(ha[0], kind="paperless", name="Synthetic archive", rules=Rules(
+        enabled=True, http_methods=["GET"], http_prefixes=["/api/"],
+    ))
+    selected = ha[1].put(
+        "/api/integration-bindings/conversation/" + ha[5], headers=ha[2],
+        json={"expected_revision": 1, "selection_mode": "manual",
+              "integration_ids": [ha[4], other]},
+    )
+    assert selected.status_code == 200
+    calls = target(ha, monkeypatch)
+    first = start(ha, GOAL)
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, first))
+    assert ha[1].get("/api/agent-runs/" + first).json()["status"] == "observed"
+    with ha[0].state.sessions() as db:
+        if invalidate == "ordinary_topic":
+            db.add(Message(conversation_id=ha[5], role="assistant", content="Other topic",
+                           created=time.time() + 1))
+        else:
+            db.get(AgentPolicy, ha[4]).revision += 1
+        db.commit()
+
+    unknown = RequestIntent(target_ids=[], mode="unknown", topic="general",
+                            confidence="uncertain").model_dump()
+
+    async def semantic(*args, **kwargs):
+        return RequestIntent.model_validate(unknown)
+
+    async def model(*args):
+        assert args[-1].get("intent_schema")
+        assert args[-1]["prior_displayed_target_ids"] == []
+        return unknown
+
+    monkeypatch.setattr("hub.request_interpretation.interpret", semantic)
+    monkeypatch.setattr(runtime, "generate", model)
+    routed = ha[1].post(
+        f"/api/conversations/{ha[5]}/integration-route", headers=ha[2],
+        json={"goal": "Welche davon sind an?"},
+    )
+    assert routed.status_code == 200 and routed.json() == {"route": "chat", "integration_ids": []}
+    job_id = start(ha, "Welche davon sind an?")
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, job_id))
+    result = ha[1].get("/api/agent-runs/" + job_id).json()
+    assert result["status"] == "unverified" and len(calls) == 1
+    assert not any(step["kind"] in {"read", "effect"} for step in result["steps"])
+
+
+def test_large_generic_followup_reaches_planner_with_bounded_prior_evidence(ha, monkeypatch):
+    import asyncio
+
+    from hub.agent_intent import RequestIntent, Requirement
+
+    states = [{"entity_id": f"light.synthetic_{i}", "state": "on",
+               "attributes": {"friendly_name": f"Synthetic lamp {i} Ä字"}} for i in range(75)]
+    target(ha, monkeypatch, states=states)
+    initial_id = start(ha, GOAL)
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, initial_id))
+    assert ha[1].get("/api/agent-runs/" + initial_id).json()["status"] == "observed"
+    job_id = start(ha, "Welche davon sind an?")
+    with ha[0].state.sessions() as db:
+        job = db.get(AgentJob, job_id)
+        binding = json.loads(job.bindings)
+        # Exact safe shape of the live semantic result; exercise the generic path.
+        binding["intent"] = RequestIntent(
+            target_ids=[ha[4]], mode="observe", topic="general", answer_kind="general",
+            followup=False, origin="semantic", requirements=[Requirement(
+                kind="entity_states", domain="light", integration_id=ha[4],
+            )],
+        ).model_dump()
+        job.bindings = json.dumps(binding)
+        db.commit()
+        from hub.agent_read_references import model_context
+
+        preview = model_context(db, job, runtime.gate(db, ha[3], job), max_bytes=1800)
+        assert len(runtime.encode(preview).encode()) <= 1800
+    planned = []
+
+    def invoke(cfg, config, secret, tool, args, rules, before_send):
+        before_send()
+        assert args["path"] == "/api/" and args["method"] == "GET"
+        return {"http_status": 200, "body": {"message": "API running."}}
+
+    async def model(*args):
+        data = args[-1]
+        planned.append(data)
+        observations = data["prior_read_results"]
+        assert len(runtime.encode(observations).encode()) <= 1800
+        assert observations[0]["result_sha256"]
+        return {"kind": "stop", "message": "Synthetic bounded planner reached; no extra state read"}
+
+    monkeypatch.setattr(runtime, "invoke", invoke)
+    monkeypatch.setattr(runtime, "generate", model)
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, job_id))
+    result = ha[1].get("/api/agent-runs/" + job_id).json()
+    assert result["status"] == "unverified" and len(planned) == 1
+
+
 def test_policy_revoked_after_read_prevents_a_fresh_observed_answer_or_references(ha, monkeypatch):
     no_planning(monkeypatch)
 
@@ -182,16 +344,20 @@ def test_general_administration_still_uses_the_ordinary_model_planner(ha, monkey
 
     def invoke(cfg, config, secret, tool, args, rules, before_send):
         before_send()
-        assert tool == "http" and args["path"] == "/api/"
+        assert tool == "http" and args["path"] in {"/api/", "/api/services"}
         calls.append(args)
-        return {"http_status": 200, "body": {"message": "API running."}}
+        return {"http_status": 200, "body": {"message": "API running."} if args["path"] == "/api/"
+                else [{"domain": "light", "services": {"turn_on": {}}}]}
 
     async def model(*args):
         model_calls.append(args[-1])
+        if len(model_calls) == 1:
+            return {"kind": "tool", "message": "Dienste tatsächlich lesen", "integration_id": ha[4],
+                    "tool": "http", "arguments": {"method": "GET", "path": "/api/services"}}
         return {"kind": "finish", "message": "Synthetic general administration reviewed."}
 
     monkeypatch.setattr(runtime, "invoke", invoke)
     monkeypatch.setattr(runtime, "generate", model)
     result = execute(ha, start(ha, "Prüfe Home Assistant und ermittle die verfügbaren Dienste."))
-    assert result["status"] == "observed" and len(model_calls) == 1
-    assert len(calls) == 1 and not ha[-1]
+    assert result["status"] == "observed" and len(model_calls) == 2
+    assert len(calls) == 2 and not ha[-1]

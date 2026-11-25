@@ -79,6 +79,29 @@ def test_preview_context_limit_rejects_before_inference(setup):
     assert provider.calls == 0
 
 
+def test_draft_prefill_is_not_truncated_by_idle_timeout_and_saves_nothing(setup):
+    import asyncio
+    from dataclasses import replace
+
+    from hub.task_drafts import preview
+
+    class PreparingProvider(DraftProvider):
+        async def stream(self, *args, **kwargs):
+            await asyncio.sleep(1.05)
+            async for chunk in super().stream(*args, **kwargs):
+                yield chunk
+
+    app, c, _, _ = setup
+    provider = PreparingProvider('{"title":"Synthetic preview"}')
+    result = asyncio.run(preview(
+        app.state.sessions, replace(app.state.settings, local_timeout=1), "Synthetic", provider
+    ))
+    assert result["spec"]["goal"] == "Synthetic"
+    assert not result["saved"] and not result["started"]
+    assert provider.calls == 1
+    assert c.get("/api/tasks").json() == []
+
+
 @pytest.mark.parametrize(
     "kind,tool",
     [

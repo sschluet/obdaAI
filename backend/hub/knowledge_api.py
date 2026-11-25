@@ -33,6 +33,7 @@ class ProjectInput(BaseModel):
     revision: int | None = None
     archived: bool = False
     icon: ProjectIcon | None = None
+    model_policy: dict[str, str] | None = None
 
 
 class WebsiteInput(BaseModel):
@@ -42,7 +43,9 @@ class WebsiteInput(BaseModel):
     request_id: UUID
 
 
-def project_info(p: Project) -> dict[str, Any]:
+def project_info(p: Project, db: Any = None, cfg: Any = None) -> dict[str, Any]:
+    from hub.project_models import policy, status
+
     return {
         "id": p.id,
         "name": p.name,
@@ -53,6 +56,11 @@ def project_info(p: Project) -> dict[str, Any]:
         "revision": p.revision,
         "archived": p.archived,
         "kind": p.kind,
+        "model_policy": policy(p.model_policy),
+        "model_policy_status": status(db, cfg, p) if db is not None and cfg else {
+            "available": not bool(policy(p.model_policy)),
+            "reason": "Modellverfügbarkeit in den Projekteinstellungen prüfen.",
+        },
     }
 
 
@@ -79,7 +87,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
     def projects(auth: Auth) -> list[dict[str, Any]]:
         with factory() as db:
             return [
-                project_info(p)
+                project_info(p, db, cfg)
                 for p in db.scalars(
                     select(Project).where(Project.kind == "project").order_by(Project.name)
                 )
@@ -91,13 +99,20 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
             p = db.get(Project, project_id)
             if not p:
                 raise HTTPException(404, "Projektraum nicht gefunden")
-            return project_info(p)
+            return project_info(p, db, cfg)
 
     @app.post("/api/projects")
     def create(body: ProjectInput, auth: Auth) -> dict[str, Any]:
         with factory() as db:
             ownership_lock(db)
+            from hub.project_models import ProjectModelError, save_policy
+
+            try:
+                model_policy = save_policy(db, cfg, body.model_policy or {})
+            except ProjectModelError as error:
+                raise HTTPException(409, str(error)) from None
             project = Project(
+                model_policy=model_policy,
                 name=body.name,
                 description=body.description,
                 instructions=body.instructions,
@@ -105,7 +120,7 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
             )
             db.add(project)
             db.commit()
-            return project_info(project)
+            return project_info(project, db, cfg)
 
     @app.patch("/api/projects/{project_id}")
     def edit(project_id: str, body: ProjectInput, auth: Auth) -> dict[str, Any]:
@@ -116,13 +131,20 @@ def install_knowledge_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Ses
                 raise HTTPException(404, "Projekt nicht gefunden")
             if body.revision != project.revision:
                 raise HTTPException(409, "Projekt inzwischen geändert")
+            if body.model_policy is not None:
+                from hub.project_models import ProjectModelError, save_policy
+
+                try:
+                    project.model_policy = save_policy(db, cfg, body.model_policy)
+                except ProjectModelError as error:
+                    raise HTTPException(409, str(error)) from None
             project.name, project.description = body.name, body.description
             project.instructions, project.archived = body.instructions, body.archived
             if body.icon is not None:
                 project.icon = body.icon
             project.revision += 1
             db.commit()
-            return project_info(project)
+            return project_info(project, db, cfg)
 
     @app.get("/api/projects/{project_id}/deletion")
     def deletion_preview(project_id: str, auth: Auth) -> dict[str, Any]:

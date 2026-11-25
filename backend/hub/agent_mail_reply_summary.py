@@ -84,10 +84,49 @@ def reply_status_goal(goal: str) -> bool:
     )
 
 
+_COHORT_REFERENCES = frozenset(
+    "davon denen diese dieser diesen dieses vorherigen vorherige zuvor angezeigten angezeigte "
+    "sichtbaren sichtbare oben genannten genannte those these this previous previously "
+    "displayed shown listed above".split()
+)
+
+
+def _empty_selected_summary(goal: str, selected: dict[str, Any]) -> str | None:
+    """An empty *display* is evidence, never proof of an empty mailbox or no replies."""
+    if (
+        not reply_status_goal(goal)
+        or not _COHORT_REFERENCES.intersection(re.findall(r"\b[\w'-]+\b", goal.casefold()))
+        or selected.get("cohort_known") is not True
+        or selected.get("rows") != []
+        or not selected.get("source_receipts")
+    ):
+        return None
+    return (
+        "In der zuvor angezeigten Auswahl für den angefragten Zeitraum waren 0 Mails enthalten. "
+        "Daher gibt es in dieser Auswahl keine Mails, deren Antwortstatus zu prüfen wäre. "
+        "Das ist keine Aussage darüber, ob andere Mails im Postfach beantwortet oder "
+        "unbeantwortet sind. Der Gesendet-Ordner wurde dafür nicht geprüft."
+    )
+
+
+def empty_mail_reply_summary(db: Any, job: AgentJob, profiles: dict[str, Any]) -> str | None:
+    """Revalidate an explicitly referenced empty display before planning remote reads.
+
+    The runtime still owns fresh target/policy/cancellation gates. This helper only
+    reads existing source receipts; missing references or unsupported accounts are
+    never interpreted as zero displayed mails.
+    """
+    if not reply_status_goal(job.goal) or not profiles or any(
+        profile.kind != "mcp" for profile, _, _ in profiles.values()
+    ):
+        return None
+    return _empty_selected_summary(job.goal, selected_receipt_rows(db, job, profiles))
+
+
 def mail_reply_summary(
     db: Any, job: AgentJob, profiles: dict[str, Any], history: list[AgentStep]
 ) -> str | None:
-    """Render only a reconstructed cohort with a current observed Sent query.
+    """Render a reconstructed cohort; nonempty displays need a current Sent query.
 
     The caller owns intent classification and final cancellation/permission gates.
     This formatter performs fresh receipt revalidation, reads no remote data and
@@ -98,6 +137,11 @@ def mail_reply_summary(
     if not reply_status_goal(job.goal):
         return None
     selected = selected_receipt_rows(db, job, profiles)
+    empty = _empty_selected_summary(job.goal, selected) if all(
+        profile.kind == "mcp" for profile, _, _ in profiles.values()
+    ) else None
+    if empty is not None:
+        return empty
     facts = cohort_evidence(db, job, profiles, history)
     rows = facts.get("rows")
     if (

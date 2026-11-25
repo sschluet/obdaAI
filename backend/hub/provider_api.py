@@ -3,10 +3,13 @@
 import asyncio
 import json
 import time
+from collections.abc import Callable
 from dataclasses import replace
 from decimal import Decimal
-from typing import Annotated
+from types import SimpleNamespace
+from typing import Annotated, Any
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
@@ -43,7 +46,7 @@ Authenticated = Annotated[LoginSession, Depends(require_session)]
 class ProbeInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     request_id: str | None = Field(default=None, pattern=r"^[0-9a-f-]{36}$")
-    mode: str = Field(pattern="^(connection|model)$")
+    mode: str = Field(pattern="^(connection|model|planner)$")
 
 
 def adapter(row: ProviderConfig, cfg: Settings) -> Providers:
@@ -88,6 +91,260 @@ def adapter(row: ProviderConfig, cfg: Settings) -> Providers:
     return Providers(settings, keys=keys, external_kind=row.kind if external else "openrouter")
 
 
+def _planner_result(message: str, provenance: dict[str, Any]) -> str:
+    return json.dumps(
+        {"planner_probe_version": 1, "message": message, "provenance": provenance},
+        ensure_ascii=False,
+    )
+
+
+def _probe_result(test: ProviderTest) -> dict[str, Any]:
+    if test.mode == "planner":
+        try:
+            value = json.loads(test.result or "")
+            if value.get("planner_probe_version") == 1:
+                return {"result": value["message"], "provenance": value["provenance"]}
+        except (ValueError, TypeError, AttributeError, KeyError):
+            pass
+    return {"result": test.result}
+
+
+class _PlannerSelectionError(ValueError):
+    """Fixed synthetic selection mismatch, without model-output diagnostics."""
+
+
+async def _execute_planner_probe(
+    factory: sessionmaker[Session],
+    cfg: Settings,
+    row: ProviderConfig,
+    p: Providers,
+    test_id: str,
+    current_permission: Callable[[], None],
+    provenance: dict[str, Any],
+) -> None:
+    from hub.agent_capabilities import describe
+    from hub.agent_context import AgentContextLimitError, fit
+    from hub.agent_instructions import instruction
+    from hub.agent_intent import accept_semantic, adequacy, semantic_request
+    from hub.agent_native import (
+        NATIVE_INVALID_ARGUMENTS,
+        NATIVE_NO_SELECTION,
+        NativeCallError,
+        NativeProtocolUnavailable,
+        auxiliary_parts,
+        metadata_size,
+        prepare,
+    )
+    from hub.agent_tools import Rules, decision_schema, validate_tool
+    from hub.integrations import Integration
+
+    limits = json.loads(row.config)
+    p.settings = replace(
+        p.settings, local_max_tokens=min(768, limits["output_tokens"]), local_disable_thinking=True
+    )
+    profile = Integration(
+        id="synthetic-ha",
+        name="Synthetic Home Assistant",
+        kind="home_assistant",
+        config="{}",
+        enabled=True,
+    )
+    profiles: dict[str, Any] = {profile.id: (profile, None, {})}
+
+    def progress(protocol: str) -> dict[str, Any]:
+        current_permission()
+        attempt = {"protocol": protocol, "status": "running"}
+        provenance["attempts"].append(attempt)
+        save_progress()
+        return attempt
+
+    def save_progress() -> None:
+        with factory() as db:
+            test = db.get(ProviderTest, test_id)
+            if not test or test.status != "running":
+                raise asyncio.CancelledError
+            test.result = _planner_result("Planertest läuft", provenance)
+            db.commit()
+
+    def parts_for(
+        policy: str,
+        data: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        *,
+        prefitted: bool = False,
+    ) -> list[ContextPart]:
+        auxiliary = auxiliary_parts(metadata) if metadata is not None else []
+        chars, encoded = metadata_size(metadata) if metadata is not None else (0, 0)
+        # Conservative byte-per-token bound includes the transport envelopes,
+        # output allowance and every auxiliary native tool-schema byte.
+        available = (
+            limits["context_tokens"]
+            - 4096
+            - 64 * (2 + len(auxiliary))
+            - p.settings.local_max_tokens
+            - encoded
+        )
+        limit = min(cfg.context_limit, limits["context_chars"]) - chars
+        if min(available, limit) <= 0:
+            raise AgentContextLimitError("Probe context does not fit")
+        fitted = data if prefitted else fit(data, policy, limit, max_bytes=available)
+        parts = [
+            ContextPart(
+                content=policy, label=Privacy.LOCAL_ONLY, source_id=test_id + ":policy", revision=1
+            ),
+            ContextPart(
+                content=json.dumps(fitted, ensure_ascii=False, separators=(",", ":")),
+                label=Privacy.LOCAL_ONLY,
+                source_id=test_id + ":data",
+                revision=1,
+            ),
+        ]
+        if (
+            sum(len(part.content) for part in parts) > limit
+            or sum(len(part.content.encode()) for part in parts) > available
+        ):
+            raise AgentContextLimitError("Serialized probe context does not fit")
+        return parts
+
+    async def infer(parts: list[ContextPart]) -> Any:
+        text = "".join(
+            [
+                chunk
+                async for chunk in p.stream(parts, ["system", "user"], external=False, grants=[])
+            ]
+        )
+        return json.loads(text)
+
+    request = semantic_request("Welche Lampen gibt es in Home Assistant?", profiles)
+    intent_attempt = progress("json_intent")
+    p.local_native_plan, p.local_json_schema = None, request["schema"]
+    accepted = accept_semantic(
+        await infer(parts_for(request["instruction"], request["data"])),
+        profiles,
+        goal="Welche Lampen gibt es in Home Assistant?",
+    )
+    if (
+        accepted.mode != "observe"
+        or accepted.target_ids != [profile.id]
+        or not any(r.kind == "entity_states" and r.domain == "light" for r in accepted.requirements)
+    ):
+        raise _PlannerSelectionError("Synthetic intent check failed")
+    provenance["intent_pass"], intent_attempt["status"] = True, "succeeded"
+    rules = Rules(enabled=True, http_prefixes=["/api/"], http_methods=["GET"], max_effects=0)
+    history = [
+        {
+            "sequence": 1,
+            "kind": "read",
+            "status": "succeeded",
+            "document": {
+                "integration_id": profile.id,
+                "tool": "http",
+                "capability_inspection": True,
+                "arguments": {"method": "GET", "path": "/api/"},
+            },
+            "result": {
+                "http_status": 200,
+                "body": {"message": "API running."},
+                "effect_verified": False,
+            },
+        }
+    ]
+    evidence = adequacy(
+        accepted,
+        [
+            SimpleNamespace(
+                **{
+                    **step,
+                    "document": json.dumps(step["document"]),
+                    "result": json.dumps(step["result"]),
+                }
+            )
+            for step in history
+        ],
+    )
+    data: dict[str, Any] = {
+        "goal": "Welche Lampen gibt es in Home Assistant?",
+        "read_only": True,
+        "allow_finish": False,
+        "allow_ask": False,
+        "allow_stop": False,
+        "tools": ["http"],
+        "interfaces": [
+            {
+                "integration_id": profile.id,
+                "kind": profile.kind,
+                "read_only": True,
+                "writes_enabled": False,
+                "rules": rules.model_dump(),
+                "capabilities": describe(profile, rules),
+            }
+        ],
+        "request_contract": accepted.model_dump(),
+        "goal_evidence": evidence,
+        "remaining_effects": 0,
+        "history": history,
+    }
+    data["decision_schema"] = decision_schema(
+        [profile.id],
+        ["http"],
+        data["interfaces"],
+        allow_finish=False,
+        allow_ask=False,
+        allow_stop=False,
+        read_only=True,
+    )
+    policy = instruction({profile.kind})
+    attempt = progress("native")
+    provenance["selection_protocol"] = "native"
+    from hub.agent_runtime import fit_native_plan
+
+    native = prepare(policy, data)
+    native, planned = fit_native_plan(
+        native,
+        min(cfg.context_limit, limits["context_chars"]),
+        limits["context_tokens"] - 4096 - 2 * 64 - p.settings.local_max_tokens,
+    )
+
+    def validate_selection(value: Any) -> None:
+        if (
+            not isinstance(value, dict)
+            or value.get("kind") != "tool"
+            or value.get("integration_id") != profile.id
+            or value.get("tool") != "http"
+        ):
+            raise _PlannerSelectionError("Synthetic native selection failed")
+        arguments, effect = validate_tool(profile.kind, rules, "http", value.get("arguments", {}))
+        if effect or arguments["method"] != "GET" or arguments["path"] != "/api/states":
+            raise _PlannerSelectionError("Synthetic read selection failed")
+
+    provenance["native_schema_sha256"] = native.metadata["sha256"]
+    p.local_json_schema, p.local_native_plan = None, native.metadata
+    native_parts = parts_for(native.instruction, planned, native.metadata, prefitted=True)
+    try:
+        value = await infer(native_parts)
+    except NativeProtocolUnavailable:
+        attempt["status"] = "unsupported"
+    else:
+        if isinstance(value, dict) and value.get("_native_error") == NATIVE_NO_SELECTION:
+            attempt["status"] = "no_selection"
+        else:
+            if isinstance(value, dict) and value.get("_native_error") == NATIVE_INVALID_ARGUMENTS:
+                raise NativeCallError()
+            validate_selection(value)
+            attempt["status"], provenance["native_pass"] = "succeeded", True
+            save_progress()
+            return
+    # One completed no-selection or explicitly unsupported protocol can be
+    # tested separately. Transport/auth/cancel/invalid-call errors never reach here.
+    provenance["compatibility_used"] = True
+    provenance["selection_protocol"] = "json_compatibility"
+    compatible = progress("json_compatibility")
+    p.local_native_plan, p.local_json_schema = None, data["decision_schema"]
+    validate_selection(await infer(parts_for(policy, data)))
+    compatible["status"], provenance["compatibility_pass"] = "succeeded", True
+    save_progress()
+
+
 async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: str) -> None:
     with factory() as db:
         test = db.scalar(select(ProviderTest).where(ProviderTest.id == test_id).with_for_update())
@@ -106,10 +363,43 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
             test.status, test.result = "failed", "Provider geändert; Modelltest erneut starten"
             db.commit()
             return
-    result, state, measured = "Modelltest fehlgeschlagen; kein Fallback", "failed", None
+    planner = test.mode == "planner"
+    provenance: dict[str, Any] = {
+        "version": 1,
+        "intent_protocol": "json_schema",
+        "intent_pass": False,
+        "selection_protocol": "not_started",
+        "native_pass": False,
+        "compatibility_pass": False,
+        "compatibility_used": False,
+        "attempts": [],
+    }
+    result, state, measured = (
+        "Planertest fehlgeschlagen" if planner else "Modelltest fehlgeschlagen; kein Fallback",
+        "failed",
+        None,
+    )
+    p: Providers | None = None
     try:
         p = adapter(row, cfg)
         external = row.kind != "local"
+
+        def current_permission() -> None:
+            assert row is not None
+            with factory() as db:
+                current = db.get(ProviderConfig, row.id)
+                active = db.get(ProviderTest, test_id)
+                if not active or active.status != "running":
+                    raise asyncio.CancelledError
+                if active.provider_id != row.id or active.revision != row.revision:
+                    raise PermissionError("Probe binding changed before inference")
+                if not current or not current.enabled or current.revision != row.revision:
+                    raise PermissionError("Provider changed while waiting for inference")
+
+        p.before_send = current_permission
+        planner = test.mode == "planner"
+        if planner and external:
+            raise PermissionError("Planner checks must remain local")
         part = ContextPart(
             content="What is 2 plus 2? Answer with the number only.",
             label=Privacy.CLOUD_ALLOWED if external else Privacy.LOCAL_ONLY,
@@ -117,8 +407,12 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
             revision=1,
         )
         started = time.monotonic()
-        async with asyncio.timeout(60):
-            if external:
+        async with asyncio.timeout(180 if planner else 60):
+            if planner:
+                await _execute_planner_probe(
+                    factory, cfg, row, p, test_id, current_permission, provenance
+                )
+            elif external:
                 row = await fresh_cloud_prices(factory, row, p)
                 with factory() as db:
                     current_test = db.get(ProviderTest, test_id)
@@ -145,30 +439,78 @@ async def execute_probe(factory: sessionmaker[Session], cfg: Settings, test_id: 
                 # The classifier intentionally never answers the arithmetic prompt.
                 await p.route([part], ["user"])
                 text = "".join(
-                    [
-                        chunk
-                        async for chunk in p.stream(
-                            [part], ["user"], external=False, grants=[]
-                        )
-                    ]
+                    [chunk async for chunk in p.stream([part], ["user"], external=False, grants=[])]
                 )
-            if text.strip() != "4":
+            if not planner and text.strip() != "4":
                 raise ValueError("Synthetic model check failed")
             result, state = (
-                f"Modelltest bestanden · {time.monotonic() - started:.2f} s"
+                f"{'Planertest' if planner else 'Modelltest'} bestanden · "
+                + (
+                    (
+                        "native · "
+                        if provenance["native_pass"]
+                        else "JSON-Kompatibilität (nativ nicht belegt) · "
+                    )
+                    if planner
+                    else ""
+                )
+                + f"{time.monotonic() - started:.2f} s"
                 + (" · Kosten aus Usage geschätzt" if p.cost_basis == "usage_estimate" else ""),
                 "succeeded",
             )
     except asyncio.CancelledError:
         result, state = "Modelltest unterbrochen", "interrupted"
         raise
-    except Exception:
-        pass
+    except Exception as error:
+        if planner:
+            from hub.agent_context import AgentContextLimitError
+            from hub.agent_native import NativeCallError
+
+            protocols = {"json_intent", "native", "json_compatibility"}
+            attempts = provenance["attempts"]
+            stage = attempts[-1]["protocol"] if attempts else "setup"
+            provenance["failure_stage"] = stage if stage in protocols else "setup"
+            if isinstance(error, (asyncio.TimeoutError, httpx.TimeoutException)):
+                category = "timeout"
+            elif isinstance(error, httpx.HTTPStatusError):
+                category = (
+                    "authentication_failed"
+                    if error.response.status_code in {401, 403}
+                    else "http_error"
+                )
+            elif isinstance(error, httpx.RequestError):
+                category = "transport_error"
+            elif isinstance(error, PermissionError):
+                category = "permission_changed"
+            elif isinstance(error, NativeCallError):
+                category = "native_arguments_invalid"
+            elif isinstance(error, AgentContextLimitError):
+                category = "context_limit"
+            elif isinstance(error, json.JSONDecodeError):
+                category = "invalid_json"
+            elif isinstance(error, _PlannerSelectionError):
+                category = "selection_mismatch"
+            elif isinstance(error, ValueError):
+                category = "validation_error"
+            else:
+                # No exception text, response body, model output or input is retained.
+                category = "inference_failed"
+            provenance["failure_category"] = category
     finally:
+        if p is not None:
+            p.local_native_plan = None
+            p.local_json_schema = None
+        if planner:
+            for attempt in provenance["attempts"]:
+                if attempt["status"] == "running":
+                    attempt["status"] = "interrupted" if state == "interrupted" else "failed"
         with factory() as db:
             test = db.get(ProviderTest, test_id)
             if test:
-                test.status, test.result = state, result
+                if test.status in {"interrupted", "cancelled"}:
+                    state, result = "interrupted", "Modelltest unterbrochen"
+                test.status = state
+                test.result = _planner_result(result, provenance) if planner else result
             settle(db, test_id, measured)
             db.commit()
 
@@ -197,7 +539,7 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 )
                 for r in rows
             }
-            tests: dict[str, dict[str, str | int] | None] = {}
+            tests: dict[str, dict[str, Any] | None] = {}
             for row in rows:
                 probe = db.scalar(
                     select(ProviderTest)
@@ -206,7 +548,12 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                     .limit(1)
                 )
                 tests[row.id] = (
-                    {"status": probe.status, "result": probe.result, "revision": probe.revision}
+                    {
+                        "status": probe.status,
+                        **_probe_result(probe),
+                        "revision": probe.revision,
+                        "mode": probe.mode,
+                    }
                     if probe
                     else None
                 )
@@ -334,15 +681,19 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
                 and (not cfg.cloud_enabled or row.kind not in cfg.external_provider_kinds)
             ):
                 raise HTTPException(409, "Provider deaktiviert oder Cloud am Server gesperrt")
-            if body.mode == "model":
+            if body.mode in ("model", "planner"):
+                if body.mode == "planner" and row.kind != "local":
+                    raise HTTPException(422, "Planertest ist ausschließlich lokal verfügbar")
                 if not body.request_id:
                     raise HTTPException(422, "Modelltest benötigt eine eindeutige Anfrage-ID")
                 previous = db.get(ProviderTest, body.request_id)
                 if previous:
-                    if previous.provider_id != row.id:
+                    if previous.provider_id != row.id or previous.mode != body.mode:
                         raise HTTPException(409, "Anfrage-ID gehört zu anderem Provider")
                     return {"id": previous.id, "status": previous.status}
-                probe = ProviderTest(id=body.request_id, provider_id=row.id, revision=row.revision)
+                probe = ProviderTest(
+                    id=body.request_id, provider_id=row.id, revision=row.revision, mode=body.mode
+                )
                 db.add(probe)
                 db.flush()
                 if not cfg.database_url.startswith("sqlite"):
@@ -420,4 +771,4 @@ def install_provider_api(app: FastAPI, cfg: Settings, factory: sessionmaker[Sess
             test = db.get(ProviderTest, test_id)
             if not test:
                 raise HTTPException(404, "Modelltest nicht gefunden")
-            return {"id": test.id, "status": test.status, "result": test.result}
+            return {"id": test.id, "status": test.status, **_probe_result(test)}

@@ -131,6 +131,26 @@ Mail-/Paperless-Planer behalten ihre eigenen Quellen- und Fortschrittsverträge.
 Nach einer belegten Alternative gelten ausschließlich die bereits vorhandenen
 ursprünglichen Rechte und Verifikationspflichten.
 
+Nach einem bestätigten HTTP-2xx-GET mit ausschließlich lokal fehlgeschlagener
+Projektion ist dieselbe begrenzte Korrektur möglich, wenn die strukturierte
+Originalantwort erhalten ist. Der Schritt bleibt fehlgeschlagen; er wird nicht
+nachträglich als erfolgreicher Auswahlbeleg umdeklariert. Der Planer darf die
+Projektion korrigieren oder entfernen beziehungsweise einen anderen erlaubten
+Leseweg wählen. Exakt dieselben normalisierten Argumente bleiben gesperrt; JSON-
+Typen wie `false` und `0` werden dabei unterschieden. Ein zweiter fehlgeschlagener
+Leseschritt beendet die Korrektur. Private Mail-/Archivverträge, unklare Wirkungen,
+Transportfehler und Berechtigungsfehler erhalten dadurch keine neue Wiederholung.
+
+Ein neuer gültiger Lesebeleg am betroffenen Ziel muss die Lesevoraussetzungen
+erfüllen. Bei mehreren bereits gebundenen Zielen zählen auch deren nachfolgende
+Lesebelege. Für einen sicher erkannten Verwaltungsauftrag wird ausschließlich in
+dieser Lesekorrektur die noch zukünftige `effect_postcondition` aus der abgeleiteten
+Leseprüfung ausgeklammert. Der originale vollständige Auftrag, Zielregeln und
+Abschluss-/Wirkungsprüfung bleiben unverändert; eine bloße Lesekorrektur bestätigt
+keine ausgeführte Änderung. Vor der gültigen Alternative bleiben Änderungen
+blockiert, danach gelten wieder dieselben ursprünglichen Rechte. Vorherige oder
+unklare Effekte werden nicht durch eine Lesekorrektur übergangen.
+
 Erfolg erfordert neben dem Transportstatus eine gültige Auswahl beziehungsweise
 einen erfolgreichen Inspektionsprozess. HTTP-Projektionsfehler und fehlerhafte
 SSH-Inspektionen sind keine erfolgreichen Datenabfragen. Das feste SSH-Skript
@@ -240,24 +260,27 @@ Rückfragen und einzelne Freigaben unterbrechen den dauerhaften Auftrag. Eine
 offene Rückfrage wird nach Neuladen im selben Chat wieder aufgenommen. Ungültige
 Modellhüllen und typisierte Werkzeugargumente erhalten höchstens zwei lokale
 Format-Rückmeldungen; der Server ergänzt weder Ziele noch Befehle oder Rechte.
-Agentenentscheidungen verlangen auch in der Generierungsgrammatik bei jedem
-Werkzeug explizite Ziel-ID, Werkzeug und Argumente; die IDs stammen ausschließlich
-aus der menschlich gebundenen Auswahl. Der Server ergänzt sie nicht nachträglich. Die native Grammatik bindet außerdem
-die vorhandenen typisierten Argumentmodelle und exakt die im Lauf verfügbaren
-Werkzeuge. GET kann keinen Schreibkörper oder Wirkungsnachweis enthalten.
-Die Grammatik bindet Werkzeug, Zielart, HA-Kommandopräfixe und HTTP-Methoden/Pfade
-an die menschlichen Zielregeln. Neue Snapshots enthalten deren gebundene
-Schnittstellen; alte Snapshots bleiben mit nachgelagerten Prüfungen kompatibel.
-Querystrings und absolute URLs sind im Pfadfeld ausgeschlossen.
-Die Prompt-Hülle bleibt kompakt; die vollständigen Argumentregeln werden
-ausschließlich als native Ausgabegrammatik übertragen.
+Die Werkzeugauswahl ist auch im Generierungsprotokoll auf die menschlich
+gebundenen Ziele und verfügbaren Werkzeuge begrenzt. Die native Funktion bindet
+Ziel-ID und Werkzeug bereits vor dem Modellaufruf; ihre Beschreibung benennt die
+Ziel-ID eindeutig. Der Decoder ergänzt keine frei gewählten Ziele, sondern
+rekonstruiert ausschließlich diese ursprüngliche Bindung. Argumente müssen dem
+bestehenden vollständigen Schema entsprechen. GET kann keinen Schreibkörper oder
+Wirkungsnachweis enthalten. Werkzeug, Zielart, HA-Kommandopräfixe und
+HTTP-Methoden/Pfade bleiben an die menschlichen Zielregeln gebunden. Querystrings
+und absolute URLs sind im Pfadfeld ausgeschlossen. Neue Snapshots enthalten die
+ursprünglichen gebundenen Schnittstellen; alte Snapshots bleiben mit den
+nachgelagerten Prüfungen kompatibel.
+
 Ein konkreter Auftrag enthält bereits den Ausführungswunsch. Die Planeranweisung
 verbietet redundante allgemeine Erlaubnisfragen; deren tatsächliche Vermeidung
 bleibt Teil der realen Abnahme. Einzelne Freigaben erzwingt der Gateway.
-Agentenentscheidungen fordern zusätzlich die feste Decision-JSON-Schemaausgabe am
-vorhandenen lokalen Modell an, Recherchepläne ein JSON-Objekt. Diese Anfrageoption
-ändert keine Inferenzkonfiguration und erweitert keine Rechte. Die nachgelagerte
-Validierung bleibt verbindlich; kein semantisches Reparieren ungültiger Ausgaben.
+Die allgemeine Planung nutzt native Funktionsschemas; die begrenzte
+Kompatibilitätsroute verlangt das bisherige Decision-JSON-Schema. Semantische
+Auftragsinterpretation und Recherche behalten ihr eigenes JSON-Format. Diese
+Anfrageoptionen ändern keine Inferenzkonfiguration und erweitern keine Rechte.
+Die nachgelagerte Validierung bleibt verbindlich; es werden keine semantisch
+fehlenden Argumentwerte erfunden. Der genaue Protokollvertrag steht unten.
 
 Der private Planer verwendet ausschließlich das konfigurierte lokale Modell.
 Ein begrenzter Verlauf desselben Gesprächs ist lokal an Nachrichtenrevisionen
@@ -378,3 +401,207 @@ oder Laufzeitnachweis für obdaAI:
 - [Home Assistant: WebSocket API](https://contributors.home-assistant.io/core/internals/websocket-api/)
 - [Home Assistant: Supervisor API](https://contributors.home-assistant.io/apps/supervisor-api/)
 - [Home Assistant: Update](https://www.home-assistant.io/integrations/update/)
+
+
+## Zielbezogene Planung und Kontextgrenzen (24.11.2026)
+
+Die gemeinsame Administrationsplanung setzt die Anweisung aus einem unveränderlichen
+Sicherheitskern und Hinweisen ausschließlich zu den tatsächlich gebundenen Zieltypen
+zusammen (`agent_instructions.py`). Werkzeugschemas und Regeln werden nicht gekürzt
+oder durch Modellannahmen ersetzt. Die feste lokale Projektwahl beziehungsweise der
+aktuelle lokale Standard bestimmt bereits vor der Kontextkompression das Budget;
+eine größere globale Einstellung darf eine kleinere Anbietergrenze nicht übergehen.
+Die abschließenden Anbieter- und Berechtigungsprüfungen bleiben zusätzlich wirksam.
+
+Große Belegnutzlasten werden in der abgeleiteten Modellsicht ausdrücklich mit Hash
+und Auslassungsmarker dargestellt. Ältere, ausdrücklich verifizierte abgeschlossene
+Änderungen können als einzelne Einträge in `effect_ledger` erscheinen: Sequenz,
+Status, Ziel-/Prüfverknüpfungen, Prüfflags und Originalhashes bleiben erhalten.
+Ungeklärte Änderungen werden niemals als verifiziert zusammengefasst; ihre
+Kontrollfelder bleiben erhalten. Originalbelege in der Datenbank bleiben unverändert.
+Ein Kontextfehler startet keinen Ersatzaufruf und wiederholt keine Änderung.
+
+Objektantworten erhalten zusätzlich eine begrenzte strukturierte Sicht tatsächlich
+vorhandener Skalarwerte. Version und Zustand bleiben auch hinter großen Listen
+sichtbar; ausgelassene Container werden ausdrücklich gezählt. Bei Update-Entitäten
+bleiben beobachtete installierte/neue Version und Fortschritts-/Funktionswerte auch
+in projizierten Zeilen erhalten. `step_status` bezeichnet den ursprünglichen
+Werkzeugstatus, `model_view_only` die abgeleitete Anzeige: eine gekürzte Modellsicht
+bedeutet keine teilweise Ausführung und benötigt keine erneute Lesebestätigung.
+
+Die Regression umfasst einen HA-Auftrag mit großer Aktionsliste, Sicherung,
+mehreren Updates und Nachzustandsprüfung sowie einen unsicheren Updateausgang.
+Dabei sind Modell und HA-Ziel simuliert; dies ist keine reale HA-Updateabnahme.
+Ein vorhandener gescheiterter Auftrag wird zur Diagnose ausschließlich lesend
+rekonstruiert und niemals automatisch fortgesetzt.
+
+
+Allgemeine Ausführungsbestätigungen bei einem sicher gebundenen administrativen
+Auftrag und als Frage formulierte konkrete Werkzeugaufrufe erteilen keine Rechte.
+Sie gehen in die bestehende auf zwei Versuche begrenzte Formatkorrektur statt in
+eine Benutzer-Bestätigungsschleife. Fachliche Auswahlfragen und fehlende gewünschte
+Parameter bleiben Rückfragen. Die endgültigen Rechte-/Autonomieprüfungen können
+einen konkret geplanten Effekt weiterhin zur echten Einzelfreigabe anhalten.
+`http.verify` wird nur bei einem erfolgreichen vorangegangenen Effekt am gebundenen
+Ziel angeboten; es ersetzt keine anfängliche Bestandsaufnahme.
+
+Die inaktiven realen lokalen Modellproben belegen die behobene Kontextgrenze,
+keinen durchgehend richtigen autonomen Updateplan. Der lokale Planer verlangte
+weiterhin unbegründete Bestätigungen und verwechselte Bestandsaufnahme und
+Nachprüfung. Eine echte HA-Updateausführung wurde dabei nicht gestartet.
+
+
+## Native Werkzeugplanung im gemeinsamen Ausführungsweg (24.11.2026)
+
+Die allgemeine lokale Administrationsplanung verwendet native OpenAI-kompatible
+Funktionsaufrufe (`agent_native.py`). Der Compiler leitet für jedes gebundene
+Ziel/Werkzeug eine Funktion aus dem bestehenden geschlossenen Entscheidungsschema
+ab. Werkzeugfunktionen erhalten genau einen Parameter `arguments` als vollständiges
+Objekt; dessen vollständige typisierte Regeln bleiben enthalten. Referenzdefinitionen
+liegen an der Wurzel des Funktionsschemas. Der lokale Server kann dadurch das ganze
+Argumentobjekt einschließlich verschachtelter Filter, JSON-Körper und Nullwerte
+korrekt dekodieren. Eine reale inaktive Probe belegte zuvor, dass der Server bei
+Union-Schemas eine Objektprojektion als Zeichenkette lieferte. Deren unveränderte
+JSON-Dekodierung bestand offline das ursprüngliche Schema und die Leseregeln.
+Es werden keine Argumentwerte ergänzt oder die fachlichen Schemas gelockert.
+
+Eine einzelne `anyOf`-Alternative wird nur bei nachgewiesen unkritischen
+Schema-Geschwistern direkt dargestellt. Referenzen, erlaubte Werte und zusätzliche
+Felder bleiben gleich streng; bei möglichen Wechselwirkungen bleibt die Hülle
+bestehen. Ausschließliche `null`-Felder sind in Schema und Funktionsbeschreibung
+sichtbar. Für einen GET ist dadurch die Grenze zur Wirkungsprüfung als Objekt
+ausdrücklich erkennbar. Ein solches Objekt wird weiterhin abgewiesen,
+nicht stillschweigend entfernt.
+
+Die Funktion bindet Ziel und Werkzeug; Argumente dürfen diese Bindung nicht
+ersetzen. `ask_user`, `finish_run` und `stop_run` sind nur gemäß den vorhandenen
+Laufregeln verfügbar. Die semantische Auftragsinterpretation, öffentliche
+Suchfragen sowie die spezialisierten privaten Mail-/Archivleser behalten ihre
+bestehenden Ausgabeformate. Es entsteht kein zweiter Ausführungsweg.
+
+Pro Planungsschritt ist ausdrücklich genau ein Funktionsaufruf erlaubt; weitere
+Aufrufe warten auf dessen Ergebnis. Steuerfunktionen behalten ihren direkten
+`message`-Parameter. Sichere Fehlerkategorien und fehlende Pflichtfelder aus den
+festen Schemas erreichen die begrenzte Formatkorrektur. Typfehler nennen zusätzlich
+ausschließlich schemaeigene Felder und erlaubte Typen, etwa
+`schema_type:verification:null`. Nicht passende Operationsalternativen werden bei
+diesen Hinweisen nicht vermischt; Typen von dynamischen Feldwerten sind als solche
+gekennzeichnet. Private Werte, unerwartete Feldnamen und rohe
+Validierungsfehlermeldungen werden nicht übernommen.
+
+Der Transport setzt SSE-Namens-/Argumentfragmente begrenzt zusammen und wertet
+erst den vollständig beendeten Stream aus. Genau ein bekannter Funktionsaufruf
+muss sein vollständiges Argumentschema erfüllen. Eine alleinige zusätzliche
+`parameters`- oder `arguments`-Hülle wird ausschließlich dann verlustfrei entfernt,
+wenn deren inneres Objekt bereits vollständig dem Originalschema entspricht.
+Keine Argumentwerte, Standardwerte oder Ziele werden ergänzt. Mehrere Aufrufe,
+unbekannte Funktionen, doppelte JSON-Schlüssel oder ungültige Argumente werden
+abgewiesen. Ein gültiger Aufruf wird zur bisherigen kanonischen Entscheidung;
+Rechte, Einzelfreigabe, dauerhafte Absicht, Versand, Abbruch und Nachprüfung gelten
+unverändert. Bereits unklare Effekte werden nicht wiederholt.
+
+Ausgeführte, aktuell schemagültige Lese-/Effektschritte erhalten nach der
+Kontextverdichtung standardisierte `assistant.tool_calls` und unmittelbar
+zugehörige `tool`-Antworten. Stabile rekonstruierte IDs kennzeichnen die tatsächlichen
+Schrittsequenzen, nicht ursprüngliche Anbieter-IDs. Zielbindung, Argumentschema,
+Paarung und separater Nachrichtenhash werden vor Versand validiert. Diese
+abgeleiteten Daten verleihen keine Rechte und führen keine Werkzeuge aus.
+Unklare Schritte, gekürzte Argumente und aktuell nicht verfügbare Funktionen bleiben
+im bisherigen Kontext. Controller-Feedback bleibt im begrenzten Zustands-JSON.
+Konvertierte Ergebnis-Payloads werden dort nicht zusätzlich dupliziert; die
+strukturierte letzte Zusammenfassung mit Zählwerten und Hash bleibt erhalten. Skalare HTTP-Fakten
+bleiben etwa unter `body.version`; Verlust-/Hashmetadaten stehen separat in
+`body_view`. HA-WebSocket-Objekte und Listen erhalten ebenfalls begrenzte typisierte
+Ansichten. Fehlerstatus, boolesche Falschwerte, Nullwerte und Originalbelege bleiben erhalten.
+
+Die tatsächlich gesendeten Funktionsschemas und Werkzeugnachrichten zählen einschließlich UTF-8-Größe,
+Nachrichtenrahmen und Antwortreserve zum lokalen Kontextbudget. Sie sind
+`LOCAL_ONLY` und werden auch an der endgültigen Anbietergrenze geprüft. Die
+gespeicherte Laufautorität behält die ursprünglichen Zielregeln, unabhängig von
+der gekürzten Modellsicht. Es gibt keine Cloud-Ausweichroute und keine Änderung
+von Modellserver, Modellgröße oder gespeicherter Anbieterkonfiguration.
+
+Bei einer ausdrücklich nicht unterstützten nativen Schnittstelle oder einer
+vollständig beendeten Antwort ohne Funktionswahl ist pro Auftrag genau ein
+Protokollwechsel zum bisherigen JSON-Planer möglich. Der native Versuch und der
+anschließende Kompatibilitätsversuch sind getrennte dauerhafte Modellläufe;
+Anbieter-ID, Modell und Revision werden gebunden und vor Versand erneut geprüft.
+Weitere Planungsschritte bleiben dann bei diesem gebundenen JSON-Protokoll.
+Zeitüberschreitung, Authentifizierungsfehler, Abbruch, Filter, unvollständiger Stream
+und ungültige Argumente lösen diesen Wechsel nicht aus. Die vorhandene begrenzte
+Formatkorrektur ersetzt keine fehlenden Rechte.
+
+Der Einstellungs-Planertest verwendet denselben nativen Compiler, begrenzten
+Kontextaufbau und Transport wie die Runtime. Seine synthetische lesende HA-Frage
+enthält einen vorherigen Bootstrap-Werkzeugdialog und die noch offene
+Entitätenanforderung; damit stehen dieselben passenden Entitätenfunktionen bereit.
+Es wird kein echtes Ziel aufgerufen. Nativer Erfolg und Erfolg erst nach dem
+höchstens einmal erlaubten JSON-Kompatibilitätsversuch bleiben getrennt in der
+vorhandenen Testhistorie nachvollziehbar. Fehler enthalten ausschließlich feste
+Phasen- und Ursachenkategorien, keine Modelltexte, Antwortkörper oder Secrets.
+Die öffentliche Ergebnisnachricht bleibt kompatibel. Der Test belegt weder
+allgemeine Modellqualität noch eine erfolgreiche HA-Aktualisierung.
+
+
+## Beleggebundener Abschluss und Updateübersicht
+
+Der native Dialog bietet bei einer offenen HA-Entitätenanforderung zusätzlich
+`ha_entities` an, sofern das bestehende zielgebundene HTTP-Werkzeug bereits einen
+lesenden Abruf von `/api/states` erlaubt. Das Modell wählt nur eine noch benötigte
+Domäne; ohne Angabe gilt die vorhandene auftragsbezogene Eingrenzung. Der Adapter
+erzeugt die technische lokale Projektion und prüft die vollständigen Argumente
+erneut gegen das ursprüngliche HTTP-Schema. Ausführung, Berechtigungen, Absichten
+und Originalbelege laufen unverändert über denselben HTTP-Werkzeugweg.
+Es gibt keinen zusätzlichen Transport oder eine neue Freigabe. Vorhandene HTTP-
+und WebSocket-Funktionen bleiben verfügbar; historische Abrufe werden weiterhin
+als tatsächliche HTTP-Aufrufe rekonstruiert, ohne einen erneuten Abruf auszulösen.
+
+Unbekannte HA-Lesefragen erhalten einen semantischen Auftrag statt einer pauschalen
+Anforderung „irgendein Datenabruf“. Für ausdrücklich angefragte aktuelle
+Softwareupdates ergänzt die bestehende Intent-Struktur `entity_states` mit Domain
+`update`, ausschließlich an bereits ausgewählten freigegebenen HA-Profilen.
+Modus, Ziele und Effektberechtigungen werden dadurch nicht erweitert. Reine,
+eindeutige Übersichtsfragen erhalten eine kanonische Beleganforderung;
+Erklärungen, historische Fragen, andere Domänen und gemischte Aufträge behalten
+ihre zusätzliche Semantik. Der normale native Planer wählt die Werkzeuge.
+
+`agent_ha_evidence.py` prüft erfolgreiche unveränderte Zustandsbelege aus HTTP
+oder WebSocket. Vollständige Rohlisten und exakte vollständige Domainprojektionen
+sind möglich, einschließlich `fields=[]` mit vollständigen Zeilen. Engere,
+abgeschnittene, fehlerhafte oder lediglich abgeleitete Modellansichten belegen
+keine vollständige Übersicht. Status, Namen und Versionen stammen ausschließlich
+aus den tatsächlichen Zeilen. Alte Belege nach einer Änderung desselben Ziels
+belegen dessen aktuellen Zustand nicht; Änderungen fremder Ziele entwerten sie
+nicht. Unbekannte Zustände ergeben niemals einen pauschalen Nullbefund.
+
+Die gemeinsame Planung erhält `goal_evidence`; Abschlussfunktionen fehlen bei
+noch offenen Beleganforderungen. Fehlende aktuelle Lesedaten nach einer
+verifizierten Änderung verengen die Modellwerkzeuge vorübergehend am betroffenen
+Ziel auf Lesen. Die vollständigen Rechte bleiben an der bisherigen endgültigen
+Grenze geprüft; Kontextgrenzen werden nicht angehoben. Eine reine belegte
+Updateübersicht wird aus den Originalzuständen gerendert, damit eine gekürzte
+Modellsicht weder Updates auslässt noch Kennungen erfindet. Liegen die vollständigen
+Belege vor, endet diese klar abgegrenzte Leseübersicht ohne weiteren Modellaufruf;
+die Auswahl der tatsächlichen Werkzeuge bleibt beim allgemeinen Planer. Unbelegte Abschluss-
+oder Stopptexte werden nicht als Antwort ausgegeben. Ein allein noch fehlender
+Wirkungsnachweis darf einen ausdrücklich unverifizierten Abschluss ergeben;
+er ersetzt keine fehlenden Lesedaten und erlaubt keine unbestätigte Erfolgsmeldung.
+
+Sind die vorhandenen globalen oder zielbezogenen Änderungslimits verbraucht und
+alle dort ausgeführten Effekte verifiziert, bietet die Planung an diesem Ziel nur
+noch Lesen an. Damit werden nicht mehr ausführbare Schreibschemas nicht erneut
+in das Modellfenster geladen. Noch ausstehende Wirkungsprüfungen bleiben möglich;
+die endgültige Budgetkontrolle vor dem Versand bleibt unverändert.
+
+Bei knappem Kontext werden in der abgeleiteten Ansicht geschlossener verifizierter
+Schritte wiederholte Anzeigetexte und Zielbeschriftungen entfernt. Original-Hashes,
+Aktionsargumente und Wirkungsnachweise bleiben erhalten. Eine zusätzliche letzte
+Anpassungsstufe verkleinert nur die doppelte Strukturbeschreibung gelesener Daten;
+Ziele, Regeln, Werkzeugverträge und gespeicherte Originalbelege werden nicht gekürzt.
+
+Ein Projektionsfilter mit gesetztem `where_prefix` oder von `null` verschiedenem `where_equals`
+benötigt ausdrücklich `where_pointer`. Andernfalls lehnen sowohl das native Schema
+als auch die endgültige Werkzeugvalidierung den Aufruf ab; der Filter darf niemals
+still ignoriert werden. `false`, `0` und der leere String bleiben echte Filterwerte;
+ein expliziter Pointer kann auch auf `null` vergleichen. Sichere Typkorrekturen
+nennen nur schemaeigene Felder, keine privaten Argumentwerte.

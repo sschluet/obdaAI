@@ -87,12 +87,12 @@ def test_bounded_periodic_memory_index_is_independent_of_extraction(worker, monk
     queue, factory, cfg = worker
     observed = []
 
-    async def index(actual_factory, config, *, limit):
-        observed.append((actual_factory, config, limit))
+    async def index(actual_factory, config, *, limit, time_budget_seconds):
+        observed.append((actual_factory, config, limit, time_budget_seconds))
 
     monkeypatch.setattr("hub.memory_embeddings.refresh_embeddings", index)
     asyncio.run(queue.tasks["hub.memory-index"].func(timestamp=0))
-    assert observed == [(factory, cfg, 20)]
+    assert observed == [(factory, cfg, 1, 2)]
 
 
 @pytest.mark.parametrize("status", ["queued", "running"])

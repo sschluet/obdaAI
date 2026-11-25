@@ -1,9 +1,11 @@
 """Shared dispatch must reject unsuccessful data selection and fixed inspection."""
 
+import asyncio
 import json
 
 import pytest
 from hub import agent_runtime as runtime
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentJob, AgentPolicy
 from hub.agent_tools import Rules
 from hub.integrations import Integration
@@ -79,7 +81,8 @@ def test_mixed_access_validates_each_ha_response_independently(ha, monkeypatch):
     no_planning(monkeypatch)
     app, client, headers, cfg, identifier, chat, *_ = ha
     with app.state.sessions() as db:
-        ssh = Integration(name="Mac mini", kind="ssh", enabled=True,
+        ssh = Integration(id="00000000-0000-0000-0000-000000000001",
+                          name="Mac mini", kind="ssh", enabled=True,
                           config=json.dumps({"kind": "ssh", "url": "host.example.test"}))
         db.add(ssh)
         db.flush()
@@ -105,7 +108,18 @@ def test_mixed_access_validates_each_ha_response_independently(ha, monkeypatch):
                 "stderr": ""}
 
     monkeypatch.setattr(runtime, "invoke", invoke)
-    result = execute(ha, start(ha))
+    async def interpret_only(*args):
+        assert args[-1].get("intent_schema"), "No second planning turn for connection-only intent"
+        return RequestIntent(
+            origin="semantic", mode="observe", topic="connection", target_ids=[identifier, ssh_id],
+            requirements=[Requirement(kind="connection", integration_id=i)
+                          for i in (identifier, ssh_id)],
+        ).model_dump()
+
+    monkeypatch.setattr(runtime, "generate", interpret_only)
+    job_id = start(ha, "Kannst du auf Home Assistant und Mac mini zugreifen?")
+    asyncio.run(runtime.execute_agent(app.state.sessions, cfg, None, job_id))
+    result = client.get("/api/agent-runs/" + job_id).json()
     assert sorted(sent) == ["http", "ssh.inspect"]
     assert result["status"] == "failed" and "nicht bestätigt" in result["summary"]
 

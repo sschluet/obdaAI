@@ -5,7 +5,7 @@ import json
 import pytest
 from hub import agent_runtime as runtime
 from hub.agent_models import AgentJob
-from test_agent_private_read_flow import archive, decision, execute  # noqa: F401
+from test_agent_private_read_flow import archive, decision, document_intent, execute  # noqa: F401
 
 pytest_plugins = ["test_agents", "test_agent_mail_read_flow"]
 
@@ -23,6 +23,8 @@ def test_archive_completion_adds_current_read_sources_without_asking_or_rereadin
 
     async def generate(*args):
         data = args[-1]
+        if data.get("intent_schema"):
+            return document_intent(data, identifier)
         assert len(args[-2].encode()) + len(runtime.encode(data).encode()) <= 14000
         turns.append(True)
         if len(turns) == 1:
@@ -52,6 +54,8 @@ def test_archive_completion_cannot_claim_observed_when_current_sources_fail_vali
     turns = []
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return document_intent(args[-1], case[4])
         turns.append(True)
         if len(turns) == 1:
             return decision(case[4], operation="search")

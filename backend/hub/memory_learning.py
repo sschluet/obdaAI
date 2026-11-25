@@ -169,6 +169,47 @@ class Extraction(StrictInput):
     facts: list[ExtractedFact] = Field(max_length=8)
 
 
+LEADING_ASIDE = re.compile(
+    r"^(?:(?:übrigens|uebrigens|noch zur info|zur information|by the way)[,: ]+)", re.I
+)
+DO_NOT_LEARN = re.compile(
+    r"\b(?:nicht (?:speichern|merken)|nicht ins gedächtnis|do not (?:remember|store)|"
+    r"don't (?:remember|store))\b",
+    re.I,
+)
+
+
+def directly_stated(quote: str, *, project: bool = False) -> bool:
+    text = LEADING_ASIDE.sub("", quote.strip())
+    if re.match(
+        r"^(?:ich (?:möchte|will|werde)|i (?:want|would like))[, :]+"
+        r"(?:wissen|fragen|verstehen|dass du|von dir|(?:to )?(?:know|ask|understand)|you to)\b",
+        text,
+        re.I,
+    ):
+        return False
+    if DIRECT.match(text) or (project and PROJECT_DIRECT.match(text)):
+        return True
+    # Admit grammatical self-statements for the grounded extractor instead of
+    # enumerating every possible personal attribute. Unknown semantic keys remain
+    # reviewable; the model still supplies only an exact user quote, never prose.
+    own = re.match(
+        r"^(?:(?:mein(?:e[nmrs]?)?|my) [^?!.\n:]{1,100} "
+        r"(?:ist|sind|heißt|heisst|lautet|is|are)|"
+        r"(?:mir|für mich) [^?!.\n]{1,100} (?:wichtig|lieber)|"
+        r"ich [^?!.\n:]{1,80} (?:bevorzuge|arbeite|wohne))\b",
+        text,
+        re.I,
+    )
+    project_statement = project and re.match(
+        r"^(?:für|bei|in) (?:unser(?:e[nmrs]?)?|dem) [^?!.\n:]{1,100} "
+        r"haben wir (?:beschlossen|entschieden)\b",
+        text,
+        re.I,
+    )
+    return bool(own or project_statement)
+
+
 def learnable_source(content: str, *, project: bool = False) -> bool:
     """Cheap admission only; extraction still independently validates every quote.
 
@@ -179,17 +220,12 @@ def learnable_source(content: str, *, project: bool = False) -> bool:
     text = content.strip()
     if not text or len(text) > 12000 or UNSAFE_SOURCE.search(text):
         return False
-    first = re.split(r"[.!\n]", text, maxsplit=1)[0]
-    if "?" in first:
+    if DO_NOT_LEARN.search(text):
         return False
-    if re.match(
-        r"^(?:ich (?:möchte|will|werde)|i (?:want|would like))[, :]+"
-        r"(?:wissen|fragen|verstehen|dass du|von dir|(?:to )?(?:know|ask|understand)|you to)\b",
-        text,
-        re.I,
-    ):
-        return False
-    return bool(DIRECT.match(text) or (project and PROJECT_DIRECT.match(text)))
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", text)
+    return any(
+        "?" not in sentence and directly_stated(sentence, project=project) for sentence in sentences
+    )
 
 
 def reserve_learning(db: Session, cfg: Settings, run_id: str) -> str | None:
@@ -341,6 +377,56 @@ def _current(db: Session, job: MemoryLearningJob) -> tuple[Message, dict[str, An
     return message, settings
 
 
+def learning_job_info(db: Session, job: MemoryLearningJob) -> dict[str, Any]:
+    current = False
+    try:
+        fresh_source(db, _pointer(job))
+        settings = get_settings(db)
+        run = db.get(Run, job.run_id) if job.run_id else None
+        forgotten = db.scalar(
+            select(Memory.id).where(
+                Memory.status == "forgotten",
+                Memory.source_message_id == job.source_message_id,
+            )
+        )
+        current = bool(
+            settings["enabled"]
+            and settings["extraction_enabled"]
+            and run
+            and run.status == "succeeded"
+            and not run.cancel_requested
+            and not forgotten
+        )
+    except ValueError:
+        pass
+    return {
+        "id": job.id,
+        "status": job.status,
+        "error": job.error,
+        "attempts": job.attempts,
+        "created": job.created,
+        "finished": job.finished,
+        "source_message_id": job.source_message_id,
+        "source_message_revision": job.source_message_revision,
+        "source_conversation_id": job.source_conversation_id,
+        "current": current,
+        "retryable": current and job.status == "failed" and job.attempts < 3,
+    }
+
+
+def retry_learning_job(db: Session, job: MemoryLearningJob, *, expected_attempts: int) -> None:
+    ownership_lock(db)
+    db.refresh(job)
+    if job.status != "failed" or job.attempts != expected_attempts or job.attempts >= 3:
+        raise ValueError("learning_retry_changed")
+    # An explicit human retry may use newly reviewed extraction settings, but
+    # never a different message/revision or a forgotten source.
+    job.settings_revision = get_settings(db)["revision"]
+    _current(db, job)
+    job.attempts += 1
+    job.status, job.error, job.finished = "queued", "", None
+
+
 def apply_extraction(db: Session, job: MemoryLearningJob, extraction: Extraction) -> None:
     ownership_lock(db)
     message, settings = _current(db, job)
@@ -352,16 +438,12 @@ def apply_extraction(db: Session, job: MemoryLearningJob, extraction: Extraction
         if fact.confidence < settings["config"]["min_confidence"]:
             continue
         # Independent grounding check: schema-valid model output is still untrusted.
-        grounded = bool(DIRECT.match(fact.quote)) or bool(
-            chat and chat.project_id and PROJECT_DIRECT.match(fact.quote)
-        )
+        grounded = directly_stated(fact.quote, project=bool(chat and chat.project_id))
         if not grounded or fact.quote not in message.content:
             continue
         # An exact substring inside a pasted document/example is not a user assertion.
         # Deliberately conservative until a richer consent/source contract is available.
-        if not DIRECT.match(message.content.lstrip()) and not (
-            chat and chat.project_id and PROJECT_DIRECT.match(message.content.lstrip())
-        ):
+        if not learnable_source(message.content, project=bool(chat and chat.project_id)):
             continue
         if "?" in fact.quote or re.search(
             r"\b(passwort|password|token|api.?key|secret)\b", fact.quote, re.I
@@ -371,8 +453,12 @@ def apply_extraction(db: Session, job: MemoryLearningJob, extraction: Extraction
         end = start + len(fact.quote)
         line_start = message.content.rfind("\n", 0, start) + 1
         prefix = message.content[line_start:start].strip()
-        if prefix and not re.fullmatch(
-            r"(?:merke dir(?: bitte)?(?:[, :]+dass)?|remember(?: that)?)[ :,]*", prefix, re.I
+        if (
+            prefix
+            and not (re.search(r"[.!]$", prefix) or LEADING_ASIDE.fullmatch(prefix))
+            and not re.fullmatch(
+                r"(?:merke dir(?: bitte)?(?:[, :]+dass)?|remember(?: that)?)[ :,]*", prefix, re.I
+            )
         ):
             continue
         if "```" in message.content[:end]:

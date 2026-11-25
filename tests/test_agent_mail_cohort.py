@@ -34,7 +34,10 @@ def freeze(context, rows):
     db, job, source, message, step, _, _, profiles = context
     step.result = encode({"response": {"content": [encode({"messages": rows})]}})
     clock = json.loads(source.bindings)["clock"]
-    source.summary = mail_overview_summary([step], clock, source.goal, profiles)
+    source.summary = mail_overview_summary(
+        [step], clock, source.goal, profiles,
+        version=json.loads(source.bindings).get("mail_overview_version", 1),
+    )
     message.content = source.summary
     job.context = encode(refs.bind(db, job, [message], profiles))
     db.flush()
@@ -192,7 +195,8 @@ def test_unbound_query_cannot_silently_expand_original_display(context):
         result=encode({"response": {"content": [encode({"messages": [row(2)]})]}}),
     )
     source.summary = mail_overview_summary(
-        [step, other], json.loads(source.bindings)["clock"], source.goal, profiles
+        [step, other], json.loads(source.bindings)["clock"], source.goal, profiles,
+        version=json.loads(source.bindings).get("mail_overview_version", 1)
     )
     message.content = source.summary
     assert call(context)["cohort_known"] is False
@@ -262,7 +266,8 @@ def test_real_two_account_binding_and_display_ordinals(context):
     db.add(other)
     db.flush()
     source.summary = mail_overview_summary(
-        [step, other], json.loads(source.bindings)["clock"], source.goal, profiles
+        [step, other], json.loads(source.bindings)["clock"], source.goal, profiles,
+        version=json.loads(source.bindings).get("mail_overview_version", 1)
     )
     message.content = source.summary
     job.context = encode(refs.bind(db, job, [message], profiles))

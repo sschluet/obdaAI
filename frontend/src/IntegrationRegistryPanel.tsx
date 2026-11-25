@@ -1,3 +1,4 @@
+import {useEditorDraft,guardNavigation} from './NavigationGuard';
 import {GoogleDriveSetupPanel, type GoogleDriveOpenRequest} from './GoogleDriveSetupPanel';
 import {GmailSetupPanel, type GmailOpenRequest} from './GmailSetupPanel';
 import {ProtonBridgeSetupPanel, type ProtonBridgeSetupView} from './ProtonBridgeSetupPanel';
@@ -23,6 +24,7 @@ export function IntegrationRegistryPanel({api}:{api:IntegrationAPI}){
  const [protonSetup,setProtonSetup]=useState<ProtonBridgeSetupView|null>(null);
  const [gmailOpen,setGmailOpen]=useState<GmailOpenRequest>(null);
  const gmailCounter=useRef(0);
+ useEditorDraft(!!draft,[draft,secret,clear],'Verbindung');
  const [driveOpen,setDriveOpen]=useState<GoogleDriveOpenRequest>(null);
  const driveCounter=useRef(0);
  useEffect(()=>{const params=new URLSearchParams(location.hash.slice(1));const id=params.get('google_drive_integration');if(params.has('google_drive_result')&&id&&/^[a-f0-9-]{36}$/.test(id)){setDriveOpen({id,key:++driveCounter.current});const url=new URL(location.href);url.hash='';history.replaceState(null,'',url)}},[]);
@@ -35,7 +37,7 @@ export function IntegrationRegistryPanel({api}:{api:IntegrationAPI}){
  const [writeProfile,setWriteProfile]=useState<IntegrationRow|null>(null);
  const [explorer,setExplorer]=useState<IntegrationRow|null>(null);
  const lock=useRef(false),dialog=useRef<HTMLFormElement>(null),closeRef=useRef(()=>{});
- const close=()=>{if(lock.current)return;setDraft(null);setSecret('');setClear(false)};closeRef.current=close;
+ const close=()=>{if(lock.current)return;setDraft(null);setSecret('');setClear(false)};closeRef.current=()=>guardNavigation(close);
  async function refresh(refreshProton=true){const data=await api('/integrations');setRows(data.integrations);setSecretsAvailable(data.encrypted_secrets_available);setMailDefault(await api('/integrations/mail-default'));if(refreshProton)setProtonRefresh(n=>n+1)}
  useEffect(()=>{let active=true;void api('/integrations').then(data=>{if(active){setRows(data.integrations);setSecretsAvailable(data.encrypted_secrets_available)}}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[api]);
  useEffect(()=>{if(!draft)return;const previous=document.activeElement as HTMLElement|null;const shell=document.querySelector<HTMLElement>('.shell');const wasInert=shell?.inert;if(shell)shell.inert=true;dialog.current?.querySelector<HTMLInputElement>('input')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();closeRef.current()}if(e.key==='Tab'){const controls=Array.from(dialog.current?.querySelectorAll<HTMLElement>('input:not(:disabled),textarea:not(:disabled),button:not(:disabled),select:not(:disabled),a[href]')||[]);const first=controls[0],last=controls.at(-1);if(!first){e.preventDefault();dialog.current?.focus()}else if(e.shiftKey&&(document.activeElement===first||!dialog.current?.contains(document.activeElement))){e.preventDefault();last?.focus()}else if(!e.shiftKey&&(document.activeElement===last||!dialog.current?.contains(document.activeElement))){e.preventDefault();first.focus()}}};document.addEventListener('keydown',key);return()=>{document.removeEventListener('keydown',key);if(shell)shell.inert=!!wasInert;requestAnimationFrame(()=>{if(previous?.isConnected)previous.focus()})}},[!!draft]);
@@ -48,7 +50,7 @@ export function IntegrationRegistryPanel({api}:{api:IntegrationAPI}){
  const visible=rows.filter(row=>(row.name+' '+(row.id===protonSetup?.integration_id?'Proton Mail':row.kind==='google_drive'?'Google Drive':row.kind==='gmail'?'Gmail':integrationTypes.find(t=>t.id===row.kind)?.name)+' '+row.config.url).toLocaleLowerCase().includes(search.toLocaleLowerCase()));
  function accessLabel(row:IntegrationRow){
   if(row.kind==='google_drive')return [row.config.enable_source?'Quelle: lokal lesen':'',row.config.enable_storage?'Ablage: einzeln speichern':''].filter(Boolean).join(' · ')||'Nutzung auswählen';
-  const policy=access[row.id];if(!policy)return 'KI-Zugriff einrichten';
+  const policy=access[row.id];if(!policy)return 'KI-Zugriffsstatus nicht geladen – prüfen';
   if(!policy.rules.enabled)return 'KI-Zugriff ausgeschaltet';
   if(!policy.current)return 'KI-Zugriff erneut freigeben';
   const r=policy.rules,configured=row.kind==='gmail'&&r.gmail_read||row.kind==='ssh'||r.http_prefixes?.length||r.ha_websocket_prefixes?.length||r.file_read_roots?.length||Object.keys(r.mcp_read_tools||{}).length||r.shell||r.mcp||r.mail_recipients?.length;

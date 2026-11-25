@@ -12,7 +12,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from hub.db import Conversation, Memory, Message, PersonalProfile
 from hub.memory_embeddings import MemoryEmbedding
-from hub.memory_models import MemoryCandidate, MemoryLearningJob, MemorySettings
+from hub.memory_models import MemoryCandidate, MemorySettings
 from hub.memory_service import create_app_memory, digest
 from hub.memory_summary import ConversationSummary
 from sqlalchemy import create_engine, inspect, text
@@ -164,7 +164,20 @@ def test_downgrade_refuses_each_kind_of_new_state_before_dropping_any_table(migr
         elif table == "candidate":
             row = MemoryCandidate(**pointer, quote_start=0, quote_end=9)
         elif table == "job":
-            row = MemoryLearningJob(**pointer, settings_revision=0)
+            # This fixture intentionally remains on 0046, before retry metadata.
+            db.execute(
+                text(
+                    "INSERT INTO memory_learning_jobs (id,source_message_id,"
+                    "source_message_revision,"
+                    "source_conversation_id,source_sha256,extractor_version,run_id,settings_revision,"
+                    "status,error,created,finished) VALUES "
+                    "(:id,:source_message_id,:source_message_revision,:source_conversation_id,"
+                    ":source_sha256,'direct-quotes-v1',NULL,0,'queued','',0,NULL)"
+                ),
+                {"id": str(uuid4()), **pointer},
+            )
+            db.commit()
+            row = None
         elif table == "embedding":
             row = MemoryEmbedding(
                 memory_id=memory_id,
@@ -185,8 +198,9 @@ def test_downgrade_refuses_each_kind_of_new_state_before_dropping_any_table(migr
                 label="LOCAL_ONLY",
                 sha256="c" * 64,
             )
-        db.add(row)
-        db.commit()
+        if row is not None:
+            db.add(row)
+            db.commit()
     engine.dispose()
     with pytest.raises(RuntimeError, match="Preserve memory state"):
         command.downgrade(Config("alembic.ini"), "0045")

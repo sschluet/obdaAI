@@ -8,6 +8,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -21,6 +22,8 @@ from hub.budgets import ExecutionLimitError, reserve_answer, settle
 from hub.chat_artifacts import ambiguous_file_revision
 from hub.config import Settings
 from hub.db import Conversation, Memory, Message, ProviderConfig, Research, Run, RunEvent
+from hub.inference_capacity import InferenceWaitTimeout
+from hub.inference_progress import stream_with_progress
 from hub.memory import digest, serialize, validate_mount
 from hub.memory import write as write_memory
 from hub.memory_context import MemoryChanged
@@ -95,6 +98,14 @@ async def execute_run(
             snapshot = json.loads(run.context_snapshot)
             parts = [ContextPart.model_validate(p) for p in snapshot["parts"]]
             roles = snapshot["roles"]
+        def model_parts() -> list[ContextPart]:
+            metadata = snapshot.get("agent_generation", {}).get("native_plan")
+            if metadata is None:
+                return parts
+            from hub.agent_native import auxiliary_parts
+
+            return [*parts, *auxiliary_parts(metadata)]
+
         workflow_generation = bool(
             snapshot.get("use_case")
             or snapshot.get("use_case_designer")
@@ -216,7 +227,7 @@ async def execute_run(
             0,
             budget["capacity_bytes"]
             - budget["late_instruction_bytes"]
-            - sum(len(part.content.encode()) + 64 for part in parts),
+            - sum(len(part.content.encode()) + 64 for part in model_parts()),
         )
         selected_evidence: list[ContextPart] = []
         marker = "\n[Auszug für das aktuelle Kontextfenster gekürzt.]"
@@ -339,6 +350,19 @@ async def execute_run(
             },
         )
         try:
+            from hub.project_models import ProjectModelError, provider_arguments
+            from hub.project_models import check as check_project_model
+            from hub.project_models import freeze as freeze_project_model
+
+            with factory() as project_db:
+                if snapshot.get("project_model"):
+                    check_project_model(project_db, cfg, snapshot["project_model"])
+                elif c.project_id:
+                    snapshot["project_model"] = freeze_project_model(project_db, cfg, c.project_id)
+            if (snapshot.get("project_model") or {}).get("policy"):
+                if snapshot.get("model_cloud_only"):
+                    raise ExecutionLimitError("Im Projekt ist ein lokales Modell fest gewählt.")
+                snapshot["model_local_only"] = True
             latest_request = next((m for m in reversed(messages) if m.role == "user"), None)
             if latest_request and not workflow_generation and "memory" in snapshot:
                 from hub.memory_context import prepare_memory
@@ -412,7 +436,7 @@ async def execute_run(
                 parts.extend(archive_parts)
                 roles.extend("user" for _ in archive_parts)
                 label = Privacy.LOCAL_ONLY
-                if sum(len(part.content) for part in parts) > cfg.context_limit:
+                if sum(len(part.content) for part in model_parts()) > cfg.context_limit:
                     raise ExecutionLimitError(
                         "Paperless und Gespräch überschreiten das Kontextlimit"
                     )
@@ -501,17 +525,66 @@ async def execute_run(
             if c.memory_scope and not cfg.vault_dir:
                 raise ExecutionLimitError("Keine Vault-Recherche: Zugang noch nicht angebunden")
             selected: dict[str, ProviderConfig] = {}
+
+            def model_boundary(expected: ProviderConfig | None) -> None:
+                with factory() as current_db:
+                    check_project_model(current_db, cfg, snapshot.get("project_model"))
+                    active = current_db.get(Run, run_id)
+                    owner = current_db.get(Conversation, chat_id)
+                    if active and active.cancel_requested:
+                        raise asyncio.CancelledError
+                    if (
+                        not active or active.status not in {"routing", "streaming"}
+                        or not owner or owner.archived
+                    ):
+                        raise PermissionError("Run changed before model dispatch")
+                    if expected:
+                        actual = current_db.get(ProviderConfig, expected.id)
+                        if (
+                            not actual or not actual.enabled
+                            or actual.revision != expected.revision
+                        ):
+                            raise PermissionError("Provider changed before model dispatch")
+                check_integration_context()
+
             if isinstance(providers, Providers):
+                requested_model = provider_arguments(snapshot.get("project_model"))
+                binding = snapshot.get("agent_generation", {}).get("provider_binding")
+                if binding:
+                    if (not isinstance(binding, dict) or set(binding) != {"id", "revision", "model"}
+                            or type(binding["id"]) is not str
+                            or type(binding["revision"]) is not int
+                            or type(binding["model"]) is not str):
+                        raise PermissionError("Invalid bound local provider")
+                    if requested_model and requested_model != {
+                        "provider_id": binding["id"], "model": binding["model"],
+                    }:
+                        raise PermissionError("Project model differs from bound provider")
+                    requested_model = {"provider_id": binding["id"], "model": binding["model"]}
                 cfg, providers, selected = runtime_provider(
                     factory,
                     cfg,
                     external_kind=c.cloud_provider,
                     cloud_only=bool(snapshot.get("model_cloud_only")),
+                    **requested_model,
                 )
-                if snapshot.get("agent_generation"):
+                if binding and (not selected.get("local")
+                                or selected["local"].revision != binding["revision"]):
+                    raise PermissionError("Bound local provider changed")
+                if snapshot.get("agent_generation", {}).get("intent_schema"):
+                    cfg = replace(cfg, local_max_tokens=min(cfg.local_max_tokens, 768),
+                                  local_disable_thinking=True)
+                    providers.settings = replace(
+                        providers.settings, local_max_tokens=cfg.local_max_tokens,
+                        local_disable_thinking=True,
+                    )
+                if (snapshot.get("agent_generation")
+                        and snapshot["agent_generation"].get("native_plan") is None):
                     from hub.agent_tools import decision_schema, ready_read_schema, research_schema
 
                     providers.local_json_schema = (
+                        snapshot["agent_generation"]["intent_schema"]
+                        if snapshot["agent_generation"].get("intent_schema") else
                         ready_read_schema(
                             snapshot["agent_generation"]["ready_reads"],
                             snapshot["agent_generation"].get("interfaces", []),
@@ -523,10 +596,18 @@ async def execute_run(
                             allow_finish=snapshot["agent_generation"].get("allow_finish", True),
                             allow_ask=snapshot["agent_generation"].get("allow_ask", True),
                             allow_stop=snapshot["agent_generation"].get("allow_stop", False),
+                            read_only=snapshot["agent_generation"].get("read_only", False),
                         )
                         if snapshot["agent_generation"].get("decision_format")
                         else research_schema()
                     )
+                native_plan = snapshot.get("agent_generation", {}).get("native_plan")
+                if native_plan is not None:
+                    if (snapshot.get("model_cloud_only")
+                            or snapshot["agent_generation"].get("intent_schema")):
+                        raise PermissionError("Native planning requires the local decision role")
+                    providers.local_json_schema = None
+                    providers.local_native_plan = native_plan
                 if not snapshot.get("model_cloud_only"):
                     local = selected.get("local")
                     if not local or not local.enabled:
@@ -536,14 +617,14 @@ async def execute_run(
                         raise ExecutionLimitError(
                             "Lokaler Router benötigt Text und strukturierte Ausgabe"
                         )
-                    input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    input_bound = sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                     if (
-                        sum(len(p.content) for p in parts) > limits["context_chars"]
+                        sum(len(p.content) for p in model_parts()) > limits["context_chars"]
                         or input_bound + min(1024, limits["output_tokens"])
                         > limits["context_tokens"]
                     ):
                         raise ExecutionLimitError("Kontextgrenze des lokalen Modells erreicht")
-                    if any(p.label not in limits["allowed_labels"] for p in parts):
+                    if any(p.label not in limits["allowed_labels"] for p in model_parts()):
                         raise PermissionError("Local model privacy class not allowed")
             async with asyncio.timeout(cfg.run_timeout) as deadline:
                 if cancelled():
@@ -588,6 +669,8 @@ async def execute_run(
                         if requests_public_research(latest.content):
                             route.capabilities.append(Capability.WEB)
                 else:
+                    if isinstance(providers, Providers):
+                        providers.before_send = lambda: model_boundary(selected.get("local"))
                     route = await providers.route(parts, roles)
                 preparation_step = "Antwortvorbereitung"
                 classifier = None if snapshot.get("model_cloud_only") else route.model_class
@@ -836,7 +919,7 @@ async def execute_run(
                         "status",
                         {"message": "Systemprüfung gespeichert · keine Änderungen ausgeführt"},
                     )
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError(
                             "Werkzeugbeleg gespeichert; Antwortkontext zu groß"
                         )
@@ -851,7 +934,7 @@ async def execute_run(
                     )
                     route.answer = None
                     yield ("status", {"message": "Webquellen mit URL und Abrufzeit gespeichert"})
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Recherche gespeichert; Antwortkontext zu groß")
                 # Resolve only the frozen enqueue snapshot, never mutable settings.
                 # The router and artifact specifications retain their existing contracts.
@@ -867,7 +950,7 @@ async def execute_run(
                     )
                     parts.append(style_part)
                     roles.append("system")
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Antwortkontext überschreitet die Kontextgrenze")
                     if c.cloud_allowed and style_part.label == Privacy.CLOUD_ALLOWED:
                         grants.append(
@@ -975,11 +1058,11 @@ async def execute_run(
                     )
                     route.answer = None
                     builtin_answer = False
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Persönlicher Antwortkontext zu groß")
                 memory_parts: list[ContextPart] = []
                 memory_budget = min(2400, max(0, cfg.context_limit - sum(
-                    len(p.content.encode()) + 64 for p in parts
+                    len(p.content.encode()) + 64 for p in model_parts()
                 ) - 1024))
                 if not workflow_generation and snapshot.get("memory"):
                     from hub.memory_context import projection
@@ -1029,7 +1112,7 @@ async def execute_run(
                                 source_id=relevance_part.source_id, revision=1, provider_id=provider
                             )
                         )
-                    if sum(len(p.content) for p in parts) > cfg.context_limit:
+                    if sum(len(p.content) for p in model_parts()) > cfg.context_limit:
                         raise ExecutionLimitError("Antwortkontext überschreitet die Kontextgrenze")
                 if external and isinstance(providers, Providers):
                     cloud = selected.get(c.cloud_provider)
@@ -1085,19 +1168,21 @@ async def execute_run(
                 selected_provider = selected.get(provider)
                 if selected_provider:
                     final_limits = json.loads(selected_provider.config)
-                    final_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    final_bound = sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                     if (
-                        sum(len(p.content) for p in parts) > final_limits["context_chars"]
+                        sum(len(p.content) for p in model_parts()) > final_limits["context_chars"]
                         or final_bound + min(1024, final_limits["output_tokens"])
                         > final_limits["context_tokens"]
                     ):
                         raise ExecutionLimitError("Antwortkontext überschreitet die Modellgrenze")
                 if not external and selected_provider:
                     limits = json.loads(selected_provider.config)
-                    input_bound = sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                    input_bound = sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                     effective_output = min(
                         limits["output_tokens"], limits["context_tokens"] - input_bound
                     )
+                    if snapshot.get("agent_generation", {}).get("intent_schema"):
+                        effective_output = min(effective_output, 768)
                     if effective_output < 16:
                         raise ExecutionLimitError("Kontextgrenze lässt keinen Antwortumfang zu")
                     cfg = replace(cfg, local_max_tokens=effective_output)
@@ -1116,6 +1201,19 @@ async def execute_run(
                 model = (
                     (cfg.openrouter_model if external else cfg.local_model) if model_used else ""
                 )
+                if (selected_provider and snapshot.get("agent_generation") and
+                        (snapshot["agent_generation"].get("native_plan") is not None
+                         or snapshot["agent_generation"].get("provider_binding"))):
+                    trace["native_provider"] = {"id": selected_provider.id,
+                        "revision": selected_provider.revision, "model": model}
+                    auxiliary = model_parts()[len(parts):]
+                    trace["native_context"] = {
+                        "auxiliary_parts": len(auxiliary),
+                        "auxiliary_chars": sum(len(part.content) for part in auxiliary),
+                        "auxiliary_utf8_bytes": sum(
+                            len(part.content.encode()) for part in auxiliary
+                        ),
+                    }
                 trace.update(actual_provider=provider, actual_model=model or None)
                 update(
                     routing_trace=json.dumps(trace, ensure_ascii=False),
@@ -1147,10 +1245,8 @@ async def execute_run(
                     check_integration_context()
                     while True:
                         try:
-                            if snapshot.get("google_drive_source") and isinstance(
-                                providers, Providers
-                            ):
-                                providers.before_send = check_integration_context
+                            if isinstance(providers, Providers):
+                                providers.before_send = partial(model_boundary, selected_provider)
                             if memory_parts:
                                 from hub.memory_context import boundary_guard
 
@@ -1160,21 +1256,45 @@ async def execute_run(
                                     byte_budget=memory_budget,
                                 )
 
-                                def guard(memory_check: Callable[[], None] = memory_guard) -> None:
-                                    if snapshot.get("google_drive_source"):
-                                        check_integration_context()
+                                def guard(
+                                    memory_check: Callable[[], None] = memory_guard,
+                                    expected: ProviderConfig | None = selected_provider,
+                                ) -> None:
+                                    model_boundary(expected)
                                     memory_check()
 
                                 guard()
                                 if isinstance(providers, Providers):
                                     providers.before_send = guard
-                            async for chunk in providers.stream(
-                                parts, roles, external=external, grants=grants
+                            inference_started = time.monotonic()
+                            model_ready_at: float | None = None
+                            async for kind, chunk in stream_with_progress(
+                                providers, parts, roles, external=external, grants=grants
                             ):
+                                if kind == "progress":
+                                    if chunk == "model_ready":
+                                        model_ready_at = time.monotonic()
+                                        trace["inference_phases"] = {
+                                            "queue_seconds": round(
+                                                model_ready_at - inference_started, 3
+                                            )
+                                        }
+                                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
+                                    yield ("status", {"phase": chunk, "message": (
+                                        "Das lokale Modell bearbeitet noch einen anderen Auftrag"
+                                        if chunk == "waiting_for_model" else
+                                        "Das lokale Modell bereitet die Antwort vor"
+                                    )})
+                                    continue
                                 if cancelled():
                                     raise asyncio.CancelledError
                                 check_integration_context()
                                 if not output:
+                                    if model_ready_at is not None:
+                                        trace["inference_phases"]["prefill_seconds"] = round(
+                                            time.monotonic() - model_ready_at, 3
+                                        )
+                                        update(routing_trace=json.dumps(trace, ensure_ascii=False))
                                     update(first_content_seconds=time.monotonic() - started)
                                 if len(output) + len(chunk) > 96000:
                                     remaining = chunk[: 96000 - len(output)]
@@ -1200,7 +1320,7 @@ async def execute_run(
                             grants[:] = [g for g in grants if g.source_id not in ids]
                             memory_parts = []
                             if isinstance(providers, Providers):
-                                providers.before_send = None
+                                providers.before_send = partial(model_boundary, selected_provider)
                             trace["memory"] = {"included": [], "degraded": True}
                             update(routing_trace=json.dumps(trace, ensure_ascii=False))
                             continue
@@ -1239,13 +1359,14 @@ async def execute_run(
                                     ) from error
                                 limits = json.loads(local.config)
                                 input_bound = (
-                                    sum(len(p.content.encode()) + 64 for p in parts) + 4096
+                                    sum(len(p.content.encode()) + 64 for p in model_parts()) + 4096
                                 )
                                 effective_output = min(
                                     limits["output_tokens"], limits["context_tokens"] - input_bound
                                 )
                                 if (
-                                    sum(len(p.content) for p in parts) > limits["context_chars"]
+                                    sum(len(p.content) for p in model_parts())
+                                    > limits["context_chars"]
                                     or effective_output < 16
                                 ):
                                     raise ExecutionLimitError(
@@ -1358,7 +1479,15 @@ async def execute_run(
             update(error=message[:240])
             yield ("error", {"message": message})
         except (TimeoutError, httpx.TimeoutException) as error:
-            if isinstance(error, httpx.TimeoutException):
+            if isinstance(error, InferenceWaitTimeout):
+                message = "Provider hat zu lange keine Daten geliefert. " + {
+                    "queue": "Das lokale Modell war zu lange durch andere Aufträge belegt.",
+                    "first_content": "Das lokale Modell hat noch keine Antwort begonnen.",
+                    "idle": "Die begonnene lokale Antwort ist stehen geblieben.",
+                }[error.phase] + " Vorhandene Ergebnisse bleiben erhalten."
+                trace["inference_timeout_phase"] = error.phase
+                update(routing_trace=json.dumps(trace, ensure_ascii=False))
+            elif isinstance(error, httpx.TimeoutException):
                 message = (
                     "Provider hat zu lange keine Daten geliefert. "
                     "Der bisherige Text bleibt erhalten; bitte erneut versuchen."
@@ -1384,6 +1513,12 @@ async def execute_run(
                 if snapshot.get("model_cloud_only")
                 else "Provider nicht verfügbar oder ungültige Antwort"
             )
+            from hub.agent_native import NativeProtocolUnavailable
+
+            if isinstance(error, NativeProtocolUnavailable):
+                message = "Native tool protocol unavailable"
+            elif isinstance(error, ProjectModelError):
+                message = str(error)
             update(error=message)
             yield (
                 "error",
@@ -1397,7 +1532,7 @@ async def execute_run(
                 },
             )
         finally:
-            if snapshot.get("google_drive_source") and isinstance(providers, Providers):
+            if isinstance(providers, Providers):
                 # A run-bound authority callback must not affect another conversation.
                 providers.before_send = None
             with factory() as db:
@@ -1469,7 +1604,12 @@ async def execute_run(
                 task.cancel()
         await task
         if cfg.database_url.startswith("sqlite") and not workflow_generation:
-            await execute_title(factory, providers, chat_id)
+            title_providers = providers
+            title_binding = None
+            if isinstance(providers, Providers):
+                _, title_providers, title_selected = runtime_provider(factory, cfg, local_only=True)
+                title_binding = title_selected.get("local")
+            await execute_title(factory, title_providers, chat_id, provider_binding=title_binding)
             from hub.memory_learning import execute_learning
             from hub.memory_models import MemoryLearningJob
 

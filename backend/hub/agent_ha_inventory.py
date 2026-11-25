@@ -166,7 +166,8 @@ def _source_cohort(
 
 
 def plan(
-    goal: str, profiles: Mapping[str, Any], source_refs: Sequence[Mapping[str, Any]] | None = None
+    goal: str, profiles: Mapping[str, Any], source_refs: Sequence[Mapping[str, Any]] | None = None,
+    *, request_intent: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Inert request only. Sources must come from freshly validated same-chat receipts.
 
@@ -176,6 +177,21 @@ def plan(
     from hub.agent_tools import validate_tool
 
     intent = _intent(goal)
+    if request_intent is not None:
+        from hub.agent_intent import RequestIntent
+
+        semantic = RequestIntent.model_validate(request_intent)
+        requirements = semantic.requirements
+        if (
+            semantic.read_only and semantic.answer_kind in {"light_inventory", "light_on_cohort"}
+            and len(semantic.target_ids) == 1 and semantic.target_ids[0] in profiles
+            and len(requirements) == 1 and requirements[0].kind == "entity_states"
+            and requirements[0].domain == "light"
+            and requirements[0].integration_id == semantic.target_ids[0]
+        ):
+            intent = (semantic.answer_kind == "light_on_cohort", semantic.followup)
+        else:
+            return None
     targets = [(identifier, values) for identifier, values in profiles.items()
                if values[0].kind == "home_assistant"]
     if intent is None or len(targets) != 1:

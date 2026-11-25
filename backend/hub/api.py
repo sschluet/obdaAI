@@ -165,6 +165,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_workspace_search(app, factory)
     install_preference_api(app, factory)
     install_provider_api(app, cfg, factory)
+    from hub.runtime_status import install_runtime_status
+
+    install_runtime_status(app, cfg, factory)
     install_knowledge_api(app, cfg, factory)
     from hub.deletion_cleanup import install_cleanup_api
 
@@ -369,6 +372,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                 )
             chats = db.scalars(statement.order_by(Conversation.created.desc()).limit(100)).all()
+            from hub.titles import repair_initial_titles
+
+            repair_initial_titles(db, [c.id for c in chats])
+            db.commit()
             return [
                 {
                     "id": c.id,
@@ -430,6 +437,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = db.get(Conversation, chat_id)
             if not c or c.purpose != "chat":
                 raise HTTPException(404, "Gespräch nicht gefunden")
+            from hub.titles import ensure_initial_title
+
+            ensure_initial_title(db, chat_id)
+            db.commit()
             messages = db.scalars(
                 select(Message)
                 .where(Message.conversation_id == chat_id, Message.active.is_(True))
@@ -457,6 +468,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
                 "cloud_provider": c.cloud_provider,
+                "archived": c.archived,
                 "context_sources": [
                     {
                         "source_id": part["source_id"],
@@ -661,6 +673,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = db.scalar(select(Conversation).where(Conversation.id == chat_id).with_for_update())
             if not c or c.purpose != "chat" or c.archived:
                 raise HTTPException(404, "Aktives Gespräch nicht gefunden")
+            from hub.project_models import ProjectModelError
+            from hub.project_models import freeze as freeze_project_model
+
+            try:
+                project_model = freeze_project_model(db, cfg, c.project_id)
+            except ProjectModelError as error:
+                raise HTTPException(409, str(error)) from None
+            if project_model and project_model.get("policy"):
+                if model_cloud_only:
+                    raise HTTPException(409, "Im Projekt ist ein lokales Modell fest gewählt.")
+                model_local_only = True
             from hub.agent_models import AgentJob
             from hub.agent_runtime import ACTIVE as AGENT_ACTIVE
 
@@ -745,6 +768,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for old in messages[cut + 1 :]:
                     old.active = False
                 messages = messages[: cut + 1]
+            from hub.titles import ensure_initial_title
+
+            ensure_initial_title(db, chat_id)
             from hub.chat_context import recent_context
 
             history_context = recent_context(messages, local_only=local_only)
@@ -772,6 +798,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "web_search_allowed": web_search_allowed,
                 "model_local_only": model_local_only,
                 "model_cloud_only": model_cloud_only,
+                "project_model": project_model,
                 **history_context,
             }
             from hub.memory_context import freeze_memory

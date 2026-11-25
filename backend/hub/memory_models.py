@@ -62,5 +62,6 @@ class MemoryLearningJob(Base):
     settings_revision: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
     error: Mapped[str] = mapped_column(String(80), default="")
+    attempts: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created: Mapped[float] = mapped_column(Float, default=time.time)
     finished: Mapped[float | None] = mapped_column(Float, nullable=True)

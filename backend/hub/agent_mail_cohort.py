@@ -51,7 +51,9 @@ def selected_receipt_rows(
     steps = []
     raw: dict[tuple[str, str], dict[str, Any]] = {}
     try:
-        clock = json.loads(source.bindings)["clock"]
+        binding = json.loads(source.bindings)
+        clock = binding["clock"]
+        version = binding.get("mail_overview_version", 1)
         for receipt in sorted(selected, key=lambda r: r["reference"]["sequence"]):
             ref = receipt["reference"]
             step = db.get(AgentStep, (ref["source_job_id"], ref["sequence"]))
@@ -62,11 +64,11 @@ def selected_receipt_rows(
             for row in parsed[1]["messages"]:
                 key = (ref["integration_id"], mail_header_identity(row))
                 raw.setdefault(key, {"integration_id": key[0], "row": row, "reference": ref})
-        summary = mail_overview_summary(steps, clock, source.goal, profiles)
+        summary = mail_overview_summary(steps, clock, source.goal, profiles, version=version)
         if summary is None or summary != source.summary:
             return unknown
         records, scopes, _ = mail_overview_records(steps, clock, source.goal)
-        shown = displayed_mail_records(records)
+        shown = displayed_mail_records(records, version=version)
         rows = [
             raw[(account, view["identity_sha256"])]
             for account in scopes

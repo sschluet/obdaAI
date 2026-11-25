@@ -278,7 +278,10 @@ def test_actual_provider_slot_wait_revocation_prevents_any_http(
     assert provider.before_send is None  # The next conversation has its own authority.
     with factory() as db:
         run = db.get(Run, identifier)
-        assert run.status == "failed" and "Google-Drive" in run.error
+        # The project-model gate rejects an archived project before Drive egress.
+        expected_error = ("Projekt fehlt oder ist archiviert"
+                          if kind == "project_archive" else "Google-Drive")
+        assert run.status == "failed" and expected_error in run.error
         assert all(
             "Private synthetic cached document" not in message.content
             for message in db.scalars(select(Message).where(Message.run_id == identifier))

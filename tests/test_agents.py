@@ -135,7 +135,11 @@ def test_model_claim_cannot_turn_acknowledgment_into_verified_success(agent, mon
         [effect(agent), {"kind": "finish", "message": "All finished"}],
     )
     assert result["status"] == "unverified"
-    assert "nicht vollständig" in result["summary"]
+    assert "nicht verifiziert" in result["summary"]
+    assert "All finished" not in result["summary"]
+    effects = [step for step in result["steps"] if step["kind"] == "effect"]
+    assert len(effects) == len(agent[7]) == 1
+    assert effects[0]["result"]["effect_verified"] is False
 
 
 @pytest.mark.parametrize("change", ["pause", "policy", "profile", "selection", "cancel", "budget"])
@@ -301,8 +305,16 @@ def test_task_can_select_shared_agent_but_not_hide_it_in_read_only_profile():
 
 
 def test_empty_model_claim_is_not_system_acceptance(agent, monkeypatch):
-    result = run(agent, start(agent), monkeypatch, [{"kind": "finish", "message": "Updated"}])
-    assert result["status"] == "unverified"
+    result = run(agent, start(agent), monkeypatch,
+                 [{"kind": "finish", "message": "Updated"}] * 3)
+    assert result["status"] == "failed"
+    feedback = [step for step in result["steps"] if step["kind"] == "feedback"]
+    assert len(feedback) == 2
+    assert all(step["document"]["issues"][0]["type"] == "goal_evidence_missing"
+               for step in feedback)
+    assert result["steps"][-1]["document"]["type"] == "AgentFormatExhausted"
+    assert "Updated" not in result["summary"]
+    assert not any(step["kind"] == "effect" for step in result["steps"])
     assert not agent[-1]
 
 
@@ -508,9 +520,20 @@ def test_continuation_waits_for_previous_worker_lock(agent, monkeypatch):
                 yield acquired
 
     monkeypatch.setattr(runtime, "execution_lock", held)
-    result = run(agent, start(agent), monkeypatch, [{"kind": "finish", "message": "No action"}])
+    model_decisions = []
+
+    def replies():
+        # The request names no document ID: resource selection is real missing
+        # input, unlike a repeated permission question or unsupported completion.
+        decision = {"kind": "ask", "message": "Welches Dokument soll ich umbenennen?"}
+        model_decisions.append(decision)
+        yield decision
+
+    result = run(agent, start(agent), monkeypatch, replies())
     assert len(attempts) == 2
-    assert result["status"] == "unverified"
+    assert result["status"] == "awaiting_input"
+    assert len(model_decisions) == 1
+    assert not agent[7]
 
 
 def test_chat_continuity_stays_local_and_revision_bound(agent):
@@ -767,11 +790,15 @@ def test_exhausted_format_correction_preserves_acknowledged_unverified_effect(ag
 def test_tool_argument_validation_uses_feedback_before_creating_intent(agent, monkeypatch):
     bad = effect(agent)
     bad["arguments"]["method"] = "BOOM"
-    result = run(
-        agent, start(agent), monkeypatch, [bad, {"kind": "finish", "message": "No action"}]
-    )
-    assert result["status"] == "unverified"
+    # Correct the model format, then ask for the genuinely missing resource ID.
+    result = run(agent, start(agent), monkeypatch, [bad, {
+        "kind": "ask", "message": "Welches Dokument soll ich umbenennen?",
+    }])
+    assert result["status"] == "awaiting_input"
     assert result["steps"][0]["kind"] == "feedback"
+    assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
+    assert result["steps"][0]["document"]["rejected_decision"] == bad
+    assert not any(step["kind"] == "effect" for step in result["steps"])
     assert not agent[7]
 
 
@@ -782,12 +809,15 @@ def test_invalid_json_can_be_corrected_locally_before_tools(agent, monkeypatch):
         attempts.append(args)
         if len(attempts) == 1:
             raise runtime.AgentFormatError("not JSON")
-        return {"kind": "finish", "message": "No action"}
+        # A valid resource-selection question does not assert system acceptance.
+        return {"kind": "ask", "message": "Welches Dokument soll ich umbenennen?"}
 
     monkeypatch.setattr(runtime, "generate", generate)
     job_id = start(agent)
     asyncio.run(runtime.execute_agent(agent[0].state.sessions, agent[3], None, job_id))
     result = agent[1].get("/api/agent-runs/" + job_id).json()
-    assert result["status"] == "unverified" and len(attempts) == 2
+    assert result["status"] == "awaiting_input" and len(attempts) == 2
+    assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
     assert result["steps"][0]["document"]["rejected_decision"] == "not JSON"
+    assert not any(step["kind"] == "effect" for step in result["steps"])
     assert not agent[7]

@@ -139,6 +139,7 @@ class ProviderConfig(Base):
 
 class ProviderTest(Base):
     __tablename__ = "provider_tests"
+    mode: Mapped[str] = mapped_column(String(20), default="model", server_default="model")
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     provider_id: Mapped[str] = mapped_column(String(36))
     revision: Mapped[int] = mapped_column(Integer)
@@ -181,6 +182,7 @@ def session_factory(url: str) -> sessionmaker[Session]:
 
 class Project(Base):
     __tablename__ = "projects"
+    model_policy: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(160))
     icon: Mapped[str] = mapped_column(String(40), default="folder", server_default="folder")

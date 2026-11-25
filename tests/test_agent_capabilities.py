@@ -15,13 +15,51 @@ from hub.agent_tools import Rules, validate_tool
 
 
 @pytest.mark.parametrize("goal", [
-    "Welche Lampen habe ich in Home Assistant?", "Welche davon sind an?",
-    "Zeige meine Sensoren", "Which devices are available?", "What is the current status?",
+    "Welche Lampen habe ich in Home Assistant?", "Zeige meine Sensoren",
     "Welche Schalter habe ich?", "Which switch is on?",
 ])
 def test_ha_inventory_lowers_authority_without_selecting_a_tool(goal):
     assert ha_inventory_question(goal, [profile()])
     assert not ha_inventory_question(goal, [profile(), profile("ssh")])
+
+
+@pytest.mark.parametrize("goal", ["Which devices are available?", "What is the current status?"])
+def test_unknown_ha_read_uses_explicit_semantic_evidence_not_inventory_shortcut(goal):
+    from hub.agent_intent import (
+        RequestIntent,
+        Requirement,
+        accept_semantic,
+        infer,
+        semantic_request,
+    )
+
+    selected = {"ha": profile()}
+    assert not ha_inventory_question(goal, list(selected.values()))
+    assert infer(goal, selected, implicit_target=True) is None
+    request = semantic_request(goal, selected)
+    assert request["data"]["goal"] == goal
+    payload = RequestIntent(target_ids=["ha"], mode="observe", topic="system",
+                            requirements=[Requirement(kind="system", integration_id="ha")])
+    interpreted = accept_semantic(payload.model_dump(), selected, goal=goal)
+    assert interpreted.read_only and interpreted.requirements == [
+        Requirement(kind="system", integration_id="ha")]
+    assert "tool" not in interpreted.model_dump()
+    assert "arguments" not in interpreted.model_dump()
+
+
+def test_unbound_anaphoric_inventory_is_not_a_standalone_ha_shortcut():
+    from hub.agent_intent import RequestIntent, accept_semantic, infer
+
+    goal = "Welche davon sind an?"
+    selected = {"ha": profile()}
+    assert not ha_inventory_question(goal, list(selected.values()))
+    assert infer(goal, selected, implicit_target=True) is None
+    # A missing displayed cohort cannot manufacture a fresh inventory or target.
+    payload = RequestIntent(target_ids=[], mode="unknown", topic="inventory",
+                            confidence="uncertain")
+    unresolved = accept_semantic(payload.model_dump(), selected, goal=goal)
+    assert unresolved.mode == "unknown" and unresolved.confidence == "uncertain"
+    assert not unresolved.target_ids and not unresolved.requirements
 
 
 @pytest.mark.parametrize("goal", [
@@ -151,3 +189,68 @@ def test_target_names_are_literal_data_and_cannot_add_permissions_or_match_wildc
     assert result == {"tool": "mcp.catalog", "arguments": {}}
     assert not validate_tool(target.kind, selected["id"][1], result["tool"], result["arguments"])[1]
     assert not access_question("Is HA reachable?", {})
+
+
+def test_websocket_read_recipes_include_authorized_backups_and_supervisor_metadata():
+    import copy
+
+    rules = Rules(enabled=True, ha_websocket_prefixes=[
+        "backup/", "supervisor/", *sorted(HA_WS_READS),
+    ])
+    saved = copy.deepcopy(rules)
+    description = describe(profile(), rules)
+    operations = description["operations"]
+    recipes = operations["websocket_reads"]
+    assert len(recipes) == 7
+    assert set(operations["websocket_no_parameter_reads"]) == HA_WS_READS | {"backup/info"}
+    assert {recipe["arguments"]["parameters"]["endpoint"] for recipe in recipes
+            if recipe["arguments"]["type"] == "supervisor/api"} == {"/info", "/supervisor/info"}
+    for recipe in recipes:
+        normalized, effect = validate_tool("home_assistant", rules, recipe["tool"],
+                                           recipe["arguments"])
+        assert effect is False and normalized == recipe["arguments"]
+        assert normalized["verification"] is None
+    assert description["readiness"]["live_access_verified"] is False
+    assert rules == saved
+
+
+@pytest.mark.parametrize("scopes,expected", [
+    ([], set()),
+    (["config/"], set()),
+    (["backup/info"], {"backup/info"}),
+    (["backup/"], {"backup/info"}),
+    (["supervisor/api"], {"supervisor/api"}),
+    (["supervisor/"], {"supervisor/api"}),
+    (["get_"], set()),
+    (["get_config"], {"get_config"}),
+    (["backup/create"], set()),
+])
+def test_websocket_read_recipes_do_not_expand_human_scopes(scopes, expected):
+    operations = describe(profile(), Rules(
+        enabled=True, ha_websocket_prefixes=scopes,
+    ))["operations"]
+    recipes = operations["websocket_reads"]
+    assert {recipe["arguments"]["type"] for recipe in recipes} == expected
+    assert set(operations["websocket_no_parameter_reads"]) == expected - {"supervisor/api"}
+
+
+def test_each_websocket_recipe_is_validated_and_effect_classification_can_remove_it(monkeypatch):
+    import hub.agent_tools as tools
+
+    original = tools.validate_tool
+    checked = []
+
+    def validator(kind, rules, tool, arguments):
+        if tool == "ha.websocket":
+            checked.append(arguments)
+            if arguments["type"] == "backup/info":
+                normalized, _ = original(kind, rules, tool, arguments)
+                return normalized, True
+        return original(kind, rules, tool, arguments)
+
+    monkeypatch.setattr(tools, "validate_tool", validator)
+    operations = describe(profile(), Rules(enabled=True, ha_websocket_prefixes=["backup/"]))[
+        "operations"]
+    assert len(checked) == 7
+    assert operations["websocket_reads"] == []
+    assert operations["websocket_no_parameter_reads"] == []

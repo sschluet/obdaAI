@@ -1,5 +1,6 @@
 import asyncio
 import json
+from dataclasses import replace
 
 import pytest
 import test_chat
@@ -70,6 +71,83 @@ def test_partial_failure_preserved_without_secret_or_retry(setup):
     assert receipt["steps"][0]["result"]["partial"]
     asyncio.run(execute_task(app.state.sessions, app.state.settings, receipt["id"], provider))
     assert provider.stream_calls == [False]
+
+
+def test_task_generation_uses_task_budget_instead_of_provider_idle_deadline(setup):
+    app, c, h, _ = setup
+
+    class PrefillProvider(AnalysisProvider):
+        async def stream(self, *args, **kwargs):
+            await asyncio.sleep(1.05)
+            async for chunk in super().stream(*args, **kwargs):
+                yield chunk
+
+    provider = PrefillProvider()
+    t = task(c, h)
+    rid = queued(app, t)
+    # Prefill exceeds the idle setting. Only the provider's first-content limit
+    # should apply here; Providers tests cover actual per-fragment waits.
+    cfg = replace(app.state.settings, local_timeout=1)
+    asyncio.run(execute_task(app.state.sessions, cfg, rid, provider))
+    receipt = terminal(c, t)
+    assert receipt["status"] == "succeeded"
+    assert receipt["steps"][0]["result"]["answer"] == "SYNTHETIC_PARTIAL_COMPLETE"
+    assert provider.stream_calls == [False]
+
+
+@pytest.mark.parametrize("revoke", ["provider_disabled", "provider_revision", "schedule"])
+def test_task_rechecks_provider_and_schedule_after_capacity_wait_before_send(
+    setup, monkeypatch, revoke,
+):
+    from hub.db import ProviderConfig, ScheduleOccurrence, TaskSchedule
+    from hub.provider_settings import seed
+    from hub.providers import Providers
+
+    app, c, h, _ = setup
+    cfg = replace(app.state.settings, local_model="synthetic")
+    t = task(c, h)
+    rid = queued(app, t)
+    with app.state.sessions() as db:
+        seed(db, cfg)
+        row = db.get(ProviderConfig, "local-default")
+        if revoke == "schedule":
+            db.add(TaskSchedule(
+                task_id=t["id"], revision=1, task_revision=t["revision"],
+                control_revision=t["control_revision"], spec_sha256=t["spec_sha256"],
+                definition='{"kind":"daily"}', paused=False,
+            ))
+            db.add(ScheduleOccurrence(
+                task_id=t["id"], schedule_revision=1, due=1, status="queued", run_id=rid,
+            ))
+        db.commit()
+    sends = []
+
+    class QueuedProvider(Providers):
+        async def stream(self, *args, **kwargs):
+            # Represents revocation while the real provider waits for its slot.
+            with app.state.sessions() as db:
+                if revoke == "schedule":
+                    db.get(TaskSchedule, t["id"]).paused = True
+                else:
+                    actual = db.get(ProviderConfig, row.id)
+                    if revoke == "provider_disabled":
+                        actual.enabled = False
+                    else:
+                        actual.revision += 1
+                db.commit()
+            assert self.before_send is not None
+            self.before_send()
+            sends.append("transport")
+            yield "This must never be sent or saved"
+
+    provider = QueuedProvider(cfg)
+    monkeypatch.setattr(
+        "hub.task_model.runtime_provider", lambda *args, **kwargs: (cfg, provider, {"local": row})
+    )
+    asyncio.run(execute_task(app.state.sessions, cfg, rid, provider))
+    receipt = terminal(c, t)
+    assert receipt["status"] == "failed" and sends == []
+    assert "This must never" not in json.dumps(receipt)
 
 
 def test_restart_running_receipt_never_repeats_inference(setup):

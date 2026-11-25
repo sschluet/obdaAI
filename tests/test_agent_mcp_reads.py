@@ -8,6 +8,7 @@ import jsonschema
 import pytest
 from hub import agent_api
 from hub import agent_runtime as runtime
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_models import AgentPolicy
 from hub.agent_tools import Rules, decision_schema, validate_tool
 from hub.db import ActionPolicy
@@ -199,6 +200,11 @@ def test_read_agent_works_with_write_pause_zero_effects_and_final_revocation(
     )
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return RequestIntent(
+                target_ids=[identifier], mode="observe", topic="general", origin="semantic",
+                requirements=[Requirement(kind="unspecified", integration_id=identifier)],
+            ).model_dump()
         return next(replies)
 
     calls = []
@@ -334,6 +340,11 @@ def test_real_read_transport_reaches_agent_receipt_and_local_model_context(mailb
 
     async def generate(*args):
         snapshot = args[-1]
+        if snapshot.get("intent_schema"):
+            return RequestIntent(
+                target_ids=[identifier], mode="observe", topic="general", origin="semantic",
+                requirements=[Requirement(kind="unspecified", integration_id=identifier)],
+            ).model_dump()
         if snapshot["history"]:
             observed.append(snapshot["history"][-1]["result"])
             return {"kind": "finish", "message": "Synthetic mail read"}

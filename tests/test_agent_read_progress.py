@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from hub import agent_runtime as runtime
 from hub.agent_context import project
+from hub.agent_intent import RequestIntent, Requirement
 from test_agent_capability_runtime import agent, gateway, ha, set_pause, writes  # noqa: F401
 
 
@@ -22,6 +23,9 @@ def test_identical_successful_get_becomes_feedback_without_a_second_dispatch(
                 "effect_verified": False}
 
     async def generate(factory, cfg, providers, job_id, instruction, data):
+        if data.get("intent_schema"):
+            return RequestIntent(target_ids=[identifier], mode="observe", topic="system",
+                requirements=[Requirement(kind="system", integration_id=identifier)]).model_dump()
         planned.append(data)
         if len(planned) < 3:
             return {"kind": "tool", "message": "Version lesen", "integration_id": identifier,
@@ -62,6 +66,9 @@ def test_distinct_boolean_and_integer_projections_are_not_duplicate_reads(
         return {"http_status": 200, "body": body}
 
     async def generate(factory, cfg, providers, job_id, instruction, data):
+        if data.get("intent_schema"):
+            return RequestIntent(target_ids=[identifier], mode="observe", topic="system",
+                requirements=[Requirement(kind="system", integration_id=identifier)]).model_dump()
         planned.append(data)
         if len(planned) <= 2:
             return {"kind": "tool", "message": "Typisiert filtern", "integration_id": identifier,

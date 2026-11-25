@@ -31,20 +31,26 @@ export async function checkAgentChatRecovery({page, base, call, capture}) {
     const retry = page.getByRole('button', {name: 'Antwort erneut erzeugen', exact: true});
     const send = page.getByRole('button', {name: 'Nachricht senden', exact: true});
     const composer = page.getByRole('textbox', {name: 'Nachricht', exact: true});
-    await page.getByRole('region', {name: 'Systemsteuerung', exact: true}).getByText('In Arbeit · ' + goal, {exact: true}).waitFor();
+    const processing=page.getByRole('region', {name: 'Details Abarbeitung', exact: true});await processing.locator('.agent-work-summary').getByText(/In Arbeit/).waitFor();await processing.locator('.agent-work-summary').click();await processing.getByText('In Arbeit · '+goal,{exact:true}).click();
     await composer.fill('Entwurf nach der Mailfrage');
-    if (await edit.isEnabled() || await retry.isEnabled() || await send.isEnabled()) throw Error('Active agent permits editing, regeneration or parallel send');
+    if (await edit.isEnabled() || (await retry.count() > 0 && await retry.isEnabled()) || await send.isEnabled()) throw Error('Active agent permits editing, regeneration or parallel send');
     // Even a newer terminal record must not hide a still active job.
     jobs = [{...job, id: 'synthetic-newer-terminal', status: 'failed', goal: 'Anderer abgeschlossener Auftrag'}, job];
     await page.getByText('Angehalten · Anderer abgeschlossener Auftrag', {exact: true}).waitFor();
     if (await send.isEnabled()) throw Error('Latest terminal record hides an active agent');
     jobs = [{...job, status: 'awaiting_input', summary: 'Synthetische Rückfrage'}];
-    await page.getByText('Synthetische Rückfrage', {exact: true}).waitFor();
+    await processing.getByText('Synthetische Rückfrage', {exact: true}).waitFor();
     await page.waitForFunction(() => !document.querySelector('button[aria-label="Nachricht senden"]').disabled);
-    if (await edit.isEnabled() || await retry.isEnabled()) throw Error('Clarification permits editing or regeneration of the active agent turn');
+    if (await edit.isEnabled() || (await retry.count() > 0 && await retry.isEnabled())) throw Error('Clarification permits editing or regeneration of the active agent turn');
     jobs = [{...job, status: 'failed', summary: 'Synthetischer Planungsfehler'}];
-    await page.getByText('Synthetischer Planungsfehler', {exact: true}).waitFor({state: 'attached'});
-    if (!await edit.isEnabled() || !await retry.isEnabled() || !await send.isEnabled()) throw Error('Terminal agent leaves the composer blocked');
+    await processing.getByText('Synthetischer Planungsfehler', {exact: true}).waitFor({state: 'attached'});
+    if (!await edit.isEnabled() || !await send.isEnabled() || await retry.count()) throw Error('Terminal user-only chat leaves composer blocked or offers regeneration without an answer');
+    // Ordinary regeneration requires a persisted ordinary assistant answer; the
+    // active agent's user-only turn must never fabricate a retry target.
+    response.messages.push({id:'synthetic-ordinary-answer',role:'assistant',content:'Gespeicherte gewöhnliche Beispielantwort.',label:'LOCAL_ONLY'});
+    await page.reload();await retry.waitFor();
+    await page.waitForFunction(()=>![...document.querySelectorAll('button')].find(button=>button.textContent.includes('Antwort erneut erzeugen'))?.disabled);
+    if(!await retry.isEnabled())throw Error('Persisted ordinary answer cannot be regenerated after terminal agent');
     // Simulate a concurrent server guard and a failed final reload. Neither may
     // retain the local busy flag or the preparation status indefinitely.
     await retry.click();
@@ -59,8 +65,9 @@ export async function checkAgentChatRecovery({page, base, call, capture}) {
     await send.click();
     await page.waitForFunction(() => !document.querySelector('button[aria-label="Antwort abbrechen"]'));
     if (messageRequests !== 1) throw Error('New question after failed agent/retry cannot be sent');
-    await page.getByText('Angehalten · ' + goal, {exact: true}).click();
-    await page.getByRole('button', {name: 'Frage erneut vorbereiten', exact: true}).click();
+    const outer=processing.locator('details.agent-work-details');if(!await outer.evaluate(el=>el.open))await outer.locator(':scope > summary').click();
+    if(!await page.getByText('Angehalten · '+goal,{exact:true}).evaluate(e=>e.parentElement.open))await page.getByText('Angehalten · '+goal,{exact:true}).click();
+    await processing.getByRole('button', {name: 'Frage erneut vorbereiten', exact: true}).click();
     if (await composer.inputValue() !== goal || agentRequests) throw Error('Preparing failed question loses goal or executes before Send');
     retryAsAgent = true;
     await send.click();
@@ -75,11 +82,11 @@ export async function checkAgentChatRecovery({page, base, call, capture}) {
         {sequence: 2, kind: 'read', status: 'succeeded', sha256: 'b'.repeat(64), document: {message: 'Postfach-Status gelesen'}, result: {}},
         {sequence: 3, kind: 'error', status: 'failed', sha256: 'c'.repeat(64), document: {message: 'Lokale Planung: Zeitlimit erreicht'}, result: {}},
       ]}];
-      response.messages = [...response.messages, {id: 'synthetic-recovery-answer', role: 'assistant', content: summary, label: 'LOCAL_ONLY', processing: {agent_job_id: job.id}}];
+      response.messages = [...response.messages, {id: 'synthetic-recovery-answer', role: 'assistant', content: summary, label: 'LOCAL_ONLY', processing: {agent_job_id: job.id,provider:'local',model_used:false,status:'failed'}}];
       await page.setViewportSize({width: 1440, height: 1150});
       await page.reload();
-      await page.getByText('Angehalten · ' + goal, {exact: true}).click();
-      await page.getByRole('button', {name: 'Frage erneut vorbereiten', exact: true}).click();
+      await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).locator('.agent-work-summary').click();await page.getByText('Angehalten · '+goal,{exact:true}).click();
+      await processing.getByRole('button', {name: 'Frage erneut vorbereiten', exact: true}).click();
       await page.evaluate(() => document.activeElement?.blur());
       if (!await send.isEnabled()) throw Error('Synthetic recovery capture has a blocked composer');
       await page.screenshot({path: capture, fullPage: true});

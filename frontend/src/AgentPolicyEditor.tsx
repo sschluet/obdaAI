@@ -1,3 +1,5 @@
+import {hasBackupBeforeUpdates,setBackupBeforeUpdates,backupBeforeUpdateMethods} from './agentPrerequisites';
+import {useUnsavedChanges} from './NavigationGuard';
 import {useEffect, useState} from 'react';
 import type {IntegrationAPI, IntegrationRow} from './IntegrationRegistryPanel';
 
@@ -20,6 +22,7 @@ export function AgentPolicyEditor({api, integration, onClose}: {
     }).catch(e => {if (alive) setError(e.message);});
     return () => {alive = false;};
   }, [api, integration.id]);
+  useUnsavedChanges(!!rules&&!!policy&&(JSON.stringify(rules)!==JSON.stringify(policy.rules)||writes!==policy.writes_enabled),'KI-Zugriffsregeln',JSON.stringify([rules,writes]));
   const change = (key: string, value: unknown) => setRules({...rules, [key]: value});
   const readCandidates: MCPReadCandidate[] = policy?.mcp_read_candidates ?? [];
   const readTools: Record<string, string> = rules?.mcp_read_tools ?? {};
@@ -37,6 +40,10 @@ export function AgentPolicyEditor({api, integration, onClose}: {
     rules?.ha_websocket_prefixes.some((prefix: string) => prefix.endsWith('/') ? command.startsWith(prefix) : command === prefix));
   const hasReads = integration.kind === 'gmail' && rules?.gmail_read || integration.kind === 'ssh' || httpRead || haRead ||
     integration.kind === 'mcp' && Object.keys(readTools).some(name => !staleReadTools.includes(name));
+  const backupBeforeUpdates=hasBackupBeforeUpdates(rules?.effect_prerequisites??[]);
+  const backupMethods=backupBeforeUpdateMethods(rules?.effect_prerequisites??[]);
+  const configuredBackupMethods=backupMethods.length?backupMethods:backupBeforeUpdateMethods(policy?.rules.effect_prerequisites??[]);
+  const backupActionsConfigured=rules?.http_methods.includes('POST')&&['/api/services/update/install',...(configuredBackupMethods.length?configuredBackupMethods:['backup.create_automatic']).map(method=>'/api/services/'+method.replace('.','/'))].every(path=>rules.http_prefixes.some((prefix:string)=>path.startsWith(prefix)));
   const hasChanges = rules && rules.max_effects > 0 && (
     supportsHTTP && rules.http_prefixes.length > 0 && rules.http_methods.some((method: string) => method !== 'GET') ||
     integration.kind === 'home_assistant' && rules.ha_websocket_prefixes.length > 0 ||
@@ -98,6 +105,12 @@ export function AgentPolicyEditor({api, integration, onClose}: {
         </label>)}</div>
       </>}
       {integration.kind === 'home_assistant' && <label>Erlaubte WebSocket-Befehle oder Präfixe mit / (je Zeile)<textarea rows={3} placeholder={'config/\ninput_boolean/'} value={rules.ha_websocket_prefixes.join('\n')} onChange={e => change('ha_websocket_prefixes', e.target.value.split('\n').filter(Boolean))}/></label>}
+      {integration.kind === 'home_assistant' && <div>
+        <label><input type="checkbox" checked={backupBeforeUpdates} disabled={!backupActionsConfigured&&!backupBeforeUpdates} onChange={e=>change('effect_prerequisites',setBackupBeforeUpdates(rules.effect_prerequisites??[],e.target.checked,policy.rules.effect_prerequisites??[]))}/>Backup vor dem Update-Dienst</label>
+        <p>Gilt für den HA-Dienst update.install dieser Verbindung über HTTP oder WebSocket. Vor diesem Aufruf muss im selben Auftrag eine Sicherung erstellt und unabhängig geprüft sein. Direkte Supervisor- und SSH-Updates werden nicht erfasst. Deine vorhandenen Freigaben gelten weiter; die Option schaltet keine Schreibrechte oder selbstständige Ausführung ein.</p>
+        <p>{backupMethods.length?'Gespeicherte Backup-Methode: '+backupMethods.join(' und ')+'. Sie bleibt beim Bearbeiten erhalten.':'Neue Regeln verwenden backup.create_automatic und die in Home Assistant konfigurierten Sicherungseinstellungen.'}</p>
+        {!backupActionsConfigured&&<p>Erlaube zuerst die Update- und Sicherungsaktionen in den API-Berechtigungen: POST und passende API-Pfade für beide Aktionen.</p>}
+      </div>}
       {integration.kind === 'ssh' && <>
         <label><input type="checkbox" checked={rules.home_assistant_host} onChange={e => change('home_assistant_host', e.target.checked)}/>Dieses Konto verwaltet einen Home-Assistant-Host</label>
         <label><input type="checkbox" checked={rules.shell} onChange={e => change('shell', e.target.checked)}/>Selbst erzeugte Shellbefehle und Konfigurationsskripte erlauben</label>
@@ -127,7 +140,7 @@ export function AgentPolicyEditor({api, integration, onClose}: {
       <label>Laufzeit in Sekunden<input type="number" min={30} max={3600} value={rules.timeout_seconds} onChange={e => change('timeout_seconds', Number(e.target.value))}/></label>
       <label>Zeitgrenze je SSH-Befehl in Sekunden<input type="number" min={1} max={600} value={rules.command_timeout_seconds} onChange={e => change('command_timeout_seconds', Number(e.target.value))}/></label>
       </details>
-      <div className="dialog-actions"><button type="button" onClick={onClose}>Schließen</button><button type="button" className="primary" onClick={() => void save()}>Zugriff speichern</button></div>
+      <div className="dialog-actions"><button data-navigation="true" type="button" onClick={onClose}>Schließen</button><button type="button" className="primary" onClick={() => void save()}>Zugriff speichern</button></div>
     </fieldset>}
   </section>;
 }

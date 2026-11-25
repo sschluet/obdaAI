@@ -29,6 +29,8 @@ class Settings:
     secrets_key_file: str = ""
     local_endpoints_json: str = "{}"
     local_timeout: int = 30
+    local_first_token_timeout: Annotated[int, Field(ge=5, le=600)] = 120
+    local_queue_timeout: Annotated[int, Field(ge=1, le=600)] = 120
     openrouter_timeout: int = 30
     local_max_tokens: int = 2048
     openrouter_max_tokens: int = 2048

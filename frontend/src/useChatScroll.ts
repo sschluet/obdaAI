@@ -64,5 +64,5 @@ export function useChatScroll(conversationKey:string,update:unknown){
   };
  },[container,content,conversationKey,changeFollow,resume,schedule]);
  useLayoutEffect(()=>schedule(),[update,schedule]);
- return {containerRef:setContainer,contentRef:setContent,following,resume,jumpToEnd};
+ return {container,containerRef:setContainer,contentRef:setContent,following,resume,jumpToEnd};
 }

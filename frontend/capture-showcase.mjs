@@ -152,7 +152,7 @@ try{
   const conversation=await showcaseApi('/conversations','POST',{cloud_allowed:false});
   await page.goto(base+'/?view=Chat&chat='+conversation.id);
   const picker=page.locator('.integration-binding-picker');
-  await picker.locator('summary').filter({hasText:/Automatisch · [1-9][0-9]* verfügbar/}).waitFor();
+  await picker.locator('summary').filter({hasText:/Automatisch · [1-9][0-9]* zugeordnet/}).waitFor();
   await picker.locator('summary').click();
   await picker.getByRole('button',{name:'Alle automatisch',exact:true}).waitFor();
   await page.getByRole('textbox',{name:'Nachricht',exact:true}).fill('Welche neuen Mails gab es heute?');

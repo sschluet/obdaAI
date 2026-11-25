@@ -5,6 +5,7 @@ import json
 import httpx
 import jsonschema
 import pytest
+from hub.agent_intent import RequestIntent, Requirement
 from hub.agent_tools import Rules, decision_schema, invoke, validate_tool
 from hub.config import Settings
 from hub.gmail_client import API_BASE, GmailClient
@@ -236,6 +237,11 @@ def test_selected_gmail_agent_dispatch_and_final_revocation(gateway, tmp_path, m
     )
 
     async def generate(*args):
+        if args[-1].get("intent_schema"):
+            return RequestIntent(
+                target_ids=[identifier], mode="observe", topic="system", origin="semantic",
+                requirements=[Requirement(kind="system", integration_id=identifier)],
+            ).model_dump()
         return next(replies)
 
     calls = []

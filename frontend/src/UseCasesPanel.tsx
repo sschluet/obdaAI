@@ -1,3 +1,4 @@
+import {useEditorDraft} from './NavigationGuard';
 import {UseCaseDesigner} from './UseCaseDesigner';
 import type {IntegrationRow} from './IntegrationRegistryPanel';
 import {useEffect,useRef,useState} from 'react';
@@ -12,6 +13,7 @@ export function UseCasesPanel({api,projectId,projects=[],disabled:requestedDisab
  const [designing,setDesigning]=useState(startDesigning),[integrations,setIntegrations]=useState<IntegrationRow[]>([]);
  const [cases,setCases]=useState<AICase[]>([]),[selected,setSelected]=useState<AICase|null>(null),[draft,setDraft]=useState<AISpec|null>(startCreating?newAISpec():null),[draftProject,setDraftProject]=useState<string|null>(projectId),[editId,setEditId]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[deleting,setDeleting]=useState(false);const active=useRef(false);
  useEffect(()=>{let stopped=false;api('/integrations').then(data=>{if(!stopped)setIntegrations(data.integrations||[])}).catch(e=>{if(!stopped)setError('Integrationen konnten nicht geladen werden: '+e.message)});return()=>{stopped=true}},[api]);
+ useEditorDraft(!!draft,[draft,draftProject],'Use Case');
  const disabled=requestedDisabled||Boolean(selected?.project_id&&projects.find(p=>p.id===selected.project_id)?.archived);
  useEffect(()=>{let stopped=false;api('/use-cases').then(data=>{if(!stopped){setCases(data);if(initialCaseId){const found=data.find((row:AICase)=>row.id===initialCaseId);setSelected(found||null);if(!found)setError('Dieser Use Case ist nicht mehr verfügbar.')}}}).catch(e=>{if(!stopped)setError(e.message)});return()=>{stopped=true}},[api,initialCaseId]);
  async function action(fn:()=>Promise<void>){if(active.current)return;active.current=true;setBusy(true);setError('');try{await fn()}catch(e){setError((e as Error).message)}finally{active.current=false;setBusy(false)}}

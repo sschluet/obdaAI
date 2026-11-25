@@ -429,3 +429,43 @@ def test_agent_schema_is_explicit_and_only_applies_to_local_requests(
         assert requests[0]["response_format"]["json_schema"]["strict"] is True
     else:
         assert "response_format" not in requests[0]
+
+@pytest.mark.parametrize("scenario", ["slow_prefill", "idle_gap", "heartbeat_only"])
+def test_stream_first_content_and_inactivity_have_separate_deadlines(
+    monkeypatch, tmp_path, scenario
+):
+    original = httpx.AsyncClient
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            if scenario == "heartbeat_only":
+                for _ in range(30):
+                    await asyncio.sleep(0.01)
+                    yield b": heartbeat\n\n"
+            else:
+                await asyncio.sleep(0.06)  # Beyond idle, within first-content budget.
+                yield b'data: {"choices":[{"delta":{"content":"first"}}]}\n\n'
+                if scenario == "idle_gap":
+                    await asyncio.sleep(0.06)
+                yield b"data: [DONE]\n\n"
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: original(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, stream=Stream())), **kw))
+    cfg = Settings(local_model="fixture", source_dir=str(tmp_path), local_first_token_timeout=5)
+    # Compress seconds only in this isolated transport fixture; production bounds stay validated.
+    object.__setattr__(cfg, "local_first_token_timeout", 0.12)
+    object.__setattr__(cfg, "local_timeout", 0.03)
+    provider = Providers(cfg)
+    monkeypatch.setattr(provider, "_target", lambda external: (
+        "http://127.0.0.1/v1/chat/completions", {}, {}, ""))
+
+    async def collect():
+        return [chunk async for chunk in provider.stream(
+            [ContextPart(content="Synthetic", source_id="fixture", revision=1)],
+            ["user"], external=False, grants=[])]
+
+    if scenario == "slow_prefill":
+        assert asyncio.run(collect()) == ["first"]
+    else:
+        with pytest.raises(TimeoutError):
+            asyncio.run(collect())

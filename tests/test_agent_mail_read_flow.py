@@ -415,7 +415,8 @@ def test_real_mail_dispatch_large_results_cannot_finish_as_false_empty_overview(
         "Within currentHeader" in response["summary"]
         and "Earlier prefix" not in response["summary"]
     )
-    assert "keine Vollständigkeit" in response["summary"] and "begrenzt" in response["summary"]
+    assert "keine Vollständigkeit" not in response["summary"]
+    assert "Abfrageumfang" not in response["summary"]
     actual_query = next(
         step
         for step in history
@@ -606,7 +607,8 @@ def test_mail_context_exhaustion_has_safe_specific_terminal_reason(read_mailbox,
     }
     app, client, _, _, _, job_id, _ = read_mailbox
     response = client.get("/api/agent-runs/" + job_id).json()
-    assert "Modellkontext" in response["summary"]
+    assert "Kontextlimit" in response["summary"]
+    assert "engere Anfrage" not in response["summary"]
     assert "SYNTHETIC_PRIVATE_MODEL_CONTENT" not in json.dumps(response)
 
 
@@ -748,8 +750,13 @@ def test_catalog_batch_cannot_exceed_total_step_budget(read_mailbox, monkeypatch
     assert started.status_code == 200, started.text
     case = (*read_mailbox[:5], started.json()["id"], calls)
     status, history = execute(case)
-    assert status == "failed" and not calls
-    assert not any(step.kind in {"read", "effect"} for step in history)
+    assert status == "unverified"
+    assert sum(call.get("method") == "tools/list" for call in calls) == 2
+    assert not any(call.get("method") == "tools/call" for call in calls)
+    reads = [step for step in history if step.kind == "read"]
+    assert len(reads) == 2
+    assert len({json.loads(step.document)["integration_id"] for step in reads}) == 2
+    assert not any(step.kind == "effect" for step in history)
 
 
 def test_oversized_observed_contract_fails_closed_instead_of_clipping_schema():
@@ -774,6 +781,8 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
     phases = []
 
     async def generate(factory, cfg, providers, job_id, instruction, data):
+        if measurements:
+            return {"kind": "stop", "message": "Synthetic measurement only; no functional read."}
         sample = copy.deepcopy(data)
         profile_id = sample["interfaces"][0]["integration_id"]
         names = sorted(runtime.MAIL_READ_TOOLS)
@@ -938,4 +947,5 @@ def test_first_mail_model_payload_with_eight_complete_schemas_is_compact(read_ma
 
     monkeypatch.setattr(runtime, "generate", generate)
     status, trace = execute(read_mailbox)
-    assert status == "unverified" and len(measurements) == 1, (phases, trace[-1].document)
+    assert status == "failed" and len(measurements) == 1, (phases, trace[-1].document)
+    assert sum(step.kind == "feedback" for step in trace) == 2

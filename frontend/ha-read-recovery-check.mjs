@@ -1,3 +1,4 @@
+import {getSystemMode,setSystemMode} from './composer-agent-mode.mjs';
 // Real React, authentication and conversation creation on a fresh synthetic fixture.
 // Integration routing and terminal HA read responses are stubbed; no live HA acceptance.
 import {chromium} from 'playwright';
@@ -76,13 +77,13 @@ async function checks(){
    return route.continue();
   });
   await page.goto(base);await loginFixture(page);
-  if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Explicit administration enabled before automatic read');
+  if(await getSystemMode(page))throw Error('Explicit administration enabled before automatic read');
   await page.locator('.composer textarea').fill(goal);await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
   await page.locator('.message.assistant').getByText(summary,{exact:true}).waitFor();
-  const panel=page.getByRole('region',{name:'Systemsteuerung',exact:true});await panel.locator('summary').first().filter({hasText:'Nur lesende Schritte abgeschlossen'}).waitFor();
+  const panel=page.getByRole('region',{name:'Details Abarbeitung',exact:true});await panel.locator('summary').first().filter({hasText:'Abfrage abgeschlossen'}).waitFor();
   if(creates!==1||routes!==1||submissions!==1||forbidden)throw Error('Read recovery required extra submission or ordinary LLM request');
   if(await page.getByRole('button',{name:/freigeben und fortsetzen|Tatsächlichen Zustand nur lesend prüfen/}).count())throw Error('Recovered read exposed approval/reconciliation');
-  await panel.locator('summary').first().click();const articles=panel.locator('article');if(await articles.count()!==3)throw Error('Read trace omitted failure or included model as action');
+  await panel.locator('summary').first().click();await panel.locator('details[data-agent-job] > summary').click();const articles=panel.locator('article');if(await articles.count()!==3)throw Error('Read trace omitted failure or included model as action');
   const expected=[{path:'/api/',status:'succeeded',code:200},{path:'/api/light',status:'failed',code:404},{path:'/api/states',status:'succeeded',code:200}];
   for(let i=0;i<3;i++){
    const article=articles.nth(i);await article.getByText('Aufruf und Beleg',{exact:true}).click();await article.locator('pre').filter({hasText:expected[i].path}).waitFor();const proof=JSON.parse(await article.locator('pre').innerText());
@@ -93,7 +94,7 @@ async function checks(){
   }
   if(receipts.join(',')!=='1,3,5')throw Error('Wrong receipt requests');
   await panel.locator('summary').first().click();await page.locator('.chat-scroll').evaluate(e=>{e.scrollTop=0;});await page.locator('.message.user').getByText(goal,{exact:true}).waitFor();
-  await page.screenshot({path:resolve('.local/browser/ha-read-recovery-ui.png'),fullPage:true});
+  await page.screenshot({path:fileURLToPath(new URL('../.local/browser/ha-read-recovery-ui.png',import.meta.url)),fullPage:true});
   for(const width of [1366,320]){await page.setViewportSize({width,height:1050});await pause(100);if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1))throw Error('Lamp recovery chat overflow');}
   if(errors.length)throw Error(errors.join(';'));
   console.log('HA read recovery UI passed: automatic route with system control off, one submission, two synthetic lamps/states, preserved failed GET /api/light 404, successful GET /api/states with local light projection, final local-model provenance, no confirmation/effect/ask, 320px/desktop. Integration routing, model and HA responses mocked; no live HA dispatch.');

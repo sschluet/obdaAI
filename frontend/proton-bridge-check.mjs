@@ -73,7 +73,7 @@ export async function checkProtonBridgeSetup({page, base, call}) {
    await wizard.getByRole('button',{name:'Einrichtung schließen',exact:true}).click();await wizard.waitFor({state:'hidden'});
   }
   if(posts.length!==2)throw Error('Secondary setup navigation automatically rechecked mailbox');
-  await openRow();await password.fill('synthetic-unsaved-password');await page.keyboard.press('Escape');await wizard.waitFor({state:'hidden'});
+  await openRow();await password.fill('synthetic-unsaved-password');await page.keyboard.press('Escape');const unsaved=page.getByRole('dialog',{name:'Ungespeicherte Änderungen',exact:true});await unsaved.waitFor();if((await unsaved.innerText()).includes('synthetic-unsaved-password'))throw Error('Discard prompt exposed credentials');await unsaved.getByRole('button',{name:'Ohne Speichern weiter',exact:true}).click();await wizard.waitFor({state:'hidden'});
   if(await page.locator('.shell').evaluate(el=>el.inert))throw Error('Wizard left workspace inert after Escape');
   await openRow();if(await password.inputValue()!=='')throw Error('Wizard close retained unsaved credentials');
   if(process.env.HUB_PROTON_BRIDGE_CAPTURE){await page.evaluate(()=>document.activeElement?.blur());await wizard.screenshot({path:process.env.HUB_PROTON_BRIDGE_CAPTURE})}

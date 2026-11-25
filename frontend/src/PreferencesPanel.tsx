@@ -1,3 +1,4 @@
+import {useUnsavedChanges} from './NavigationGuard';
 import {useEffect,useId,useRef,useState} from 'react';
 import './preferences.css';
 
@@ -19,6 +20,7 @@ export function PreferencesPanel({api,projectId,conversationId}:{api:API;project
  useEffect(()=>{let current=true;generation.current+=1;setBusy(false);setData(null);setDraft({});setError('');setNotice('');api(path).then((value:State)=>{if(current){setData(value);setDraft(value.overrides)}}).catch(()=>{if(current)setError('Antwortvorgaben konnten nicht geladen werden.')});return()=>{current=false}},[path,api]);
  async function save(values:Values){if(!data||busy)return;const requestGeneration=generation.current;setBusy(true);setError('');setNotice('');try{const result=await api(path,'PUT',{expected_revision:data.revision,overrides:values});if(requestGeneration!==generation.current)return;setData(result);setDraft(result.overrides);setNotice('Gespeichert. Gilt für neue Antworten; laufende Antworten behalten ihre Vorgaben.')}catch(e){if(requestGeneration===generation.current)setError(e instanceof Error?e.message:'Speichern fehlgeschlagen. Bitte neu laden.')}finally{if(requestGeneration===generation.current)setBusy(false)}}
  const dirty=data&&fields.some(field=>draft[field.key]!==data.overrides[field.key]);
+ useUnsavedChanges(!!dirty,'Antwortvorgaben',JSON.stringify(draft));
  function choose(field:Field,value:string){setDraft(previous=>{const next={...previous};if(value)next[field]=value;else delete next[field];return next});setNotice('')}
  return <section className="setting-card response-preferences" aria-label="Antwortvorgaben">
   <h2>{conversationId?'Antwortvorgaben für dieses Gespräch':projectId?'Antwortvorgaben für dieses Projekt':'Persönliche Antwortvorgaben'}</h2>

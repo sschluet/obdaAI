@@ -128,7 +128,7 @@ Projekte erhalten unter **Projekt bearbeiten** ein konfigurierbares Logo aus 32 
 
 Verbindungen und kontrollierte Aktionen findest du unter **Einstellungen → Integrationen**. Direkte Prüfergebnisse, geführte Archivierung und Ausführungsbelege sind in [docs/integrations.md](docs/integrations.md) beschrieben.
 
-Generische Verbindungsprofile mit Tabelle, Aktivschalter und Projekt-/Aufgaben-/Chatzuordnungen sowie lokale Formular-Use-Cases mit optionalem Projektbezug und direkten Auswahlfeldern im eigenen Navigationsbereich zwischen Projekte und Aufgaben: [Ausbauvertrag und Grenzen](docs/generic-integrations-and-use-cases.md). Der neue [Agentenweg](docs/agent-system-control.md) verwendet diese Profile auch für mehrstufige Systemsteuerung aus Chat, Aufgaben und Projekten, nach separat eingerichteten Agentenregeln. [Offizielle Anschlusswege weiterer Dienste](docs/integration-services-research.md) unterscheiden API, OAuth, Bridge und Dateiimport.
+Generische Verbindungsprofile mit Tabelle, Aktivschalter und Projekt-/Aufgaben-/Chatzuordnungen sowie lokale Formular-Use-Cases mit optionalem Projektbezug und direkten Auswahlfeldern im eigenen Navigationsbereich zwischen Projekte und Aufgaben: [Ausbauvertrag und Grenzen](docs/generic-integrations-and-use-cases.md). [Verständliche Anfrageausführung und Gesprächstitel](docs/agent-experience.md) beschreiben die neue Fortschrittsanzeige und den beleggebundenen Agentenabschluss. Der neue [Agentenweg](docs/agent-system-control.md) verwendet diese Profile auch für mehrstufige Systemsteuerung aus Chat, Aufgaben und Projekten, nach separat eingerichteten Agentenregeln. [Offizielle Anschlusswege weiterer Dienste](docs/integration-services-research.md) unterscheiden API, OAuth, Bridge und Dateiimport.
 
 Oberfläche mit eigenem App-Namen, Anzeigenamen, Foto, Abständen und Akzentfarbe: [Persönliche Oberfläche](docs/appearance-customization.md). Anzeigeangaben sind vom persönlichen KI-Profil getrennt.
 
@@ -143,3 +143,6 @@ Längere Konzepte, klare Teilantworten und manuelle Fortsetzung: [Antwort-, Kont
 - [Use Cases: Integrationsphasen, KI-Erstellungsdialog und Mailversand](docs/use-case-integrations.md)
 
 Kontrollierte Integrationsänderungen mit eigener Profilfreigabe, lokaler KI-Vorbereitung, Vorschau, Ausführungsbeleg und lesendem Fehlerabgleich: [Schreibadapter und Grenzen](docs/integration-writes.md). Noch keine vollständige administrative Fremdsystemabnahme.
+
+Die gemeinsame Stabilisierung von Anfrageplanung, Inferenz, Gedächtnis und Bedienung
+ist in [Assistant-Stabilisierung](docs/assistant-stabilization.md) dokumentiert.

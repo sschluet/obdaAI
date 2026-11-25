@@ -31,7 +31,7 @@ try{
  if(originalPolicy.paused)await archive.getByRole('button',{name:'Einzelne Änderungen erlauben',exact:true}).click();
  await page.getByRole('button',{name:'Datenschutz',exact:true}).click();
  await page.getByRole('heading',{name:'Datenverarbeitung und Aktionen',exact:true}).waitFor();
- await page.locator('.setting-card b').getByText('Einzeln freigeben',{exact:true}).waitFor();
+ await page.locator('.setting-card b').getByText('Gemäß den Regeln der jeweiligen Verbindung erlaubt',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Integrationen',exact:true}).click();
  await page.getByText('Bestehende Systemaktionen',{exact:true}).click();
  await archive.getByRole('button',{name:'Projekt auswählen',exact:true}).click();

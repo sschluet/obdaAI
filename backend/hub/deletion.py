@@ -70,6 +70,21 @@ def plan(
     chat_ids = [c.id for c in chats]
     agent_jobs = list(db.scalars(select(AgentJob).where(AgentJob.conversation_id.in_(chat_ids))))
     hidden_ids = {job.model_conversation_id for job in agent_jobs} - set(chat_ids)
+    # Intent interpretation stores private input in an application-owned hidden
+    # conversation. Only the server-owned, exact parent pointer establishes
+    # ownership; prose, nested keys and malformed legacy snapshots grant none.
+    for hidden_id, snapshot in db.execute(
+        select(models.Conversation.id, models.Run.context_snapshot)
+        .join(models.Run, models.Run.conversation_id == models.Conversation.id)
+        .where(models.Conversation.purpose == "intent")
+    ):
+        try:
+            document = json.loads(snapshot)
+        except (ValueError, TypeError):
+            continue
+        owner = document.get("request_owner") if isinstance(document, dict) else None
+        if isinstance(owner, str) and owner in chat_ids and hidden_id not in chat_ids:
+            hidden_ids.add(hidden_id)
     chats.extend(
         db.scalars(select(models.Conversation).where(models.Conversation.id.in_(hidden_ids)))
     )

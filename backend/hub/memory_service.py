@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from hub.db import Conversation, Memory, MemoryRevision, Message, Project, new_id
 from hub.db_locks import ownership_lock
@@ -128,6 +128,8 @@ def create_app_memory(
     valid_until: float | None = None,
     identifier: str | None = None,
     approved_sensitive: bool = False,
+    replacement_memory_id: str | None = None,
+    replacement_revision: int | None = None,
 ) -> Memory:
     ownership_lock(db)
     if category not in CATEGORIES or fact_type not in FACT_TYPES:
@@ -168,6 +170,29 @@ def create_app_memory(
             raise ValueError("Memory muss ein wörtlicher Nutzerbeleg sein")
         if (sensitivity == "sensitive" or SENSITIVE.search(content)) and not approved_sensitive:
             raise ValueError("Sensible Fakten benötigen ausdrückliche Prüfung")
+    if (replacement_memory_id is None) != (replacement_revision is None):
+        raise ValueError("Ersetzen benötigt eine konkrete Erinnerung mit aktueller Revision")
+    # Decisions and plans are sets of independently true statements, not one value
+    # named 'user'. Stable identity also deduplicates repeated extraction safely.
+    if predicate in {"decision", "plan"} and subject in {"", "user"}:
+        subject = "statement:" + digest(normalized(content))[:32]
+    replacement = None
+    if replacement_memory_id is not None:
+        replacement = db.get(Memory, replacement_memory_id, populate_existing=True)
+        if (
+            not replacement
+            or replacement.storage != "app"
+            or replacement.owner_id != "owner"
+            or replacement.deleted
+            or replacement.status != "active"
+            or replacement.revision != replacement_revision
+            or replacement.project_id != project_id
+            or replacement.category != category
+            or replacement.predicate != predicate
+            or replacement.fact_type != fact_type
+            or (predicate not in {"decision", "plan"} and replacement.subject != subject)
+        ):
+            raise ValueError("Zu ersetzende Erinnerung oder Freigabe inzwischen geändert")
     text = ("# " + title + "\n\n" if title else "") + content.strip()
     matches = list(
         db.scalars(
@@ -199,10 +224,12 @@ def create_app_memory(
     # A known single-valued predicate may never have competing active values.
     conflicts = (
         [match for match in matches if match.fact_type == fact_type]
-        if predicate not in {"other", "interest", "preference", "goal"}
+        if predicate not in {"other", "interest", "preference", "goal", "decision", "plan"}
         else []
     )
-    if conflicts and not explicit_correction:
+    if replacement is not None and replacement not in conflicts:
+        conflicts.append(replacement)
+    if conflicts and not explicit_correction and replacement is None:
         raise ValueError("Widersprüchlicher Fakt benötigt Prüfung")
     identifier = identifier or new_id()
     existing = db.get(Memory, identifier)
@@ -312,7 +339,7 @@ def edit_app_memory(
 
     invalidate_memory(db, row.id)
     predicate = metadata.get("predicate", row.predicate)
-    if predicate not in {"other", "interest", "preference", "goal", ""}:
+    if predicate not in {"other", "interest", "preference", "goal", "decision", "plan", ""}:
         for competing in db.scalars(
             select(Memory).where(
                 Memory.storage == "app",
@@ -361,13 +388,18 @@ def forget_memory(db: Session, row: Memory, *, expected_revision: int) -> None:
         raise ValueError("Memory inzwischen geändert")
     # Explicit forgetting removes derived copies, not the user's original conversation.
     from hub.memory_embeddings import invalidate_memory
-    from hub.memory_summary import ConversationSummary, invalidate_summary
+    from hub.memory_summary import (
+        ConversationSummary,
+        ConversationSummarySegment,
+        invalidate_summary,
+    )
 
     invalidate_memory(db, row.id)
     if row.source_conversation_id:
         invalidate_summary(db, row.source_conversation_id)
     else:
         db.execute(delete(ConversationSummary))
+        db.execute(delete(ConversationSummarySegment))
     for version in db.scalars(select(MemoryRevision).where(MemoryRevision.memory_id == row.id)):
         db.delete(version)
     row.content = row.base_content = row.conflict = ""
@@ -376,6 +408,26 @@ def forget_memory(db: Session, row: Memory, *, expected_revision: int) -> None:
     row.status, row.deleted = "forgotten", True
     row.revision += 1
     # Retain only the one-way digest as a suppression tombstone, never the forgotten text.
+    row.updated = time.time()
+
+
+def promote_memory(db: Session, row: Memory, *, expected_revision: int) -> None:
+    """An explicit human promotion detaches an archived source; no inferred consent."""
+    ownership_lock(db)
+    db.refresh(row)
+    if (
+        row.storage != "app"
+        or row.owner_id != "owner"
+        or row.revision != expected_revision
+        or not memory_info(row)["can_promote"]
+    ):
+        raise ValueError("Erinnerung oder archivierte Quelle inzwischen geändert")
+    preserve_revision(db, row)
+    row.origin = f"promoted:{row.source_message_id}:{row.source_message_revision}"
+    row.source_message_id = row.source_conversation_id = row.source_message_revision = None
+    row.source_sha256 = ""
+    row.cloud_providers, row.label = "[]", "LOCAL_ONLY"
+    row.revision += 1
     row.updated = time.time()
 
 
@@ -419,11 +471,48 @@ def memory_info(row: Memory) -> dict[str, Any]:
     result["cloud_providers"] = json.loads(row.cloud_providers)
     if row.status == "active" and row.valid_until is not None and row.valid_until <= time.time():
         result["status"] = "expired"
+    db = object_session(row)
+    provenance = "independent" if not row.source_message_id else "stale_origin"
+    if db is not None and row.source_message_id:
+        message = db.get(Message, row.source_message_id, populate_existing=True)
+        chat = db.get(Conversation, row.source_conversation_id, populate_existing=True)
+        if (
+            message
+            and chat
+            and message.active
+            and message.role == "user"
+            and message.conversation_id == chat.id
+            and message.revision == row.source_message_revision
+            and digest(message.content) == row.source_sha256
+        ):
+            provenance = "archived_origin" if chat.archived else "current"
+    active = (
+        row.status == "active"
+        and not row.deleted
+        and not row.conflict
+        and row.sha256 == digest(row.content)
+        and (row.valid_from is None or row.valid_from <= time.time())
+        and (row.valid_until is None or row.valid_until > time.time())
+    )
+    if db is not None and row.project_id:
+        project = db.get(Project, row.project_id)
+        active = active and bool(project and not project.archived)
+    result.update(
+        provenance_status=provenance,
+        context_eligible=active and provenance in {"independent", "current"},
+        can_promote=active and provenance == "archived_origin",
+    )
     return result
 
 
 def review_candidate(
-    db: Session, candidate_id: str, *, approve: bool, expected_revision: int
+    db: Session,
+    candidate_id: str,
+    *,
+    approve: bool,
+    expected_revision: int,
+    replacement_memory_id: str | None = None,
+    replacement_revision: int | None = None,
 ) -> Memory | None:
     candidate = db.get(MemoryCandidate, candidate_id, populate_existing=True)
     if (
@@ -449,7 +538,9 @@ def review_candidate(
             sensitivity=candidate.sensitivity,
             confidence=candidate.confidence,
             source=source,
-            explicit_correction=True,
+            explicit_correction=False,
+            replacement_memory_id=replacement_memory_id,
+            replacement_revision=replacement_revision,
             approved_sensitive=True,
             project_id=chat.project_id if chat and candidate.category == "project" else None,
         )

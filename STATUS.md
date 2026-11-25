@@ -1,4 +1,311 @@
-# obdaAI — Status 22.11.2026
+# obdaAI — Status 25.11.2026
+
+
+## Bedienung und Agentenausführung — installiert und lesend live geprüft
+
+`dd75187` ist auf der Test-VM installiert. Die vollständige
+[CI 45643114017](https://github.com/sschluet/obdaAI/actions/runs/45643114017)
+bestand mit **4.224 Tests und sechs optionalen Calc-Skips**, einschließlich
+Browser-, Container-, Isolations-, Typ- und Secretprüfungen. Alle neun Images,
+beide APIs und die installierten Quellhashes stimmen mit der geprüften Lieferung
+überein. Schema 0050 bleibt unverändert; eine frische verschlüsselte Sicherung
+und die Originalkonfiguration sind erhalten. Dies ist kein Entschlüsselungs-
+oder Wiederherstellungstest.
+
+[Architektur und Ausgangsbefunde](docs/agent-experience.md).
+
+- Gesprächstitel entstehen lokal mit der ersten Benutzernachricht, auch bei
+  fehlgeschlagenen Antworten und Agentenaufträgen. Geeignete alte Standardtitel
+  werden beim Laden repariert. Die Reparatur und ein neuer Auto-Chat sind über
+  die echte API geprüft; manuelle Titel und übrige Originaldaten bleiben erhalten.
+- Einordnung und tatsächliche Arbeitsphasen erscheinen direkt im Gespräch.
+  Abbruch, Rückfragen, Freigaben und lesende Zustandsprüfung sind erreichbar.
+  Erfolgreiche Antworten behalten nur eine eingeklappte Detailszeile.
+- Die mobile Darstellung ist kompakter. Der zusätzliche „Systemauftrag“ liegt
+  im Plusmenü; gewöhnliche Integrationsfragen benötigen diesen Schalter nicht.
+- Kleinere aktive HTTP-Werkzeuge, interne Formatsteuerung und begrenzte
+  Korrekturen erhalten Originalschema, endgültige Rechteprüfung und dauerhafte
+  Absichten. Wiederholte erfolgreiche Abfragen ohne Fortschritt werden begrenzt.
+- Gebundene Entitätenziele benötigen dieselbe vollständig beobachtete Zielgruppe
+  und frische Nachbelege. Ein Backup oder einzelner Effekt gilt nicht als
+  vollständiger Updateerfolg. Ausdrückliche Backup-Voraussetzungen verlangen
+  zuvor beobachtete geeignete Statusfelder; Dienstaufrufe sind keine lesbaren
+  Prüfnachweise. Bekannte ungültige Prüfschritte erhalten begrenztes internes
+  Korrekturfeedback; Rechtefehler werden dadurch nicht wiederholt.
+
+**Acht echte lesende Integrationsanfragen bestehen auf diesem Release:** Lampenübersicht und
+frischer Einschaltzustand, freie HA-Updateübersicht mit tatsächlicher nativer
+Modellplanung, Paperless-Übersicht und Inhalt des zuerst beobachteten Dokuments,
+Proton-Tagesmails und Gesendet-Abgleich sowie SSH-Zugriff. Zusätzlich besteht der
+normale Auto-Chat-Einstieg mit automatischer Verbindungswahl und gespeichertem
+Titel, ohne erzwungenen Systemmodus oder vom Test eingespritzte Lesebegrenzung.
+Damit bestehen insgesamt neun reale Leseanfragen. Der Server leitet den lesenden
+Umfang selbst ab. Laufende Phasen für Einplanung,
+Planung und Lesen sowie der Abschluss wurden über die echte API beobachtet.
+Browserdarstellung und verzögerte Oberflächenabläufe sind synthetisch geprüft.
+Eigene QA-Sitzungen sind entfernt und eigene Chats archiviert; andere Originaldaten
+und Konfiguration blieben erhalten. Es wurden keine Zieländerungen ausgeführt.
+
+Die Leseprüfungen belegen Quellenabruf, Zuordnung und begrenzte beleggebundene
+Antworten. Paperless belegt keine vollständige fachliche Bewertung jeder
+Zusammenfassung. Ein positiver Mail-Antwortbezug wurde im aktuellen begrenzten
+Abgleich nicht beobachtet; fehlende Beziehungen bleiben unbekannt. Eine
+HA-Updateübersicht aus Update-Entitäten bestätigt nicht sämtliche denkbaren
+Updatequellen einer Installation.
+
+**Komplexe autonome Verwaltung bleibt offen.** Die isolierte Administrationsprobe
+mit dem tatsächlich eingesetzten lokalen Modell scheitert weiterhin: sieben
+Modellaufrufe, vier erfolgreiche Abfragen, wiederholte ungeeignete
+Verifikationsvorschläge und keine Effekte. Die begrenzte Korrektur verhindert den
+früheren unmittelbaren technischen Abbruch, beweist aber keine ausreichende
+allgemeine Planerqualität. Reale HA-Updates, umfassende Konfigurationsänderungen
+und Wiederherstellung sind nicht als abgenommen ausgewiesen. Die App ist keine
+vollständig abgenommene V1.
+
+## Beleggebundene HA-Abfragen — lesend live geprüft
+
+Der vorherige Release `a7695cb` war nach vollständiger [CI 45495642205](https://github.com/sschluet/obdaAI/actions/runs/45495642205)
+auf der Test-VM installiert. Lokal bestanden 3.986 Tests; die vollständige CI
+bestand mit 3.980 Tests und sechs optionalen Calc-Skips einschließlich Browser-,
+Container-, Isolations- und Secretprüfungen. Alle neun installierten Images, beide
+APIs, installierte Quellhashes, Schema 0050 und der Erhalt ursprünglicher
+Daten/Konfiguration sind geprüft. Eine frische verschlüsselte Sicherung liegt vor;
+keine Datenbankmigration war erforderlich. Dies ist kein Wiederherstellungstest.
+
+Die freie reale Frage nach ausstehenden HA-Updates besteht auf diesem Release:
+vollständige aktuelle Zustandsbelege, alle gemeldeten verfügbaren Updates
+enthalten, keine erfundenen Kennungen oder behaupteten Änderungen. Der Planer
+wählt seine Werkzeuge selbst. Der native Entitätenabruf erzeugt geprüfte Argumente
+für den bestehenden HTTP-Leseweg. Ein beleggebundener Abschluss verhindert
+unbelegte Nullmeldungen und benötigt für reine Updateübersichten keinen weiteren
+Modellaufruf. Metadaten allein erfüllen keine Anforderung an aktuelle Zustände.
+Die Prüfung belegt den vollständigen abgerufenen Bestand an Update-Entitäten,
+keine Vollständigkeit aller denkbaren Updatequellen einer Installation.
+
+Nach verifizierten Effekten und verbrauchten Änderungsbudgets angebotene Werkzeuge
+sowie kompakte Belegsichten begrenzen den Kontext, ohne offene Wirkungsprüfungen
+oder aktuelle Ausführungsgrenzen zu umgehen. Ungültige Filter werden vor Versand
+abgewiesen; begrenzte interne Korrekturen erhalten den ursprünglichen Auftrag.
+Aktuelle Rechte, Originalbelege und dauerhafte Absichten bleiben verbindlich.
+
+Auf dem direkt vorausgehenden Release `712ac60` bestanden außerdem sieben echte
+lesende Fragen: SSH-Zugriff; Paperless-Übersicht und Dokumentinhaltabruf;
+Proton-Tagesübersicht und Gesendet-Abgleich; HA-Lampenübersicht und frischer
+Einschaltzustand. Originaldaten, Konfiguration und Bereinigung sind geprüft.
+Die Paperless-Prüfung belegt Abruf und Quellenzuordnung, keine vollständige
+fachliche Prüfung jeder Zusammenfassung. Ein positiver Mail-Antwortbezug wurde
+mangels beobachtetem Treffer nicht live belegt; fehlende Beziehungen bleiben
+unbekannt. Die neue Diagnosekorrektur verändert diese Ausführungspfade nicht;
+diese früheren Fälle werden nicht als neuer Gesamtlauf auf `a7695cb` ausgegeben.
+
+Der separate Provider-Planertest nutzt jetzt denselben begrenzten Kontextaufbau,
+Bootstrap-Werkzeugdialog und Goal-Evidence wie die Runtime. Damit ist der native
+Entitätenabruf auch im synthetischen Test erreichbar. Sichere feste Fehlerphasen
+und -kategorien enthalten keine Modelltexte oder Secrets. Seine reale neue
+persistierte API-Probe erkennt den Intent, scheitert aber weiterhin bei der
+nativen Werkzeugauswahl (`selection_mismatch`). Es folgt kein Kompatibilitätswechsel.
+Der fehlgeschlagene Test bleibt erhalten; ursprüngliche Zeilen und das
+Providerprofil sind unverändert, die eigene Sitzung ist entfernt. Der Test führt
+keine echte Integrationsaktion aus. Eine zusätzliche isolierte lokale Probe
+zeigte denselben Auswahlfehler. Damit ist die Diagnose technisch angeglichen und
+ihre Fehleraufzeichnung geprüft, die allgemeine lokale Planerabnahme aber
+weiterhin nicht bestanden. Erfolgreiche einzelne Leseabläufe ersetzen diese nicht.
+
+Keine HA-Updates oder Konfigurationsänderungen wurden in dieser Abnahme ausgeführt.
+Allgemeine autonome Verwaltung, echte HA-Schreibabläufe und Wiederherstellung
+bleiben offen. Die bestehenden zielgebundenen Regeln, dauerhaften Absichten,
+Freigaben, Nachprüfungen und das Verbot blinder Wiederholung bleiben erhalten.
+
+## Frühere geprüfte Lieferung — f07dd44 / Schema 0050
+
+**f07dd44** war die vorausgegangene Funktionslieferung auf der Test-VM. Exakte vollständige
+[CI 45129676744](https://github.com/sschluet/obdaAI/actions/runs/45129676744):
+**3.511 bestanden**, sechs optionale Calc-Skips; vollständige Browserprüfungen,
+Secret-Scan, Container, isolierte Werkzeugdienste und App-Tree-Beleg erfolgreich.
+
+Neue Mailübersichten zeigen Betreff, Absender und lokal aufgelöste Zeit statt
+pauschaler technischer Fußtexte. Zeitlich nicht zuordenbare Nachrichten werden
+nicht als Treffer angezeigt; Belege bleiben erhalten. Die gespeicherte Formatversion
+bewahrt alte Mail-Folgefragen ohne Umschreiben vorhandener Antworten.
+„Details Abarbeitung“ ist standardmäßig eine kompakte eingeklappte Zeile, auch bei
+laufenden Aufträgen; Freigaben und Rückfragen sind gezielt erreichbar. Mobile
+Chatleisten reagieren auf tatsächliches Abwärts-/Aufwärtsscrollen; Streaming und
+Layoutänderungen verstecken die Bedienung nicht automatisch.
+
+Projekte erhalten Auto oder ein festes konfiguriertes Modell. Lokale Antworten,
+Aufgabenanalysen, Aufgabenentwürfe, Use Cases und Agentenplanung verwenden diese
+Wahl. Bestehende Aufgaben übernehmen Modellwechsel beim nächsten Lauf ohne
+Spezifikationsänderung; globale Standards bleiben erhalten. Projekt-/Anbieteränderungen
+werden vor dem tatsächlichen Versand nach einer Wartephase erneut geprüft.
+**Cloud-Präferenzen sind speicherbar, aber ohne ausdrückliche Projektfreigabe gesperrt.**
+Die Freigabefrage zu Projektbeschreibung, Anweisungen und ausgewählten Dokumenten
+ist noch offen. Historie, Memory, Quellen und Integrationsrechte werden nicht
+implizit freigegeben; eine gesperrte feste Cloudwahl erhält keinen lokalen Ersatz.
+
+Vor Umschaltung wurde eine frische verschlüsselte Sicherung mit geprüften
+Ciphertext-Hashes erstellt. Migration 0050 ergänzte ausschließlich
+`projects.model_policy` mit `{}`. Alle bisherigen Tabellenwerte, Projekt-IDs und
+statischen Konfigurationen blieben erhalten; neue Vorgaben wurden getrennt geprüft.
+Neun exakte laufende Image-IDs, installierte Quellbytes und beide APIs wurden
+verifiziert. Kein Decryptions-/Restoretest ist damit behauptet.
+
+| Reale Abnahme | Ergebnis |
+| --- | --- |
+| HA-Inventar und Folgefrage | Erwartete Entitäten und aktuelle Quellenbindung bestanden. |
+| Paperless-Übersicht und Inhaltsfolgefrage | Beobachtete Dokumentliste und tatsächlicher Inhalt der ersten belegten Quelle geprüft. |
+| Proton-Tagesübersicht und Antwortstatusfolgefrage | Kurze Formatversion 2 und rekonstruierte Auswahl stimmen mit den Abrufen überein; fehlende Antwortbelege bleiben unbekannt. |
+| SSH | Feste authentifizierte Leseprüfung erfolgreich. |
+| Eigenes synthetisches Projekt: Chat und ai.analyze-Aufgabe | Tatsächliche lokale Modell-/Anbieter-/Revisionsbindung und Ergebnis geprüft. Globale Modellstandards und ursprüngliche Projektvorgaben blieben unverändert. |
+
+Alle sieben Integrationsaufträge bestanden ohne Rückfrage, Cloud, Recherche oder
+Zieländerung. Datenerhalt, Konfigurationsvergleich und eigene QA-Bereinigung bestanden
+jeweils. Eigene Projektmodell-Testobjekte wurden archiviert, die Prüfsitzung entfernt.
+Der dort gewählte lokale Anbieter war zugleich der bestehende globale Standard;
+eine abweichende Anbieterwahl ist durch Mock-Transporttests, nicht live, belegt.
+Positive Gesendet-Antwortbeziehungen und vollständige Postfachabdeckung wurden im
+aktuellen Proton-Lauf nicht nachgewiesen. Die zweistufige lokale Planerprüfung
+bestand ohne Cloud oder Integrationstools.
+
+Der erste lokale Gesamtlauf fand vier Gegenfälle (3.513 bestanden) bei engem
+Mailkontext und der genauen Meldung einer früheren Projektsperre. Nach Korrektur
+bestanden 394 gezielte Prüfungen. Der erste CI-Lauf auf 1cf7374 scheiterte an einem
+mehrdeutigen alten Icon-Testselektor und wurde vom korrigierten vollständigen Lauf
+abgelöst; sein Python-Teillauf ist kein Full-CI-Beleg. Der Icon-Test und alle späteren
+Browserabläufe bestanden zuvor auch lokal. Die Mailanweisung hält weiterhin das
+bisherige Bytebudget ein. Neue öffentliche Screenshots sind ausschließlich synthetisch.
+
+Die lesende Browserabnahme auf dem aktuellen Release bestand Integrationsdialoge,
+Fokus/Escape, Betriebsdiagnose und Desktop-/320-Pixel-Layout ohne Chat-, Modell-
+oder Zielaktionen; die eigene Sitzung wurde entfernt. Die dynamische mobile
+Chatbedienung ist zusätzlich durch synthetische Browserabläufe geprüft, nicht an
+einem physischen Telefon. Abschließend waren beide APIs und alle neun Images
+gesund, keine Systemdienste fehlgeschlagen und Backup sowie Timer gesund.
+
+Weitere Architektur und Grenzen: [docs/assistant-stabilization.md](docs/assistant-stabilization.md).
+Reale Gmail-/Drive-/UniFi-Abnahme, Cloud-Projektverarbeitung, allgemeine administrative
+Abdeckung und breite Promptzuverlässigkeit bleiben offen. Keine vollständige V1.
+
+## Vorherige geprüfte Lieferung — 78617e2 / Schema 0049
+
+Der vollständig geprüfte Commit **78617e2** ist auf der Test-VM installiert.
+Exakte [CI 45096515809](https://github.com/sschluet/obdaAI/actions/runs/45096515809):
+**3.484 bestanden**, sechs optionale Calc-Skips; vollständige Browserprüfungen,
+Secret-Scan, Container und beide isolierten Werkzeugdienste sowie App-Tree-Beleg
+bestanden. Die drei veralteten Paperless-Modellfixtures aus dem vorherigen
+fehlgeschlagenen Lauf wurden korrigiert; sein Fehlerbeleg bleibt erhalten.
+
+Vor Umschaltung entstand eine frische verschlüsselte Sicherung mit geprüften
+Ciphertext-Hashes. Der Korrekturrollout benötigte keine Migration. Alle neun
+laufenden Image-IDs, installierte Backendbytes, beide APIs, bisherige Daten und
+statische Konfigurationen wurden erfolgreich geprüft. Kein Decryptions- oder
+Restoretest ist damit behauptet.
+
+| Reale Leseabnahme auf 78617e2 | Ergebnis |
+| --- | --- |
+| HA-Inventar und „Welche davon sind an?“ | Erwartete Entitäten aus frischen Zuständen genannt; Folgefrage bleibt an den gültigen vorherigen Quellen gebunden. |
+| Paperless-Übersicht und Inhaltsfolgefrage | Beobachtete Dokument-IDs/Titel stehen im Antworttext; tatsächlicher Inhalt des ersten zuvor beobachteten Dokuments gelesen und Quelle gebunden. |
+| Proton-Tagesübersicht und Antwortstatusfolgefrage | Zeitfenster und angezeigte Auswahl an Abrufe gebunden; fehlender Antwortbeleg bleibt unbekannt. |
+| SSH-Zugriff | Feste authentifizierte Inspektion erfolgreich. |
+
+Alle sieben Aufträge endeten ohne Rückfrage, Cloud, Recherche oder Zieländerung.
+Für jeden Fall bestanden Datenerhalt, Konfigurationsvergleich, Archivierung
+lediglich eigener QA-Chats und Entfernung der eigenen Prüfsitzung. Die Abnahme
+belegt begrenzte Quellen-/Abrufabdeckung, keine vollständige semantische
+Korrektheit jeder Zusammenfassung. Positive Gesendet-Antwortbeziehungen wurden
+im aktuellen Proton-Lauf nicht nachgewiesen; die leere Auswahl ist durch eigene
+Runtime-/Widerrufsregressionen abgedeckt, im aktuellen realen Lauf jedoch nicht
+aufgetreten. Reale Gmail-/Drive-/UniFi-Abnahme bleibt offen.
+
+Die gemeinsame Architektur und Bedienänderungen sind in
+[docs/assistant-stabilization.md](docs/assistant-stabilization.md) beschrieben.
+Die nachstehenden Zwischenstände und Gegenbeispiele bleiben zur Nachvollziehbarkeit
+erhalten. Insbesondere sind reine Inhaltsvergleiche mit dem konfigurierten lokalen
+Modell noch nicht zuverlässig: Zwei echte synthetische Proben wurden fälschlich als
+Administration eingeordnet und sicher vor Werkzeugzugriffen abgewiesen. Das zählt
+nicht als Zielerfüllung. Kein universeller 98-Prozent- oder vollständiger V1-Nachweis.
+
+Die neue native Planerprüfung bestand beide lokalen synthetischen Modellstufen
+über den echten Provider-Testweg, ohne Integration oder Cloud aufzurufen. Ein
+lesender Browser-Smoke auf dem aktuellen Release bestand Integrationsdialoge
+(Proton/Gmail/Drive), Fokus/Escape, Betriebsdiagnose sowie Desktop-/320-Pixel-Layout.
+Dabei wurden weder Chats noch Modell- oder Zielaktionen ausgelöst; die eigene
+Prüfsitzung wurde entfernt. Diese begrenzte UI-Abnahme ersetzt nicht die vollständige
+synthetische Browser-CI. Abschließend: neun exakte Images, beide APIs gesund,
+keine fehlgeschlagenen Systemdienste und Backup samt Timer gesund.
+
+## Vorherige Lieferung — gemeinsame Stabilisierung und Live-Nachbesserung
+
+Der Entwicklungszweig `codex/assistant-stabilization` ergänzt gemeinsame
+Anfrageinterpretation, auftragsgebundene Toolgrammatik und Abschlussbelege,
+Inferenzkapazität/-zeitgrenzen, Memory-Faktidentität, dauerhafte Summarysegmente,
+Aufgaben-Kontext, Entwurfsschutz und eine getrennte Betriebsdiagnose.
+Siehe [Architektur und Abdeckung](docs/assistant-stabilization.md).
+
+**c5552bf / Schema 0049** ist auf der Test-VM installiert. Exakte vollständige
+[CI 45087132188](https://github.com/sschluet/obdaAI/actions/runs/45087132188):
+3.434 bestanden, sechs optionale Calc-Skips, vollständige Browserprüfungen und
+alle Pflichtjobs samt App-Tree-Beleg erfolgreich. Lokal bestand ein Zwischenstand
+3.438 PostgreSQL-/Pythonprüfungen; die letzte Routinggrenze und Fixturekorrektur
+wurden danach gezielt geprüft. Der erste CI-Lauf auf 2d3762b hatte einen
+inkompatiblen synthetischen Agentenprovider aufgedeckt und wurde nach dessen
+Browserfehler durch den korrigierten vollständigen Lauf ersetzt. Seine übrigen
+Teiljobs gelten nicht als vollständiger Nachweis.
+
+Vor der Umschaltung wurde eine frische verschlüsselte Sicherung mit geprüften
+Ciphertext-Hashes erstellt; dies war kein Decryptions- oder Restoretest. Die
+additiven Migrationen 0048/0049 liefen erfolgreich. Danach bestanden der Vergleich
+aller bisherigen Daten und statischen Konfigurationen, die Prüfung aller neun
+laufenden Image-IDs sowie beide API-Gesundheitsprüfungen.
+
+Die anschließende reale Integrationsabnahme zeigte weitere offene Fälle:
+
+| Abnahme auf c5552bf | Beobachtung |
+| --- | --- |
+| HA-Inventar | Alle in der konkreten Abfrage beobachteten Lampen wurden genannt. |
+| HA-Folgefrage | Nicht bestanden: die bekannte Kohorte wurde unnötig semantisch neu eingeordnet; anschließend scheiterte die generische Belegansicht vor der Modellplanung. |
+| Paperless | Echte neutrale Suche und korrekter Scopeblock, aber keine brauchbare Dokumentliste im eigentlichen Antwortkörper. Die Inhaltsfolgefrage wurde nach dieser fehlgeschlagenen Vorbedingung nicht gestartet. |
+| Proton | Erste begrenzte Übersicht belegt; Folgefrage nicht bestanden, weil leere angezeigte Auswahl und fehlende Belege nicht sauber getrennt wurden. |
+| SSH | Feste authentifizierte Zugriffsprüfung bestanden. |
+
+Datenerhalt, statischer Konfigurationsvergleich, Archivierung ausschließlich eigener
+QA-Chats und Entfernung der eigenen Prüfsitzungen bestanden für jeden dieser Fälle.
+Kein Cloudaufruf oder Schreibzugriff auf angebundene Systeme war Teil der Abnahme.
+Die gescheiterten Prüfungen bleiben erhalten und werden nicht als Erfolg gewertet.
+
+Die lokale Nachbesserung bindet den bekannten HA-Folgeauftrag an aktuell validierte
+Referenzen, prüft das Bytebudget nach tatsächlichem JSON-/UTF-8-Encoding, ergänzt
+einen expliziten `document_inventory`-Antwortvertrag mit faktischer ID-/Titelliste
+und behandelt eine belegte leere Mailauswahl ohne neuen Postfachscan. Inhalt,
+Analyse, fehlende oder widerrufene Referenzen bleiben davon getrennt. Für diese
+Nachbesserung wurden gezielte Regressionen, erneute Modellabnahme, exakte CI
+und ein eigener kontrollierter Rollout ausgeführt; der aktuelle Nachweis steht oben.
+Der erste vollständige Korrekturlauf (034754a, CI 45094870123) bestand
+3.481 Pythonprüfungen; drei ältere Paperless-Modellfixtures beantworteten die
+neue Interpretation noch mit Werkzeugentscheidungen. Nach Anpassung dieser
+Fixtures ist erneut die vollständige CI erforderlich. Browser- und übrige
+Pflichtprüfungen dieses fehlgeschlagenen Laufs bestanden; er ist kein Gesamtbeleg.
+Das Schema bleibt 0049. Vorhandene Daten und alle neuen Spalten/Tabellen werden
+beim Korrekturrollout vollständig erhalten.
+
+Die vorherige echte lokale Laufzeitprüfung an isolierten synthetischen Zielsystemen
+bestand vier Fälle in rund 208 Sekunden: Sensorliste, Vertragssuche,
+quellgebundener Inhaltsabruf und leere Suche. Alle neun Modellaufrufe und fünf
+Werkzeuglesezugriffe blieben lokal, ohne produktiven Datenbank-Schreibzugriff.
+Ein erneuter Lauf auf der nachgebesserten Backendfassung bestand dieselben vier
+unveränderten Fälle in rund 239 Sekunden (elf Modellaufrufe, fünf Lesezugriffe).
+Diese Vier-Fall-Nachweise haben die oben genannten größeren bzw. leeren
+realen Kohorten nicht vollständig abgedeckt. Ein zusätzlicher echter lokaler
+Modelllauf bestand die zehn Dokumente umfassende Inventarabfrage mit vier
+synthetischen Verbindungskandidaten einschließlich aller IDs/Titel und korrekter
+Seitengrenzen. Zwei zusätzliche Inhalts-/Mehrziel-Vergleichsproben wurden mit
+`ValueError` abgewiesen und gelten ausdrücklich als nicht bestanden. Eine getrennte
+Diagnose belegt: Das lokale Modell wählte `admin`, verlangte jedoch ausschließlich
+Inhaltslesebelege. Der Vertragsvalidator verweigerte den widersprüchlichen Auftrag
+vor jedem Werkzeugaufruf. Die sichere Ablehnung zählt nicht als Zielerfüllung. Die separate Interpretationsevaluation erreichte
+auf einem Zwischenstand 20/23, darunter acht von acht zurückgehaltenen Fällen;
+das ist keine Erfolgsquote vollständiger Aufgaben. Ein breiter 98-Prozent-Nachweis,
+reale Gmail-/Drive-/UniFi-Abnahme und allgemeine administrative Abdeckung bleiben
+offen. Die Anwendung wird nicht als vollständige V1 bezeichnet.
 
 ## 22.11.2026 — Erweiterte Prüfung der Integrationsabfragen
 
