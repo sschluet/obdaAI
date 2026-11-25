@@ -1,9 +1,9 @@
 {
   "updated": "2026-11-25",
-  "applicationCommit": "a7695cb",
+  "applicationCommit": "dd75187",
   "schema": "0050",
-  "tests": 3980,
-  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45495642205",
+  "tests": 4224,
+  "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45643114017",
   "screenshots": [
     {
       "id": "live-activity-mobile",
@@ -364,12 +364,12 @@
         {
           "title": "Mehr Platz im mobilen Chat",
           "status": "limited",
-          "description": "Laufende, wartende und fehlgeschlagene Aufträge zeigen ihren Zustand direkt am Chat. Nach einer erfolgreichen Antwort bleibt nur eine geschlossene Zeile „Details Abarbeitung“. Mobile Chatleisten weichen beim Lesen aus; optionale Systemaufträge liegen im Plus-Menü. Implementiert und synthetisch im Browser geprüft; diese neue Oberfläche ist noch nicht auf der Test-VM abgenommen."
+          "description": "Laufende, wartende und fehlgeschlagene Aufträge zeigen ihren Zustand direkt am Chat. Nach einer erfolgreichen Antwort bleibt nur eine geschlossene Zeile „Details Abarbeitung“. Mobile Chatleisten weichen beim Lesen aus; optionale Systemaufträge liegen im Plus-Menü. Auf der Test-VM installiert; mobile Darstellung und verzögerte Oberflächenabläufe synthetisch im Browser geprüft. Echte lesende API-Läufe ergänzen diese Darstellungstests."
         },
         {
           "title": "Sichtbarer Auftragsstatus und gezielte nächste Schritte",
           "status": "limited",
-          "description": "Zwischenstatus für Einordnung, Planung, Lesen, Änderungen und Verifikation erscheinen unmittelbar im Chat und bei Aufgaben. Rückfragen, Freigaben und Abbruch bleiben erreichbar; bei unklarer Wirkung ist eine ausdrückliche rein lesende Zustandsprüfung möglich. Kein automatisches Wiederholen von Änderungen und keine erfundenen Fortschrittsprozente. Implementiert und mit synthetischen Browserabläufen einschließlich verzögerter Antworten geprüft; neue UI noch nicht live auf der Test-VM abgenommen."
+          "description": "Zwischenstatus für Einordnung, Planung, Lesen, Änderungen und Verifikation erscheinen unmittelbar im Chat und bei Aufgaben. Rückfragen, Freigaben und Abbruch bleiben erreichbar; bei unklarer Wirkung ist eine ausdrückliche rein lesende Zustandsprüfung möglich. Kein automatisches Wiederholen von Änderungen und keine erfundenen Fortschrittsprozente. Auf der Test-VM installiert: Einplanung, Planung, Lesen und Abschluss über echte lesende API-Läufe beobachtet. Änderungs-, Freigabe- und Fehleransichten zusätzlich synthetisch im Browser geprüft."
         },
         {
           "title": "Gemeinsame Stabilisierung von Planung und Kontext",
@@ -388,7 +388,7 @@
         },
         {
           "title": "Titel, Suche und Verlauf",
-          "description": "Lokale automatische Titel, manuelle Umbenennung, deutsche Volltextsuche und Archivierung sorgen für Orientierung. Neue Anfragen erhalten unmittelbar einen privaten lokalen Titel, auch während langer Antworten oder bei Fehlern. Diese Erweiterung ist implementiert und gegen echte synthetische API-/Streamingabläufe geprüft, noch nicht auf der Test-VM ausgerollt.",
+          "description": "Lokale automatische Titel, manuelle Umbenennung, deutsche Volltextsuche und Archivierung sorgen für Orientierung. Neue Anfragen erhalten unmittelbar einen privaten lokalen Titel, auch während langer Antworten oder bei Fehlern. Auf der Test-VM installiert: geeignete alte Standardtitel über die echte API repariert, normale automatische Verbindungswahl und Titelbildung eines neuen Auto-Chats geprüft. Manuelle Titel und übrige Originaldaten bleiben erhalten; Browser- und Fehlerabläufe zusätzlich synthetisch geprüft.",
           "status": "live"
         },
         {
@@ -741,7 +741,7 @@
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen, auch mit höflichem Präfix, verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Lampenübersicht und Zustandsfolgefrage sind mit echten freigegebenen Abrufen ohne zusätzliche Bestätigung geprüft. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen. Neue typisierte Ziel- und Ergebnisangaben sowie sichtbare Arbeitsphasen sind implementiert und synthetisch geprüft. Aktuelle allgemeine Planungsproben scheitern weiterhin trotz einzelner erfolgreicher Leseaufrufe; daraus folgt keine bestätigte Verwaltung oder Updateausführung.",
+          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen, auch mit höflichem Präfix, verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Lampenübersicht und Zustandsfolgefrage sind mit echten freigegebenen Abrufen ohne zusätzliche Bestätigung geprüft. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen. Typisierte Ziel- und Ergebnisangaben sowie sichtbare Arbeitsphasen sind installiert und automatisiert geprüft. Die freie Updateübersicht besteht mit tatsächlicher nativer Planung und vollständigen aktuellen Zustandsbelegen. Komplexe Administrationsproben scheitern weiterhin; daraus folgt keine bestätigte Updateausführung.",
           "status": "limited"
         },
         {
@@ -791,7 +791,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen behalten vollständig typisierte Argumente, Zielregeln, dauerhafte Absichten und Nachprüfungen. Neue typisierte Ergebnisanforderungen, sichtbare Arbeitsphasen und verständliche Stopps sind implementiert und automatisiert beziehungsweise synthetisch geprüft. Frühere begrenzte HA-, SSH- und Paperless-Leseabnahmen bleiben getrennte Einzelfallbelege. Aktuelle allgemeine Modellproben scheitern weiterhin bei der Werkzeugauswahl beziehungsweise dem Abschluss, auch nach einzelnen erfolgreichen Leseaufrufen; die neue Oberfläche ist noch nicht auf der Test-VM abgenommen. Daraus werden weder allgemeine Planerqualität noch umfassende autonome HA-Konfiguration oder erfolgreiche Updates abgeleitet. Unklare Änderungen werden nicht automatisch wiederholt.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen behalten typisierte Argumente, Zielregeln, dauerhafte Absichten und Nachprüfungen. Sichtbare Arbeitsphasen, lokale Gesprächstitel und kompakte mobile Details sind auf der Test-VM installiert und im Browser synthetisch geprüft; echte lesende API-Läufe belegen automatische Auswahl, Quellenabruf und Fortschrittsphasen. Die komplexe Administrationsprobe mit dem eingesetzten lokalen Modell scheitert weiterhin trotz erfolgreicher Leseaufrufe. Daraus werden weder allgemeine Planerqualität noch umfassende autonome HA-Konfiguration oder erfolgreiche Updates abgeleitet. Unklare Änderungen werden nicht automatisch wiederholt.",
           "status": "limited"
         }
       ]

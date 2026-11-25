@@ -1,51 +1,70 @@
 # obdaAI — Status 25.11.2026
 
 
-## Laufende Überarbeitung von Bedienung und Agentenausführung
+## Bedienung und Agentenausführung — installiert und lesend live geprüft
 
-Die vorhandene Chat-, Aufgaben- und Agentenarchitektur wird erweitert; persönliche
-Daten, Originalbelege und Berechtigungsgrenzen bleiben erhalten. Die Änderungen
-sind derzeit lokal implementiert und noch nicht auf der Test-VM installiert.
+`dd75187` ist auf der Test-VM installiert. Die vollständige
+[CI 45643114017](https://github.com/sschluet/obdaAI/actions/runs/45643114017)
+bestand mit **4.224 Tests und sechs optionalen Calc-Skips**, einschließlich
+Browser-, Container-, Isolations-, Typ- und Secretprüfungen. Alle neun Images,
+beide APIs und die installierten Quellhashes stimmen mit der geprüften Lieferung
+überein. Schema 0050 bleibt unverändert; eine frische verschlüsselte Sicherung
+und die Originalkonfiguration sind erhalten. Dies ist kein Entschlüsselungs-
+oder Wiederherstellungstest.
+
 [Architektur und Ausgangsbefunde](docs/agent-experience.md).
 
 - Gesprächstitel entstehen lokal mit der ersten Benutzernachricht, auch bei
   fehlgeschlagenen Antworten und Agentenaufträgen. Geeignete alte Standardtitel
-  werden beim Laden repariert; manuelle Namen bleiben erhalten.
+  werden beim Laden repariert. Die Reparatur und ein neuer Auto-Chat sind über
+  die echte API geprüft; manuelle Titel und übrige Originaldaten bleiben erhalten.
 - Einordnung und tatsächliche Arbeitsphasen erscheinen direkt im Gespräch.
   Abbruch, Rückfragen, Freigaben und lesende Zustandsprüfung sind erreichbar.
   Erfolgreiche Antworten behalten nur eine eingeklappte Detailszeile.
 - Die mobile Darstellung ist kompakter. Der zusätzliche „Systemauftrag“ liegt
   im Plusmenü; gewöhnliche Integrationsfragen benötigen diesen Schalter nicht.
-- Das Modell erhält kleinere HTTP-Werkzeuge für Lesen, Ändern und Projektion.
-  Originalschema, endgültige Rechteprüfung und dauerhafte Absichten gelten
-  weiterhin. Wiederholte Abfragen und Formatkorrekturen sind begrenzt.
+- Kleinere aktive HTTP-Werkzeuge, interne Formatsteuerung und begrenzte
+  Korrekturen erhalten Originalschema, endgültige Rechteprüfung und dauerhafte
+  Absichten. Wiederholte erfolgreiche Abfragen ohne Fortschritt werden begrenzt.
 - Gebundene Entitätenziele benötigen dieselbe vollständig beobachtete Zielgruppe
-  und frische Nachbelege. Ein Backup, ein einzelner Effekt oder eine verkleinerte
-  Ergebnisliste gelten nicht als vollständiger Updateerfolg.
+  und frische Nachbelege. Ein Backup oder einzelner Effekt gilt nicht als
+  vollständiger Updateerfolg. Ausdrückliche Backup-Voraussetzungen verlangen
+  zuvor beobachtete geeignete Statusfelder; Dienstaufrufe sind keine lesbaren
+  Prüfnachweise. Bekannte ungültige Prüfschritte erhalten begrenztes internes
+  Korrekturfeedback; Rechtefehler werden dadurch nicht wiederholt.
 
-Die erste Überarbeitung `0709f84` besteht die vollständige
-[CI 45636540557](https://github.com/sschluet/obdaAI/actions/runs/45636540557):
-4.192 Tests bestanden, sechs optionale Calc-Prüfungen übersprungen; Browser-,
-Container-, Isolations- und Secretprüfungen bestanden. Der lokale Gesamtlauf vor
-der letzten kleinen Decoderkorrektur bestand mit 4.179 Tests. Diese Evidenz gilt
-jeweils für den angegebenen Quellstand.
+**Acht echte lesende Integrationsanfragen bestehen auf diesem Release:** Lampenübersicht und
+frischer Einschaltzustand, freie HA-Updateübersicht mit tatsächlicher nativer
+Modellplanung, Paperless-Übersicht und Inhalt des zuerst beobachteten Dokuments,
+Proton-Tagesmails und Gesendet-Abgleich sowie SSH-Zugriff. Zusätzlich besteht der
+normale Auto-Chat-Einstieg mit automatischer Verbindungswahl und gespeichertem
+Titel, ohne erzwungenen Systemmodus oder vom Test eingespritzte Lesebegrenzung.
+Damit bestehen insgesamt neun reale Leseanfragen. Der Server leitet den lesenden
+Umfang selbst ab. Laufende Phasen für Einplanung,
+Planung und Lesen sowie der Abschluss wurden über die echte API beobachtet.
+Browserdarstellung und verzögerte Oberflächenabläufe sind synthetisch geprüft.
+Eigene QA-Sitzungen sind entfernt und eigene Chats archiviert; andere Originaldaten
+und Konfiguration blieben erhalten. Es wurden keine Zieländerungen ausgeführt.
 
-Die echte lokale Modellabnahme ist noch nicht abgeschlossen. Ungültige
-Projektionsargumente, Leseschleifen, zusätzliche Versionsdomänen und abweichende
-Schema-/Tokensteuerung wurden anhand isolierter tatsächlicher Modellaufrufe
-korrigiert. Der jüngste vollständige Versuch erzeugte gültige Werkzeugargumente
-und startete im künstlichen HA ein Backup, scheiterte aber an einem vom Modell
-gewählten ungeeigneten Statusendpunkt. Es wurden keine realen Zielsysteme
-geändert. Die ergänzende Absicherung weist solche Dienstendpunkte vor dem Versand
-ab und verlangt bei ausdrücklich vorgeschriebenen HA-Backups einen zuvor
-beobachteten geeigneten Statusbeleg. Dafür bestehen 102 gezielte Tests und
-unabhängig 65 Prüfungen; eine neue exakte Gesamt-CI und die Modellabnahme stehen
-noch aus. Fehlgeschlagene Proben werden nicht als bestandene Abnahme gewertet.
-Allgemeine autonome Verwaltung und reale HA-Updates bleiben offen.
+Die Leseprüfungen belegen Quellenabruf, Zuordnung und begrenzte beleggebundene
+Antworten. Paperless belegt keine vollständige fachliche Bewertung jeder
+Zusammenfassung. Ein positiver Mail-Antwortbezug wurde im aktuellen begrenzten
+Abgleich nicht beobachtet; fehlende Beziehungen bleiben unbekannt. Eine
+HA-Updateübersicht aus Update-Entitäten bestätigt nicht sämtliche denkbaren
+Updatequellen einer Installation.
+
+**Komplexe autonome Verwaltung bleibt offen.** Die isolierte Administrationsprobe
+mit dem tatsächlich eingesetzten lokalen Modell scheitert weiterhin: sieben
+Modellaufrufe, vier erfolgreiche Abfragen, wiederholte ungeeignete
+Verifikationsvorschläge und keine Effekte. Die begrenzte Korrektur verhindert den
+früheren unmittelbaren technischen Abbruch, beweist aber keine ausreichende
+allgemeine Planerqualität. Reale HA-Updates, umfassende Konfigurationsänderungen
+und Wiederherstellung sind nicht als abgenommen ausgewiesen. Die App ist keine
+vollständig abgenommene V1.
 
 ## Beleggebundene HA-Abfragen — lesend live geprüft
 
-`a7695cb` ist nach vollständiger [CI 45495642205](https://github.com/sschluet/obdaAI/actions/runs/45495642205)
+Der vorherige Release `a7695cb` war nach vollständiger [CI 45495642205](https://github.com/sschluet/obdaAI/actions/runs/45495642205)
 auf der Test-VM installiert. Lokal bestanden 3.986 Tests; die vollständige CI
 bestand mit 3.980 Tests und sechs optionalen Calc-Skips einschließlich Browser-,
 Container-, Isolations- und Secretprüfungen. Alle neun installierten Images, beide

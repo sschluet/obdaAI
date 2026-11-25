@@ -242,3 +242,10 @@ Diese synthetischen Fälle ersetzen keine reale Integrationsabnahme. Exakte
 Gesamtläufe, installierte Releases, echte Modell-/Werkzeugprüfungen und offene
 Abnahmen stehen in [STATUS](../STATUS.md). Erfolgreiche Lesetests sind kein Beleg
 für eine tatsächlich durchgeführte HA-Aktualisierung oder Wiederherstellung.
+
+Auf der Test-VM sind inzwischen Titelreparatur, der normale Auto-Chat-Einstieg
+und begrenzte echte HA-, Paperless-, Proton- und SSH-Abfragen geprüft. Die API
+liefert dabei beobachtete Arbeitsphasen; ihre Darstellung bleibt durch isolierte
+Browserprüfungen abgedeckt. Die komplexe Verwaltungsprobe mit dem eingesetzten
+lokalen Modell besteht weiterhin nicht. Diese Grenze wird durch sichtbaren
+Fortschritt oder eine bestandene Leseabfrage nicht aufgehoben.
