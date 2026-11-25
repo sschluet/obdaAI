@@ -173,6 +173,16 @@ zugeordnet; ihre ursprünglichen Argumente, Hashes und Transportrechte bleiben
 maßgeblich. Direkte Supervisor- oder SSH-Aktualisierungen sind keine stillschweigend
 gleichgesetzten Operationen dieser konkreten Dienstregel.
 
+Ein Dienstaufruf unter `/api/services/<domain>/<service>` ist kein lesbarer
+Statusendpunkt und wird als HTTP-Nachprüfung vor dem Versand abgewiesen. Bei
+einem ausdrücklich vorgeschriebenen HA-Backup muss die vorgeschlagene
+Statusressource außerdem zuvor im selben Auftrag und Ziel erfolgreich gelesen
+worden sein. Die erwarteten Felder müssen im Originalbeleg vorhanden sein;
+ein bereits erfülltes statisches Kriterium belegt kein neues Backup. Diese
+Vorbedingung ersetzt die unabhängige Prüfung nach der Änderung nicht. Fehlen
+geeignete veränderliche Statusbelege, bleibt die Backup-Ausführung blockiert;
+ein allgemeiner Beweis für Zeitstempel oder Backup-Ereignisse wird nicht behauptet.
+
 Der Abschluss muss den gesamten gebundenen Auftrag berücksichtigen. Bei
 Entitätenzielen stammt eine anfängliche Zielkohorte aus einem vollständigen
 Originalbeleg. Eine spätere kleinere Liste darf diese Kohorte nicht ersetzen.

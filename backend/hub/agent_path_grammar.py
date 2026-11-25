@@ -68,3 +68,7 @@ def ha_read_path_pattern(prefixes: Sequence[str]) -> str | None:
         # /api/webhookSomething is not the webhook endpoint or its directory.
         alternatives.append(re.escape(prefix) + matched + _different_character("/") + _TAIL)
     return "^(?:" + "|".join(dict.fromkeys(alternatives)) + ")$" if alternatives else None
+
+
+def ha_service_execution_path(path: str) -> bool:
+    return re.fullmatch(r"/api/services/[^/]+/[^/]+/?", path, re.IGNORECASE) is not None

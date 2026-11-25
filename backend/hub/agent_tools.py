@@ -479,7 +479,9 @@ def _interface_tool(kind: str, rules: Rules, tool: str) -> bool:
     return False
 
 
-def _scoped_arguments(tool: str, schema: dict[str, Any], rules: Rules) -> dict[str, Any]:
+def _scoped_arguments(
+    tool: str, schema: dict[str, Any], rules: Rules, *, kind: str | None = None,
+) -> dict[str, Any]:
     result = copy.deepcopy(schema)
     if tool == "mcp.call" and not rules.mcp and rules.mcp_read_tools:
         return {
@@ -529,8 +531,17 @@ def _scoped_arguments(tool: str, schema: dict[str, Any], rules: Rules) -> dict[s
             else:
                 verification = ReadVerification.model_json_schema()
                 verification["properties"]["path"]["pattern"] = path_pattern
+                if kind == "home_assistant":
+                    verification["properties"]["path"]["description"] = (
+                        "Status GET, never POST-only /api/services/domain/service. "
+                        "Observe proof fields first."
+                    )
                 verification["properties"]["expected"]["additionalProperties"] = False
                 properties["verification"] = {"anyOf": [verification, {"type": "null"}]}
+        if tool == "http.verify" and kind == "home_assistant":
+            properties["path"]["description"] = (
+                "Read-status GET, never a POST-only service execution URL."
+            )
         retained.append(variant)
     if not retained:
         raise ValueError("No allowed administration argument variant")
@@ -715,7 +726,10 @@ def decision_schema(
             definition_name = "Tool_" + name.replace(".", "_")
             if identifier is not None:
                 definition_name += "_" + str(index)
-            scoped = arguments if rules is None else _scoped_arguments(name, arguments, rules)
+            kind = (next(kind for candidate, kind, _rules in bound if candidate == identifier)
+                    if bound is not None else None)
+            scoped = (arguments if rules is None else
+                      _scoped_arguments(name, arguments, rules, kind=kind))
             if target_read_only and name == "http" and bound is not None:
                 kind = next(kind for candidate, kind, _ in bound if candidate == identifier)
                 if kind == "home_assistant":
@@ -888,6 +902,13 @@ def validate_tool(
             data["path"].casefold().rstrip("/") == "/api/webhook"
             or data["path"].casefold().startswith("/api/webhook/")
         )
+        if kind == "home_assistant" and tool == "http.verify":
+            from hub.agent_path_grammar import ha_service_execution_path
+
+            if ha_service_execution_path(data["path"]):
+                raise ValueError(
+                    "HA service execution endpoints are POST-only, not verification reads"
+                )
         if webhook and tool == "http.verify":
             raise PermissionError("Home Assistant webhooks cannot verify an effect by reading")
         return data, data["method"] != "GET" or webhook

@@ -82,6 +82,10 @@ def test_closed_all_update_pipeline_rejects_premature_change_then_backup_verify_
                 verification=update,
             ),
             decision(
+                ha[4], RULE["requires"]["path"], method="POST", verification=backup,
+            ),
+            decision(ha[4], "/api/states/sensor.backup"),
+            decision(
                 ha[4],
                 RULE["requires"]["path"],
                 method="POST",
@@ -144,6 +148,8 @@ def test_closed_all_update_pipeline_rejects_premature_change_then_backup_verify_
                 assert state["backup"]
                 state["installed"] = True
             return {"http_status": 200, "body": {}, "effect_verified": False}
+        if args["path"] == "/api/states/sensor.backup":
+            return {"http_status": 200, "body": {"state": "ready" if state["backup"] else "idle"}}
         from hub.agent_context import project
 
         body = project([row], args["projection"]) if args.get("projection") else [row]
@@ -166,6 +172,10 @@ def test_closed_all_update_pipeline_rejects_premature_change_then_backup_verify_
         item["type"] == "effect_prerequisite_required"
         for step in feedback
         for item in step["document"]["issues"]
+    )
+    assert any(
+        item["type"] == "backup_verification_observation_required"
+        for step in feedback for item in step["document"]["issues"]
     )
     assert all(
         step["result"]["effect_verified"] is True
@@ -240,6 +250,7 @@ def test_prerequisite_proof_revocation_cannot_be_bypassed_by_transport_or_human_
 
     monkeypatch.setattr(runtime, "generate", generate)
     monkeypatch.setattr(runtime, "invoke", invoke)
+    monkeypatch.setattr(agent_reconcile, "invoke", invoke)
     asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, job_id))
     result = ha[1].get("/api/agent-runs/" + job_id).json()
     if stage == "approval":
@@ -278,3 +289,61 @@ def test_true_native_admin_transport_fits_and_observes_configured_prerequisite(
     assert all(view["operation_prerequisites"][0]["requires"] == RULE["requires"] for view in views)
     assert any(not view["operation_prerequisites"][0]["satisfied"] for view in views)
     assert any(view["operation_prerequisites"][0]["satisfied"] for view in views)
+
+
+@pytest.mark.parametrize("stage", ["transport", "approval"])
+def test_backup_observability_rechecked_after_approval_and_at_transport(ha, monkeypatch, stage):
+    from hub.agent_models import AgentStep
+
+    configure(ha, autonomous=stage != "approval")
+    job_id = start(ha, "Create the synthetic backup", research_allowed=False)
+    with ha[0].state.sessions() as db:
+        job = db.get(AgentJob, job_id)
+        job.bindings = json.dumps({**json.loads(job.bindings), "intent": RequestIntent(
+            mode="admin", topic="general", target_ids=[ha[4]], requirements=[
+                Requirement(kind="effect_postcondition", integration_id=ha[4]),
+            ],
+        ).model_dump(mode="json")})
+        observed = runtime.record(db, job, "read", decision(ha[4], "/api/states/sensor.backup"))
+        observed.status = "succeeded"
+        observed.result = json.dumps({"http_status": 200, "body": {"state": "idle"}})
+        sequence = observed.sequence
+        db.commit()
+    sent = []
+
+    async def generate(*args):
+        return decision(ha[4], RULE["requires"]["path"], method="POST", verification={
+            "path": "/api/states/sensor.backup", "expected": {"/body/state": "ready"},
+            "timeout_seconds": 1, "interval_seconds": 1,
+        })
+
+    def revoke():
+        with ha[0].state.sessions() as db:
+            db.get(AgentStep, (job_id, sequence)).status = "failed"
+            db.commit()
+
+    def invoke(cfg, config, secret, tool, args, rules, before_send):
+        if tool == "http.verify":
+            raise PermissionError("Synthetic revoked observation; stop reconciliation")
+        if stage == "transport":
+            revoke()
+        before_send()
+        sent.append(args)
+        raise AssertionError("No backup write after proof revocation")
+
+    monkeypatch.setattr(runtime, "generate", generate)
+    monkeypatch.setattr(runtime, "invoke", invoke)
+    monkeypatch.setattr(agent_reconcile, "invoke", invoke)
+    asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, job_id))
+    result = ha[1].get("/api/agent-runs/" + job_id).json()
+    if stage == "approval":
+        assert result["status"] == "awaiting_approval", result["summary"]
+        prepared = result["steps"][-1]
+        revoke()
+        response = ha[1].post(f"/api/agent-runs/{job_id}/approve", headers=ha[2], json={
+            "sequence": prepared["sequence"], "sha256": prepared["sha256"],
+        })
+        assert response.status_code == 200, response.text
+        asyncio.run(runtime.execute_agent(ha[0].state.sessions, ha[3], None, job_id))
+        result = ha[1].get("/api/agent-runs/" + job_id).json()
+    assert not sent and result["status"] in {"failed", "uncertain"}

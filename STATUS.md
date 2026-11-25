@@ -23,30 +23,25 @@ sind derzeit lokal implementiert und noch nicht auf der Test-VM installiert.
   und frische Nachbelege. Ein Backup, ein einzelner Effekt oder eine verkleinerte
   Ergebnisliste gelten nicht als vollständiger Updateerfolg.
 
-Synthetische Unit-, API- und Browserprüfungen belegen die neuen Oberflächenabläufe
-und Sicherheitsfälle. Der erste lokale Gesamtlauf bestand mit 4.052 Tests;
-spätere Änderungen an der Werkzeugoberfläche sind darin nicht vollständig
-enthalten. Der nächste Gesamtlauf ergab 4.079 bestandene und drei durch den
-neuen Werkzeugvertrag veraltete Tests; nach Anpassung bestehen die betroffenen
-49 Tests. Ein weiterer lokaler Gesamtlauf bestand mit 4.094 Tests; nachfolgende
-Korrekturen an semantischer Formatsteuerung, Abgleich und Detailzuständen sind
-zusätzlich gezielt geprüft und benötigen weiterhin die vollständige passende CI.
-Die einzelnen Browserprüfungen sind kein behaupteter exakt passender Gesamt-CI-Lauf. Die veröffentlichte CI-Evidenz
-und der installierte Stand bleiben bis zur neuen Abnahme unverändert.
+Die erste Überarbeitung `0709f84` besteht die vollständige
+[CI 45636540557](https://github.com/sschluet/obdaAI/actions/runs/45636540557):
+4.192 Tests bestanden, sechs optionale Calc-Prüfungen übersprungen; Browser-,
+Container-, Isolations- und Secretprüfungen bestanden. Der lokale Gesamtlauf vor
+der letzten kleinen Decoderkorrektur bestand mit 4.179 Tests. Diese Evidenz gilt
+jeweils für den angegebenen Quellstand.
 
-Die tatsächlichen lokalen Modellproben sind noch nicht erfolgreich abgeschlossen:
-Frühere Varianten erzeugten ungültige Projektionsargumente und Leseschleifen.
-Mit der neuen aktiven Werkzeugoberfläche sind die Argumente im isolierten
-Planertest gültig, die geforderte nächste Auswahl stimmt jedoch weiterhin nicht.
-Ein vollständiger synthetischer Administrationslauf mit dem echten Modell
-scheiterte an zusätzlich erfundenen Versionsdomänen und anschließenden
-Lesewiederholungen; sechs Modellaufrufe, drei erfolgreiche Abfragen, keine Effekte.
-Die folgende Diagnose zeigte außerdem einen Unterschied zur API-Einordnung:
-Der Worker übergab interne Schema-Metadaten als zusätzlichen Prompttext und
-überschrieb später das vorgesehene Ausgabelimit. Ein Modellversuch lieferte
-30 gleiche Leseanforderungen ohne Änderungsziel. Diese Grenzen werden angeglichen;
-eine bestandene allgemeine Modellabnahme wird daraus noch nicht abgeleitet. Diese Proben ändern keine angebundenen Systeme und sind kein
-Beleg für echte HA-Updates. Allgemeine autonome Verwaltung bleibt offen.
+Die echte lokale Modellabnahme ist noch nicht abgeschlossen. Ungültige
+Projektionsargumente, Leseschleifen, zusätzliche Versionsdomänen und abweichende
+Schema-/Tokensteuerung wurden anhand isolierter tatsächlicher Modellaufrufe
+korrigiert. Der jüngste vollständige Versuch erzeugte gültige Werkzeugargumente
+und startete im künstlichen HA ein Backup, scheiterte aber an einem vom Modell
+gewählten ungeeigneten Statusendpunkt. Es wurden keine realen Zielsysteme
+geändert. Die ergänzende Absicherung weist solche Dienstendpunkte vor dem Versand
+ab und verlangt bei ausdrücklich vorgeschriebenen HA-Backups einen zuvor
+beobachteten geeigneten Statusbeleg. Dafür bestehen 102 gezielte Tests und
+unabhängig 65 Prüfungen; eine neue exakte Gesamt-CI und die Modellabnahme stehen
+noch aus. Fehlgeschlagene Proben werden nicht als bestandene Abnahme gewertet.
+Allgemeine autonome Verwaltung und reale HA-Updates bleiben offen.
 
 ## Beleggebundene HA-Abfragen — lesend live geprüft
 

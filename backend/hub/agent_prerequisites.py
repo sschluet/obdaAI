@@ -144,6 +144,87 @@ def missing(
     ]
 
 
+def backup_observability(
+    history: Sequence[Any], identifier: str, rules: Rules, tool: str,
+    arguments: Mapping[str, Any], *, job_id: str, kind: str,
+) -> dict[str, Any] | None:
+    """Require observed existing proof fields only for configured HA backup prerequisites.
+
+    This is a precondition, never a replacement for independent post-effect proof.
+    No read is dispatched, no field or expected value is inferred.
+    """
+    if kind != "home_assistant" or not any(
+        prerequisite.requires.path in {
+            "/api/services/backup/create", "/api/services/backup/create_automatic",
+        }
+        and _matches(prerequisite.requires, tool, arguments)
+        for prerequisite in rules.effect_prerequisites
+    ):
+        return None
+    verification = _object(arguments.get("verification"))
+    path, query = verification.get("path"), verification.get("query", {})
+    expected = verification.get("expected")
+    issue: dict[str, Any] = {
+        "type": "backup_verification_observation_required",
+        "next_action": "Before creating the configured backup, read its proposed "
+        "verification resource and observe every expected field. Use a real readable "
+        "status resource, never a service-execution GET. Do not invent fields or values. "
+        "The postcondition must differ from the observed state; no change was sent.",
+    }
+    if not isinstance(path, str) or not isinstance(expected, dict) or not expected:
+        return issue
+    issue["required_read"] = {"tool": "http", "method": "GET", "path": path, "query": query}
+    last_effect = max((item.sequence for item in history
+                       if item.kind == "effect" and (
+                           _object(getattr(item, "document", None)).get("integration_id")
+                           == identifier)), default=-1)
+    # Choose the latest exact resource read; never revive older evidence past a
+    # failed/tampered matching read or an intervening target mutation.
+    candidate = None
+    for item in history:
+        document = _object(getattr(item, "document", None))
+        args = _object(document.get("arguments"))
+        if (item.kind == "read" and document.get("integration_id") == identifier
+                and document.get("tool") == "http" and args.get("method") == "GET"
+                and args.get("path") == path
+                and encode(args.get("query", {})) == encode(query)):
+            if candidate is None or item.sequence > candidate.sequence:
+                candidate = item
+    if candidate is None or candidate.sequence <= last_effect:
+        return issue
+    original_document = _original(candidate)
+    result = _object(getattr(candidate, "result", None))
+    status = result.get("http_status")
+    if (not original_document or getattr(candidate, "job_id", None) != job_id
+            or candidate.status != "succeeded" or type(status) is not int
+            or not 200 <= status < 300 or result.get("projection_error")
+            or result.get("model_view_only") or result.get("effect_uncertain")
+            or _object(original_document.get("arguments")).get("projection") is not None):
+        return issue
+    already_true = True
+    for pointer, wanted in expected.items():
+        value: Any = result
+        if not isinstance(pointer, str) or not pointer.startswith("/"):
+            return issue
+        try:
+            for key in pointer[1:].split("/"):
+                key = key.replace("~1", "/").replace("~0", "~")
+                value = value[int(key)] if isinstance(value, list) else value[key]
+        except (KeyError, IndexError, TypeError, ValueError):
+            return issue
+        if type(value) is not type(wanted):
+            return issue
+        # Match the existing verifier exactly: its top-level JSON type check
+        # precedes Python equality (including nested numeric/bool equality).
+        already_true = already_true and value == wanted
+    if already_true:
+        return {"type": "backup_verification_already_true",
+                "next_action": "The proposed static backup postcondition is already true "
+                "before creation and cannot prove a new backup. Choose an observable, "
+                "supported changing proof, or stop without sending the backup."}
+    return None
+
+
 def check(
     history: Sequence[Any],
     identifier: str,
@@ -152,7 +233,12 @@ def check(
     arguments: Mapping[str, Any],
     *,
     job_id: str,
+    kind: str = "",
 ) -> None:
+    if backup_observability(
+        history, identifier, rules, tool, arguments, job_id=job_id, kind=kind,
+    ):
+        raise PermissionError("Backup-Verifikation benötigt zuvor beobachtbare neue Statusbelege")
     if missing(history, identifier, rules, tool, arguments, job_id=job_id):
         raise PermissionError("Eine konfigurierte Aktionsvoraussetzung ist noch nicht verifiziert")
 

@@ -1969,7 +1969,7 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
 
             check_prerequisites(
                 [item for item in steps(db, job_id) if item.sequence < sequence],
-                profile.id, rules, document["tool"], args, job_id=job_id,
+                profile.id, rules, document["tool"], args, job_id=job_id, kind=profile.kind,
             )
         if effect:
             # An uncertain response followed by a successful read is no permission
@@ -2049,7 +2049,7 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
                 check_prerequisites(
                     [item for item in steps(db, job_id) if item.sequence < sequence],
                     current.id, current_rules, document["tool"], document["arguments"],
-                    job_id=job_id,
+                    job_id=job_id, kind=current.kind,
                 )
             if document["tool"] == "http.upload":
                 from hub.agent_files import check
@@ -3364,6 +3364,17 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 "next_action": "The typed requested state is already proven. "
                                 "Do not perform an unnecessary change; report only observed facts.",
                             }])
+                            db.commit()
+                            continue
+                    if effect:
+                        from hub.agent_prerequisites import backup_observability
+
+                        observability_issue = backup_observability(
+                            current_history, profile.id, rules, decision.tool or "", args,
+                            job_id=job_id, kind=profile.kind,
+                        )
+                        if observability_issue:
+                            format_feedback(db, cfg, job, {"kind": "tool"}, [observability_issue])
                             db.commit()
                             continue
                     if effect:

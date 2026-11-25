@@ -732,7 +732,7 @@
         {
           "title": "Backup vor dem HA-Update-Dienst",
           "status": "limited",
-          "description": "Optionale Regel für update.install dieser HA-Verbindung über HTTP oder WebSocket: Im selben Auftrag muss zuvor eine Sicherung unabhängig bestätigt sein. Neue Regeln verwenden backup.create_automatic mit den Home-Assistant-Sicherungseinstellungen; bestehende explizite Backup-Methoden bleiben erhalten. Standardmäßig aus, ohne zusätzliche Zugriffs- oder Autonomierechte; direkte Supervisor-/SSH-Updates werden nicht erfasst. Oberfläche und API mit synthetischen Daten geprüft, echte Ausführungsabnahme noch offen."
+          "description": "Optionale Regel für update.install dieser HA-Verbindung über HTTP oder WebSocket: Im selben Auftrag muss zuvor eine Sicherung unabhängig bestätigt sein. Neue Regeln verwenden backup.create_automatic mit den Home-Assistant-Sicherungseinstellungen; bestehende explizite Backup-Methoden bleiben erhalten. Standardmäßig aus, ohne zusätzliche Zugriffs- oder Autonomierechte; direkte Supervisor-/SSH-Updates werden nicht erfasst. Vor dem vorgeschriebenen Backup müssen geeignete veränderliche Statusfelder bereits beobachtet sein; ein Dienstaufruf ist kein lesbarer Prüfnachweis. Oberfläche und API mit synthetischen Daten geprüft, echte Ausführungsabnahme noch offen."
         },
         {
           "title": "Versionierte Skills",

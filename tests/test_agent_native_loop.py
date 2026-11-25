@@ -86,6 +86,8 @@ def scenario(
             {"method": "GET", "path": "/api/services"},
             {"method": "GET", "path": "/api/states"},
             *([{"method": "GET", "path": "/api/states"}] if repeat_inventory else []),
+            *([{"method": "GET", "path": "/api/states/sensor.backup"}]
+              if require_backup else []),
             {
                 "method": "POST",
                 "path": "/api/services/backup/create",
@@ -317,6 +319,8 @@ def scenario(
                     raise TimeoutError("Synthetic lost update acknowledgement")
                 installed = True
             return {"http_status": 200, "body": {}, "effect_verified": False}
+        if args["path"] == "/api/states/sensor.backup":
+            return {"http_status": 200, "body": {"state": "ready" if backup else "idle"}}
         payload = {"message": "API running."}
         if projection_failure_first and args["path"] == "/api/config":
             return {
