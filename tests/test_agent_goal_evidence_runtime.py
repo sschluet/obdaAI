@@ -108,8 +108,8 @@ def test_native_metadata_is_not_completion_and_websocket_states_ground_the_answe
         else:
             assert 'finish_run' in names and data['goal_evidence']['satisfied']
         if directive == 'config':
-            name = next(n for n in names if n.endswith('_http'))
-            args = {'arguments': {'method': 'GET', 'path': '/api/config'}}
+            name = next(n for n in names if n.endswith('_http_read'))
+            args = {'arguments': {'path': '/api/config'}}
         elif directive in {'supervisor', 'states'}:
             name = next(n for n in names if n.endswith('_ha_websocket'))
             args = {'arguments': {'type': 'get_states', 'parameters': {}}}

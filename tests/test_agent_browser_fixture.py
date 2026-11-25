@@ -45,7 +45,8 @@ def test_synthetic_browser_admin_provider_interprets_compound_goal_before_asking
             parts, ["system", "user"], external=False, grants=[],
         )]))
 
-    output = asyncio.run(invoke({**contract["data"], "intent_schema": contract["schema"]}))
+    assert "intent_schema" not in contract["data"]
+    output = asyncio.run(invoke(contract["data"]))
     Draft202012Validator(contract["schema"]).validate(output)
     intent = accept_semantic(output, selected)
     assert intent.mode == "admin" and intent.target_ids == [identifier]

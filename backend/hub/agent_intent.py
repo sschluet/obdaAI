@@ -11,7 +11,79 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic_core import PydanticCustomError
+
+_VERSION_ATTRIBUTES = {"installed_version", "latest_version"}
+def _non_version_attribute_pattern() -> str:
+    """Regular identifier language minus two literals; no unsupported lookaround."""
+    import string
+
+    def characters(values: set[str]) -> str:
+        chars = sorted(values)
+        groups = []
+        while chars:
+            run = [chars.pop(0)]
+            while chars and ord(chars[0]) == ord(run[-1]) + 1:
+                run.append(chars.pop(0))
+            groups.append(run[0] + "-" + run[-1] if len(run) > 2 else "".join(run))
+        return "[" + "".join(groups) + "]"
+
+    def suffix(prefix: str) -> str:
+        following = {word[len(prefix)] for word in _VERSION_ATTRIBUTES
+                     if word.startswith(prefix) and len(word) > len(prefix)}
+        alphabet = set(string.ascii_lowercase + (string.digits + "_" if prefix else ""))
+        alternatives = [""] if prefix and prefix not in _VERSION_ATTRIBUTES else []
+        other = alphabet - following
+        if other:
+            alternatives.append(characters(other) + "[a-z0-9_]{0," + str(63 - len(prefix)) + "}")
+        alternatives.extend(char + suffix(prefix + char) for char in sorted(following))
+        return "(?:" + "|".join(alternatives) + ")"
+
+    return "^" + suffix("") + "$"
+
+
+def _semantic_outcome_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Supported anyOf grammar preserves all generic names except reserved versions."""
+    update = copy.deepcopy(schema)
+    update["properties"]["domain"] = {"type": "string", "const": "update"}
+    generic = copy.deepcopy(schema)
+    mapping = generic["properties"]["attribute_from_initial"]
+    mapping.pop("additionalProperties", None)
+    pattern = _non_version_attribute_pattern()
+    mapping["patternProperties"] = {pattern: {"type": "string", "pattern": pattern}}
+    mapping["additionalProperties"] = False
+    return {"anyOf": [update, generic]}
+
+
+class EntityOutcome(BaseModel):
+    """Semantic desired state, not a command, entity ID or permission grant."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    domain: str = Field(pattern=r"^[a-z][a-z0-9_]{0,39}$")
+    state: str = Field(min_length=1, max_length=200)
+    scope: Literal["all_observed"]
+    selection_state: str | None = Field(default=None, max_length=200,
+                                         exclude_if=lambda value: value is None)
+    attribute_from_initial: dict[str, str] = Field(default_factory=dict, max_length=8,
+                                                 exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def known_state(self) -> "EntityOutcome":
+        if any(not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
+               for pair in self.attribute_from_initial.items() for key in pair):
+            raise ValueError("Outcome attributes must name actual scalar entity attributes")
+        if self.domain != "update" and any(
+            name in _VERSION_ATTRIBUTES
+            for pair in self.attribute_from_initial.items() for name in pair
+        ):
+            raise PydanticCustomError(
+                "outcome_version_domain",
+                "HA version attributes belong only to the update entity domain",
+            )
+        if self.state in {"unknown", "unavailable"}:
+            raise ValueError("Unavailable state is not a verified completion condition")
+        return self
 
 
 class Requirement(BaseModel):
@@ -20,11 +92,14 @@ class Requirement(BaseModel):
                   "mail_reply", "system", "unspecified", "effect_postcondition"]
     domain: str = Field(default="", pattern=r"^[a-z_]{0,40}$")
     integration_id: str = Field(min_length=1, max_length=100)
+    outcome: EntityOutcome | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def domain_scope(self) -> "Requirement":
         if (self.kind == "entity_states") != bool(self.domain):
             raise ValueError("Entity states require a domain; other evidence has no entity domain")
+        if self.outcome is not None and self.kind != "effect_postcondition":
+            raise ValueError("State outcomes must bind their actual entity domain")
         return self
 
 
@@ -213,6 +288,7 @@ def normalize_goal(
 ) -> RequestIntent:
     """Strengthen goal evidence only; never select a target or grant an effect."""
     selected = RequestIntent.model_validate(intent)
+    selected = _all_update_proof(selected, profiles, goal)
     if (
         selected.mode not in {"observe", "admin"}
         or selected.confidence != "certain"
@@ -262,6 +338,54 @@ def normalize_goal(
     return RequestIntent.model_validate(
         {**selected.model_dump(), "requirements": [r.model_dump() for r in requirements]}
     )
+
+
+def _all_update_proof(
+    selected: RequestIntent, profiles: Mapping[str, Any], goal: str,
+) -> RequestIntent:
+    """Closed, already-authorized all-update goal strengthens proof, never selects actions."""
+    text = " ".join(goal.casefold().strip(" .?!").split())
+    location = r"(?:home ?assistant|ha)"
+    pending = r"(?:ausstehenden|verfügbaren|verfuegbaren|offenen)"
+    closed = any(re.fullmatch(pattern, text) for pattern in (
+        rf"(?:bitte )?(?:prüfe|pruefe|überprüfe|ueberpruefe) {location} und "
+        rf"(?:spiele|spiel) alle {pending} updates? ein",
+        rf"(?:bitte )?installiere alle {pending} updates? (?:in|für|fuer) {location}",
+        r"(?:please )?check home assistant and install all pending updates",
+    ))
+    if (not closed or selected.mode != "admin" or selected.confidence != "certain"
+            or selected.freshness != "current" or len(selected.target_ids) != 1):
+        return selected
+    identifier = selected.target_ids[0]
+    profile = profile_map(profiles).get(identifier)
+    if (not profile or profile.kind != "home_assistant"
+            or getattr(profile, "enabled", False) is not True
+            or not any(item.kind == "effect_postcondition" and item.integration_id == identifier
+                       for item in selected.requirements)):
+        return selected
+    outcome = EntityOutcome(domain="update", state="off", scope="all_observed",
+                            selection_state="on",
+                            attribute_from_initial={"installed_version": "latest_version"})
+    requirements = []
+    bound = False
+    for requirement in selected.requirements:
+        if (requirement.kind == "effect_postcondition"
+                and requirement.integration_id == identifier
+                and requirement.outcome is not None and requirement.outcome != outcome):
+            raise ValueError("All-update proof conflicts with the explicit update goal")
+        if (requirement.kind == "effect_postcondition"
+                and requirement.integration_id == identifier and requirement.outcome is None):
+            requirement = requirement.model_copy(update={"outcome": outcome})
+            bound = True
+        if requirement.outcome == outcome and requirement.integration_id == identifier:
+            bound = True
+        requirements.append(requirement)
+    if not bound:
+        requirements.append(Requirement(kind="effect_postcondition", integration_id=identifier,
+                                        outcome=outcome))
+    distinct = {json.dumps(r.model_dump(), sort_keys=True, separators=(",", ":")): r
+                for r in requirements}
+    return selected.model_copy(update={"requirements": list(distinct.values())})
 
 
 def _pure_update_overview_goal(goal: str) -> bool:
@@ -494,6 +618,7 @@ def semantic_request(
         raise ValueError("Prior context must refer only to current provided targets")
     prior = list(dict.fromkeys(prior_target_ids))
     schema = RequestIntent.model_json_schema()
+    schema["$defs"]["EntityOutcome"] = _semantic_outcome_schema(schema["$defs"]["EntityOutcome"])
     for field in ("origin", "version"):
         schema["properties"].pop(field)
     schema["required"] = list(schema["properties"])
@@ -512,7 +637,24 @@ def semantic_request(
     state["properties"]["domain"] = {"type": "string", "pattern": "^[a-z_]{1,40}$"}
     other["properties"]["kind"]["enum"] = [kind for kind in kinds if kind != "entity_states"]
     other["properties"]["domain"] = {"type": "string", "const": ""}
-    schema["$defs"]["Requirement"] = {"anyOf": [state, other]}
+    effect = copy.deepcopy(other)
+    effect["properties"]["kind"] = {"type": "string", "const": "effect_postcondition"}
+    state["properties"]["outcome"] = {"type": "null"}
+    other["properties"]["outcome"] = {"type": "null"}
+    other["properties"]["kind"]["enum"].remove("effect_postcondition")
+    schema["$defs"]["Requirement"] = {"anyOf": [state, effect, other]}
+    definitions = schema.pop("$defs")
+    definitions["EffectRequirement"] = effect
+    admin = copy.deepcopy(schema)
+    admin["properties"]["mode"] = {"type": "string", "const": "admin"}
+    admin["properties"]["requirements"].update(
+        minItems=1, prefixItems=[{"$ref": "#/$defs/EffectRequirement"}],
+    )
+    nonadmin = copy.deepcopy(schema)
+    nonadmin["properties"]["mode"] = {
+        "type": "string", "enum": ["observe", "explain", "unknown"],
+    }
+    schema = {"$defs": definitions, "anyOf": [admin, nonadmin]}
     return {
         "instruction": (
             "You classify a request. You do NOT execute it. Return ONE JSON object only, "
@@ -547,6 +689,27 @@ def semantic_request(
             "answered and needs sent/reply relationship evidence; system needs host/service "
             "information; unspecified is another data read; effect_postcondition is a verified "
             "state change. domain is nonempty ONLY for entity_states, otherwise empty string. "
+            "Use the MINIMUM DISTINCT requirements needed for every actual requested subtask. "
+            "Never duplicate a requirement or fill the array to its maximum. "
+            "For admin, serialize the actual effect_postcondition FIRST, then distinct "
+            "read requirements. This ordering is not an execution plan or permission. "
+            "Each requirement also has outcome, normally null. For an explicit desired state "
+            "of ALL entities in a HA domain, bind outcome={domain,state,scope:'all_observed'} "
+            "to the effect_postcondition: use the actual desired HA state, not an operation "
+            "name. It requires a complete fresh post-change snapshot of that domain. "
+            "For installing all pending updates, the desired update state is off (current); "
+            "use selection_state='on' to freeze the initially available-update cohort and "
+            "attribute_from_initial={installed_version:'latest_version'} to require actual "
+            "installation of its observed target versions. installed_version/latest_version "
+            "are intrinsic update.* attributes: use them ONLY with outcome.domain='update', "
+            "never invent separate core/supervisor/addon entity domains for version updates. "
+            "Other actual scalar attribute mappings and custom domains remain possible. "
+            "These are observed attribute names, "
+            "not code or tool arguments. Initial unknown/unavailable entries outside that "
+            "selected cohort do not become proven current. "
+            "backup creation alone never proves that outcome. Never choose unknown or "
+            "unavailable as a completion state. Preserve unrelated or compound subtasks. "
+            "Do not invent entity IDs, endpoints, commands, postconditions or permission. "
             "Home Assistant software-update availability requires entity_states domain update: "
             "update.* on means available, off means current, unknown/unavailable is not current. "
             "Installed-version/configuration or Supervisor metadata alone does not establish "
@@ -572,7 +735,9 @@ def semantic_request(
                 "answer_kind": "general | light_inventory | light_on_cohort | document_inventory",
                 "requirements": [{"kind": "evidence kind defined in instructions",
                                   "domain": "entity domain, otherwise empty string",
-                                  "integration_id": "a selected provided target ID"}],
+                                  "integration_id": "a selected provided target ID",
+                                  "outcome": "null or {domain,state,scope:'all_observed'} for "
+                                  "an explicit all-entities desired-state goal"}],
                 "research": "boolean", "followup": "boolean",
                 "freshness": "current | historical", "confidence": "certain | uncertain",
             },
@@ -637,7 +802,42 @@ def accept_semantic(
         or {item.integration_id for item in intent.requirements} != set(intent.target_ids)
     ):
         raise ValueError("Each observed target needs a goal-specific evidence requirement")
+    for requirement in intent.requirements:
+        if (requirement.outcome is not None
+                and profile_map(profiles)[requirement.integration_id].kind != "home_assistant"):
+            raise ValueError("Entity outcomes require an actual entity-state interface")
     return normalize_goal(intent, profiles, goal) if goal is not None else intent
+
+
+def semantic_failure_feedback(error: ValueError) -> dict[str, Any]:
+    """Application-owned schema feedback, never exception text or model-produced values."""
+    issue = "semantic_contract_invalid"
+    if isinstance(error, ValidationError) and any(
+        item["type"] == "outcome_version_domain" for item in error.errors()
+    ):
+        issue = "outcome_version_domain"
+    elif error.args == ("Administration requires a target-bound verified postcondition",):
+        issue = "semantic_postcondition_missing"
+    elif error.args == ("All-update proof conflicts with the explicit update goal",):
+        issue = "semantic_update_outcome_mismatch"
+    instruction = (
+        "Return a complete valid interpretation of the original request and provided "
+        "interfaces. Use minimal DISTINCT requirements for every genuine subtask; "
+        "no duplicates or array filling. Never silently drop a genuine subtask. No tool calls. "
+    )
+    if issue == "outcome_version_domain":
+        instruction += ("installed_version/latest_version are update.* attributes only; "
+                        "do not invent other version entity domains.")
+    elif issue == "semantic_postcondition_missing":
+        instruction += ("An administration request needs a target-bound effect_postcondition "
+                        "for its actual desired result; read requirements alone cannot prove it.")
+    elif issue == "semantic_update_outcome_mismatch":
+        instruction += ("For the explicit all-pending-HA-updates goal, the required outcome "
+                        "is update/off over the initial on cohort, with installed_version "
+                        "matching its initial latest_version. Do not replace or widen that goal.")
+    else:
+        instruction += "Follow the supplied schema."
+    return {"semantic_feedback": {"issue": issue, "instruction": instruction}}
 
 
 def effect_target_allowed(intent: Mapping[str, Any] | None, identifier: str) -> bool:
@@ -665,13 +865,30 @@ def adequacy(intent: RequestIntent | Mapping[str, Any], history: Sequence[Any]) 
 
     selected = RequestIntent.model_validate(intent)
     missing = []
+    entity_targets = {item.integration_id for item in selected.requirements
+                      if item.kind == "entity_states"}
+    unbound = {item.integration_id for item in selected.requirements
+               if selected.mode == "admin" and item.kind == "effect_postcondition"
+               and item.integration_id in entity_targets and item.outcome is None}
     for requirement in selected.requirements:
+        if (requirement.kind == "effect_postcondition" and requirement.outcome is None
+                and requirement.integration_id in unbound):
+            missing.append(requirement.model_dump())
+            continue
         if requirement.kind == "entity_states" and requirement.domain == "update":
             from hub.agent_ha_evidence import evidence_satisfied
 
             if not evidence_satisfied(
                 history, requirement.integration_id, "update", require_complete=True
             ):
+                missing.append(requirement.model_dump())
+            continue
+        if requirement.outcome is not None:
+            from hub.agent_outcomes import assessment
+
+            if not assessment(
+                history, requirement.integration_id, requirement.outcome,
+            )["satisfied"]:
                 missing.append(requirement.model_dump())
             continue
         satisfied = False
@@ -788,6 +1005,7 @@ def adequacy(intent: RequestIntent | Mapping[str, Any], history: Sequence[Any]) 
     return {
         "satisfied": not missing,
         "missing": missing,
+        **({"completion_binding_missing": sorted(unbound)} if unbound else {}),
         "instruction": instruction,
         **(
             {
@@ -805,6 +1023,55 @@ def adequacy(intent: RequestIntent | Mapping[str, Any], history: Sequence[Any]) 
         ),
     }
 
+
+
+def completed_outcome_targets(
+    intent: RequestIntent | Mapping[str, Any] | None, history: Sequence[Any],
+) -> set[str]:
+    """Lower capabilities at targets whose explicit requested state is already proven."""
+    if intent is None:
+        return set()
+    from hub.agent_outcomes import assessment
+
+    selected = RequestIntent.model_validate(intent)
+    changes = [item for item in selected.requirements if item.kind == "effect_postcondition"]
+    return {identifier for identifier in selected.target_ids
+            if any(item.integration_id == identifier for item in changes)
+            and all(item.outcome is not None and assessment(
+                history, identifier, item.outcome,
+            )["satisfied"] for item in changes if item.integration_id == identifier)}
+
+
+def missing_initial_outcome_baseline(
+    intent: RequestIntent | Mapping[str, Any] | None, history: Sequence[Any], identifier: str,
+) -> bool:
+    if intent is None:
+        return False
+    from hub.agent_outcomes import assessment
+
+    selected = RequestIntent.model_validate(intent)
+    return any(item.integration_id == identifier and item.outcome is not None
+               and assessment(history, identifier, item.outcome).get("reason")
+               in {"initial_complete_snapshot_missing", "initial_goal_attributes_missing"}
+               for item in selected.requirements)
+
+
+def outcome_observation_targets(
+    intent: RequestIntent | Mapping[str, Any] | None, history: Sequence[Any],
+) -> set[str]:
+    """Lower to observations until explicit state goals have a current complete snapshot."""
+    if intent is None:
+        return set()
+    from hub.agent_outcomes import assessment
+
+    selected = RequestIntent.model_validate(intent)
+    return {
+        item.integration_id for item in selected.requirements
+        if item.outcome is not None and assessment(
+            history, item.integration_id, item.outcome,
+        ).get("reason") in {"initial_complete_snapshot_missing", "initial_goal_attributes_missing",
+                           "fresh_complete_snapshot_missing"}
+    }
 
 
 def post_effect_read_targets(

@@ -1,4 +1,52 @@
-# obdaAI — Status 24.11.2026
+# obdaAI — Status 25.11.2026
+
+
+## Laufende Überarbeitung von Bedienung und Agentenausführung
+
+Die vorhandene Chat-, Aufgaben- und Agentenarchitektur wird erweitert; persönliche
+Daten, Originalbelege und Berechtigungsgrenzen bleiben erhalten. Die Änderungen
+sind derzeit lokal implementiert und noch nicht auf der Test-VM installiert.
+[Architektur und Ausgangsbefunde](docs/agent-experience.md).
+
+- Gesprächstitel entstehen lokal mit der ersten Benutzernachricht, auch bei
+  fehlgeschlagenen Antworten und Agentenaufträgen. Geeignete alte Standardtitel
+  werden beim Laden repariert; manuelle Namen bleiben erhalten.
+- Einordnung und tatsächliche Arbeitsphasen erscheinen direkt im Gespräch.
+  Abbruch, Rückfragen, Freigaben und lesende Zustandsprüfung sind erreichbar.
+  Erfolgreiche Antworten behalten nur eine eingeklappte Detailszeile.
+- Die mobile Darstellung ist kompakter. Der zusätzliche „Systemauftrag“ liegt
+  im Plusmenü; gewöhnliche Integrationsfragen benötigen diesen Schalter nicht.
+- Das Modell erhält kleinere HTTP-Werkzeuge für Lesen, Ändern und Projektion.
+  Originalschema, endgültige Rechteprüfung und dauerhafte Absichten gelten
+  weiterhin. Wiederholte Abfragen und Formatkorrekturen sind begrenzt.
+- Gebundene Entitätenziele benötigen dieselbe vollständig beobachtete Zielgruppe
+  und frische Nachbelege. Ein Backup, ein einzelner Effekt oder eine verkleinerte
+  Ergebnisliste gelten nicht als vollständiger Updateerfolg.
+
+Synthetische Unit-, API- und Browserprüfungen belegen die neuen Oberflächenabläufe
+und Sicherheitsfälle. Der erste lokale Gesamtlauf bestand mit 4.052 Tests;
+spätere Änderungen an der Werkzeugoberfläche sind darin nicht vollständig
+enthalten. Der nächste Gesamtlauf ergab 4.079 bestandene und drei durch den
+neuen Werkzeugvertrag veraltete Tests; nach Anpassung bestehen die betroffenen
+49 Tests. Ein weiterer lokaler Gesamtlauf bestand mit 4.094 Tests; nachfolgende
+Korrekturen an semantischer Formatsteuerung, Abgleich und Detailzuständen sind
+zusätzlich gezielt geprüft und benötigen weiterhin die vollständige passende CI.
+Die einzelnen Browserprüfungen sind kein behaupteter exakt passender Gesamt-CI-Lauf. Die veröffentlichte CI-Evidenz
+und der installierte Stand bleiben bis zur neuen Abnahme unverändert.
+
+Die tatsächlichen lokalen Modellproben sind noch nicht erfolgreich abgeschlossen:
+Frühere Varianten erzeugten ungültige Projektionsargumente und Leseschleifen.
+Mit der neuen aktiven Werkzeugoberfläche sind die Argumente im isolierten
+Planertest gültig, die geforderte nächste Auswahl stimmt jedoch weiterhin nicht.
+Ein vollständiger synthetischer Administrationslauf mit dem echten Modell
+scheiterte an zusätzlich erfundenen Versionsdomänen und anschließenden
+Lesewiederholungen; sechs Modellaufrufe, drei erfolgreiche Abfragen, keine Effekte.
+Die folgende Diagnose zeigte außerdem einen Unterschied zur API-Einordnung:
+Der Worker übergab interne Schema-Metadaten als zusätzlichen Prompttext und
+überschrieb später das vorgesehene Ausgabelimit. Ein Modellversuch lieferte
+30 gleiche Leseanforderungen ohne Änderungsziel. Diese Grenzen werden angeglichen;
+eine bestandene allgemeine Modellabnahme wird daraus noch nicht abgeleitet. Diese Proben ändern keine angebundenen Systeme und sind kein
+Beleg für echte HA-Updates. Allgemeine autonome Verwaltung bleibt offen.
 
 ## Beleggebundene HA-Abfragen — lesend live geprüft
 

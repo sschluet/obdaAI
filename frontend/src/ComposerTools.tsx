@@ -13,6 +13,8 @@ export type ComposerToolsProps={
  webAllowed:boolean;
  sourceLabel?:string;
  inheritedModel?:string;
+ systemMode?:boolean;
+ onToggleSystemMode?:()=>void;
  onChooseModel:(value:string)=>void;
  onToggleWeb:()=>void;
  onAction:(action:ComposerAction)=>void;
@@ -20,7 +22,7 @@ export type ComposerToolsProps={
 type Menu='actions'|'models';
 
 /** Modes apply to the next current input; provider setup stays in Settings. */
-export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConfigured,webAllowed,sourceLabel,inheritedModel,onChooseModel,onToggleWeb,onAction}:ComposerToolsProps){
+export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConfigured,webAllowed,sourceLabel,inheritedModel,systemMode=false,onToggleSystemMode,onChooseModel,onToggleWeb,onAction}:ComposerToolsProps){
  const [menu,setMenu]=useState<Menu|null>(null);
  const root=useRef<HTMLDivElement>(null),actions=useRef<HTMLButtonElement>(null),models=useRef<HTMLButtonElement>(null),popup=useRef<HTMLDivElement>(null);
  const id=useId();
@@ -50,7 +52,7 @@ export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConf
   <button ref={actions} className="composer-tool composer-add" type="button" aria-label="Aktionen und Anhänge" aria-haspopup="menu" aria-expanded={menu==='actions'} aria-controls={menu==='actions'?id+'-actions':undefined} disabled={disabled} onClick={()=>toggle('actions')} onKeyDown={event=>triggerKeys(event,'actions')} title="Dateien, Quellen, Aufgaben und Antwortstil"><Plus size={19}/></button>
   {inheritedModel?<span className="composer-tool composer-model project-model-choice" role="status" title={'Im Projekt festgelegt: '+inheritedModel}><Sparkles size={14}/><span>Projekt: {inheritedModel}</span></span>:<button ref={models} className="composer-tool composer-model" type="button" aria-label="Modellwahl" aria-haspopup="menu" aria-expanded={menu==='models'} aria-controls={menu==='models'?id+'-models':undefined} disabled={disabled} onClick={()=>toggle('models')} onKeyDown={event=>triggerKeys(event,'models')}><span className="composer-model-icon">{isLocal?<LockKeyhole size={14}/>:choice==='cloud'?<Cloud size={14}/>:<Sparkles size={14}/>}</span><span>{modelLabel}</span><ChevronDown className="composer-chevron" size={13}/></button>}
   {sourceLabel&&<button className="composer-tool composer-source" type="button" disabled={disabled} onClick={()=>onAction('sources')} aria-label="Quellen für dieses Gespräch öffnen"><BookOpen size={14}/><span>{sourceLabel}</span></button>}
-  <button className={'composer-tool composer-web'+(webAllowed?' is-enabled':'')} type="button" aria-label={webAllowed?'Websuche aktiviert':'Websuche'} aria-pressed={webAllowed} disabled={webDisabled} title={webHint} onClick={onToggleWeb}><Globe size={15}/><span>{webAllowed?'Websuche an':'Websuche'}</span>{webAllowed&&<Check size={13}/>}</button>
+  <button className={'composer-tool composer-web'+(webAllowed?' is-enabled':'')} type="button" aria-label={webAllowed?'Websuche aktiviert':'Websuche'} aria-pressed={webAllowed} disabled={webDisabled} title={webHint} onClick={onToggleWeb}><Globe size={15}/><span className="composer-web-long">{webAllowed?'Websuche an':'Websuche'}</span><span className="composer-web-short" aria-hidden="true">{webAllowed?'Web an':'Web'}</span>{webAllowed&&<Check size={13}/>}</button>
   {menu&&<div className="composer-popover" ref={popup} id={id+'-'+menu} role="menu" aria-label={menu==='actions'?'Aktionen und Anhänge':'Modellwahl'}>
    <div className="composer-popover-heading">{menu==='actions'?'Mit deinem Gespräch weiterarbeiten':'Wie soll die KI antworten?'}</div>
    {menu==='actions'?<>
@@ -59,6 +61,7 @@ export function ComposerTools({choice,cloudEnabled,cloudBlocked,disabled,webConf
     <button type="button" role="menuitem" onClick={()=>action('task')}><ListChecks size={19}/><span><strong>Aufgabe planen</strong><small>Aus einer Idee einen kontrollierten Ablauf machen</small></span></button>
     <button type="button" role="menuitem" onClick={()=>action('skills')}><Sparkles size={19}/><span><strong>Skill einsetzen</strong><small>Eine aktivierte Regel für diese Anfrage aufrufen</small></span></button>
     <button type="button" role="menuitem" onClick={()=>action('preferences')}><SlidersHorizontal size={19}/><span><strong>Antwortstil einstellen</strong><small>Sprache, Länge und Darstellung einstellen</small></span></button>
+    {onToggleSystemMode&&<><div className="composer-menu-divider">Optionale Arbeitsweise</div><button type="button" role="menuitemcheckbox" aria-label="Systemauftrag" aria-checked={systemMode} onClick={()=>{close(true);onToggleSystemMode()}}><ListChecks size={19}/><span><strong>Systemauftrag</strong><small>Direkt lokal mit freigegebenen Systemen arbeiten. Für normale Fragen wählt die KI Integrationen automatisch.</small></span>{systemMode&&<Check size={17}/>}</button></>}
    </>:<>
     <button type="button" role="menuitemradio" aria-label="Auto" aria-checked={choice==='auto'} onClick={()=>choose('auto')}><Sparkles size={19}/><span><strong>Auto</strong><small>{cloudBlocked?'Private Quellen bleiben lokal':cloudEnabled?'Lokal oder Cloud nach deinen Routingregeln':'Lokales Modell · Cloud am Server ausgeschaltet'}</small></span>{choice==='auto'&&<Check size={17}/>}</button>
     <button type="button" role="menuitemradio" aria-label="Nur lokal" aria-checked={isLocal} onClick={()=>choose('local')}><LockKeyhole size={19}/><span><strong>Nur lokal</strong><small>Lokales Modell, ohne Cloud und Websuche</small></span>{isLocal&&<Check size={17}/>}</button>

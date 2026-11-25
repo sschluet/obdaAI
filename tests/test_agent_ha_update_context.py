@@ -6,7 +6,7 @@ import json
 from hub import agent_reconcile
 from hub import agent_runtime as runtime
 from hub.agent_context import project
-from hub.agent_intent import RequestIntent, Requirement
+from hub.agent_intent import EntityOutcome, RequestIntent, Requirement
 from hub.agent_models import AgentJob
 from hub.agent_tools import Rules
 from test_actions import gateway, set_pause  # noqa: F401
@@ -30,7 +30,8 @@ class SyntheticPlanner(FakeProviders):
         assert not external
         data = json.loads(parts[1].content)
         self.inputs.append(data)
-        if data.get("intent_schema"):
+        assert "intent_schema" not in data  # Private formatter metadata is never prompt data.
+        if data.get("output_contract"):
             self.semantic_calls += 1
             answer = RequestIntent(target_ids=[self.identifier], mode="admin", topic="system",
                 requirements=[Requirement(kind="system", integration_id=self.identifier),
@@ -38,7 +39,13 @@ class SyntheticPlanner(FakeProviders):
                                   Requirement(kind="entity_states", domain="update",
                                               integration_id=self.identifier)]),
                               Requirement(kind="effect_postcondition",
-                                          integration_id=self.identifier)]
+                                  integration_id=self.identifier, outcome=(None
+                                      if "Automation" in data["goal"] else EntityOutcome(
+                                          domain="update", state="off", scope="all_observed",
+                                          selection_state="on", attribute_from_initial={
+                                              "installed_version": "latest_version",
+                                          },
+                                      )))]
             ).model_dump(mode="json")
         else:
             assert data["request_contract"]["mode"] == "admin"
@@ -55,7 +62,12 @@ class SyntheticPlanner(FakeProviders):
                 "interface_methods": [row["rules"]["http_methods"]
                                       for row in data["interfaces"]],
             })
-            assert ("http.verify" in data["tools"]) == (has_effect and not read_only_turn)
+            needs_verification = any(
+                row["kind"] == "effect" and row["status"] == "succeeded"
+                and row.get("result", {}).get("effect_verified") is not True
+                for row in [*data["history"], *data.get("effect_ledger", [])]
+            )
+            assert ("http.verify" in data["tools"]) == (needs_verification and not read_only_turn)
             if has_effect and read_only_turn:
                 assert data["interfaces"] and all(
                     row.get("read_only") is True and row["rules"]["http_methods"] == ["GET"]
@@ -207,7 +219,7 @@ def test_large_ha_admin_discovery_backup_and_multiple_updates_fit_and_verify(ha,
     assert [row["state"] for row in fresh_reads[-1]["result"]["body"]["items"]] == ["off", "off"]
     assert all(row["attributes"]["installed_version"] == "2"
                for row in fresh_reads[-1]["result"]["body"]["items"])
-    assert len(model.inputs) == 10  # Semantic, discovery, effects, three fresh reads, finish.
+    assert len(model.inputs) == 9  # Complete typed state proof needs no final model turn.
     discovery = json.dumps(model.inputs[3])  # Next step after both real discovery reads.
     assert "update.synthetic_1" in discovery and "update.synthetic_2" in discovery
     assert any(step["document"].get("arguments", {}).get("verification")
@@ -237,13 +249,13 @@ def test_tool_confirmation_is_repaired_without_user_input_or_extra_dispatch(ha, 
     assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
     assert len([call for call in calls if call[1] == "POST"]) == 3
     assert all(step["status"] != "awaiting_input" for step in result["steps"])
-    assert len(model.inputs) == 11
+    assert len(model.inputs) == 10
 
 
 def test_repeated_tool_confirmation_stops_bounded_without_target_changes(ha, monkeypatch):  # noqa: F811
     result, calls, model = scenario(ha, monkeypatch, False, confirmations=3)
     assert result["status"] == "failed"
-    assert "lokale Planung" in result["summary"]
+    assert "nicht zuverlässig bestimmen" in result["summary"]
     assert "Zugriffsregeln" not in result["summary"]
     assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 2
     assert not [call for call in calls if call[1] == "POST"]
@@ -258,7 +270,7 @@ def test_certain_admin_execution_confirmation_is_repaired_without_user_input(ha,
     assert result["status"] == "succeeded"
     assert len([step for step in result["steps"] if step["kind"] == "feedback"]) == 1
     assert len([call for call in calls if call[1] == "POST"]) == 3
-    assert len(model.inputs) == 11
+    assert len(model.inputs) == 10
 
 
 

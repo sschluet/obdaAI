@@ -360,7 +360,8 @@ def test_mixed_observation_and_change_requires_both_distinct_evidence_types():
     effect.result = json.dumps({"effect_verified": True})
     assert not adequacy(intent, [effect])["satisfied"]
     states = step("/api/states", [{"entity_id": "light.synthetic", "state": "on"}])
-    assert adequacy(intent, [effect, states])["satisfied"]
+    proof = adequacy(intent, [effect, states])
+    assert not proof["satisfied"] and proof["completion_binding_missing"] == [ID]
 
 
 @pytest.mark.parametrize("goal", [
@@ -397,16 +398,21 @@ def test_administration_with_multiple_same_kind_candidates_needs_semantic_target
 def test_semantic_grammar_requires_model_fields_and_application_stamps_its_own_provenance():
     contract = semantic_request("Überblick bitte", profiles())
     schema = contract["schema"]
-    assert "origin" not in schema["properties"] and "version" not in schema["properties"]
-    assert set(schema["required"]) == set(schema["properties"])
+    for branch in schema["anyOf"]:
+        assert "origin" not in branch["properties"] and "version" not in branch["properties"]
+        assert set(branch["required"]) == set(branch["properties"])
     expected = RequestIntent(target_ids=[ID], mode="observe", topic="inventory",
                              requirements=[Requirement(kind="entity_states", domain="light",
                                                        integration_id=ID)])
     payload = expected.model_dump(exclude={"origin", "version"})
+    # New model interpretations explicitly state optional completion predicates;
+    # historical serialized requirements still omit their absent None value.
+    for requirement in payload["requirements"]:
+        requirement["outcome"] = None
     Draft202012Validator(schema).validate(payload)
     accepted = accept_semantic(payload, profiles())
     assert accepted.origin == "semantic" and accepted.version == 1
-    for field in schema["required"]:
+    for field in schema["anyOf"][1]["required"]:
         incomplete = {key: value for key, value in payload.items() if key != field}
         with pytest.raises(ValueError):
             accept_semantic(incomplete, profiles())

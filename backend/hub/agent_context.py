@@ -549,6 +549,52 @@ def fit(
         result["latest_input"] = latest_input
     stages = [(size, None) for size in (6000, 3000, 1500, 600, 180)] + [(180, 600)]
     for size, metadata_override in stages:
+        if metadata_override is not None:
+            # Only repeated application-authored discovery prose is optional.
+            # Scoped rules, operations, goal predicates and original receipts stay intact.
+            result["interfaces"] = []
+            for interface in data.get("interfaces", []):
+                current = dict(interface)
+                capability = current.get("capabilities")
+                if isinstance(capability, dict) and isinstance(capability.get("discovery"), list):
+                    current["capabilities"] = {
+                        key: value for key, value in capability.items() if key != "discovery"
+                    } | {"discovery_omitted": len(capability["discovery"]),
+                         "model_view_only": True, "full_sha256": _receipt_hash(capability)}
+                result["interfaces"].append(current)
+        goal_evidence = data.get("goal_evidence")
+        if size <= 600 and isinstance(goal_evidence, dict):
+            compact_goal = {key: goal_evidence[key] for key in (
+                "satisfied", "completion_binding_missing", "complete_domain_evidence",
+            ) if key in goal_evidence}
+            compact_goal["missing"] = [{key: item[key] for key in (
+                "kind", "integration_id", "domain",
+            ) if key in item} | ({"outcome_source": "request_contract"}
+                                if "outcome" in item else {})
+                for item in goal_evidence.get("missing", []) if isinstance(item, dict)]
+            compact_goal["model_view_only"] = True
+            result["goal_evidence"] = compact_goal
+        state = data.get("execution_state")
+        if size <= 600 and isinstance(state, dict):
+            # This is derived planning guidance, not policy or original evidence.
+            # The complete goal contract and uncertain-effect receipts stay intact.
+            compact_state = {key: state[key] for key in (
+                "version", "phase", "remaining_effects", "target_remaining_effects",
+                "completion_binding_missing", "unresolved_effects", "missing_observations",
+                "operation_prerequisites",
+            ) if key in state}
+            compact_state["verified_effect_count"] = len(state.get("verified_effects", []))
+            compact_state["outcomes"] = [{key: outcome[key] for key in (
+                "integration_id", "domain", "scope", "satisfied", "reason", "selected_count",
+                "remaining_count", "initial_sequence", "current_sequence",
+            ) if key in outcome} | {
+                "remaining": outcome.get("remaining", [])[:8],
+                "remaining_omitted": max(0, (outcome.get("remaining_count") or 0) - 8),
+            } for outcome in state.get("outcomes", []) if isinstance(outcome, dict)]
+            compact_state["model_view_only"] = True
+            result["execution_state"] = compact_state
+        elif state is not None:
+            result["execution_state"] = state
         if latest is not None:
             protected = (
                 _projected_mail_observation(latest)

@@ -1181,6 +1181,8 @@ async def execute_run(
                     effective_output = min(
                         limits["output_tokens"], limits["context_tokens"] - input_bound
                     )
+                    if snapshot.get("agent_generation", {}).get("intent_schema"):
+                        effective_output = min(effective_output, 768)
                     if effective_output < 16:
                         raise ExecutionLimitError("Kontextgrenze lässt keinen Antwortumfang zu")
                     cfg = replace(cfg, local_max_tokens=effective_output)

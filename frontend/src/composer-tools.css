@@ -33,3 +33,6 @@
  .composer-popover-heading{padding:8px}
 }
 .web-preference{display:flex!important;align-items:center;gap:12px;margin-top:20px}.web-preference input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;accent-color:var(--accent)}
+
+.composer-web-short{display:none}
+@media(max-width:420px){.composer-web-long{display:none}.composer-web-short{display:inline}.composer-tools .composer-web{gap:4px}.composer-tools .composer-model{gap:4px}}

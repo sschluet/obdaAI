@@ -1,3 +1,4 @@
+import {getSystemMode,setSystemMode} from './composer-agent-mode.mjs';
 // Real React, authentication and conversation creation on a fresh synthetic fixture.
 // Integration routing and terminal HA read responses are stubbed; no live HA acceptance.
 import {chromium} from 'playwright';
@@ -43,7 +44,7 @@ async function checks(){
  if(await memory.getByLabel('Memory-Inhalt',{exact:true}).inputValue()!=='Keep this private synthetic draft.')throw Error('Cross-tab cancel lost memory draft');
  await page.getByRole('button',{name:'Chat',exact:true}).click();await confirm().getByRole('button',{name:'Ohne Speichern weiter',exact:true}).click();await page.getByRole('textbox',{name:'Nachricht',exact:true}).waitFor();
  // Explicit administration choice belongs to one conversation only.
- await page.getByLabel('Systeme steuern',{exact:true}).check();await page.locator('.composer-note').getByText('Systemauftrag · lokal, ohne Cloudmodell',{exact:true}).waitFor();await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();
+ await setSystemMode(page,true);await page.locator('.composer-note').getByText('Systemauftrag · lokal, ohne Cloudmodell',{exact:true}).waitFor();await page.getByRole('button',{name:'Neues Gespräch',exact:true}).click();
  await page.waitForFunction(()=>!document.querySelector('.agent-mode input')?.checked);
  // Ordinary history traversal must retain its real forward entry when no editor is dirty.
  await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.getByRole('button',{name:'Modelle',exact:true}).click();await page.getByRole('heading',{name:'Modelle und Verbindungen',exact:true}).waitFor();

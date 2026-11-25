@@ -2,10 +2,12 @@
 
 import asyncio
 import hashlib
+import re
+import unicodedata
 from collections.abc import Sequence
 from typing import Any, Protocol, cast
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from hub.config import Settings
@@ -17,13 +19,78 @@ class TitleProvider(Protocol):
     async def title(self, parts: list[ContextPart], roles: list[str]) -> str: ...
 
 
+def initial_title(content: str) -> str:
+    """A private local derivative, never requiring provider availability.
+
+    Credential-looking input gets a neutral title rather than copying a secret
+    into the sidebar. The complete message remains in its existing storage.
+    """
+    text = content[:12000]
+    if re.search(
+        r"(?i)(?:password|passwort|passwd|secret|api[ _-]?key|access[ _-]?token|"
+        r"bearer\s|private[ _-]?key|ssh-(?:rsa|ed25519)|-----BEGIN|"
+        r"\bsk-[A-Za-z0-9]|[A-Za-z0-9_+/=-]{32,})", text
+    ):
+        return "Vertrauliche Anfrage"
+    text = re.sub(r"https?://\S+|\b[^\s@]+@[^\s@]+\.[^\s@]+", "", text)
+    text = " ".join(
+        "".join(c if not unicodedata.category(c).startswith("C") else " " for c in text).split()
+    ).strip(" #*`>\"'")
+    if not text:
+        return "Neue Anfrage"
+    if len(text) > 76:
+        text = text[:73].rsplit(" ", 1)[0] or text[:73]
+        text += "…"
+    return text
+
+
+def ensure_initial_title(db: Session, chat_id: str) -> None:
+    """Persist immediately in the message transaction; manual titles always win."""
+    repair_initial_titles(db, [chat_id])
+
+
+def repair_initial_titles(db: Session, chat_ids: Sequence[str]) -> None:
+    """Repair only visible legacy placeholders, with one bounded source-row query.
+
+    Failed/interrupted refinements keep their state and are never redispatched.
+    The window selects one actual user input per conversation, not all history.
+    """
+    if not chat_ids:
+        return
+    eligible = (
+        Conversation.id.in_(chat_ids), Conversation.purpose == "chat",
+        Conversation.archived.is_(False), Conversation.manual_title.is_(False),
+        Conversation.title == "Neues Gespräch",
+    )
+    first = select(
+        Message.conversation_id.label("chat_id"), Message.content,
+        func.row_number().over(
+            partition_by=Message.conversation_id, order_by=(Message.created, Message.id)
+        ).label("position"),
+    ).join(Conversation, Conversation.id == Message.conversation_id).where(
+        *eligible, Message.active.is_(True), Message.role == "user"
+    ).subquery()
+    for chat_id, content in db.execute(
+        select(first.c.chat_id, first.c.content).where(first.c.position == 1)
+    ):
+        title = initial_title(content)
+        values = {"title": title}
+        if title == "Vertrauliche Anfrage":
+            values["title_status"] = "generated"
+        db.execute(
+            update(Conversation).where(*eligible, Conversation.id == chat_id).values(**values)
+        )
+
+
 def reserve_title(db: Session, cfg: Settings, chat_id: str) -> None:
+    ensure_initial_title(db, chat_id)
     claimed = db.scalar(
         update(Conversation)
         .where(
             Conversation.id == chat_id,
             Conversation.manual_title.is_(False),
-            Conversation.title == "Neues Gespräch",
+            Conversation.purpose == "chat",
+            Conversation.archived.is_(False),
             Conversation.title_status == "idle",
         )
         .values(title_status="queued")

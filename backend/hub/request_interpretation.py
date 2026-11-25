@@ -6,7 +6,7 @@ import time
 from dataclasses import replace
 from typing import Any
 
-from hub.agent_intent import accept_semantic, semantic_request
+from hub.agent_intent import accept_semantic, semantic_failure_feedback, semantic_request
 from hub.db import Conversation, ProviderConfig, Run
 from hub.db_locks import ownership_lock
 from hub.inference_capacity import InferenceWaitTimeout
@@ -113,28 +113,59 @@ async def interpret(
 
     def progress(phase: str) -> None:
         nonlocal ready_at
-        if phase == "model_ready":
+        if phase == "model_ready" and ready_at is None:
             ready_at = time.monotonic()
             phase_times["queue_seconds"] = round(ready_at - started, 3)
 
     provider.on_progress = progress
+    attempts: list[dict[str, Any]] = []
     try:
+        # Both interpretations share one deadline and the same final provider/owner gates.
         async with asyncio.timeout(min(cfg.generation_timeout, 120)):
-            chunks = []
-            async for chunk in provider.stream(
-                parts, ["system", "user"], external=False, grants=[]
-            ):
-                if chunk and first_content is None:
-                    first_content = time.monotonic() - started
-                    if ready_at is not None:
-                        phase_times["prefill_seconds"] = round(time.monotonic() - ready_at, 3)
-                chunks.append(chunk)
-                if sum(len(item) for item in chunks) > 12000:
-                    raise ValueError("Intent output exceeded its bound")
-        result = accept_semantic(json.loads("".join(chunks)), profiles, goal=goal)
-        accepted = result.model_dump(mode="json")
-        success = True
-        return result
+            for attempt in range(2):
+                chunks = []
+                async for chunk in provider.stream(
+                    parts, ["system", "user"], external=False, grants=[]
+                ):
+                    if chunk and first_content is None:
+                        first_content = time.monotonic() - started
+                        if ready_at is not None:
+                            phase_times["prefill_seconds"] = round(time.monotonic() - ready_at, 3)
+                    chunks.append(chunk)
+                    if sum(len(item) for item in chunks) > 12000:
+                        raise ValueError("Intent output exceeded its bound")
+                try:
+                    result = accept_semantic(json.loads("".join(chunks)), profiles, goal=goal)
+                except ValueError as error:
+                    feedback = semantic_failure_feedback(error)
+                    issue = feedback["semantic_feedback"]["issue"]
+                    attempts.append({"status": "invalid", "issue": issue})
+                    if attempt:
+                        raise
+                    corrected = [
+                        *parts[:1],
+                        parts[1].model_copy(
+                            update={
+                                "content": json.dumps(
+                                    {**request["data"], **feedback}, ensure_ascii=False
+                                ),
+                            }
+                        ),
+                    ]
+                    if (
+                        sum(len(part.content) for part in corrected) > limits["context_chars"]
+                        or sum(len(part.content.encode()) + 64 for part in corrected)
+                        + 4096
+                        + provider.settings.local_max_tokens
+                        > limits["context_tokens"]
+                    ):
+                        raise ValueError("Intent repair exceeds the local model boundary") from None
+                    parts = corrected
+                    continue
+                attempts.append({"status": "succeeded"})
+                accepted = result.model_dump(mode="json")
+                success = True
+                return result
     except InferenceWaitTimeout as error:
         timeout_phase = error.phase
         raise
@@ -160,6 +191,7 @@ async def interpret(
                     "intent": accepted,
                     "interpretation_seconds": round(time.monotonic() - started, 3),
                     "inference_phases": phase_times,
+                    "semantic_attempts": attempts,
                     **({"inference_timeout_phase": timeout_phase} if timeout_phase else {}),
                 },
                 ensure_ascii=False,

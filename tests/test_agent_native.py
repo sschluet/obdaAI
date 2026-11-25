@@ -17,6 +17,7 @@ from jsonschema import Draft202012Validator
 
 
 def prepared(**flags):
+    """Historical metadata-v1 fixture; current active HTTP is tested separately."""
     rows = []
     for identifier, prefix in [("one", "/api/one/"), ("two", "/api/two/")]:
         rules = Rules(
@@ -43,7 +44,23 @@ def prepared(**flags):
         "private_context": {"text": "private"},
         **flags,
     }
-    return prepare(instruction({"home_assistant"}), data)
+    value = prepare(instruction({"home_assistant"}), data)
+    # Persisted V1 metadata advertised the canonical function. Keep exercising
+    # that backward-compatible protocol without forcing it on new model calls.
+    from hub.agent_native import _digest
+
+    canonical = value.metadata.pop("canonical_tools", [])
+    aliases = {
+        name for name, binding in value.metadata["bindings"].items() if "http_facade" in binding
+    }
+    value.metadata["tools"] = [
+        row for row in value.metadata["tools"] if row["function"]["name"] not in aliases
+    ] + canonical
+    value.metadata["bindings"] = {
+        name: binding for name, binding in value.metadata["bindings"].items() if name not in aliases
+    }
+    value.metadata["sha256"] = _digest(value.metadata)
+    return value
 
 
 def call(name, arguments):
@@ -182,6 +199,7 @@ def test_no_mutation_preserves_policy_private_data_and_safety():
             key: val
             for key, val in old["rules"].items()
             if key not in {"http_methods", "http_prefixes", "ha_websocket_prefixes"}
+            and (key != "effect_prerequisites" or val)
         }
     for text in [
         "production_ha_approved",
@@ -423,10 +441,10 @@ def test_schema_issue_volume_and_names_are_bounded(monkeypatch):
 def test_native_instruction_requires_one_call_and_existing_evidence_for_completion():
     value = prepared()
     for text in [
-        "GENAU EINEN Funktionsaufruf",
-        "Warte dessen Ergebnis ab",
-        "keine parallelen Aufrufe",
-        "Abschluss nur aus bereits vorliegenden Belegen",
+        "GENAU EIN Funktionsaufruf",
+        "Ergebnis abwarten",
+        "nicht parallel",
+        "Abschluss nur aus vorhandenen Belegen",
     ]:
         assert text in value.instruction
     assert "Nachzustand unabhängig prüfen" in value.instruction
@@ -478,7 +496,7 @@ def test_tool_wire_is_one_object_with_hoisted_refs_and_typed_nested_values():
             assert result is not None and result["arguments"] == arguments
             assert type(result["arguments"]["query"][next(iter(arguments["query"]))]) is bool
             assert result["integration_id"] == "one"
-    assert "arguments als vollständiges JSON-Objekt" in value.instruction
+    assert "arguments als JSON-Objekt nach Schema" in value.instruction
     assert "direkt message" in value.instruction
 
 
@@ -586,7 +604,7 @@ def test_readonly_single_anyof_flatten_is_language_equivalent():
         after.is_valid({"arguments": args}) for args in candidates
     ]
     assert before.is_valid(candidates[0]) and not before.is_valid(candidates[-1])
-    assert "type:null verlangt JSON-null, kein Objekt oder Text" in value.instruction
+    assert "type:null verlangt JSON-null" in value.instruction
 
 
 def test_single_anyof_flatten_preserves_interacting_sibling_constraints():

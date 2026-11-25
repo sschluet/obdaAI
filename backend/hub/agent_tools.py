@@ -59,6 +59,22 @@ def api_path(value: str) -> str:
     return value
 
 
+class HTTPEffectOperation(Strict):
+    tool: Literal["http"] = "http"
+    method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
+    path: str = Field(min_length=1, max_length=1000)
+
+    @model_validator(mode="after")
+    def relative_path(self) -> "HTTPEffectOperation":
+        api_path(self.path)
+        return self
+
+
+class EffectPrerequisite(Strict):
+    operation: HTTPEffectOperation
+    requires: HTTPEffectOperation
+
+
 class Rules(Strict):
     enabled: bool = False
     autonomous: bool = False
@@ -68,6 +84,7 @@ class Rules(Strict):
     http_methods: list[Literal["GET", "POST", "PUT", "PATCH", "DELETE"]] = Field(
         default=["GET"], max_length=5
     )
+    effect_prerequisites: list[EffectPrerequisite] = Field(default_factory=list, max_length=8)
     shell: bool = False
     home_assistant_host: bool = False
     production_ha_approved: bool = False
@@ -101,6 +118,23 @@ class Rules(Strict):
             api_path(path)
             if not path.endswith("/"):
                 raise ValueError("API scopes must end in a slash")
+        dependencies: dict[tuple[str, str], set[tuple[str, str]]] = {}
+        for prerequisite in self.effect_prerequisites:
+            for operation in (prerequisite.operation, prerequisite.requires):
+                if operation.method not in self.http_methods or not any(
+                    operation.path.startswith(prefix) for prefix in self.http_prefixes
+                ):
+                    raise ValueError("Effect prerequisites need permitted HTTP operations")
+            operation_key = (prerequisite.operation.method, prerequisite.operation.path)
+            required = (prerequisite.requires.method, prerequisite.requires.path)
+            dependencies.setdefault(operation_key, set()).add(required)
+        def visit(operation: tuple[str, str], ancestors: set[tuple[str, str]]) -> None:
+            if operation in ancestors:
+                raise ValueError("Cyclic effect prerequisites are not executable")
+            for required in dependencies.get(operation, set()):
+                visit(required, ancestors | {operation})
+        for root_key in dependencies:
+            visit(root_key, set())
         for path in self.file_read_roots:
             if (
                 not path.startswith("/")
@@ -569,6 +603,7 @@ def effective_rules(rules: Rules, *, read_only: bool = False) -> Rules:
     )]
     return rules.model_copy(deep=True, update={
         "http_methods": ["GET"] if "GET" in rules.http_methods else [],
+        "effect_prerequisites": [],  # No effects exist in this derived read-only ceiling.
         "shell": False, "file_upload": False, "mail_recipients": [], "mcp": False,
         # Existing shell authority already permits absolute file reads. Represent
         # that read subset explicitly so removing shell does not remove file.read.

@@ -1,14 +1,26 @@
 {
-  "updated": "2026-11-24",
+  "updated": "2026-11-25",
   "applicationCommit": "a7695cb",
   "schema": "0050",
   "tests": 3980,
   "ciUrl": "https://github.com/sschluet/obdaAI/actions/runs/45495642205",
   "screenshots": [
     {
+      "id": "live-activity-mobile",
+      "title": "Du siehst, was gerade passiert.",
+      "description": "Lesender Auftrag mit unmittelbar sichtbarem Status, belegten abgeschlossenen Schritten und erreichbarem Abbruch; technische Details bleiben eingeklappt. Ausschließlich synthetische Aurora-Verbindung und simulierte Statusdaten. Kein echter Zielzugriff und kein Nachweis allgemeiner Planerqualität.",
+      "image": "assets/liveactivitymobile.png"
+    },
+    {
+      "id": "live-activity-desktop",
+      "title": "Fortschritt bleibt im Gespräch.",
+      "description": "Gleicher sichtbarer Zwischenstatus am Desktop, ohne erfundene Prozentwerte oder ausgegebene Gedankengänge. Gesprächstitel und Verlauf zeigen denselben synthetischen Titel. Ausschließlich isolierte Browserfixture; kein realer Modell- oder Systemaufruf.",
+      "image": "assets/liveactivitydesktop.png"
+    },
+    {
       "id": "compact-chat",
       "title": "Mehr Platz für die eigentliche Antwort.",
-      "description": "Kurze synthetische Mailübersicht, standardmäßig eingeklappte „Details Abarbeitung“ und ausgeblendete obere Leisten nach tatsächlichem Scrollen. Isolierte Browserfixture mit erfundenen Aurora-Mails; kein echtes Postfach und kein Modellaufruf.",
+      "description": "Kurze Mailantwort und danach nur eine eingeklappte Zeile „Details Abarbeitung“ statt einer zusätzlichen Erfolgskarte. Mobile Chatleisten weichen beim Lesen aus; der Composer bleibt erreichbar. Ausschließlich erfundene Aurora-Mails in einer isolierten Browserfixture, kein echtes Postfach oder Modellaufruf.",
       "image": "assets/compactchat.png"
     },
     {
@@ -32,7 +44,7 @@
     {
       "id": "ha-lights",
       "title": "Lampen aus vorhandenen Zuständen",
-      "description": "Eine fehlende Lampen-Schnittstelle bleibt als 404-Beleg sichtbar. Eine begrenzte alternative Leseabfrage filtert die vorhandenen Zustände lokal nach Lampen. Synthetische Aurora-Lampen und simulierte Modell-/HA-Antworten; kein echter Systemzugriff.",
+      "description": "Eine fehlende Lampen-Schnittstelle bleibt als 404-Beleg sichtbar. Eine begrenzte alternative Leseabfrage filtert die vorhandenen Zustände lokal nach Lampen. Synthetische Aurora-Lampen und simulierte Modell-/HA-Antworten; kein echter Systemzugriff. Nach erfolgreicher Antwort erscheint keine zusätzliche Abschlusskarte.",
       "image": "assets/halights.png"
     },
     {
@@ -44,7 +56,7 @@
     {
       "id": "ha-access",
       "title": "Zugriff prüfen. Klar antworten.",
-      "description": "Eine einfache Frage nach Home Assistant nutzt automatisch die freigegebene Verbindung und eine feste lesende HTTP-Prüfung. Erfolg und Verbindungsfehler erscheinen verständlich im Chat, ohne Änderungsfreigaben. Ausschließlich synthetische API-Antworten und Testdaten; kein Nachweis eines echten HA-Zugriffs.",
+      "description": "Eine einfache Frage nach Home Assistant nutzt automatisch die freigegebene Verbindung und eine feste lesende HTTP-Prüfung. Erfolg und Verbindungsfehler erscheinen verständlich im Chat, ohne Änderungsfreigaben. Ausschließlich synthetische API-Antworten und Testdaten; kein Nachweis eines echten HA-Zugriffs. Nach der Antwort genügt die kompakte geschlossene Detailszeile.",
       "image": "assets/haaccess.png"
     },
     {
@@ -68,13 +80,13 @@
     {
       "id": "mail-chat-recovery",
       "title": "Nach einem Fehler weiterfragen.",
-      "description": "Ein beendeter Integrationsauftrag erklärt einen lokalen Planungsfehler. Der Chat ist danach wieder benutzbar. Ausschließlich synthetischer Fehler und Aurora-Testprofil; keine echte Mail und kein Beleg eines realen erfolgreichen Postfachabrufs.",
+      "description": "Ein angehaltener Auftrag erklärt seinen letzten bekannten Zustand direkt im Chat. Die Frage kann ausdrücklich als Entwurf vorbereitet werden; dadurch wird nichts erneut ausgeführt. Details bleiben manuell erreichbar. Synthetischer Planungsfehler und erfundenes Aurora-Profil, keine echte Mail oder erfolgreiche Postfachabnahme.",
       "image": "assets/mailchatrecovery.png"
     },
     {
       "id": "chat",
       "title": "Ein Gespräch. Viele Möglichkeiten.",
-      "description": "Direkte Gesprächsleiste mit Plus-Aktionen, sofort umschaltbarer Websuche und kompakter Modellwahl. Antwortstil als sichtbare Auswahl neben dem Chat.",
+      "description": "Kompakte Modellwahl mit Auto, Nur lokal und Cloud sowie direkter Websuche. Zusätzliche Aktionen einschließlich des optionalen lokalen Systemauftrags liegen im Plus-Menü. Ausschließlich synthetisches Projekt Aurora; keine echten Gespräche.",
       "image": "assets/chat.png"
     },
     {
@@ -320,7 +332,7 @@
     {
       "id": "agentcontrol",
       "title": "Ein Ziel im Chat. Nachvollziehbare Schritte.",
-      "description": "Systemsteuerung mit Rückfragen im selben Gespräch, gezielten Freigaben und prüfbaren Werkzeugbelegen. Ausschließlich synthetischer Archivauftrag und simulierte Dienstantworten; kein realer HA-Updatebeleg.",
+      "description": "Abgeschlossene synthetische Archivaktion mit Werkzeugbelegen und unabhängigem Prüfschritt. Die Details wurden für dieses Bild ausdrücklich geöffnet; standardmäßig bleiben sie einzeilig geschlossen. Simulierter Dienst und lokaler Testworker, kein realer HA-Updatebeleg.",
       "image": "assets/agentcontrol.png"
     },
     {
@@ -352,7 +364,12 @@
         {
           "title": "Mehr Platz im mobilen Chat",
           "status": "limited",
-          "description": "Kompakte Mailübersichten, eine standardmäßig eingeklappte Zeile „Details Abarbeitung“ und beim tatsächlichen Lesen ausblendbare mobile Chatleisten. Freigaben und Rückfragen bleiben gezielt erreichbar. Synthetische Browserprüfungen; reale Telefonbedienung wird dadurch nicht behauptet."
+          "description": "Laufende, wartende und fehlgeschlagene Aufträge zeigen ihren Zustand direkt am Chat. Nach einer erfolgreichen Antwort bleibt nur eine geschlossene Zeile „Details Abarbeitung“. Mobile Chatleisten weichen beim Lesen aus; optionale Systemaufträge liegen im Plus-Menü. Implementiert und synthetisch im Browser geprüft; diese neue Oberfläche ist noch nicht auf der Test-VM abgenommen."
+        },
+        {
+          "title": "Sichtbarer Auftragsstatus und gezielte nächste Schritte",
+          "status": "limited",
+          "description": "Zwischenstatus für Einordnung, Planung, Lesen, Änderungen und Verifikation erscheinen unmittelbar im Chat und bei Aufgaben. Rückfragen, Freigaben und Abbruch bleiben erreichbar; bei unklarer Wirkung ist eine ausdrückliche rein lesende Zustandsprüfung möglich. Kein automatisches Wiederholen von Änderungen und keine erfundenen Fortschrittsprozente. Implementiert und mit synthetischen Browserabläufen einschließlich verzögerter Antworten geprüft; neue UI noch nicht live auf der Test-VM abgenommen."
         },
         {
           "title": "Gemeinsame Stabilisierung von Planung und Kontext",
@@ -371,7 +388,7 @@
         },
         {
           "title": "Titel, Suche und Verlauf",
-          "description": "Lokale automatische Titel, manuelle Umbenennung, deutsche Volltextsuche und Archivierung sorgen für Orientierung.",
+          "description": "Lokale automatische Titel, manuelle Umbenennung, deutsche Volltextsuche und Archivierung sorgen für Orientierung. Neue Anfragen erhalten unmittelbar einen privaten lokalen Titel, auch während langer Antworten oder bei Fehlern. Diese Erweiterung ist implementiert und gegen echte synthetische API-/Streamingabläufe geprüft, noch nicht auf der Test-VM ausgerollt.",
           "status": "live"
         },
         {
@@ -713,13 +730,18 @@
           "description": "Optionale Google-OAuth-Einrichtung mit getrennten Quellen- und Ablagerechten auf der Test-VM installiert; native API und Dialog im echten Browser geprüft. Gewählte Ordner verwenden die bestehende lokale Quellenindexierung, geprüfte Dateiversionen die eigene Ablage. Echte Google-Anmeldung und reale Transfers bleiben bis zur Kontoeinrichtung ungeprüft."
         },
         {
+          "title": "Backup vor dem HA-Update-Dienst",
+          "status": "limited",
+          "description": "Optionale Regel für update.install dieser HA-Verbindung über HTTP oder WebSocket: Im selben Auftrag muss zuvor eine Sicherung unabhängig bestätigt sein. Neue Regeln verwenden backup.create_automatic mit den Home-Assistant-Sicherungseinstellungen; bestehende explizite Backup-Methoden bleiben erhalten. Standardmäßig aus, ohne zusätzliche Zugriffs- oder Autonomierechte; direkte Supervisor-/SSH-Updates werden nicht erfasst. Oberfläche und API mit synthetischen Daten geprüft, echte Ausführungsabnahme noch offen."
+        },
+        {
           "title": "Versionierte Skills",
           "description": "Skill-Bibliothek mit Suche, Markdown-Editor und geprüften Revisionen. Einzelne SKILL.md-Dateien sowie ZIP-/Skill-Pakete mit Office-Vorlagen, Bildern und Referenzen importieren. Paketdateien, Abhängigkeiten und Importhinweise im Editor prüfen; Originale bleiben lokal und unverändert. Verwendung Immer, Bei Erwähnung oder Nach Stichwort; Cloudfreigabe je Anleitung. Skripte werden archiviert und nicht ausgeführt. Vorlagen für die Dateierstellung sind an die geprüfte Skillrevision gebunden. Paketimport, unveränderte Originalhashes, reale lokale Vorlagenausgaben und Dateidialog mit gemischten Markdown-/Paketbibliotheken auf der Test-VM geprüft.",
           "status": "live"
         },
         {
           "title": "Home Assistant lesen",
-          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen, auch mit höflichem Präfix, verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Lampenübersicht und Zustandsfolgefrage sind mit echten freigegebenen Abrufen ohne zusätzliche Bestätigung geprüft. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen.",
+          "description": "Lesende Zugriffsfragen sind am echten Ziel geprüft. Eng erkannte Lampenfragen, auch mit höflichem Präfix, verwenden eine feste, freigegebene Zustandsabfrage mit lokalem Filter und klarer Darstellung ohne Modellplanung; Folgefragen bleiben an die beobachtete Auswahl gebunden. Lampenübersicht und Zustandsfolgefrage sind mit echten freigegebenen Abrufen ohne zusätzliche Bestätigung geprüft. Der allgemeine Agent kann nach einem GET-404 genau einen anderen freigegebenen Leseweg wählen und erhält den ursprünglichen Fehlerbeleg. Automatisierte Vertrags- und synthetische Browserprüfungen ergänzen die echte Zielabnahme. Umfassende HA-Verwaltung, Updates und Restore bleiben teilweise offen. Neue typisierte Ziel- und Ergebnisangaben sowie sichtbare Arbeitsphasen sind implementiert und synthetisch geprüft. Aktuelle allgemeine Planungsproben scheitern weiterhin trotz einzelner erfolgreicher Leseaufrufe; daraus folgt keine bestätigte Verwaltung oder Updateausführung.",
           "status": "limited"
         },
         {
@@ -769,7 +791,7 @@
         },
         {
           "title": "Agentische Systemsteuerung aus Chat, Aufgaben und Projekten",
-          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen erhalten vollständig typisierte Argumentobjekte; Zielregeln, dauerhafte Absichten und Nachprüfungen bleiben wirksam. Ein nativer Entitätenabruf erzeugt geprüfte bestehende HTTP-Leseaufrufe. Eine reale freie HA-Updateübersicht besteht mit vollständigen Zustandsbelegen und beleggebundenem Abschluss; SSH und Paperless wurden ebenfalls lesend geprüft. Der separate Provider-Planertest nutzt denselben Kontextaufbau und sichere Fehlerkategorien. Seine reale Probe erkennt den Intent, scheitert aber weiterhin bei der Werkzeugauswahl; die allgemeine lokale Planerabnahme bleibt offen. Umfassende autonome HA-Konfiguration und Updates sind nicht live abgenommen. Unklare Änderungen werden nicht automatisch wiederholt.",
+          "description": "Gemeinsamer lokaler Planer mit öffentlicher Recherche und gebundenen REST-/HA-WebSocket-/SSH-/MCP-Werkzeugen. Native Funktionen behalten vollständig typisierte Argumente, Zielregeln, dauerhafte Absichten und Nachprüfungen. Neue typisierte Ergebnisanforderungen, sichtbare Arbeitsphasen und verständliche Stopps sind implementiert und automatisiert beziehungsweise synthetisch geprüft. Frühere begrenzte HA-, SSH- und Paperless-Leseabnahmen bleiben getrennte Einzelfallbelege. Aktuelle allgemeine Modellproben scheitern weiterhin bei der Werkzeugauswahl beziehungsweise dem Abschluss, auch nach einzelnen erfolgreichen Leseaufrufen; die neue Oberfläche ist noch nicht auf der Test-VM abgenommen. Daraus werden weder allgemeine Planerqualität noch umfassende autonome HA-Konfiguration oder erfolgreiche Updates abgeleitet. Unklare Änderungen werden nicht automatisch wiederholt.",
           "status": "limited"
         }
       ]

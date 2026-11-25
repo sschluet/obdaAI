@@ -7,7 +7,7 @@ import json
 import re
 from collections import deque
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import islice
 from typing import Any
 
@@ -132,7 +132,13 @@ def _parameters(arguments: dict[str, Any], definitions: dict[str, Any]) -> dict[
 
 def _digest(metadata: dict[str, Any]) -> str:
     return hashlib.sha256(
-        _encode({key: metadata[key] for key in ("tools", "bindings")}).encode()
+        _encode(
+            {
+                key: metadata[key]
+                for key in ("tools", "bindings", "canonical_tools")
+                if key in metadata
+            }
+        ).encode()
     ).hexdigest()
 
 
@@ -172,6 +178,10 @@ def _entity_facades(
     missing = evidence.get("missing", []) if isinstance(evidence, dict) else []
     if not isinstance(missing, list):
         return
+    phase = original.get("execution_state")
+    observations = phase.get("missing_observations", []) if isinstance(phase, dict) else []
+    if isinstance(observations, list):
+        missing = [*missing, *observations]
     facades = []
     for interface in original["interfaces"]:
         identifier = interface["integration_id"]
@@ -256,6 +266,144 @@ def _entity_facades(
         )
 
     tools[:0] = facades
+
+
+def _capability_examples(interface: dict[str, Any], metadata: dict[str, Any]) -> None:
+    """Translate only application-owned capability examples, never fetched data/receipts."""
+    from hub.agent_http_facades import history_alias, normalized_http
+
+    capabilities = interface.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return
+    identifier = interface["integration_id"]
+    active = {row["function"]["name"] for row in metadata["tools"]}
+    names = {
+        name: binding
+        for name, binding in metadata["bindings"].items()
+        if name in active and binding.get("integration_id") == identifier
+    }
+
+    def example(value: Any) -> Any:
+        if not isinstance(value, dict) or not isinstance(value.get("arguments"), dict):
+            return value
+        tool, arguments = value.get("tool"), value["arguments"]
+        selected = history_alias(metadata, identifier, arguments) if tool == "http" else None
+        if selected is None:
+            name = next(
+                (
+                    name
+                    for name, binding in names.items()
+                    if binding.get("tool") == tool and "canonical_function" not in binding
+                ),
+                None,
+            )
+            selected = (name, arguments) if name else None
+        if selected is not None:
+            name, selected_arguments = selected
+            binding = metadata["bindings"][name]
+            wire = (
+                {"arguments": selected_arguments}
+                if binding.get("argument_object")
+                else selected_arguments
+            )
+            try:
+                decision = decode_calls(
+                    metadata,
+                    [
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": name,
+                                "arguments": _encode(wire),
+                            },
+                        }
+                    ],
+                )
+                same = (
+                    decision is not None
+                    and decision.get("integration_id") == identifier
+                    and decision.get("tool") == tool
+                    and (
+                        normalized_http(decision["arguments"]) == normalized_http(arguments)
+                        if tool == "http"
+                        else _encode(decision["arguments"]) == _encode(arguments)
+                    )
+                )
+            except (NativeCallError, ValueError):
+                same = False
+            if same:
+                return {
+                    **{
+                        key: item for key, item in value.items() if key not in {"tool", "arguments"}
+                    },
+                    "function": name,
+                    "arguments": deepcopy(wire),
+                }
+        # A descriptive hint is not a callable recipe when current tools cannot
+        # represent it losslessly. Never repair or discard part of an invocation.
+        return {
+            **{key: item for key, item in value.items() if key not in {"tool", "arguments"}},
+            **(
+                {"relative_path": arguments["path"]}
+                if isinstance(arguments.get("path"), str)
+                else {}
+            ),
+            "invocation_unavailable": True,
+        }
+
+    if capabilities.get("inspection") is not None:
+        capabilities["inspection"] = example(capabilities["inspection"])
+    operations = capabilities.get("operations")
+    if isinstance(operations, dict):
+        for key in ("http_reads", "websocket_reads"):
+            if isinstance(operations.get(key), list):
+                operations[key] = [example(value) for value in operations[key]]
+    read_name = next(
+        (name for name, binding in names.items() if binding.get("http_facade") == "read"), None
+    )
+    project_name = next(
+        (name for name, binding in names.items() if binding.get("http_facade") == "project"), None
+    )
+    entity_name = next(
+        (name for name, binding in names.items() if name.endswith("_ha_entities")), None
+    )
+    hidden_http = any(
+        binding.get("tool") == "http" and name not in active
+        for name, binding in metadata["bindings"].items()
+        if binding.get("integration_id") == identifier
+    )
+    no_http = not any(binding.get("tool") == "http" for binding in names.values())
+    discovery = capabilities.get("discovery")
+    if isinstance(discovery, list):
+        rewritten = []
+        for text in discovery:
+            if isinstance(text, str) and text.startswith(
+                "Use authenticated /api/config and /api/services"
+            ):
+                if hidden_http or no_http:
+                    if read_name:
+                        rewritten.append(
+                            f"Use {read_name} only for needed permitted GET paths; "
+                            "reuse existing observations."
+                        )
+                    continue
+            if isinstance(text, str) and text.startswith("Entity domains are not REST routes."):
+                if hidden_http or no_http:
+                    hints = ["Entity domains are not REST routes."]
+                    if entity_name:
+                        hints.append(f"Use {entity_name} for the goal's domain states.")
+                    if project_name:
+                        hints.append(
+                            f"Advanced list selection: {project_name}, explicit "
+                            "filter_mode/filter_field/filter_value; fields/items_path/limit "
+                            "follow its actual schema. Never guess pointers or IDs."
+                        )
+                    if not entity_name and not project_name:
+                        hints.append("Use only provided state-read examples and actual schemas.")
+                    rewritten.append(" ".join(hints))
+                    continue
+            rewritten.append(text)
+        capabilities["discovery"] = rewritten
 
 
 def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
@@ -350,8 +498,18 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
                 "function": {"name": name, "description": description, "parameters": parameters},
             }
         )
+    from hub.agent_http_facades import add_facades
+
+    canonical_tools = add_facades(original, tools, bindings)
     _entity_facades(original, tools, bindings, targets)
-    metadata: dict[str, Any] = {"version": 1, "tools": tools, "bindings": bindings}
+    private_names = {row["function"]["name"] for row in canonical_tools}
+    tools = [row for row in tools if row["function"]["name"] not in private_names]
+    metadata: dict[str, Any] = {
+        "version": 1,
+        "tools": tools,
+        "bindings": bindings,
+        **({"canonical_tools": canonical_tools} if canonical_tools else {}),
+    }
     metadata["sha256"] = _digest(metadata)
     native = {
         key: deepcopy(value)
@@ -359,32 +517,85 @@ def prepare(instruction: str, data: dict[str, Any]) -> PreparedNative:
         if key not in {"tools", "decision_schema"}
     }
     for interface in native["interfaces"]:
+        _capability_examples(interface, metadata)
         rules = interface.pop("rules", {})
         interface["policy_context"] = {
             key: value
             for key, value in rules.items()
             if key not in {"http_methods", "http_prefixes", "ha_websocket_prefixes"}
+            and (key != "effect_prerequisites" or value)
         }
     start = instruction.index("Ausgabe NUR ein JSON-Objekt nach decision_schema.")
     end = instruction.index("Öffentliche Recherche", start)
     prose = (
         instruction[:start]
         + (
-            "Wähle pro Planungsschritt GENAU EINEN Funktionsaufruf. Warte dessen Ergebnis ab; "
-            "keine parallelen Aufrufe. Abschluss nur aus bereits vorliegenden Belegen.\n"
-            "Verwende native Funktionsaufrufe aus der bereitgestellten Liste. Der Funktionsname\n"
-            "bindet Ziel und Werkzeug. Werkzeugfunktionen erhalten genau den Parameter "
-            "arguments als vollständiges JSON-Objekt nach dessen Schema, keine JSON-Zeichenkette.\n"
-            "ask_user, finish_run und stop_run erhalten direkt message.\n"
-            "Beachte die Feldtypen genau: type:null verlangt JSON-null, kein Objekt oder Text. "
-            "Nicht benötigte optionale Felder dürfen entfallen.\n"
-            "Keine zusätzliche JSON-Hülle. Rückfragen über ask_user, Abschluss über finish_run,\n"
-            "sicheres Anhalten über stop_run, jeweils nur soweit angeboten.\n"
-            "Texte kurz und sachlich, keine internen Überlegungen.\n"
+            "GENAU EIN Funktionsaufruf; Ergebnis abwarten, nicht parallel. "
+            "Abschluss nur aus vorhandenen Belegen. Name bindet Ziel/Werkzeug.\n"
+            "Werkzeuge: arguments als JSON-Objekt nach Schema, keine Zeichenkette/Hülle. "
+            "type:null verlangt JSON-null. Unbenötigte optionale Felder dürfen entfallen.\n"
+            "ask_user/finish_run/stop_run: direkt message, nur wenn angeboten; "
+            "kurz, sachlich, keine internen Überlegungen.\n"
         )
         + instruction[end:]
     )
+    if canonical_tools and not any(
+        binding.get("tool") == "http"
+        and "canonical_function" not in binding
+        and name not in private_names
+        for name, binding in bindings.items()
+    ):
+        start = prose.find("Große Antworten: projection mit")
+        end = prose.find("Unbekannte Struktur zuerst", start)
+        if start >= 0 and end > start:
+            prose = (
+                prose[:start]
+                + (
+                    "GET: *_http_read; Änderungen: *_http_change. Domänenzustände: *_ha_entities. "
+                    "Auswahl nur mit *_http_project: filter_mode=none|equals|prefix, "
+                    "filter_field als explizitem JSON-Pointer, filter_value typgetreu. "
+                    "Keine projection-Hülle oder geratenen Filterwerte.\n"
+                )
+                + prose[end:]
+            )
+        prose = prose.replace(
+            "Unbekannte Struktur zuerst ohne projection lesen;",
+            "Unbekannte Struktur zuerst mit angebotenem Lesewerkzeug ohne Auswahl lesen;",
+        ).replace(
+            "/api/states-Liste lesen, where_pointer=/entity_id, where_prefix=update.;",
+            "/api/states-Liste mit angebotenem Domänenwerkzeug lesen; sonst über "
+            "die flache Auswahl mit filter_field=/entity_id, "
+            "filter_mode=prefix, filter_value=update.;",
+        )
+    if not any(binding.get("tool") == "http" for binding in bindings.values()):
+        from hub.agent_instructions import _HTTP
+
+        prose = prose.replace(_HTTP, "").replace(
+            "Version allein belegt keine offenen Updates. Deren Zustände aus beobachteter\n"
+            "/api/states-Liste lesen, where_pointer=/entity_id, where_prefix=update.;\n"
+            "nur vorhandene Attribute projizieren.",
+            "Version allein belegt keine offenen Updates. Zustände nur über angebotene "
+            "Werkzeuge und deren vorhandene Felder lesen.",
+        )
     return PreparedNative(prose, native, metadata, instruction, original)
+
+
+def without_http_facades(native: PreparedNative) -> PreparedNative:
+    """Drop optional method hints when needed to fit; canonical tools remain complete."""
+    if native.metadata.get("canonical_tools"):
+        return native
+    metadata = deepcopy(native.metadata)
+    removed = {name for name, binding in metadata["bindings"].items() if "http_facade" in binding}
+    if not removed:
+        return native
+    metadata["tools"] = [
+        tool for tool in metadata["tools"] if tool["function"]["name"] not in removed
+    ]
+    metadata["bindings"] = {
+        name: binding for name, binding in metadata["bindings"].items() if name not in removed
+    }
+    metadata["sha256"] = _digest(metadata)
+    return replace(native, metadata=metadata)
 
 
 def native_messages(metadata: dict[str, Any]) -> list[dict[str, Any]]:
@@ -435,7 +646,7 @@ def native_messages(metadata: dict[str, Any]) -> list[dict[str, Any]]:
                 sequence = int(identifier.removeprefix("call_obdaai_"))
                 if sequence <= last_sequence or set(call["function"]) != {"name", "arguments"}:
                     raise NativeCallError("native_history_id")
-                decision = decode_calls(metadata, [call])
+                decision = _decode_calls(metadata, [call], history=True)
                 if decision is None or decision["kind"] != "tool":
                     raise NativeCallError("native_history_binding")
                 seen.add(identifier)
@@ -539,10 +750,19 @@ def with_history(
             retained.append(entry)
             continue
         arguments = document["arguments"]
+        history_arguments = arguments
+        alias_used = False
+        if document.get("tool") == "http" and metadata.get("canonical_tools"):
+            from hub.agent_http_facades import history_alias
+
+            alias = history_alias(metadata, document["integration_id"], arguments)
+            if alias is not None:
+                name, history_arguments = alias
+                alias_used = True
         wire = (
-            {"arguments": arguments}
+            {"arguments": history_arguments}
             if metadata["bindings"][name].get("argument_object")
-            else arguments
+            else history_arguments
         )
         call = {
             "id": f"call_obdaai_{sequence}",
@@ -550,9 +770,16 @@ def with_history(
             "function": {"name": name, "arguments": _encode(wire)},
         }
         try:
-            decision = decode_calls(metadata, [call])
-            # No normalization or invented defaults may rewrite an executed call.
-            if decision is None or _encode(decision.get("arguments")) != _encode(arguments):
+            decision = _decode_calls(metadata, [call], history=True)
+            if decision is None:
+                raise NativeCallError("native_history_arguments")
+            if alias_used:
+                from hub.agent_http_facades import normalized_http
+
+                same = normalized_http(decision["arguments"]) == normalized_http(arguments)
+            else:
+                same = _encode(decision.get("arguments")) == _encode(arguments)
+            if not same:
                 raise NativeCallError("native_history_arguments")
         except NativeCallError:
             retained.append(entry)
@@ -772,7 +999,52 @@ def _schema_issues(validator: Any, arguments: Any) -> list[str]:
     return ["args_schema_invalid", *(specific + generic)[:5]]
 
 
-def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _root_fields(schema: dict[str, Any], definitions: dict[str, Any]) -> set[str]:
+    """Only root argument properties, never nested body/business-data properties."""
+    fields = set(schema.get("properties", {}))
+    for key in ("anyOf", "oneOf", "allOf"):
+        for branch in schema.get(key, []):
+            fields.update(_root_fields(branch, definitions))
+    reference = schema.get("$ref")
+    if isinstance(reference, str) and reference.startswith("#/$defs/"):
+        name = reference[8:].replace("~1", "/").replace("~0", "~")
+        if name in definitions:
+            fields.update(_root_fields(definitions[name], {}))
+    return fields
+
+
+def _split_arguments(
+    arguments: dict[str, Any],
+    schema: dict[str, Any],
+    binding: dict[str, Any],
+) -> dict[str, Any] | None:
+    """One explicit split envelope is lossless, never an argument repair or coercion."""
+    if binding.get("argument_object") is not True or len(arguments) < 2:
+        return None
+    wrappers = set(arguments) & {"arguments", "parameters"}
+    if len(wrappers) != 1:
+        return None
+    wrapper = next(iter(wrappers))
+    fields = _root_fields(schema, schema.get("$defs", {}))
+    # MCP.arguments and WS.parameters can be genuine root business fields. A
+    # malformed business object must not be reinterpreted as an invocation wrapper.
+    if wrapper in fields or not isinstance(arguments[wrapper], dict):
+        return None
+    inner: dict[str, Any] = deepcopy(arguments[wrapper])
+    for key, value in arguments.items():
+        if key == wrapper:
+            continue
+        if key not in fields:
+            return None
+        if key in inner and _encode(inner[key]) != _encode(value):
+            raise NativeCallError("native_wrapper_conflict")
+        inner[key] = deepcopy(value)
+    return inner
+
+
+def _decode_calls(
+    metadata: dict[str, Any], calls: list[dict[str, Any]], *, history: bool = False
+) -> dict[str, Any] | None:
     """Exactly one validated native call becomes one ordinary canonical decision."""
     if not calls:
         return None
@@ -789,9 +1061,11 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
         if not isinstance(name, str) or name not in metadata["bindings"]:
             raise NativeCallError("native_unknown_function")
         binding = metadata["bindings"][name]
-        definition = next(
-            row["function"] for row in metadata["tools"] if row["function"]["name"] == name
-        )
+        visible = {row["function"]["name"] for row in metadata["tools"]}
+        if name not in visible and not history:
+            raise NativeCallError("native_unoffered_function")
+        definitions = [*metadata["tools"], *metadata.get("canonical_tools", [])]
+        definition = next(row["function"] for row in definitions if row["function"]["name"] == name)
         raw = function["arguments"]
         try:
             arguments = (
@@ -801,17 +1075,20 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
             )
         except json.JSONDecodeError:
             raise NativeCallError("native_invalid_json") from None
-        validator = Draft202012Validator(_canonical_parameters(definition, binding))
+        canonical_schema = _canonical_parameters(definition, binding)
+        validator = Draft202012Validator(canonical_schema)
         if not isinstance(arguments, dict):
             raise NativeCallError(_schema_issues(validator, arguments))
         if not validator.is_valid(arguments):
-            if (
-                not isinstance(arguments, dict)
-                or len(arguments) != 1
-                or next(iter(arguments)) not in {"parameters", "arguments"}
-            ):
-                raise NativeCallError(_schema_issues(validator, arguments))
-            inner = next(iter(arguments.values()))
+            # Preserve the historical single envelope, then permit at most one
+            # explicit split envelope. Never recursively search/flatten business data.
+            inner = arguments
+            if len(arguments) == 1 and next(iter(arguments)) in {"parameters", "arguments"}:
+                inner = next(iter(arguments.values()))
+            if isinstance(inner, dict) and not validator.is_valid(inner):
+                merged = _split_arguments(inner, canonical_schema, binding)
+                if merged is not None:
+                    inner = merged
             if not isinstance(inner, dict) or not validator.is_valid(inner):
                 raise NativeCallError(_schema_issues(validator, inner))
             arguments = inner
@@ -828,11 +1105,16 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
             ):
                 raise NativeCallError("native_alias_binding")
             original = next(
-                row["function"]
-                for row in metadata["tools"]
-                if row["function"]["name"] == canonical_name
+                row["function"] for row in definitions if row["function"]["name"] == canonical_name
             )
-            arguments = _entity_arguments(arguments.get("domain"))
+            if "http_facade" in binding:
+                if binding["http_facade"] not in {"read", "change", "project"}:
+                    raise NativeCallError("native_alias_binding")
+                from hub.agent_http_facades import canonical_arguments
+
+                arguments = canonical_arguments(binding, arguments)
+            else:
+                arguments = _entity_arguments(arguments.get("domain"))
             scoped = Draft202012Validator(_canonical_parameters(original, origin))
             if not scoped.is_valid(arguments):
                 raise NativeCallError(_schema_issues(scoped, arguments))
@@ -849,3 +1131,8 @@ def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[
         raise
     except (KeyError, TypeError, ValueError, StopIteration):
         raise NativeCallError("native_call_envelope_invalid") from None
+
+
+def decode_calls(metadata: dict[str, Any], calls: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Only visible function names are callable; private schemas validate history/origins."""
+    return _decode_calls(metadata, calls)

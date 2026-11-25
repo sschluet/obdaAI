@@ -36,13 +36,17 @@ def test_probe_uses_goal_evidence_alias_and_original_bootstrap_native_pair(
         assert data["remaining_effects"] == 0 and not data["allow_finish"]
         assistant, result = body["messages"][2:]
         call = assistant["tool_calls"][0]
-        assert call["function"]["name"] == "t0_http"
+        assert call["function"]["name"] == "t0_http_read"
         assert result["tool_call_id"] == call["id"] == "call_obdaai_1"
         arguments = json.loads(call["function"]["arguments"])["arguments"]
-        assert arguments == {"method": "GET", "path": "/api/"}
+        assert arguments == {"path": "/api/"}
         receipt = json.loads(result["content"])
         assert receipt["http_status"] == 200 and receipt["_obdaai_receipt"]["sequence"] == 1
-        assert [t["function"]["name"] for t in body["tools"]] == ["t0_ha_entities", "t0_http"]
+        assert [t["function"]["name"] for t in body["tools"]] == [
+            "t0_ha_entities",
+            "t0_http_read",
+            "t0_http_project",
+        ]
         return sse(
             {
                 "tool_calls": [

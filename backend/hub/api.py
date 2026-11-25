@@ -372,6 +372,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                 )
             chats = db.scalars(statement.order_by(Conversation.created.desc()).limit(100)).all()
+            from hub.titles import repair_initial_titles
+
+            repair_initial_titles(db, [c.id for c in chats])
+            db.commit()
             return [
                 {
                     "id": c.id,
@@ -433,6 +437,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             c = db.get(Conversation, chat_id)
             if not c or c.purpose != "chat":
                 raise HTTPException(404, "Gespräch nicht gefunden")
+            from hub.titles import ensure_initial_title
+
+            ensure_initial_title(db, chat_id)
+            db.commit()
             messages = db.scalars(
                 select(Message)
                 .where(Message.conversation_id == chat_id, Message.active.is_(True))
@@ -460,6 +468,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "title_status": c.title_status,
                 "cloud_allowed": c.cloud_allowed,
                 "cloud_provider": c.cloud_provider,
+                "archived": c.archived,
                 "context_sources": [
                     {
                         "source_id": part["source_id"],
@@ -759,6 +768,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for old in messages[cut + 1 :]:
                     old.active = False
                 messages = messages[: cut + 1]
+            from hub.titles import ensure_initial_title
+
+            ensure_initial_title(db, chat_id)
             from hub.chat_context import recent_context
 
             history_context = recent_context(messages, local_only=local_only)

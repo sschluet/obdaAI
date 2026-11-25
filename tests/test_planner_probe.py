@@ -69,8 +69,10 @@ def test_planner_probe_checks_local_schema_and_semantics(
                         "id": "call_synthetic",
                         "type": "function",
                         "function": {
-                            "name": "t0_http",
-                            "arguments": json.dumps(intent["arguments"]),
+                            "name": "t0_http_read",
+                            "arguments": json.dumps(
+                                {"arguments": {"path": intent["arguments"]["path"]}}
+                            ),
                         },
                     }
                 ]

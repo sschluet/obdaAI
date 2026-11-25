@@ -1143,7 +1143,13 @@ def job_info(db: Any, job: AgentJob, *, compact: bool = False) -> dict[str, Any]
     if compact:
         query = query.options(defer(AgentStep.result))
     items = list(db.scalars(query))
+    from hub.agent_activity import activity
+
+    last_model = next((step for step in reversed(items) if step.kind == "model"), None)
+    model_run = (db.get(Run, last_model.model_run_id)
+                 if last_model and last_model.model_run_id else None)
     return {
+        "activity": activity(job, items, model_run=model_run),
         "id": job.id,
         "scope": job.scope,
         "owner_id": job.owner_id,
@@ -1500,7 +1506,12 @@ def format_feedback(
     db: Any, cfg: Settings, job: AgentJob, rejected: Any, issues: Sequence[Mapping[str, Any]]
 ) -> None:
     gate(db, cfg, job)
-    if sum(s.kind == "feedback" for s in steps(db, job.id)) >= 2:
+    from hub.agent_execution_state import progress_anchor
+
+    history = steps(db, job.id)
+    anchor = progress_anchor(history)
+    feedback = [step for step in history if step.kind == "feedback"]
+    if len(feedback) >= 8 or sum(step.sequence > anchor for step in feedback) >= 2:
         raise AgentFormatExhausted("Lokale Formatkorrekturen ausgeschöpft")
     record(
         db,
@@ -1520,11 +1531,15 @@ def format_feedback(
 
 
 def complete(db: Any, job: AgentJob, status: str, summary: str) -> None:
+    from hub.agent_terminal_summary import terminal_summary
+
+    history = steps(db, job.id)
+    summary = terminal_summary(job, history, status, summary)
     unresolved_effect = any(
         s.kind == "effect"
         and s.status in {"dispatching", "verifying", "succeeded", "uncertain"}
         and not json.loads(s.result).get("effect_verified")
-        for s in steps(db, job.id)
+        for s in history
     )
     if job.task_run_id and (status == "uncertain" or (status not in ACTIVE and unresolved_effect)):
         task = db.get(Task, job.owner_id)
@@ -1538,7 +1553,7 @@ def complete(db: Any, job: AgentJob, status: str, summary: str) -> None:
     job.status, job.summary = status, summary
     if status not in ACTIVE:
         job.finished = time.time()
-    last_model = next((s for s in reversed(steps(db, job.id)) if s.kind == "model"), None)
+    last_model = next((s for s in reversed(history) if s.kind == "model"), None)
     db.add(
         Message(
             conversation_id=job.conversation_id,
@@ -1642,11 +1657,20 @@ def fit_native_plan(
     tool_chars, tool_bytes = agent_native.metadata_size(native.metadata)
     reserve_chars = reserve_bytes = 0
     for _ in range(5):
-        fitted = fit(
-            native.data, native.instruction, char_limit - tool_chars - reserve_chars,
-            max_bytes=(max(0, byte_limit - tool_bytes - 64 - reserve_bytes)
-                       if byte_limit is not None else None),
-        )
+        try:
+            fitted = fit(
+                native.data, native.instruction, char_limit - tool_chars - reserve_chars,
+                max_bytes=(max(0, byte_limit - tool_bytes - 64 - reserve_bytes)
+                           if byte_limit is not None else None),
+            )
+        except AgentContextLimitError:
+            minimal = agent_native.without_http_facades(native)
+            if minimal is native:
+                raise
+            native = minimal
+            tool_chars, tool_bytes = agent_native.metadata_size(native.metadata)
+            reserve_chars = reserve_bytes = 0
+            continue
         prepared, planned = agent_native.with_history(native, fitted)
         auxiliary = agent_native.auxiliary_parts(prepared.metadata)
         content = [native.instruction, encode(planned), *(part.content for part in auxiliary)]
@@ -1676,7 +1700,9 @@ async def _generate_once(
         authority_data = native.original_data if native else data
         parts = [
             ContextPart(content=instruction, source_id="agent-policy", revision=1),
-            ContextPart(content=encode(data), source_id="agent-data", revision=1),
+            ContextPart(content=encode({key: value for key, value in data.items()
+                                       if key != "intent_schema"}),
+                        source_id="agent-data", revision=1),
         ]
         char_limit, byte_limit = generation_context_budget(
             factory, cfg, providers, json.loads(job.bindings).get("project_model"), provider_binding
@@ -1884,6 +1910,16 @@ async def research(
             db.commit()
 
 
+def _effect_outcome_gate(intent: Any, history: Sequence[Any], identifier: str) -> None:
+    """Recheck typed state prerequisites before a durable intent reaches transport."""
+    from hub.agent_intent import completed_outcome_targets, missing_initial_outcome_baseline
+
+    if missing_initial_outcome_baseline(intent, history, identifier):
+        raise PermissionError("Vollständiger Anfangsbeleg vor Zieländerung fehlt")
+    if identifier in completed_outcome_targets(intent, history):
+        raise PermissionError("Der gebundene Zielzustand ist bereits belegt")
+
+
 def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
     """Persist intent first. A crash or lost response is never automatically resent."""
     with factory() as db:
@@ -1926,6 +1962,15 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
             raise PermissionError("Dieser Auftrag erlaubt ausschließlich lesende Werkzeuge")
         if effect and not profile.writes_enabled:
             raise PermissionError("Profil-Schreibaktionen ausgeschaltet")
+        if effect:
+            _effect_outcome_gate(intent, [item for item in steps(db, job_id)
+                                         if item.sequence < sequence], profile.id)
+            from hub.agent_prerequisites import check as check_prerequisites
+
+            check_prerequisites(
+                [item for item in steps(db, job_id) if item.sequence < sequence],
+                profile.id, rules, document["tool"], args, job_id=job_id,
+            )
         if effect:
             # An uncertain response followed by a successful read is no permission
             # to repeat that mutation under a new step number.
@@ -1994,6 +2039,18 @@ def dispatch(factory: Any, cfg: Settings, job_id: str, sequence: int) -> None:
                 raise PermissionError("Nur-lesend-Grenze des Auftrags")
             if effect and not current.writes_enabled:
                 raise PermissionError("Schreibaktionen widerrufen")
+            if effect:
+                _effect_outcome_gate(
+                    json.loads(job.bindings).get("intent"),
+                    [item for item in steps(db, job_id) if item.sequence < sequence], current.id,
+                )
+                from hub.agent_prerequisites import check as check_prerequisites
+
+                check_prerequisites(
+                    [item for item in steps(db, job_id) if item.sequence < sequence],
+                    current.id, current_rules, document["tool"], document["arguments"],
+                    job_id=job_id,
+                )
             if document["tool"] == "http.upload":
                 from hub.agent_files import check
 
@@ -2115,7 +2172,9 @@ async def inspect_ha_inventory(factory: Any, cfg: Settings, job_id: str) -> bool
         selected = plan(job.goal, profiles, source_refs=source_refs,
                         request_intent=frozen.get("intent"))
         history = [step for step in steps(db, job_id)
-                   if not json.loads(step.document).get("intent_interpretation")]
+                   if not json.loads(step.document).get("intent_interpretation")
+                   and not (step.kind == "feedback" and json.loads(step.document).get(
+                       "rejected_decision", {}).get("reason") == "semantic_intent_invalid")]
         if selected is None:
             if any("inventory_plan" in json.loads(step.document) for step in history):
                 raise PermissionError("Gebundene Inventarabfrage geändert")
@@ -2188,7 +2247,9 @@ async def inspect_capabilities(factory: Any, cfg: Settings, job_id: str) -> tupl
         if not access and job.max_steps < 2:
             return False, False  # Leave the single permitted operation to the planner.
         history = [step for step in steps(db, job_id)
-                   if not json.loads(step.document).get("intent_interpretation")]
+                   if not json.loads(step.document).get("intent_interpretation")
+                   and not (step.kind == "feedback" and json.loads(step.document).get(
+                       "rejected_decision", {}).get("reason") == "semantic_intent_invalid")]
         # Never insert a new inspection into an already planned/executed action chain.
         if history:
             if not all(json.loads(step.document).get("capability_inspection") is True
@@ -2232,7 +2293,8 @@ async def inspect_capabilities(factory: Any, cfg: Settings, job_id: str) -> tupl
         assert job
         profiles = planning_profiles(job, gate(db, cfg, job))
         history = steps(db, job_id)
-        failed = [step for step in history if step.status == "failed"]
+        failed = [step for step in history
+                  if step.sequence in sequences and step.status == "failed"]
         if failed:
             complete(db, job, "failed", failure_summary(json.loads(failed[-1].result)))
             db.commit()
@@ -2351,7 +2413,11 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                 needs_intent = frozen.get("intent_version") == 1 and frozen.get("intent") is None
                 db.commit()
             if needs_intent:
-                from hub.agent_intent import accept_semantic, semantic_request
+                from hub.agent_intent import (
+                    accept_semantic,
+                    semantic_failure_feedback,
+                    semantic_request,
+                )
                 from hub.agent_read_references import _validated
 
                 with factory() as db:
@@ -2361,32 +2427,113 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     prior_ids = [ref["integration_id"] for ref, _, _ in
                                  _validated(db, job, profiles)]
                 request = semantic_request(job.goal, profiles, prior_target_ids=prior_ids)
-                raw_intent = await generate(factory, cfg, providers, job_id,
-                                            request["instruction"], {
-                                                **request["data"],
-                                                "intent_schema": request["schema"],
-                                            })
+                feedback: dict[str, Any] = {}
                 with factory() as db:
                     job = db.get(AgentJob, job_id)
                     assert job
-                    profiles = planning_profiles(job, gate(db, cfg, job))
-                    intent = accept_semantic(raw_intent, profiles, goal=job.goal)
-                    frozen = json.loads(job.bindings)
-                    frozen["intent"] = intent.model_dump(mode="json")
-                    if intent.read_only:
-                        frozen["read_only"], job.max_effects = True, 0
-                    if (intent.read_only and intent.topic == "connection" and intent.requirements
-                            and all(item.kind == "connection" for item in intent.requirements)):
-                        frozen["capability_access"] = True
-                        job.research_allowed = False
-                    job.bindings = encode(frozen)
-                    if intent.mode not in {"observe", "admin"} or intent.confidence != "certain":
-                        complete(db, job, "unverified", "Der Auftrag konnte keinem eindeutigen "
-                                 "Systemzugriff zugeordnet werden. Bitte nenne das Ziel und "
-                                 "das gewünschte Ergebnis; es wurde kein Werkzeug ausgeführt.")
-                        db.commit()
-                        return
-                    db.commit()
+                    history = steps(db, job_id)
+                    prior_repairs = sum(
+                        step.kind == "feedback"
+                        and json.loads(step.document).get("rejected_decision", {}).get("reason")
+                        == "semantic_intent_invalid"
+                        for step in history
+                    )
+                    prior_models = [step for step in history if step.kind == "model"
+                                    and json.loads(step.document).get("intent_interpretation")]
+                    if prior_repairs or prior_models:
+                        raise AgentFormatExhausted("Unterbrochene Auftragseinordnung wird "
+                                                   "nicht automatisch wiederholt")
+                    remaining = job.created + job.timeout_seconds - time.time()
+                # One original job deadline, not a new timeout for each interpretation.
+                async with asyncio.timeout(max(0, remaining)):
+                    for attempt in range(2):
+                        malformed = False
+                        try:
+                            raw_intent = await generate(
+                                factory,
+                                cfg,
+                                providers,
+                                job_id,
+                                request["instruction"],
+                                {
+                                    **request["data"],
+                                    **feedback,
+                                    "intent_schema": request["schema"],
+                                },
+                            )
+                        except AgentFormatError:
+                            raw_intent, malformed = None, True
+                        with factory() as db:
+                            job = db.get(AgentJob, job_id)
+                            assert job
+                            profiles = planning_profiles(job, gate(db, cfg, job))
+                            try:
+                                if malformed:
+                                    raise ValueError("Semantic interpretation JSON is invalid")
+                                intent = accept_semantic(raw_intent, profiles, goal=job.goal)
+                            except ValueError as error:
+                                if attempt or prior_repairs:
+                                    raise
+                                feedback = semantic_failure_feedback(error)
+                                prior_feedback = [
+                                    step
+                                    for step in steps(db, job_id)
+                                    if step.kind == "feedback"
+                                ]
+                                if len(prior_feedback) >= 2:
+                                    raise AgentFormatExhausted(
+                                        "Lokale Formatkorrekturen ausgeschöpft"
+                                    ) from None
+                                record(
+                                    db,
+                                    job,
+                                    "feedback",
+                                    {
+                                        "message": "Einordnung korrigieren; kein Werkzeug versandt",
+                                        "rejected_decision": {
+                                            "reason": "semantic_intent_invalid"
+                                        },
+                                        "issues": [
+                                            {"type": feedback["semantic_feedback"]["issue"]}
+                                        ],
+                                        "instruction": feedback["semantic_feedback"][
+                                            "instruction"
+                                        ],
+                                    },
+                                ).status = "succeeded"
+                                db.commit()
+                                continue
+                            frozen = json.loads(job.bindings)
+                            frozen["intent"] = intent.model_dump(mode="json")
+                            if intent.read_only:
+                                frozen["read_only"], job.max_effects = True, 0
+                            if (
+                                intent.read_only
+                                and intent.topic == "connection"
+                                and intent.requirements
+                                and all(
+                                    item.kind == "connection" for item in intent.requirements
+                                )
+                            ):
+                                frozen["capability_access"] = True
+                                job.research_allowed = False
+                            job.bindings = encode(frozen)
+                            if (
+                                intent.mode not in {"observe", "admin"}
+                                or intent.confidence != "certain"
+                            ):
+                                complete(
+                                    db,
+                                    job,
+                                    "unverified",
+                                    "Der Auftrag konnte keinem eindeutigen "
+                                    "Systemzugriff zugeordnet werden. Bitte nenne das Ziel und "
+                                    "das gewünschte Ergebnis; es wurde kein Werkzeug ausgeführt.",
+                                )
+                                db.commit()
+                                return
+                            db.commit()
+                            break
             with factory() as db:
                 job = db.get(AgentJob, job_id)
                 assert job
@@ -2473,6 +2620,16 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         )
                         db.commit()
                         return
+                    if not private_read and frozen_intent:
+                        from hub.agent_outcomes import automatic_completion
+
+                        outcome_summary = automatic_completion(frozen_intent, history)
+                        if outcome_summary is not None:
+                            complete(db, job, "succeeded" if any(
+                                step.kind == "effect" for step in history
+                            ) else "observed", outcome_summary)
+                            db.commit()
+                            return
                     if (not private_read and frozen_intent and len(profiles) == 1
                             and next(iter(profiles.values()))[0].kind == "home_assistant"):
                         from hub.agent_ha_evidence import summary as update_summary
@@ -2536,10 +2693,15 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             db.commit()
                             return
                         summarize_only = True  # One final answer from existing evidence, no tools.
-                    from hub.agent_intent import post_effect_read_targets
+                    from hub.agent_intent import (
+                        completed_outcome_targets,
+                        outcome_observation_targets,
+                        post_effect_read_targets,
+                    )
 
                     refresh_targets = (post_effect_read_targets(frozen_intent, history)
                                        if frozen_intent and not private_read else set())
+                    refresh_targets |= outcome_observation_targets(frozen_intent, history)
                     spent_effects = [step for step in history if step.kind == "effect"
                                      and step.status in {"dispatching", "succeeded", "uncertain"}]
                     target_effects = {
@@ -2557,7 +2719,8 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             len(spent_effects) >= job.max_effects
                             or target_effects[identifier] >= rules.max_effects)
                     }
-                    read_targets = refresh_targets | exhausted_targets
+                    completed_targets = completed_outcome_targets(frozen_intent, history)
+                    read_targets = refresh_targets | exhausted_targets | completed_targets
                     model_read_only = bool(
                         bounded_read or recovery and recovery["needs_alternative"]
                         or profiles and set(profiles) <= read_targets
@@ -2589,11 +2752,12 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                             allowed_tools.add("gmail.read")
                         if rules.mail_recipients:
                             allowed_tools.add("mail.send")
-                    # A postcondition checker cannot inspect a system without a
-                    # preceding effect. Keep that impossible choice out of both
-                    # prompt and native grammar; dispatch still checks the receipt.
+                    # Manual verification is needed only for completed effects still
+                    # lacking proof. Automatic prebound checks and ordinary fresh
+                    # reads remain independent; dispatch still checks the reference.
                     if not any(
                         step.kind == "effect" and step.status == "succeeded"
+                        and json.loads(step.result).get("effect_verified") is not True
                         and json.loads(step.document).get("integration_id") in profiles
                         for step in history
                     ):
@@ -2651,6 +2815,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     allow_finish = (
                         read_plan.get("allow_finish", has_read_data) and not repairing_read
                     )
+                    from hub.agent_execution_state import planning_state, remaining_budget
                     from hub.agent_intent import adequacy
 
                     goal_evidence = (adequacy(frozen_intent, history)
@@ -2658,10 +2823,24 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                     if (goal_evidence is not None and not goal_evidence["satisfied"]
                             and not unverified_effect_completion(goal_evidence, history)):
                         allow_finish = False
+                    loop_state = planning_state(
+                        frozen_intent, history, **remaining_budget(
+                            history, job.max_effects,
+                            {identifier: rules.max_effects if profile.writes_enabled else 0
+                             for identifier, (profile, rules, _) in profiles.items()},
+                        ),
+                    ) if not private_read else None
+                    if loop_state is not None and not bounded_read:
+                        from hub.agent_prerequisites import planning_context
+
+                        prerequisites = planning_context(history, profiles, job_id=job_id)
+                        if prerequisites:
+                            loop_state["operation_prerequisites"] = prerequisites
                     allow_ask = not bounded_read and not repairing_read
                     ready = read_plan.get("ready", {})
                     choices = ready.get("decisions", [])
-                    allow_stop = bounded_read and not choices
+                    allow_stop = ((bounded_read and not choices)
+                                  or bool(loop_state and loop_state["phase"] == "blocked"))
                     initial_read_required = bool(private_read and not has_read_data and (
                         choices or private_archive_read and any(
                             "GET" in r.http_methods and any("/api/documents/".startswith(p)
@@ -2706,6 +2885,7 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         **({"request_contract": frozen_intent}
                            if frozen_intent and not private_read else {}),
                         **({"goal_evidence": goal_evidence} if goal_evidence is not None else {}),
+                        **({"execution_state": loop_state} if loop_state is not None else {}),
                         **({"read_recovery": recovery} if recovery else {}),
                         "interfaces": effective_interfaces([
                             {
@@ -2962,7 +3142,14 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                 }])
                                 db.commit()
                                 continue
-                            if not bounded_read:
+                            current_state = planning_state(
+                                frozen_intent, current_history, **remaining_budget(
+                                    current_history, job.max_effects,
+                                    {identifier: rules.max_effects if profile.writes_enabled else 0
+                                     for identifier, (profile, rules, _) in profiles.items()},
+                                ),
+                            )
+                            if not bounded_read and current_state["phase"] != "blocked":
                                 format_feedback(db, cfg, job, {"kind": "stop"}, [{
                                     "type": "private_read_terminal_not_available",
                                 }])
@@ -3023,6 +3210,12 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                                     db.commit()
                                     return
                                 decision.message = rendered
+                        if not private_read and decision.kind == "finish" and frozen_intent:
+                            from hub.agent_outcomes import completion_summary
+
+                            bounded_completion = completion_summary(frozen_intent, current_history)
+                            if bounded_completion is not None:
+                                decision.message = bounded_completion
                         queried = (
                             mailbox_queried(current_history) if private_mail_read
                             else paperless_queried(current_history)
@@ -3148,6 +3341,49 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         }])
                         db.commit()
                         continue
+                    if effect:
+                        from hub.agent_intent import (
+                            completed_outcome_targets,
+                            missing_initial_outcome_baseline,
+                        )
+
+                        if missing_initial_outcome_baseline(
+                            frozen_intent, current_history, profile.id,
+                        ):
+                            format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                                "type": "initial_outcome_baseline_required",
+                                "next_action": "Observe the complete initial goal domain before "
+                                "any target change, including prerequisites or backup creation. "
+                                "No change was dispatched.",
+                            }])
+                            db.commit()
+                            continue
+                        if profile.id in completed_outcome_targets(frozen_intent, current_history):
+                            format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                                "type": "requested_state_already_observed",
+                                "next_action": "The typed requested state is already proven. "
+                                "Do not perform an unnecessary change; report only observed facts.",
+                            }])
+                            db.commit()
+                            continue
+                    if effect:
+                        from hub.agent_prerequisites import missing as missing_prerequisites
+
+                        required = missing_prerequisites(
+                            current_history, profile.id, rules, decision.tool or "", args,
+                            job_id=job_id,
+                        )
+                        if required:
+                            format_feedback(db, cfg, job, {"kind": "tool"}, [{
+                                "type": "effect_prerequisite_required",
+                                "required_operations": required,
+                                "next_action": "A human-configured prerequisite must first "
+                                "have an independently verified effect in this job/target. "
+                                "Use only already permitted operations and observed parameters; "
+                                "this rule grants no authority. No requested change was sent.",
+                            }])
+                            db.commit()
+                            continue
                     if effect and decision.integration_id in refresh_targets:
                         format_feedback(db, cfg, job, {"kind": "tool"}, [{
                             "type": "fresh_goal_read_required",
@@ -3169,20 +3405,21 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         db.commit()
                         continue
                     private_read_tool(job, profiles, decision.tool or "", effect)
-                    if (bounded_read and not private_read and decision.tool == "http"
+                    if (not private_read and decision.tool == "http"
                             and args.get("method") == "GET"):
-                        previous_read = next((s.sequence for s in current_history
-                            if s.kind == "read" and s.status == "succeeded"
-                            and (document := json.loads(s.document)).get("tool") == "http"
-                            and document.get("integration_id") == decision.integration_id
-                            and encode(document.get("arguments")) == encode(args)), None)
+                        from hub.agent_execution_state import duplicate_read
+
+                        previous_read = duplicate_read(
+                            current_history, decision.integration_id, decision.tool, args,
+                        )
                         if previous_read is not None:
                             format_feedback(db, cfg, job, {"kind": "tool"}, [{
                                 "type": "read_already_observed",
                                 "original_sequence": previous_read,
-                                "next_action": "Use the successful observation to answer, or "
-                                "select a different bounded projection needed for this question. "
-                                "Do not repeat the identical successful GET in this read-only job.",
+                                "next_action": "Use the successful observation. Select a different "
+                                "bounded read only for missing evidence or prerequisites. Follow "
+                                "the current execution_state and remaining authorized goal; "
+                                "do not repeat the identical GET without a target change.",
                             }])
                             db.commit()
                             continue
@@ -3265,8 +3502,8 @@ async def _execute_agent_once(factory: Any, cfg: Settings, providers: Any, job_i
                         if uncertain
                         else "Agentenlauf abgebrochen."
                         if job.cancel_requested
-                        else "Die lokale Planung konnte keinen gültigen nächsten Schritt wählen. "
-                        "Der Auftrag wurde angehalten; vorhandene Belege bleiben erhalten."
+                        else "Ich konnte den nächsten Schritt nicht zuverlässig bestimmen. "
+                        "Der Auftrag ist angehalten; bisherige Ergebnisse bleiben erhalten."
                         if isinstance(error, AgentFormatExhausted)
                         else "Die interne Planung hat ihr Kontextlimit erreicht. Der Auftrag wurde "
                         "angehalten; vorhandene Belege bleiben erhalten. Weitere Änderungen "

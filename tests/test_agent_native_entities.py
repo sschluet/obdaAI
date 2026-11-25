@@ -184,7 +184,9 @@ def test_alias_validates_generated_arguments_against_original_http_schema():
     name = facade(value)
     original_name = metadata["bindings"][name]["canonical_function"]
     original = next(
-        row["function"] for row in metadata["tools"] if row["function"]["name"] == original_name
+        row["function"]
+        for row in metadata["canonical_tools"]
+        if row["function"]["name"] == original_name
     )
     original["parameters"]["properties"]["arguments"]["properties"]["path"]["const"] = "/api/other"
     metadata["sha256"] = _digest(metadata)
@@ -238,7 +240,8 @@ def test_existing_http_and_history_remain_canonical_not_replayed_as_facade():
     name = facade(value)
     origin = value.metadata["bindings"][name]["canonical_function"]
     args = {"method": "GET", "path": "/api/states", "projection": None}
-    assert decode_calls(value.metadata, [call(origin, {"arguments": args})])["arguments"] == args
+    with pytest.raises(NativeCallError):
+        decode_calls(value.metadata, [call(origin, {"arguments": args})])
     fitted = deepcopy(value.data)
     fitted["history"] = [
         {
@@ -252,7 +255,7 @@ def test_existing_http_and_history_remain_canonical_not_replayed_as_facade():
     compiled, model_data = with_history(value, fitted)
     messages = native_messages(compiled.metadata)
     assert len(messages) == 2 and model_data["history"] == []
-    assert messages[0]["tool_calls"][0]["function"]["name"] == origin
+    assert messages[0]["tool_calls"][0]["function"]["name"] == "t0_http_read"
     assert len(compiled.metadata["bindings"]) == len(value.metadata["bindings"])
     assert value.metadata["sha256"] == _digest(value.metadata)
 
@@ -284,4 +287,38 @@ def test_history_reconstruction_ignores_aliases_even_after_sorted_json_round_tri
     ]
     compiled, model_data = with_history(restored, data)
     assert model_data["history"] == []
-    assert native_messages(compiled.metadata)[0]["tool_calls"][0]["function"]["name"] == origin
+    assert (
+        native_messages(compiled.metadata)[0]["tool_calls"][0]["function"]["name"] == "t0_http_read"
+    )
+
+
+def test_typed_goal_without_separate_entity_read_uses_bound_phase_observation_facade():
+    value, rules = build(evidence=False)
+    data = deepcopy(value.original_data)
+    data["goal_evidence"]["missing"] = [{"kind": "effect_postcondition", "integration_id": "ha"}]
+    data["execution_state"] = {
+        "phase": "observe",
+        "missing_observations": [
+            {"kind": "entity_states", "domain": "light", "integration_id": "ha"},
+            {"kind": "entity_states", "domain": "switch", "integration_id": "foreign"},
+        ],
+    }
+    result = prepare(instruction({"home_assistant"}), data)
+    decision = decode_calls(
+        result.metadata,
+        [
+            call(
+                facade(result),
+                {
+                    "arguments": {"domain": "light"},
+                },
+            )
+        ],
+    )
+    assert decision["integration_id"] == "ha" and decision["tool"] == "http"
+    arguments, effect = validate_tool("home_assistant", rules, "http", decision["arguments"])
+    assert not effect and arguments["path"] == "/api/states"
+    assert arguments["projection"]["where_pointer"] == "/entity_id"
+    assert arguments["projection"]["where_prefix"] == "light."
+    with pytest.raises(NativeCallError):
+        decode_calls(result.metadata, [call(facade(result), {"arguments": {"domain": "switch"}})])

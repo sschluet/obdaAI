@@ -327,7 +327,8 @@ def test_verified_effect_refresh_targets_are_missing_data_only_and_fresh_read_cl
     fresh = receipt("/api/states", [{"entity_id": "update.synthetic", "state": "off"}], sequence=3)
     assert post_effect_read_targets(selected, [old, effect(), fresh]) == set()
     assert selected.model_dump() == before
-    assert adequacy(selected, [old, effect(), fresh])["satisfied"]
+    proof = adequacy(selected, [old, effect(), fresh])
+    assert not proof["satisfied"] and proof["completion_binding_missing"] == [HA]
 
 
 @pytest.mark.parametrize(

@@ -66,7 +66,10 @@ class IntentProvider:
     async def stream(self, parts, roles, *, external, grants):
         assert external is False and grants == []
         assert roles == ["system", "user"]
-        assert self.local_json_schema["properties"]["target_ids"]
+        # Mode-specific output branches keep the same public target-ID contract.
+        branches = self.local_json_schema.get("anyOf", [self.local_json_schema])
+        assert branches and all(branch["properties"]["target_ids"] for branch in branches)
+        assert all("target_ids" in branch["required"] for branch in branches)
         assert all(part.label == "LOCAL_ONLY" for part in parts)
         case = self.expected[self.calls]
         self.calls += 1

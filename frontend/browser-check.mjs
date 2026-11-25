@@ -41,8 +41,12 @@ await page.reload();
 await page.locator('aside > button.new').waitFor();
 await page.locator('.history button').first().click();
 await page.waitForFunction(()=>document.querySelectorAll('.message.assistant').length===2&&![...document.querySelectorAll('button')].some(button=>button.getAttribute('aria-label')==='Antwort abbrechen'));
-const reloadedChat=await (await page.request.get(base+'/api/conversations/'+firstChatId)).json();
+// Hydration may already render an empty durable placeholder while its accepted run is routing.
+// Observe that same run; never treat placeholder count as completed persistence or resubmit it.
+let reloadedChat;const reloadDeadline=Date.now()+30000;
+do{reloadedChat=await(await page.request.get(base+'/api/conversations/'+firstChatId)).json();if(reloadedChat.runs.length===2&&reloadedChat.runs.every(run=>run.status==='succeeded'))break;if(reloadedChat.runs.some(run=>['failed','cancelled','interrupted'].includes(run.status)))throw Error('Reloaded accepted run did not succeed');await page.waitForTimeout(100)}while(Date.now()<reloadDeadline);
 if(reloadedChat.runs.length!==2||reloadedChat.runs.some(run=>run.status!=='succeeded'))throw Error('Reload did not retain both successful runs');
+await page.waitForFunction(()=>document.querySelectorAll('.message.assistant').length===2&&[...document.querySelectorAll('.message.assistant .markdown')].every(node=>!!node.textContent.trim())&&![...document.querySelectorAll('button')].some(button=>button.getAttribute('aria-label')==='Antwort abbrechen'));
 if(await page.locator('.message.assistant').count()!==2)throw Error('Reload lost or duplicated answer');
 await page.getByRole('button',{name:'Antwort erneut erzeugen',exact:true}).click();
 await page.getByText('Antwort abgeschlossen',{exact:true}).waitFor();
@@ -445,3 +449,11 @@ await import('./chat-scope-check.mjs');
 await import('./chat-compact-check.mjs');
 
 await import('./project-model-check.mjs');
+
+await import('./agent-activity-check.mjs');
+
+await import('./chat-title-activity-check.mjs');
+
+await import('./chat-detail-race-check.mjs');
+
+await import('./ha-prerequisites-check.mjs');

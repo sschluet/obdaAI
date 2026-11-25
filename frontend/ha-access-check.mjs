@@ -1,3 +1,4 @@
+import {getSystemMode,setSystemMode} from './composer-agent-mode.mjs';
 // Real React, authentication and conversation creation on a fresh synthetic fixture.
 // Integration routing and terminal HA read responses are stubbed; no live HA acceptance.
 import {chromium} from 'playwright';
@@ -71,12 +72,12 @@ async function checks(){
   for(const variant of ['success','failure']){
    scenario=variant;const before={creates,routes,submissions};
    if(variant==='failure')await page.locator('.sidebar button.new').click();
-   if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Explicit system control is enabled before automatic read');
+   if(await getSystemMode(page))throw Error('Explicit system control is enabled before automatic read');
    await page.locator('.composer textarea').fill(goal);
    await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
    await page.locator('.message.assistant').getByText(variant==='success'?success:failure,{exact:true}).waitFor();
    const panel=page.getByRole('region',{name:'Details Abarbeitung',exact:true});
-   await panel.locator('.agent-work-summary').getByText(variant==='success'?/Nur lesende Schritte abgeschlossen/:/Angehalten/).waitFor();
+   await panel.locator('.agent-work-summary').getByText(variant==='success'?/Abfrage abgeschlossen/:/Angehalten/).waitFor();
    if(creates-before.creates!==1||routes-before.routes!==1||submissions-before.submissions!==1||forbidden)throw Error('Read required extra confirmation/submission or normal LLM request');
    if(await page.getByRole('button',{name:/freigeben und fortsetzen|Tatsächlichen Zustand nur lesend prüfen/}).count())throw Error('Read-only access check exposes write approval or uncertain recovery');
    await panel.locator('summary').first().click();await panel.locator('details[data-agent-job] > summary').click();
@@ -86,7 +87,7 @@ async function checks(){
    if(!trace.includes('"GET"')||!trace.includes('"/api/"')||trace.includes('ha.websocket')||trace.includes('config/verify_connection'))throw Error('Trace is not fixed read-only HTTP GET /api/');
    if(variant==='success'){
     await panel.locator('summary').first().click();await page.locator('.chat-scroll').evaluate(e=>{e.scrollTop=0;});await page.locator('.message.user').getByText(goal,{exact:true}).waitFor();await page.evaluate(()=>document.activeElement?.blur());
-    await page.screenshot({path:resolve('.local/browser/ha-access-ui.png'),fullPage:true});
+    await page.screenshot({path:fileURLToPath(new URL('../.local/browser/ha-access-ui.png',import.meta.url)),fullPage:true});
    }
    for(const width of [1366,320]){
     await page.setViewportSize({width,height:1050});await pause(100);

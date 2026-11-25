@@ -47,7 +47,9 @@ def _scalar(value: Any) -> bool:
     )
 
 
-def _row(value: Any, *, projected: bool) -> dict[str, Any] | None:
+def _row(
+    value: Any, *, projected: bool, attribute_names: Sequence[str] = ()
+) -> dict[str, Any] | None:
     if not isinstance(value, dict) or value.get("model_view_only") is True:
         return None
     entity = value.get("/entity_id" if projected else "entity_id")
@@ -61,7 +63,7 @@ def _row(value: Any, *, projected: bool) -> dict[str, Any] | None:
         return None
     result: dict[str, Any] = {"entity_id": entity, "state": state}
     actual = {}
-    for key in _ATTRS:
+    for key in dict.fromkeys([*_ATTRS, *attribute_names]):
         source = value if projected else attributes
         field = "/attributes/" + key if projected else key
         if field in source and _scalar(source[field]):
@@ -73,7 +75,11 @@ def _row(value: Any, *, projected: bool) -> dict[str, Any] | None:
 
 
 def _snapshot(
-    document: dict[str, Any], result: dict[str, Any], domain: str, require_complete: bool
+    document: dict[str, Any],
+    result: dict[str, Any],
+    domain: str,
+    require_complete: bool,
+    attribute_names: Sequence[str] = (),
 ) -> dict[str, Any] | None:
     if "projection_error" in result or any(
         result.get(key) for key in ("model_view_only", "uncertain", "truncated", "partial")
@@ -138,7 +144,7 @@ def _snapshot(
         return None
     rows, seen = [], set()
     for value in values:
-        row = _row(value, projected=projected)
+        row = _row(value, projected=projected, attribute_names=attribute_names)
         if row is None or row["entity_id"] in seen:
             return None
         seen.add(row["entity_id"])
@@ -161,9 +167,24 @@ def _snapshot(
 
 
 def states_snapshot(
-    history: Sequence[Any], integration_id: str, domain: str, require_complete: bool = True
+    history: Sequence[Any],
+    integration_id: str,
+    domain: str,
+    require_complete: bool = True,
+    *,
+    attribute_names: Sequence[str] = (),
 ) -> dict[str, Any] | None:
     """Return latest qualifying original states receipt, never a model preview."""
+    if (
+        not _DOMAIN.fullmatch(domain)
+        or not integration_id
+        or len(attribute_names) > 16
+        or any(
+            not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
+            for key in attribute_names
+        )
+    ):
+        return None
     if not _DOMAIN.fullmatch(domain) or not integration_id:
         return None
     candidates = []
@@ -190,7 +211,7 @@ def states_snapshot(
             continue
         if type(sequence) is not int or sequence < 1 or sequence <= last_effect:
             continue
-        parsed = _snapshot(document, result, domain, require_complete)
+        parsed = _snapshot(document, result, domain, require_complete, attribute_names)
         if parsed is not None:
             candidates.append(
                 {
@@ -204,7 +225,12 @@ def states_snapshot(
 
 
 def evidence_satisfied(
-    history: Sequence[Any], integration_id: str, domain: str, require_complete: bool = True
+    history: Sequence[Any],
+    integration_id: str,
+    domain: str,
+    require_complete: bool = True,
+    *,
+    attribute_names: Sequence[str] = (),
 ) -> bool:
     return states_snapshot(history, integration_id, domain, require_complete) is not None
 

@@ -2,42 +2,49 @@ import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {AgentPolicyEditor} from './AgentPolicyEditor';
 import {IntegrationBindingPicker} from './IntegrationBindingPicker';
 import type {IntegrationAPI, IntegrationRow} from './IntegrationRegistryPanel';
+import {AgentActivity, type AgentActivityState} from './AgentActivity';
+import {reconciliationRequest} from './agentReconciliation';
+import {mergeAgentJobs} from './agentJobState';
 import './agent.css';
 
-export type AgentJob = {id: string; status: string; goal: string; summary: string; cancel_requested: boolean;
-  steps: {sequence: number; kind: string; status: string; sha256: string; document: any; result: any}[]};
+export type AgentJob = {id: string; status: string; goal: string; summary: string; cancel_requested: boolean;created?:number; activity?: AgentActivityState;
+  steps: {sequence: number; kind: string; status: string; sha256: string; document: any; result: any;approved?:boolean}[]};
 const stepNames:Record<string,string>={prepared:'vorbereitet',dispatching:'wird ausgeführt',verifying:'Sollzustand wird geprüft',succeeded:'abgeschlossen',uncertain:'Wirkung unklar',failed:'fehlgeschlagen',unavailable:'nicht verfügbar'};
 const kindNames:Record<string,string>={input:'Deine Angabe',research:'Öffentliche Recherche',effect:'Änderung',read:'Prüfung',verification:'Sollzustand prüfen',error:'Fehler',feedback:'Modellentscheidung korrigieren'};
 const active = ['queued', 'running', 'awaiting_approval', 'awaiting_input'];
 const names: Record<string, string> = {queued: 'Eingeplant', running: 'In Arbeit', awaiting_approval: 'Freigabe erforderlich', awaiting_input: 'Rückfrage', succeeded: 'Ausführung und Prüfschritte abgeschlossen', observed: 'Nur lesende Schritte abgeschlossen', failed: 'Angehalten', uncertain: 'Wirkung unklar', unverified: 'Wirkung nicht vollständig belegt', cancelled: 'Abgebrochen'};
 
-export function AgentRunsPanel({api, conversationId, taskId, setup = false, onState, onChanged, onPrepareRetry, retryDisabled = false}: {
+export function AgentRunsPanel({api, conversationId, taskId, setup = false, onState, onChanged, onPrepareRetry, retryDisabled = false, revealRequest, onStatusError,commandEpoch}: {
   api: IntegrationAPI; conversationId?: string; taskId?: string; setup?: boolean;
   onState?: (job: AgentJob | null) => void; onChanged?: () => void;
   onPrepareRetry?: (goal: string) => void; retryDisabled?: boolean;
+  revealRequest?: {id:string;serial:number};commandEpoch?:{current:number};onStatusError?:(message:string)=>void;
 }) {
-  const [jobs, setJobs] = useState<AgentJob[]>([]), [error, setError] = useState('');
+  const [jobs, setJobs] = useState<AgentJob[]>([]), [error, setError] = useState(''),[pollError,setPollError]=useState('');
   const [rows, setRows] = useState<IntegrationRow[]>([]), [editing, setEditing] = useState<IntegrationRow | null>(null);
   const [pause, setPause] = useState<any>(null), [busy, setBusy] = useState(false);
   const [detailsOpen,setDetailsOpen]=useState(false),[attentionJob,setAttentionJob]=useState<string|null>(null);const panel=useRef<HTMLElement>(null);
   const [receipts, setReceipts] = useState<Record<string, unknown>>({});
-  const callbacks = useRef({onState, onChanged}); callbacks.current = {onState, onChanged};
+  const callbacks = useRef({onState, onChanged,onStatusError}); callbacks.current = {onState, onChanged,onStatusError};
+  const ownCommands=useRef(0),commands=commandEpoch||ownCommands;
   const signature = useRef(''), mounted = useRef(false), generation = useRef(0);
   const filter = taskId ? 'task_id=' + taskId : 'conversation_id=' + conversationId;
   useEffect(() => {
     if (!conversationId && !taskId) return;
-    const version=++generation.current;mounted.current=true;signature.current='';setJobs([]);setReceipts({});setBusy(false);setError('');setDetailsOpen(false);
+    const version=++generation.current;mounted.current=true;signature.current='';setJobs([]);setReceipts({});setBusy(false);setError('');setPollError('');setDetailsOpen(false);
     let alive = true, timer: ReturnType<typeof setTimeout>;
     async function load() {
+      const command=commands.current;
       try {
         const next: AgentJob[] = await api('/agent-runs?' + filter);
         if (!alive||generation.current!==version) return;
-        setJobs(next); setError('');
+        if(command!==commands.current){if(alive)timer=setTimeout(()=>void load(),2000);return}
+        setJobs(previous=>mergeAgentJobs(previous,next)); setError('');setPollError('');callbacks.current.onStatusError?.('');
         callbacks.current.onState?.(next.find(job => active.includes(job.status)) || next[0] || null);
-        const value = JSON.stringify(next.map(j => [j.id, j.status, j.steps.map(s => [s.sequence, s.status]), j.cancel_requested]));
+        const value = JSON.stringify(next.map(j => [j.id, j.status, j.steps.map(s => [s.sequence, s.status]), j.cancel_requested,j.activity?.event_key]));
         if (signature.current && signature.current !== value) callbacks.current.onChanged?.();
         signature.current = value;
-      } catch (e) {if (alive) setError((e as Error).message);}
+      } catch (e) {if (alive&&generation.current===version&&command===commands.current){setError((e as Error).message);setPollError((e as Error).message);callbacks.current.onStatusError?.((e as Error).message)}}
       if (alive) timer = setTimeout(() => void load(), 2000);
     }
     void load();
@@ -54,30 +61,33 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
   async function perform(path: string, body = {}) {
     if (busy) return;
     const version=generation.current,current=()=>mounted.current&&generation.current===version;
-    setBusy(true); setError('');
+    commands.current++;setBusy(true); setError('');
     try {
       const job = await api(path, 'POST', body);
       // The accepted command still belongs to its original owner; never relabel it as a new chat's job.
-      if(!current())return;
+      if(!current())return;commands.current++;
       setJobs(previous => previous.some(item => item.id === job.id) ? previous.map(item => item.id === job.id ? job : item) : [job, ...previous]);
       callbacks.current.onState?.(job); callbacks.current.onChanged?.();
-    } catch (e) {if(current())setError((e as Error).message);} finally {if(current())setBusy(false);}
+    } catch (e) {if(current())setError((e as Error).message);} finally {if(current()){commands.current++;setBusy(false)}}
   }
+  useEffect(()=>{if(revealRequest){setAttentionJob(revealRequest.id);setDetailsOpen(true)}},[revealRequest?.serial,revealRequest?.id]);
   function reveal(job:AgentJob){setAttentionJob(job.id);setDetailsOpen(true)}
   useLayoutEffect(()=>{
     if(!detailsOpen||!attentionJob)return;
     const details=Array.from(panel.current?.querySelectorAll<HTMLDetailsElement>('[data-agent-job]')||[]).find(element=>element.dataset.agentJob===attentionJob);
-    if(details){details.open=true;details.querySelector<HTMLElement>('[data-agent-attention]')?.focus({preventScroll:true})}
+    if(details){details.open=true;details.querySelector<HTMLElement>('[data-agent-attention]')?.focus()}
     setAttentionJob(null);
   },[detailsOpen,attentionJob]);
   const jobCount=jobs.length===1?'1 Auftrag':jobs.length+' Aufträge';
   const current=jobs.find(job=>active.includes(job.status))||jobs[0];
+  const summaryStatus=current?.status==='succeeded'?'Abgeschlossen':current?.status==='observed'?'Abfrage abgeschlossen':current?(names[current.status]||current.status):'';
   const attention=jobs.filter(job=>['awaiting_approval','awaiting_input'].includes(job.status));
   if (!setup && !jobs.length && !error) return null;
   return <section ref={panel} className="agent-runs" aria-label="Details Abarbeitung">
+    {taskId&&current&&<AgentActivity key={current.id} job={current} api={api} latestResponse={true} onCommandBoundary={()=>{commands.current++}} onCancelSend={()=>{}} onState={job=>{setJobs(previous=>previous.map(item=>item.id===job.id?job:item));callbacks.current.onState?.(job);callbacks.current.onChanged?.()}} onDetails={()=>reveal(current)} onReply={()=>reveal(current)} onPrepareRetry={onPrepareRetry} connectionError={pollError}/>}
     {error && <p className="error" role="alert">{error}</p>}
     <details className="agent-work-details" open={detailsOpen} onToggle={event=>setDetailsOpen(event.currentTarget.open)}>
-    <summary className="agent-work-summary" aria-label="Details Abarbeitung" aria-description={current?(names[current.status]||current.status)+' · '+jobCount: 'Zugriff einrichten'}><span>Details Abarbeitung</span><small aria-hidden="true">{current?(names[current.status]||current.status)+' · '+jobCount:'Einrichten'}</small></summary>
+    <summary className="agent-work-summary" aria-label="Details Abarbeitung" aria-description={current?summaryStatus+' · '+jobCount: 'Zugriff einrichten'}><span>Details Abarbeitung</span><small aria-hidden="true">{current?summaryStatus+' · '+jobCount:'Einrichten'}</small></summary>
     <div className="agent-work-body">
     {setup && <details><summary>Zugriff und Agentenregeln einrichten</summary>
       {conversationId && <IntegrationBindingPicker api={api} scope="conversation" ownerId={conversationId}/>}
@@ -92,14 +102,11 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
     </details>}
     {jobs.slice(0, 5).map(job => <details key={job.id} data-agent-job={job.id}>
       <summary>{names[job.status] || job.status} · {job.goal.slice(0, 100)}</summary>
-      <p role="status" tabIndex={-1} data-agent-attention={job.status==='awaiting_input'?'true':undefined}>{job.summary || 'Der Agent ermittelt die nächsten Schritte.'}</p>
+      <p role="status" tabIndex={-1} data-agent-attention={job.status==='awaiting_input'&&!taskId?'true':undefined}>{job.summary || 'Der Agent ermittelt die nächsten Schritte.'}</p>
       {['failed','unverified'].includes(job.status) && !job.steps.some(step=>step.kind==='effect') && onPrepareRetry && <button type="button" disabled={busy || retryDisabled || jobs.some(item => active.includes(item.status))} onClick={() => onPrepareRetry(job.goal)}>Frage erneut vorbereiten</button>}
       {job.status==='unverified'&&<p className="hint">Der Auftrag hat kein vollständig belegtes Ergebnis. Prüfe die Schritte; Änderungen nicht ungeprüft wiederholen.</p>}
       {job.cancel_requested && <p>Abbruch angefordert. Bereits gestartete entfernte Prozesse können weiterlaufen.</p>}
-      {job.status === 'uncertain' && conversationId && <button type="button" disabled={busy} onClick={() => void perform('/conversations/' + conversationId + '/agent-runs', {
-        request_id: crypto.randomUUID(), read_only: true, research_allowed: false, reconcile_job_id: job.id,
-        goal: 'Prüfe ausschließlich lesend den tatsächlichen Zustand nach dem unklaren Auftrag. Keine Änderung wiederholen. Früherer Auftrag: ' + job.goal,
-      })}>Tatsächlichen Zustand nur lesend prüfen</button>}
+      {job.status === 'uncertain' && conversationId && <button type="button" disabled={busy} onClick={() => {const request=reconciliationRequest(conversationId,job);void perform(request.path,request.body)}}>Tatsächlichen Zustand nur lesend prüfen</button>}
       {active.includes(job.status) && <button type="button" disabled={busy || job.cancel_requested} onClick={() => void perform('/agent-runs/' + job.id + '/cancel')}>Agentenlauf abbrechen</button>}
       {job.steps.filter(s => s.kind !== 'model').map((step,index) => <article key={step.sequence}>
         <p>Schritt {index+1}: {step.document.message&&step.document.message!==step.kind ? step.document.message : kindNames[step.kind]||step.kind} · {stepNames[step.status]||step.status}</p>
@@ -115,7 +122,7 @@ export function AgentRunsPanel({api, conversationId, taskId, setup = false, onSt
       {job.status === 'awaiting_input' && taskId && <form onSubmit={e => {
         e.preventDefault(); const form = e.currentTarget; const content = new FormData(form).get('reply'); const last = job.steps.at(-1);
         if (last && content) void perform('/agent-runs/' + job.id + '/reply', {sequence: last.sequence, sha256: last.sha256, content});
-      }}><label>Antwort an den Agenten<textarea name="reply" required maxLength={8000}/></label><button disabled={busy}>Antworten und fortsetzen</button></form>}
+      }}><label>Antwort an den Agenten<textarea name="reply" data-agent-attention="true" required maxLength={8000}/></label><button disabled={busy}>Antworten und fortsetzen</button></form>}
     </details>)}
     </div></details>
     {!detailsOpen&&attention.map(job=><div className="agent-attention" key={job.id}><p role="status">{job.status==='awaiting_approval'?'Ein Schritt wartet auf deine Freigabe.':job.summary||'Der Auftrag wartet auf deine Antwort.'}</p><button type="button" onClick={()=>reveal(job)}>{job.status==='awaiting_approval'?'Freigabe anzeigen':'Rückfrage anzeigen'}</button></div>)}

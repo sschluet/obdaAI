@@ -1,3 +1,4 @@
+import {getSystemMode,setSystemMode} from './composer-agent-mode.mjs';
 import {chromium} from 'playwright';
 import {loginFixture} from './fixture-login.mjs';
 import {checkProtonBridgeSetup} from './proton-bridge-check.mjs';
@@ -78,25 +79,25 @@ try{
  const pause=await call('/action-policy');if(pause.paused)await call('/action-policy','PATCH',{expected_revision:pause.revision,paused:false});
  chat=await call('/conversations','POST',{});
  await call('/integration-bindings/conversation/'+chat.id,'PUT',{expected_revision:0,selection_mode:'manual',integration_ids:[profile.id]});
- await page.goto(base+'/?chat='+chat.id);await page.getByLabel('Systeme steuern',{exact:true}).check();await page.locator('.composer-note').getByText('Systemauftrag · lokal, ohne Cloudmodell',{exact:true}).waitFor();
+ await page.goto(base+'/?chat='+chat.id);await setSystemMode(page,true);await page.locator('.composer-note').getByText('Systemauftrag · lokal, ohne Cloudmodell',{exact:true}).waitFor();
  const composer=page.locator('.composer textarea');
  await composer.fill('Ändere das synthetische Dokument. Frage zuerst nach dem gewünschten Titel.');
  await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
  await page.reload();await page.getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).first().waitFor();
  await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByRole('button',{name:'Rückfrage anzeigen',exact:true}).click();await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByText('Welchen Titel soll das synthetische Dokument erhalten?',{exact:true}).waitFor();
- if(await page.getByLabel('Systeme steuern',{exact:true}).isChecked())throw Error('Restored agent job makes explicit system mode sticky');
+ if(await getSystemMode(page))throw Error('Restored agent job makes explicit system mode sticky');
  await composer.fill('Agentenabnahme');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  const panel=page.getByRole('region',{name:'Details Abarbeitung',exact:true});
  const approve=panel.getByRole('button',{name:'Diesen Schritt freigeben und fortsetzen',exact:true});await approve.waitFor();
  let parallelMessages=0;const blockedPath='**/api/conversations/'+chat.id+'/messages';await page.route(blockedPath,route=>{parallelMessages++;return route.abort()});await composer.fill('Parallelfrage während einer ausstehenden Freigabe');if(await page.getByRole('button',{name:'Nachricht senden',exact:true}).isEnabled())throw Error('Active agent permits parallel normal-chat send');await composer.press('Enter');await page.getByRole('alert').filter({hasText:'Der aktuelle Integrationsauftrag läuft oder wartet auf deine Freigabe.'}).waitFor();if(parallelMessages)throw Error('Keyboard submission bypassed active agent guard');await page.unroute(blockedPath);
  let jobs=await call('/agent-runs?conversation_id='+chat.id);let job=await call('/agent-runs/'+jobs[0].id);
  if(job.status!=='awaiting_approval'||job.steps.some(s=>s.kind==='effect'&&s.status==='succeeded'))throw Error('Effect before exact approval');
- await approve.click();await panel.getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
+ await approve.click();await panel.locator('.agent-work-summary').getByText('Abgeschlossen · 1 Auftrag',{exact:true}).waitFor();
  job=await call('/agent-runs/'+job.id);
  if(job.status!=='succeeded'||!job.steps.find(s=>s.kind==='effect')?.result.effect_verified)throw Error('Missing independent verification');
- if(process.env.HUB_AGENT_CAPTURE){await panel.getByText(/Ausführung und Prüfschritte abgeschlossen/).first().click();await page.screenshot({path:process.env.HUB_AGENT_CAPTURE,fullPage:true})}
- await page.reload();await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
+ if(process.env.HUB_AGENT_CAPTURE){await page.screenshot({path:process.env.HUB_AGENT_CAPTURE,fullPage:true})}
+ await page.reload();await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).locator('.agent-work-summary').getByText('Abgeschlossen · 1 Auftrag',{exact:true}).waitFor();
  policy=await call('/integrations/'+profile.id+'/agent-policy');
  await call('/integrations/'+profile.id+'/agent-policy','PUT',{expected_revision:policy.revision,expected_profile_revision:policy.profile_revision,rules:{...policy.rules,autonomous:true}});
 
@@ -115,13 +116,20 @@ try{
  let task=(await call('/tasks')).find(t=>t.spec.title==='Agentenaufgabe Aurora');
  if(task.spec.steps[0].tool_id!=='agent.run'||task.spec.autonomy!=='bounded_autonomous')throw Error('Shared agent task not saved');
  await call('/integration-bindings/task/'+task.id,'PUT',{expected_revision:0,selection_mode:'manual',integration_ids:[profile.id]});
+ // Synthetic task clarification contract only; do not submit the stub job to the API.
+ const taskQuestion={id:'00000000-0000-0000-0000-000000000701',created:0,status:'awaiting_input',goal:'Synthetische Aufgabenrückfrage',summary:'Welchen synthetischen Titel möchtest du verwenden?',cancel_requested:false,steps:[{sequence:1,kind:'input',status:'prepared',sha256:'a'.repeat(64),document:{message:'Synthetische Rückfrage'},result:{}}]};
+ const taskPoll=base+'/api/agent-runs?task_id='+task.id;await page.route(taskPoll,route=>route.fulfill({json:[taskQuestion]}));
+ await page.getByRole('region',{name:'Aktueller Auftrag',exact:true}).getByRole('button',{name:'Antwort schreiben',exact:true}).click();
+ const taskReply=page.getByLabel('Antwort an den Agenten',{exact:true});await taskReply.waitFor();if(!await taskReply.evaluate(e=>e===document.activeElement))throw Error('Task clarification does not focus its actual reply field');
+ await page.unroute(taskPoll);
  task=await call('/tasks/'+task.id+'/control','PATCH',{expected_revision:task.revision,expected_control_revision:task.control_revision,paused:false});
  await call('/tasks/'+task.id+'/runs','POST',{request_id:crypto.randomUUID(),expected_revision:task.revision,expected_control_revision:task.control_revision,spec_sha256:task.spec_sha256});
- await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).getByText(/Ausführung und Prüfschritte abgeschlossen/).first().waitFor();
+ await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).locator('.agent-work-summary').getByText('Abgeschlossen · 1 Auftrag',{exact:true}).waitFor();
  const taskJobs=await call('/agent-runs?task_id='+task.id);
  if(taskJobs[0]?.status!=='succeeded')throw Error('Task did not use the verified shared loop');
+ const taskActivity=page.getByRole('region',{name:'Aktueller Auftrag',exact:true});await taskActivity.waitFor({state:'hidden'});await page.getByRole('region',{name:'Details Abarbeitung',exact:true}).locator('.agent-work-summary').getByText('Abgeschlossen · 1 Auftrag',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Chat',exact:true}).click();await page.goto(base+'/?chat='+chat.id);
- await page.getByLabel('Systeme steuern',{exact:true}).check();await composer.fill('Benenne das synthetische Dokument um: Abnahmetest mit Antwortverlust.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
+ await setSystemMode(page,true);await composer.fill('Benenne das synthetische Dokument um: Abnahmetest mit Antwortverlust.');await page.getByRole('button',{name:'Nachricht senden',exact:true}).click();
  await panel.getByText(/Wirkung unklar/).first().waitFor();
  jobs=await call('/agent-runs?conversation_id='+chat.id);job=await call('/agent-runs/'+jobs[0].id);
  if(job.status!=='uncertain'||job.steps.filter(s=>s.kind==='effect').length!==1)throw Error('Uncertain effect retried');

@@ -36,7 +36,7 @@ try {
  await input.fill('Geänderter synthetischer Entwurf');
  await composer.getByRole('button',{name:'Websuche',exact:true}).click();
  if(await composer.getByRole('button',{name:'Websuche aktiviert',exact:true}).count()!==1)throw Error('Direct web toggle failed');
- await plus.click();await page.keyboard.press('End');if(!await page.getByRole('menuitem',{name:/Antwortstil einstellen/}).evaluate(e=>e===document.activeElement))throw Error('End navigation failed');await page.keyboard.press('Home');await page.keyboard.press('Escape');
+ await plus.click();await page.keyboard.press('End');const systemOption=page.getByRole('menuitemcheckbox',{name:'Systemauftrag',exact:true});if(!await systemOption.evaluate(e=>e===document.activeElement)||await systemOption.getAttribute('aria-checked')!=='false')throw Error('End navigation or default optional system mode failed');await systemOption.click();await page.getByRole('button',{name:'Systemauftrag beenden',exact:true}).waitFor();if(creates)throw Error('Optional system mode creates a conversation');await page.getByRole('button',{name:'Systemauftrag beenden',exact:true}).click();if(await composer.locator('.system-mode-chip').count())throw Error('System chip cannot be removed');await plus.click();await page.keyboard.press('Home');await page.keyboard.press('Escape');
  await plus.click();await input.click();if(await page.getByRole('menu',{name:'Aktionen und Anhänge',exact:true}).count())throw Error('Outside click did not close menu');
  await plus.click();await page.getByRole('menuitem',{name:/Antwortstil einstellen/}).click();await page.getByRole('radiogroup',{name:'Antwortlänge',exact:true}).waitFor();
  await page.getByRole('button',{name:'Arbeitsbereich schließen',exact:true}).click();

@@ -3,7 +3,7 @@
 import asyncio
 import json
 import time
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import httpx
@@ -41,6 +41,7 @@ class StartInput(StrictInput):
 
 class IntegrationRouteInput(StrictInput):
     goal: str = Field(min_length=1, max_length=16000)
+    model_mode: Literal["auto", "local", "cloud"] = "auto"
 
 
 class ApprovalInput(StrictInput):
@@ -102,10 +103,18 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
     intent_cache: dict[tuple[str, str], tuple[float, str, dict[str, Any]]] = {}
 
     def profile_signature(profiles: dict[str, Any]) -> str:
-        return digest(encode({identifier: [p.revision, digest(p.config), r.model_dump()]
-                              for identifier, (p, r, _) in profiles.items()}))
-    def reference_signal(db: Any, conversation_id: str, profiles: dict[str, Any]
-                         ) -> tuple[list[str], str]:
+        return digest(
+            encode(
+                {
+                    identifier: [p.revision, digest(p.config), r.model_dump()]
+                    for identifier, (p, r, _) in profiles.items()
+                }
+            )
+        )
+
+    def reference_signal(
+        db: Any, conversation_id: str, profiles: dict[str, Any]
+    ) -> tuple[list[str], str]:
         from hub.agent_read_references import previous_references
 
         references = previous_references(db, conversation_id, profiles)
@@ -152,6 +161,12 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             ):
                 raise HTTPException(409, "Profil oder Agentenregeln inzwischen geändert")
             rules = body.rules
+            from hub.agent_prerequisites import validate_policy
+
+            try:
+                validate_policy(profile.kind, rules)
+            except ValueError as error:
+                raise HTTPException(422, str(error)) from None
             if (
                 rules.gmail_read
                 and profile.kind != "gmail"
@@ -219,13 +234,18 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             result = route_integrations(db, cfg, str(conversation_id), body.goal)
             profiles = semantic_candidates(db, cfg, str(conversation_id))
             prior_targets, reference_hash = reference_signal(db, str(conversation_id), profiles)
-        if not profiles or very_simple_request(body.goal):
+        # Explicit Cloud ordinary chat must not depend on local inference. The
+        # lexical private-target signal is still returned, and all final cloud
+        # history/project/source permissions remain enforced by the chat boundary.
+        if body.model_mode == "cloud" or not profiles or very_simple_request(body.goal):
             return result
         from hub.agent_capabilities import request_intent
 
         intent = request_intent(body.goal, profiles, prior_target_ids=prior_targets)
-        if intent and intent.followup and any(
-            item.kind == "mail_reply" for item in intent.requirements
+        if (
+            intent
+            and intent.followup
+            and any(item.kind == "mail_reply" for item in intent.requirements)
         ):
             if not set(intent.target_ids) <= set(prior_targets):
                 return {"route": "chat", "integration_ids": []}
@@ -234,15 +254,21 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             from hub.request_interpretation import interpret
 
             try:
-                intent = await interpret(factory, cfg, body.goal, profiles,
-                                         prior_target_ids=prior_targets,
-                                         conversation_id=str(conversation_id))
+                intent = await interpret(
+                    factory,
+                    cfg,
+                    body.goal,
+                    profiles,
+                    prior_target_ids=prior_targets,
+                    conversation_id=str(conversation_id),
+                )
             except (ValueError, TimeoutError, OSError, httpx.HTTPError):
                 app.state.intent_interpretation_degraded = True
                 raise HTTPException(
-                    503, "Die lokale Auftragseinordnung ist vorübergehend nicht verfügbar. "
+                    503,
+                    "Die lokale Auftragseinordnung ist vorübergehend nicht verfügbar. "
                     "Die Anfrage wurde nicht an Chat oder Werkzeuge weitergegeben. "
-                    "Bitte das lokale Modell prüfen und erneut versuchen."
+                    "Bitte das lokale Modell prüfen und erneut versuchen.",
                 ) from None
         app.state.intent_interpretation_degraded = False
         with factory() as db:
@@ -250,13 +276,17 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
             current = semantic_candidates(db, cfg, str(conversation_id))
             _, current_reference_hash = reference_signal(db, str(conversation_id), current)
         if digest(encode([profile_signature(current), current_reference_hash])) != signature:
-            raise HTTPException(409, "Verbindungen oder Gesprächsbezug haben sich während "
-                                "der Einordnung geändert. Bitte erneut versuchen.")
+            raise HTTPException(
+                409,
+                "Verbindungen oder Gesprächsbezug haben sich während "
+                "der Einordnung geändert. Bitte erneut versuchen.",
+            )
         if intent.mode == "unknown" and (intent.target_ids or result.get("route") == "agent"):
             raise HTTPException(
-                409, "Der Bezug zu deinen Systemen ist nicht eindeutig. "
+                409,
+                "Der Bezug zu deinen Systemen ist nicht eindeutig. "
                 "Bitte benenne die gewünschte Verbindung oder die gemeinten Daten. "
-                "Es wurde kein Chat- oder Werkzeugauftrag gestartet."
+                "Es wurde kein Chat- oder Werkzeugauftrag gestartet.",
             )
         key = (str(conversation_id), digest(body.goal))
         intent_cache[key] = (time.monotonic(), signature, intent.model_dump(mode="json"))
@@ -307,6 +337,19 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                     for part in json.loads(old.context)
                     if part["source_id"].startswith("agent-history:")
                 )
+            reconciliation_intent = None
+            reconciliation_ids = None
+            reconciliation_binding = None
+            if old:
+                source_ids = {
+                    part["source_id"].split(":")[1]
+                    for part in json.loads(old.context)
+                    if str(part.get("source_id", "")).startswith("agent-effect:")
+                }
+                if source_ids != ({str(body.reconcile_job_id)} if body.reconcile_job_id else set()):
+                    raise HTTPException(
+                        409, "Auftragskennung ist an einen anderen Abgleich gebunden"
+                    )
             if body.reconcile_job_id:
                 from hub.agent_runtime import steps
                 from hub.policy import ContextPart
@@ -323,6 +366,92 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                         "Abgleich benötigt einen unklaren Auftrag im selben Gespräch "
                         "und bleibt lokal lesend",
                     )
+                from hub.agent_intent import RequestIntent, Requirement
+                from hub.agent_runtime import selection
+
+                source_steps = [step for step in steps(db, previous.id) if step.kind == "effect"]
+                unclear = [
+                    step
+                    for step in source_steps
+                    if step.status
+                    in {
+                        "uncertain",
+                        "dispatching",
+                        "verifying",
+                    }
+                    or step.status == "succeeded"
+                    and json.loads(step.result).get("effect_verified") is not True
+                ]
+                source_profiles = {
+                    item["id"]: item for item in json.loads(previous.bindings)["profiles"]
+                }
+                affected = [json.loads(step.document).get("integration_id") for step in unclear]
+                if any(
+                    not isinstance(identifier, str) or not identifier for identifier in affected
+                ):
+                    raise HTTPException(409, "Ziel des unklaren Auftrags fehlt")
+                reconciliation_ids = sorted(set(affected))
+                currently_selected = {
+                    item["id"] for item in selection(db, "conversation", owner.id)["bindings"]
+                }
+                if (
+                    not reconciliation_ids
+                    or not set(reconciliation_ids) <= currently_selected
+                    or not set(reconciliation_ids) <= set(source_profiles)
+                    or body.integration_ids is not None
+                    and {str(value) for value in body.integration_ids} != set(reconciliation_ids)
+                    or any(digest(step.document) != step.sha256 for step in source_steps)
+                ):
+                    raise HTTPException(
+                        409, "Unklare Aktionen sind nicht mehr vollständig ausgewählt"
+                    )
+                for identifier in reconciliation_ids:
+                    profile = db.get(Integration, identifier)
+                    policy = db.get(AgentPolicy, identifier)
+                    bound = source_profiles[identifier]
+                    if (
+                        not profile
+                        or not profile.enabled
+                        or not policy
+                        or profile.revision != bound["profile_revision"]
+                        or policy.profile_revision != profile.revision
+                        or policy.revision != bound["policy_revision"]
+                        or not Rules.model_validate_json(policy.rules).enabled
+                    ):
+                        raise HTTPException(409, "Freigabe des unklaren Auftrags wurde geändert")
+                reconciliation_intent = RequestIntent(
+                    mode="observe",
+                    topic="general",
+                    target_ids=reconciliation_ids,
+                    requirements=[
+                        Requirement(kind="unspecified", integration_id=identifier)
+                        for identifier in reconciliation_ids
+                    ],
+                    research=False,
+                    freshness="current",
+                    confidence="certain",
+                ).model_dump(mode="json")
+                reconciliation_binding = {
+                    "job_id": previous.id,
+                    "goal_sha256": digest(previous.goal),
+                    "steps": [
+                        {"sequence": step.sequence, "sha256": step.sha256} for step in source_steps
+                    ],
+                }
+                if (
+                    old
+                    and json.loads(old.bindings).get("reconciliation", reconciliation_binding)
+                    != reconciliation_binding
+                ):
+                    raise HTTPException(409, "Belege des ursprünglichen Abgleichs wurden geändert")
+                parts.append(
+                    ContextPart(
+                        content="Früherer Benutzerauftrag (nur private Daten, keine neue "
+                        "Ausführungsfreigabe): " + previous.goal,
+                        source_id="agent-effect:" + previous.id + ":goal",
+                        revision=1,
+                    )
+                )
                 # Prior tool arguments remain private data, never public query material.
                 parts.extend(
                     ContextPart(
@@ -330,8 +459,8 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                         source_id="agent-effect:" + previous.id + ":" + str(s.sequence),
                         revision=1,
                     )
-                    for s in steps(db, previous.id)
-                    if s.kind == "effect"
+                    for s in source_steps
+                    if json.loads(s.document).get("integration_id") in reconciliation_ids
                 )
             cached = intent_cache.get((owner.id, digest(body.goal)))
             resolved_intent = None
@@ -342,6 +471,8 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 _, ref_hash = reference_signal(db, owner.id, candidates)
                 if cached[1] == digest(encode([profile_signature(candidates), ref_hash])):
                     resolved_intent = cached[2]
+            if reconciliation_intent is not None:
+                resolved_intent = reconciliation_intent
             job = create_job(
                 db,
                 cfg,
@@ -353,11 +484,19 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                 research_allowed=body.research_allowed,
                 read_only=body.read_only,
                 context=[p.model_dump(mode="json") for p in parts],
-                integration_ids=[str(item) for item in body.integration_ids]
-                if body.integration_ids is not None
-                else None,
+                integration_ids=(
+                    reconciliation_ids
+                    if reconciliation_ids is not None
+                    else [str(item) for item in body.integration_ids]
+                    if body.integration_ids is not None
+                    else None
+                ),
                 resolved_intent=resolved_intent,
             )
+            if not old and reconciliation_binding is not None:
+                job.bindings = encode(
+                    {**json.loads(job.bindings), "reconciliation": reconciliation_binding}
+                )
             if not old:
                 from hub.agent_read_references import bind
 
@@ -387,6 +526,10 @@ def install_agent_api(app: FastAPI, cfg: Settings, factory: Any) -> None:
                         conversation_id=owner.id, role="user", content=body.goal, label="LOCAL_ONLY"
                     )
                 )
+                db.flush()
+                from hub.titles import ensure_initial_title
+
+                ensure_initial_title(db, owner.id)
                 enqueue_agent(db, cfg, job.id)
             db.commit()
             result = job_info(db, job)

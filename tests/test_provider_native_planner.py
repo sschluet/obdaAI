@@ -37,9 +37,9 @@ def sse(delta, *, done=True):
     )
 
 
-def native(*, name="t0_http", path="/api/states"):
+def native(*, name="t0_http_read", path="/api/states"):
     # Real SSE fragments are reassembled by Providers before the bound decoder.
-    args = json.dumps({"method": "GET", "path": path})
+    args = json.dumps({"arguments": {"path": path}})
     chunks = [
         {
             "tool_calls": [
@@ -107,7 +107,11 @@ def test_native_probe_real_fragment_decoder_and_provider_rows_preserved(managed,
             assert "response_format" in body and "tools" not in body
             return sse({"content": json.dumps(intent())})
         assert "response_format" not in body and body["tool_choice"] == "auto"
-        assert [t["function"]["name"] for t in body["tools"]] == ["t0_ha_entities", "t0_http"]
+        assert [t["function"]["name"] for t in body["tools"]] == [
+            "t0_ha_entities",
+            "t0_http_read",
+            "t0_http_project",
+        ]
         assert body["tools"][0]["function"]["parameters"]
         return native()
 
